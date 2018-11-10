@@ -109,6 +109,8 @@ def parsing_argument(args):
 		options['env']['TARGET'] = args.target
 		options['env']['WORKSPACE'] += '/' + args.target
 
+		#create workspace folder for the target
+		initials_stuff(options)
 
 	#run specific task otherwise run the normal routine
 	if args.module:
@@ -136,7 +138,6 @@ def parsing_argument(args):
 		sys.exit(0)
 
 	else:
-		initials_stuff(options)
 		routine(options)
 
 
