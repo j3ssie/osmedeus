@@ -15,16 +15,14 @@ class GitScan(object):
 		self.truffleHog()
 		self.gitrob()
 
-
-	#https://github.com/dxa4481/truffleHog
 	def truffleHog(self):
-		cmd = 'truffleHog --regex --entropy=True $TARGET'
+		cmd = 'trufflehog --regex --entropy=True $TARGET | tee $WORKSPACE/gitscan/$TARGET-trufflehog.txt'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
 
 	def gitrob(self):
-		cmd = '$GO_PATH/gitrob -github-access-token $GITHUB_API_KEY $TARGET'
+		cmd = '$GO_PATH/gitrob -github-access-token $GITHUB_API_KEY $TARGET | tee $WORKSPACE/gitscan/$TARGET-gitrob.txt'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)

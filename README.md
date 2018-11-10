@@ -1,5 +1,6 @@
 Osmedeus
 ============
+Automatic Reconnaisance and Scanning in Penetration Testing
 
 # What is Osmedeus?
 Osmedeus allow you to doing boring stuff in Pentesting automatically like reconnaissance and scanning the target by run the collection of awesome tools.
@@ -25,12 +26,12 @@ chmod +x install.sh
 
 * Git repo scanning
 ```
-./osmedeus.py --git https://github.com/whatever/repo
+./osmedeus.py -m git --git https://github.com/whatever/repo
 ```
 
 * Doing some stuff with Burp State file
 ```
-./osmedeus.py -t example.com --burp yourburpstate.xml
+./osmedeus.py -m burp -t example.com --burp yourburpstate.xml
 ```
 
 

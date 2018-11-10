@@ -36,7 +36,7 @@ def print_bad(text):
 def replace_argument(options, cmd):
 	for key,value in options['env'].items():
 		if key in cmd:
-			cmd = cmd.replace('$' + key, value)	
+			cmd = cmd.replace('$' + str(key), str(value))	
 	return cmd
 
 def make_directory(directory):

@@ -7,7 +7,7 @@ PLUGINS_PATH="$CWD/plugins/"
 
 echo -e "\033[1;32m[+] Downloading wordlists \033[1;37m"
 mkdir -p $PLUGINS_PATH/wordlists/
-[[ -f $PLUGINS_PATH/wordlists/all.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/all.txt https://gist.githubusercontent.com/jhaddix/86a06c5dc309d08580a018c66354a056/raw/96f4e51d96b2203f19f6381c8c545b278eaa0837/all.txt
+[[ -f $PLUGINS_PATH/wordlists/all.txt ]] || wget -O $PLUGINS_PATH/wordlists/all.txt https://gist.githubusercontent.com/jhaddix/86a06c5dc309d08580a018c66354a056/raw/96f4e51d96b2203f19f6381c8c545b278eaa0837/all.txt
 
 
 ##

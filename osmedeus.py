@@ -88,8 +88,7 @@ def parsing_argument(args):
 	if args.workspace:
 		options['env']['WORKSPACE'] = args.workspace
 
-	if args.target:
-		options['target'] = args.target
+
 
 	if args.git:
 		options['env']['TARGET'] = args.git
@@ -105,11 +104,13 @@ def parsing_argument(args):
 		options['targetlist'] = args.targetlist
 
 
+	if args.target:
+		options['target'] = args.target
+		#just loop in the for if the target list
+		options['target'] = args.target
+		options['env']['TARGET'] = args.target
+		options['env']['WORKSPACE'] += '/' + args.target
 
-	#just loop in the for if the target list
-	options['target'] = args.target
-	options['env']['TARGET'] = args.target
-	options['env']['WORKSPACE'] += '/' + args.target
 
 	#run specific task otherwise run the normal routine
 	if args.module:
