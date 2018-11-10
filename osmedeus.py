@@ -88,8 +88,6 @@ def parsing_argument(args):
 	if args.workspace:
 		options['env']['WORKSPACE'] = args.workspace
 
-
-
 	if args.git:
 		options['env']['TARGET'] = args.git
 		# git_routine(options)
@@ -115,21 +113,27 @@ def parsing_argument(args):
 	#run specific task otherwise run the normal routine
 	if args.module:
 		module = args.module
-		if 'git' in module:
-			gitscan.GitScan(options)
-			sys.exit(0)
+		if 'subdomain' in module:
+			subdomain.SubdomainScanning(options)
+			takeover.TakeOverScanning(options)
 
-		elif 'burp' in module:
-			burpstate.BurpState(options)
-			sys.exit(0)
-
-		elif 'port' in module:
+		elif 'portscan' in module:
 			# scanning port, service and vuln with masscan and nmap
 			portscan.PortScan(options)
 
+		elif 'git' in module:
+			gitscan.GitScan(options)
+
+		elif 'burp' in module:
+			burpstate.BurpState(options)
+
 		elif 'brute' in module:
 			# running brute force things based on scanning result
-			BurpState(options)
+			# BurpState(options)
+			pass
+
+		#exit after run a single module
+		sys.exit(0)
 
 	else:
 		initials_stuff(options)
@@ -145,7 +149,7 @@ def routine(options):
 	takeover.TakeOverScanning(options)
 
 	# Scanning all port using result from subdomain scanning
-	portscan.PortScan(options)	
+	portscan.PortScan(options)
 
 	
 
@@ -158,8 +162,21 @@ def initials_stuff(options):
 	utils.make_directory(options['env']['WORKSPACE'] + '/screenshot')
 	utils.make_directory(options['env']['WORKSPACE'] + '/screenshot/all')
 
-def help_message():
-	print('./osmedeus.py -t <target>')
+	utils.make_directory(options['env']['WORKSPACE'] + '/gitscan/')
+	utils.make_directory(options['env']['WORKSPACE'] + '/burpstate/')
+
+def list_module():
+	print(''' 
+List module
+===========
+subdomain 	- Scanning subdomain and subdomain takerover
+portscan 	- Screenshot and Scanning service for list of domain
+git 		- Scanning for git repo
+burp 		- Scanning for burp state
+brute 		- Do brute force on service of target
+
+		''')
+	sys.exit(0)
 
 
 def main():
@@ -174,10 +191,16 @@ def main():
 	parser.add_argument('--more' , action='store', dest='more', help='append more command for some tools')
 	parser.add_argument('-w','--workspace' , action='store', dest='workspace', help='Domain')
 
+	parser.add_argument('-M', '--list_module', action='store_true', help='List all module')
+	parser.add_argument('-v', '--verbose', action='store_true', help='show verbose output')
+
 	args = parser.parse_args()
 	if len(sys.argv) == 1:
-		help_message()
+		# help_message()
 		sys.exit(0)
+
+	if args.list_module:
+		list_module()
 
 	parsing_argument(args)
 
