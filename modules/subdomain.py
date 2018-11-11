@@ -15,7 +15,6 @@ class SubdomainScanning(object):
 		self.subfinder()
 		self.massdns()
 		self.unique_result()
-		self.create_ip_result()
 
 	# def template(self):
 	# 	cmd = '$GO_PATH/amass -v -ip -d3 $WORKSPACE/$OUTPUT.html -d $TARGET'
@@ -56,19 +55,7 @@ class SubdomainScanning(object):
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
 
-	#just for the masscan
-	def create_ip_result(self):
-		utils.print_good('Create IP for list of domain result')
-		domains = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
-		with open(domains, 'r+') as d:
-			ds = d.read().splitlines()
-		for domain in ds:
-			try:
-				cmd = '''dig +short {0} |grep -oE "\b([0-9]{{1,3}}\.){{3}}[0-9]{{1,3}}\b"|head -1 >> $WORKSPACE/subdomain/IP-$OUTPUT.txt'''.format(domain)
-				cmd = utils.replace_argument(self.options, cmd)
-				execute.run(cmd)
-			except:
-				pass			
+			
 
 
 

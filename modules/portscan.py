@@ -1,4 +1,4 @@
-import os
+import os, socket
 from core import execute
 from core import utils
 
@@ -12,6 +12,7 @@ class PortScan(object):
 	def initial(self):
 		self.aquaton()
 		self.eyewitness_common()
+		self.create_ip_result()
 		self.masscan()
 		self.eyewitness_all()
 
@@ -31,9 +32,28 @@ class PortScan(object):
 		execute.run(cmd)
 		print()
 
+	#just for the masscan
+	def create_ip_result(self):
+		utils.print_good('Create IP for list of domain result')
+		domains = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
+		with open(domains, 'r+') as d:
+			ds = d.read().splitlines()
+		for domain in ds:
+			try:
+				ip = socket.gethostbyname(domain.strip())
+				cmd = 'echo {0} >> $WORKSPACE/subdomain/IP-$OUTPUT.txt'.format(ip)
+				cmd = utils.replace_argument(self.options, cmd)
+				execute.run(cmd)
+			except:
+				pass
+		cmd = 'cat $WORKSPACE/subdomain/IP-$OUTPUT.txt | sort | uniq > $WORKSPACE/subdomain/final-IP-$OUTPUT.txt'
+		cmd = utils.replace_argument(self.options, cmd)
+		execute.run(cmd)
+
+
 	def masscan(self):
 		utils.print_good('Starting masscan')
-		cmd = 'sudo masscan -p0-65535 --rate 1000000 -iL $WORKSPACE/subdomain/final-$TARGET.txt -oG $WORKSPACE/portscan/$OUTPUT-masscan.gnmap -oX $WORKSPACE/portscan/$OUTPUT-masscan.xml --wait 0'
+		cmd = 'sudo masscan -p0-65535 -iL $WORKSPACE/subdomain/final-IP-$OUTPUT.txt -oG $WORKSPACE/portscan/$OUTPUT-masscan.gnmap -oX $WORKSPACE/portscan/$OUTPUT-masscan.xml --wait 0'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
