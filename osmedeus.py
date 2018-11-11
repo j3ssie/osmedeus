@@ -3,6 +3,7 @@
 import os, sys, glob
 import argparse
 
+from core import execute
 from core import utils
 # import modules 
 from modules import subdomain
@@ -179,6 +180,9 @@ brute 		- Do brute force on service of target
 		''')
 	sys.exit(0)
 
+def update():
+	execute.run('git fetch --all && git reset --hard origin/master')
+	sys.exit(0)
 
 def main():
 	cowsay()
@@ -194,6 +198,7 @@ def main():
 
 	parser.add_argument('-M', '--list_module', action='store_true', help='List all module')
 	parser.add_argument('-v', '--verbose', action='store_true', help='show verbose output')
+	parser.add_argument('--update', action='store_true', help='update lastest from git')
 
 	args = parser.parse_args()
 	if len(sys.argv) == 1:
@@ -202,6 +207,8 @@ def main():
 
 	if args.list_module:
 		list_module()
+	if args.update:
+		update()
 
 	parsing_argument(args)
 
