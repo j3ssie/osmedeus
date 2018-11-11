@@ -15,7 +15,7 @@ chmod +x osmedeus.py
 echo "\033[1;32m[+] Installing Golang"
 
 apt install golang -y
-if ! (grep -Fxq "~/.bashrc" GOPATH)
+if ! (grep -Fxq "~/.bashrc" "GOPATH")
 then
 	echo 'export GOPATH=$HOME/go' >> ~/.bashrc
 	echo 'PATH=$GOPATH/bin:$PATH' >> ~/.bashrc

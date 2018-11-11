@@ -5,7 +5,6 @@ from core import utils
 class GitScan(object):
 	"""docstring for PortScan"""
 	def __init__(self, options):
-		# super(subdomain, self).__init__()
 		utils.print_banner("Github Repo Scanning")
 		self.options = options
 		self.initial()

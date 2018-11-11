@@ -21,7 +21,7 @@ class TakeOverScanning(object):
 		print()
 
 	def subjack(self):
-		utils.print_good('Starting subjacj')
+		utils.print_good('Starting subjack')
 		cmd = '$GO_PATH/subjack -w $WORKSPACE/subdomain/final-$TARGET.txt -t 100 -timeout 30 -o $WORKSPACE/subdomain/takeover-$TARGET-subjack.txt -ssl'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
