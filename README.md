@@ -19,10 +19,28 @@ chmod +x install.sh
 ```
 ./osmedeus.py -t example.com
 ```
+
 * Scanning subdomain and Subdomain TakeOver
 ```
 ./osmedeus.py -m subdomain -t example.com
 ```
+
+* Screenshot the list of domain and do Port Scan on it
+```
+./osmedeus.py -m portscan -t example.com
+```
+
+* Doing blind directory search on the target 
+```
+./osmedeus.py -m dirbrute -t example.com
+```
+
+
+* Doing brute force on the service result from scanning service
+```
+./osmedeus.py -m brute -t example.com
+```
+
 
 * Git repo scanning
 ```
@@ -33,6 +51,19 @@ chmod +x install.sh
 ```
 ./osmedeus.py -m burp -t example.com --burp yourburpstate.xml
 ```
+
+
+* List all module 
+```
+./osmedeus.py -M
+```
+
+* Update 
+```
+./osmedeus.py --update
+```
+
+
 
 
 # Available modules with list tool being used
@@ -58,6 +89,18 @@ chmod +x install.sh
   * [sqlmap](https://github.com/sqlmapproject/sqlmap)
   * [SleuthQL](https://github.com/RhinoSecurityLabs/SleuthQL)
   * [LinkFinder](https://github.com/GerbenJavado/LinkFinder)
+
+* Directory search
+  * [dirhunt](https://github.com/Nekmo/dirhunt)
+  * [dirsearch](https://github.com/maurosoria/dirsearch)
+  * [gobuster](https://github.com/OJ/gobuster)
+
+* Bruteforce services
+  * [brutespray](https://github.com/x90skysn3k/brutespray)
+
+* Wordlists
+  * [domain](https://gist.githubusercontent.com/jhaddix/86a06c5dc309d08580a018c66354a056/raw/96f4e51d96b2203f19f6381c8c545b278eaa0837/all.txt)
+  * [web-content](https://gist.githubusercontent.com/jhaddix/b80ea67d85c13206125806f0828f4d10/raw/c81a34fe84731430741e0463eb6076129c20c4c0/content_discovery_all.txt)
 
 # Contribute
 This is just beta version if you have any problem or an idea, feel free to create an issue or contact me.

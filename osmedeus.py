@@ -11,6 +11,8 @@ from modules import takeover
 from modules import portscan
 from modules import gitscan
 from modules import burpstate
+from modules import brutethings
+from modules import dirbrute
 
 # Console colors
 W = '\033[1;0m'   # white 
@@ -34,7 +36,7 @@ good = '{0}[+]{1}'.format(G,W)
 #############
 
 __author__ = '@j3ssiejjj'
-__version__ = '0.1'
+__version__ = '1.0'
 current_path = os.path.dirname(os.path.realpath(__file__))
 
 
@@ -51,7 +53,7 @@ SPECIAL_ARGUMENT = {
 	'DOMAIN_FULL' : current_path + '/plugins/wordlists/all.txt',
 	'DEFAULT_WORDLIST' : '',
 
-	'GITHUB_API_KEY' : 'db683e65d46c0dc1ba29a5e275c511685b49e17d',
+	'GITHUB_API_KEY' : 'db683e65d46c0dc1ba29a5e275c511685b49e17d', # this isn't work api :D 
 	'MORE' : '',
 	'CWD' : os.path.dirname(os.path.realpath(__file__)),
 }
@@ -130,10 +132,13 @@ def parsing_argument(args):
 		elif 'burp' in module:
 			burpstate.BurpState(options)
 
-		elif 'brute' in module:
+		elif 'brute' in module or 'force' in module:
 			# running brute force things based on scanning result
-			# BurpState(options)
-			pass
+			brutethings.BruteThings(options)
+
+		elif 'dir' in module:
+			# running brute force things based on scanning result
+			dirbrute.DirBrute(options)
 
 		#exit after run a single module
 		sys.exit(0)
@@ -165,6 +170,7 @@ def initials_stuff(options):
 	utils.make_directory(options['env']['WORKSPACE'] + '/screenshot/all')
 
 	utils.make_directory(options['env']['WORKSPACE'] + '/gitscan/')
+	utils.make_directory(options['env']['WORKSPACE'] + '/directory/')
 	utils.make_directory(options['env']['WORKSPACE'] + '/burpstate/')
 
 def list_module():
@@ -176,6 +182,7 @@ portscan 	- Screenshot and Scanning service for list of domain
 git 		- Scanning for git repo
 burp 		- Scanning for burp state
 brute 		- Do brute force on service of target
+dirbrute 	- Do brute force on service of target
 
 		''')
 	sys.exit(0)
