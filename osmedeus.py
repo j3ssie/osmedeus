@@ -5,6 +5,7 @@ import argparse
 
 from core import execute
 from core import utils
+
 # import modules 
 from modules import subdomain
 from modules import takeover
@@ -26,10 +27,6 @@ C = '\033[1;36m'  # cyan
 GR = '\033[1;37m'  # gray
 colors = [G,R,B,P,C,O,GR]
 
-info = '{0}[*]{1}'.format(B,W)
-ques =  '{0}[?]{1}'.format(C,W)
-bad = '{0}[-]{1}'.format(R,W)
-good = '{0}[+]{1}'.format(G,W)
 
 #############
 # Osmedeus - One line to rude them all
@@ -37,12 +34,13 @@ good = '{0}[+]{1}'.format(G,W)
 
 __author__ = '@j3ssiejjj'
 __version__ = '1.0'
-current_path = os.path.dirname(os.path.realpath(__file__))
 
 
 ### Global stuff
+current_path = os.path.dirname(os.path.realpath(__file__))
 SPECIAL_ARGUMENT = {
 	'TARGET' : 'example.com',
+	'STRIP_TARGET' : 'example.com',
 	'BURPSTATE' : '',
 	'OUTPUT' : 'out.txt',
 	'WORKSPACE' : current_path + '/workspaces',
@@ -80,17 +78,7 @@ def cowsay():
 
 
 def parsing_argument(args):
-	print('---<---<--{1}@{2} Target: {0} {1}@{2}-->--->---'.format(args.target, P, G))
-
 	#parsing agument
-	if args.output:
-		options['env']['OUTPUT'] = args.output
-	else:
-		options['env']['OUTPUT'] = args.target
-		
-	if args.workspace:
-		options['env']['WORKSPACE'] = args.workspace
-
 	if args.git:
 		options['env']['TARGET'] = args.git
 		# git_routine(options)
@@ -103,14 +91,40 @@ def parsing_argument(args):
 
 	if args.targetlist:
 		options['targetlist'] = args.targetlist
+		#check if target list file exist and loop throught the target
+		if os.path.exists(options['targetlist']):
+			with open(options['targetlist'], 'r+') as ts:
+				targetlist = ts.read().splitlines()
+			
+			for target in targetlist:
+				args.target = target
+				single_target(args)
+				print('=' * 30)
 
+	else:
+		single_target(args)
+
+def single_target(args):
+	print('{2}---<---<--{1}@{2} Target: {0} {1}@{2}-->--->---'.format(args.target, P, G))
 
 	if args.target:
-		options['target'] = args.target
+		if args.output:
+			options['env']['OUTPUT'] = args.output
+		else:
+			options['env']['OUTPUT'] = args.target
+
 		#just loop in the for if the target list
 		options['target'] = args.target
 		options['env']['TARGET'] = args.target
-		options['env']['WORKSPACE'] += '/' + args.target
+		options['env']['STRIP_TARGET'] = args.target.replace('https://','').replace('http://','')
+
+		if args.workspace:
+			if args.workspace[-1] == '/':
+				options['env']['WORKSPACE'] = args.workspace + options['env']['STRIP_TARGET']
+			else:
+				options['env']['WORKSPACE'] = args.workspace + '/' + options['env']['STRIP_TARGET']
+		else:
+			options['env']['WORKSPACE'] = current_path + '/workspaces/' + options['env']['STRIP_TARGET']
 
 		#create workspace folder for the target
 		initials_stuff(options)
@@ -137,11 +151,9 @@ def parsing_argument(args):
 			brutethings.BruteThings(options)
 
 		elif 'dir' in module:
-			# running brute force things based on scanning result
+			# run blind directory brute force directly
 			dirbrute.DirBrute(options)
-
-		#exit after run a single module
-		sys.exit(0)
+			# pass
 
 	else:
 		routine(options)
@@ -149,14 +161,17 @@ def parsing_argument(args):
 
 #runnning normal routine if none of module specific
 def routine(options):
-	#finding subdomain
+	#Finding subdomain
 	subdomain.SubdomainScanning(options)
 
 	#Scanning for subdomain take over
 	takeover.TakeOverScanning(options)
 
-	# Scanning all port using result from subdomain scanning
+	#Scanning all port using result from subdomain scanning
 	portscan.PortScan(options)
+
+	#Brute force service from port scan result
+	brutethings.BruteThings(options)
 
 	
 
@@ -170,6 +185,7 @@ def initials_stuff(options):
 	utils.make_directory(options['env']['WORKSPACE'] + '/screenshot/all')
 
 	utils.make_directory(options['env']['WORKSPACE'] + '/gitscan/')
+	utils.make_directory(options['env']['WORKSPACE'] + '/bruteforce/')
 	utils.make_directory(options['env']['WORKSPACE'] + '/directory/')
 	utils.make_directory(options['env']['WORKSPACE'] + '/burpstate/')
 
@@ -188,7 +204,7 @@ dirbrute 	- Do brute force on service of target
 	sys.exit(0)
 
 def update():
-	execute.run('git fetch --all && git reset --hard origin/master')
+	execute.run('git fetch --all && git reset --hard origin/master && ./install.sh')
 	sys.exit(0)
 
 def main():
@@ -200,8 +216,8 @@ def main():
 	parser.add_argument('-o','--output' , action='store', dest='output', help='output')
 	parser.add_argument('-b','--burp' , action='store', dest='burp', help='burp http file')
 	parser.add_argument('-g','--git' , action='store', dest='git', help='git repo to scan')
-	parser.add_argument('--more' , action='store', dest='more', help='append more command for some tools')
 	parser.add_argument('-w','--workspace' , action='store', dest='workspace', help='Domain')
+	parser.add_argument('--more' , action='store', dest='more', help='append more command for some tools')
 
 	parser.add_argument('-M', '--list_module', action='store_true', help='List all module')
 	parser.add_argument('-v', '--verbose', action='store_true', help='show verbose output')

@@ -14,7 +14,8 @@ class PortScan(object):
 		self.eyewitness_common()
 		self.create_ip_result()
 		self.masscan()
-		self.eyewitness_all()
+		# self.eyewitness_all()
+		
 
 	def aquaton(self):
 		utils.print_good('Starting aquatone')
@@ -53,7 +54,7 @@ class PortScan(object):
 
 	def masscan(self):
 		utils.print_good('Starting masscan')
-		cmd = 'sudo masscan -p0-65535 -iL $WORKSPACE/subdomain/final-IP-$OUTPUT.txt -oG $WORKSPACE/portscan/$OUTPUT-masscan.gnmap -oX $WORKSPACE/portscan/$OUTPUT-masscan.xml --wait 0'
+		cmd = 'sudo masscan --rate 10000 -p0-65535 -iL $WORKSPACE/subdomain/final-IP-$OUTPUT.txt -oG $WORKSPACE/portscan/$OUTPUT-masscan.gnmap -oX $WORKSPACE/portscan/$OUTPUT-masscan.xml --wait 0'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)

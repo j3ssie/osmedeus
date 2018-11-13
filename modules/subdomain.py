@@ -16,11 +16,6 @@ class SubdomainScanning(object):
 		self.massdns()
 		self.unique_result()
 
-	# def template(self):
-	# 	cmd = '$GO_PATH/amass -v -ip -d3 $WORKSPACE/$OUTPUT.html -d $TARGET'
-	# 	cmd = utils.replace_argument(self.options, cmd)
-	# 	# execute.run(cmd)
-
 	def amass(self):
 		utils.print_good('Starting amass')
 		cmd = '$GO_PATH/amass -active -d $TARGET |tee $WORKSPACE/subdomain/$OUTPUT-amass.txt'
@@ -28,7 +23,6 @@ class SubdomainScanning(object):
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
 		print()
-
 
 	def subfinder(self):
 		utils.print_good('Starting subfinder')
