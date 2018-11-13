@@ -23,7 +23,7 @@ class BruteThings(object):
 
 	def brutespray(self):
 		utils.print_good('Starting brutespray')
-		cmd = 'python $PLUGINS_PATH/brutespray/brutespray.py --file $WORKSPACE/portscan/$OUTPUT-masscan.gnmap --threads 5 --hosts 5 -o $WORKSPACE/bruteforce/$OUTPUT/'
+		cmd = 'python $PLUGINS_PATH/brutespray/brutespray.py --file $WORKSPACE/portscan/$OUTPUT-masscan.xml --threads 5 --hosts 5 -o $WORKSPACE/bruteforce/$OUTPUT/'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
@@ -33,7 +33,7 @@ class BruteThings(object):
 	def direct_masscan(self):
 		utils.print_good('Starting masscan')
 		ip = socket.gethostbyname(self.options['env']['STRIP_TARGET'])
-		cmd = 'sudo masscan --rate 10000 -p0-65535 {0} -oG $WORKSPACE/portscan/$OUTPUT-masscan.gnmap -oX $WORKSPACE/portscan/$OUTPUT-masscan.xml --wait 0'.format(ip)
+		cmd = 'sudo nmap -sS -T4 -Pn -n -p- {0} -oG $WORKSPACE/portscan/$OUTPUT-nmap.gnmap -oX $WORKSPACE/portscan/$OUTPUT-nmap.xml '.format(ip)
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
@@ -41,7 +41,7 @@ class BruteThings(object):
 
 
 	def direct_brutespray(self):
-		cmd = 'python $PLUGINS_PATH/brutespray/brutespray.py --file $WORKSPACE/portscan/$OUTPUT-masscan.gnmap --threads 5 --hosts 5 -o $WORKSPACE/bruteforce/$OUTPUT/'
+		cmd = 'python $PLUGINS_PATH/brutespray/brutespray.py --file $WORKSPACE/portscan/$OUTPUT-masscan.xml --threads 5 --hosts 5 -o $WORKSPACE/bruteforce/$OUTPUT/'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
