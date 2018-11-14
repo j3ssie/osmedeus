@@ -22,7 +22,7 @@ class DirBrute(object):
 
 	def dirsearch(self):
 		utils.print_good('Starting dirsearch')
-		cmd = '$PLUGINS_PATH/dirsearch/dirsearch.py -r --plain-text-report=$WORKSPACE/directory/$STRIP_TARGET-dirsearch.txt -u "$TARGET" -e php,asp,aspx,jsp,js -t 20 $MORE'
+		cmd = '$PLUGINS_PATH/dirsearch/dirsearch.py --plain-text-report=$WORKSPACE/directory/$STRIP_TARGET-dirsearch.txt -u "$TARGET" -e php,asp,aspx,jsp,js -t 20 $MORE'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
