@@ -99,7 +99,7 @@ def parsing_argument(args):
 			for target in targetlist:
 				args.target = target
 				single_target(args)
-				print('=' * 30)
+				print("{2}>++('> >++('{1}>{2} Target done: {0} {1}<{2}')++< <')++<".format(args.target, P, G))
 
 	else:
 		single_target(args)
@@ -117,6 +117,8 @@ def single_target(args):
 		options['target'] = args.target
 		options['env']['TARGET'] = args.target
 		options['env']['STRIP_TARGET'] = args.target.replace('https://','').replace('http://','')
+		if '/' in options['env']['STRIP_TARGET']:
+			options['env']['STRIP_TARGET'] = options['env']['STRIP_TARGET'].split('/')[0]
 
 		if args.workspace:
 			if args.workspace[-1] == '/':
@@ -198,13 +200,13 @@ portscan 	- Screenshot and Scanning service for list of domain
 git 		- Scanning for git repo
 burp 		- Scanning for burp state
 brute 		- Do brute force on service of target
-dirbrute 	- Do brute force on service of target
+dirb 		- Do brute force on service of target
 
 		''')
 	sys.exit(0)
 
 def update():
-	execute.run('git fetch --all && git reset --hard origin/master && ./install.sh')
+	execute.run1('git fetch --all && git reset --hard origin/master && ./install.sh')
 	sys.exit(0)
 
 def main():
