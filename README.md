@@ -14,56 +14,20 @@ chmod +x install.sh
 ```
 
 # How to use
-
-* Doing normal routine include: Subdomain Scanning, Subdomain TakeOver Scanning, Port Scanning and ScreenShot the target.
+If you have no idea what are you doing just type the command below or check out the [Advance Usage](https://github.com/j3ssie/Osmedeus/wiki/Advanced-Usage)
 ```
 ./osmedeus.py -t example.com
 ```
 
-* Scanning subdomain and Subdomain TakeOver
-```
-./osmedeus.py -m subdomain -t example.com
-```
-
-* Screenshot the list of domain and do Port Scan on it
-```
-./osmedeus.py -m portscan -t example.com
-```
-
-* Doing blind directory search on the target 
-```
-./osmedeus.py -m dirbrute -t example.com
-```
-
-
-* Doing brute force on the service result from scanning service
-```
-./osmedeus.py -m brute -t example.com
-```
-
-
-* Git repo scanning
-```
-./osmedeus.py -m git --git https://github.com/whatever/repo
-```
-
-* Doing some stuff with Burp State file
-```
-./osmedeus.py -m burp -t example.com --burp yourburpstate.xml
-```
-
-
-* List all module 
+List all module 
 ```
 ./osmedeus.py -M
 ```
 
-* Update 
+Update 
 ```
 ./osmedeus.py --update
 ```
-
-
 
 
 # Available modules with list tool being used
