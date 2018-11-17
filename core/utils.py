@@ -54,17 +54,17 @@ def not_empty_file(fpath):
 
 #checking the workspace and plugin path
 def initial_stuff(options):
-	utils.make_directory(options['env']['WORKSPACE'])
-	utils.make_directory(options['env']['WORKSPACE'] + '/subdomain')
-	utils.make_directory(options['env']['WORKSPACE'] + '/portscan')
-	utils.make_directory(options['env']['WORKSPACE'] + '/screenshot')
-	utils.make_directory(options['env']['WORKSPACE'] + '/screenshot/all')
+	make_directory(options['env']['WORKSPACE'])
+	make_directory(options['env']['WORKSPACE'] + '/subdomain')
+	make_directory(options['env']['WORKSPACE'] + '/portscan')
+	make_directory(options['env']['WORKSPACE'] + '/screenshot')
+	make_directory(options['env']['WORKSPACE'] + '/screenshot/all')
 
-	utils.make_directory(options['env']['WORKSPACE'] + '/gitscan/')
-	utils.make_directory(options['env']['WORKSPACE'] + '/bruteforce/')
-	utils.make_directory(options['env']['WORKSPACE'] + '/directory/')
-	utils.make_directory(options['env']['WORKSPACE'] + '/burpstate/')
-	utils.make_directory(options['env']['WORKSPACE'] + '/vulnscan/')
+	make_directory(options['env']['WORKSPACE'] + '/gitscan/')
+	make_directory(options['env']['WORKSPACE'] + '/bruteforce/')
+	make_directory(options['env']['WORKSPACE'] + '/directory/')
+	make_directory(options['env']['WORKSPACE'] + '/burpstate/')
+	make_directory(options['env']['WORKSPACE'] + '/vulnscan/')
 
 
 
