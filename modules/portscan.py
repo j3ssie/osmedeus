@@ -1,6 +1,7 @@
 import os, socket
 from core import execute
 from core import utils
+from . import vulnscan
 
 class PortScan(object):
 	"""docstring for PortScan"""
@@ -10,28 +11,16 @@ class PortScan(object):
 		self.initial()
 
 	def initial(self):
-		self.aquaton()
-		self.eyewitness_common()
 		self.create_ip_result()
 		self.masscan()
-		# self.eyewitness_all()
-		
 
-	def aquaton(self):
-		utils.print_good('Starting aquatone')
-		cmd ='cat $WORKSPACE/subdomain/final-$TARGET.txt | $GO_PATH/aquatone -out $WORKSPACE/portscan/aquatone-common/$OUTPUT'
-		cmd = utils.replace_argument(self.options, cmd)
-		utils.print_info("Execute: {0} ".format(cmd))
-		execute.run(cmd)
-
-
-	def eyewitness_common(self):
-		utils.print_good('Starting EyeWitness for web')
-		cmd = 'python $PLUGINS_PATH/EyeWitness/EyeWitness.py -f $WORKSPACE/subdomain/IP-$TARGET.txt --web --prepend-https --threads 20 -d $WORKSPACE/screenshot/'	
-		cmd = utils.replace_argument(self.options, cmd)
-		utils.print_info("Execute: {0} ".format(cmd))
-		execute.run(cmd)
-		print()
+		masscan_xml = utils.replace_argument(self.options, '$WORKSPACE/portscan/$OUTPUT-masscan.xml')
+		# checking output of masscan is empty or not because usually your bandwidth will not enough to scan large input 
+		if utils.not_empty_file(masscan_xml):
+			self.create_html()
+		else:
+			utils.print_bad('Masscan output empty')
+			vulnscan.VulnScan(self.options)
 
 	#just for the masscan
 	def create_ip_result(self):
@@ -42,6 +31,7 @@ class PortScan(object):
 		for domain in ds:
 			try:
 				ip = socket.gethostbyname(domain.strip())
+				print('.',end='')
 				cmd = 'echo {0} >> $WORKSPACE/subdomain/IP-$OUTPUT.txt'.format(ip)
 				cmd = utils.replace_argument(self.options, cmd)
 				execute.run(cmd)
@@ -51,15 +41,23 @@ class PortScan(object):
 		cmd = utils.replace_argument(self.options, cmd)
 		execute.run(cmd)
 
-
 	def masscan(self):
 		utils.print_good('Starting masscan')
 		cmd = 'sudo masscan --rate 10000 -p0-65535 -iL $WORKSPACE/subdomain/final-IP-$OUTPUT.txt -oG $WORKSPACE/portscan/$OUTPUT-masscan.gnmap -oX $WORKSPACE/portscan/$OUTPUT-masscan.xml --wait 0'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
-		print()
+		utils.check_output(self.options, '$WORKSPACE/portscan/$OUTPUT-masscan.xml')
 
+	def create_html(self):
+		utils.print_good('Create beautify HTML report')
+		cmd = 'xsltproc -o $WORKSPACE/portscan/$OUTPUT-html.html $PLUGINS_PATH/nmap-bootstrap.xsl $WORKSPACE/portscan/$OUTPUT-masscan.xml'
+		cmd = utils.replace_argument(self.options, cmd)
+		utils.print_info("Execute: {0} ".format(cmd))
+		execute.run(cmd)
+		utils.check_output(self.options, '$WORKSPACE/portscan/$OUTPUT-html.html')
+
+	#disable because this take really long time :(
 	def eyewitness_all(self):
 		utils.print_good('Starting EyeWitness for all protocol')
 		cmd = 'python $PLUGINS_PATH/EyeWitness/EyeWitness.py -x  $WORKSPACE/portscan/$OUTPUT-masscan.xml --web --all-protocols --prepend-https --threads 20 -d $WORKSPACE/screenshot/all/'	

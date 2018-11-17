@@ -32,6 +32,10 @@ def print_good(text):
 def print_bad(text):
 	print(bad + text)
 
+def check_output(options, raw_output):
+	output = replace_argument(options, raw_output)
+	print('{1}--==[ Check the output: {2}{0}'.format(output, G, P))
+
 
 def replace_argument(options, cmd):
 	for key,value in options['env'].items():
@@ -44,9 +48,23 @@ def make_directory(directory):
 		print_good('Make new workspace: {0}'.format(directory))
 		os.makedirs(directory)
 
-def somethinng():
-	pass
+def not_empty_file(fpath):  
+	return os.path.isfile(fpath) and os.path.getsize(fpath) > 0
 
+
+#checking the workspace and plugin path
+def initial_stuff(options):
+	utils.make_directory(options['env']['WORKSPACE'])
+	utils.make_directory(options['env']['WORKSPACE'] + '/subdomain')
+	utils.make_directory(options['env']['WORKSPACE'] + '/portscan')
+	utils.make_directory(options['env']['WORKSPACE'] + '/screenshot')
+	utils.make_directory(options['env']['WORKSPACE'] + '/screenshot/all')
+
+	utils.make_directory(options['env']['WORKSPACE'] + '/gitscan/')
+	utils.make_directory(options['env']['WORKSPACE'] + '/bruteforce/')
+	utils.make_directory(options['env']['WORKSPACE'] + '/directory/')
+	utils.make_directory(options['env']['WORKSPACE'] + '/burpstate/')
+	utils.make_directory(options['env']['WORKSPACE'] + '/vulnscan/')
 
 
 

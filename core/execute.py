@@ -1,5 +1,7 @@
 import sys, os
 import subprocess
+from core import utils
+
 
 def run1(command):
 	os.system(command)
@@ -13,7 +15,6 @@ def run(command):
 		# store output to log file
 		if nextline == '' and process.poll() is not None:
 			break
-		# sys.stdout.write(nextline)
 		print(nextline, end='')
 		sys.stdout.flush()
 
@@ -23,8 +24,8 @@ def run(command):
 	if (exitCode == 0):
 		return output
 	else:
-		print('[!] Something went wrong with the command below: ')
-		print(command, output)
+		utils.print_bad('Something went wrong with the command below: ')
+		print(command)
 
 def run_as_background(command):
 	process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

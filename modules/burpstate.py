@@ -5,7 +5,6 @@ from core import utils
 class BurpState(object):
 	"""docstring for PortScan"""
 	def __init__(self, options):
-		# super(subdomain, self).__init__()
 		self.options = options
 		self.initial()
 

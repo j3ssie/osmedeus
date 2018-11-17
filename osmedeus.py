@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os, sys, glob
 import argparse
+from pprint import pprint
 
 from core import execute
 from core import utils
@@ -9,11 +10,13 @@ from core import utils
 # import modules 
 from modules import subdomain
 from modules import takeover
+from modules import screenshot
 from modules import portscan
 from modules import gitscan
 from modules import burpstate
 from modules import brutethings
 from modules import dirbrute
+from modules import vulnscan
 
 # Console colors
 W = '\033[1;0m'   # white 
@@ -106,7 +109,6 @@ def parsing_argument(args):
 
 def single_target(args):
 	print('{2}---<---<--{1}@{2} Target: {0} {1}@{2}-->--->---'.format(args.target, P, G))
-
 	if args.target:
 		if args.output:
 			options['env']['OUTPUT'] = args.output
@@ -129,7 +131,7 @@ def single_target(args):
 			options['env']['WORKSPACE'] = current_path + '/workspaces/' + options['env']['STRIP_TARGET']
 
 		#create workspace folder for the target
-		initials_stuff(options)
+		utils.initial_stuff(options)
 
 	#run specific task otherwise run the normal routine
 	if args.module:
@@ -137,10 +139,15 @@ def single_target(args):
 		if 'subdomain' in module:
 			subdomain.SubdomainScanning(options)
 			takeover.TakeOverScanning(options)
+			screenshot.ScreenShot(options)
 
 		elif 'portscan' in module:
 			# scanning port, service and vuln with masscan and nmap
 			portscan.PortScan(options)
+
+		elif 'vuln' in module:
+			# scanning vulnerable service based on version
+			vulnscan.VulnScan(options)
 
 		elif 'git' in module:
 			gitscan.GitScan(options)
@@ -155,7 +162,6 @@ def single_target(args):
 		elif 'dir' in module:
 			# run blind directory brute force directly
 			dirbrute.DirBrute(options)
-			# pass
 
 	else:
 		routine(options)
@@ -169,27 +175,21 @@ def routine(options):
 	#Scanning for subdomain take over
 	takeover.TakeOverScanning(options)
 
-	#Scanning all port using result from subdomain scanning
+	#Screen shot the target on common service
+	screenshot.ScreenShot(options)
+
+	##### Note: From here the module gonna take really long time for scanning service and stuff like that
+	utils.print_info('This will take a while')
+
+	#Scanning all port using result from subdomain scanning and also checking vulnerable service based on version
 	portscan.PortScan(options)
+
+	#Starting vulnerable scan
+	vulnscan.VulnScan(options)
 
 	#Brute force service from port scan result
 	brutethings.BruteThings(options)
 
-	
-
-
-#checking the workspace and plugin path
-def initials_stuff(options):
-	utils.make_directory(options['env']['WORKSPACE'])
-	utils.make_directory(options['env']['WORKSPACE'] + '/subdomain')
-	utils.make_directory(options['env']['WORKSPACE'] + '/portscan')
-	utils.make_directory(options['env']['WORKSPACE'] + '/screenshot')
-	utils.make_directory(options['env']['WORKSPACE'] + '/screenshot/all')
-
-	utils.make_directory(options['env']['WORKSPACE'] + '/gitscan/')
-	utils.make_directory(options['env']['WORKSPACE'] + '/bruteforce/')
-	utils.make_directory(options['env']['WORKSPACE'] + '/directory/')
-	utils.make_directory(options['env']['WORKSPACE'] + '/burpstate/')
 
 def list_module():
 	print(''' 
@@ -197,10 +197,11 @@ List module
 ===========
 subdomain 	- Scanning subdomain and subdomain takerover
 portscan 	- Screenshot and Scanning service for list of domain
+brute 		- Do brute force on service of target
+vuln 		- Scanning version of services and checking vulnerable service
 git 		- Scanning for git repo
 burp 		- Scanning for burp state
-brute 		- Do brute force on service of target
-dirb 		- Do brute force on service of target
+dirb 		- Do directory search on the target
 
 		''')
 	sys.exit(0)

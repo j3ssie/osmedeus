@@ -5,7 +5,6 @@ from core import utils
 class SubdomainScanning(object):
 	"""docstring for subdomain"""
 	def __init__(self, options):
-		# super(subdomain, self).__init__()
 		utils.print_banner("Scanning Subdomain")
 		self.options = options
 		self.initial()
@@ -22,7 +21,7 @@ class SubdomainScanning(object):
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
-		print()
+		utils.check_output(self.options, '$WORKSPACE/subdomain/$OUTPUT-amass.txt')
 
 	def subfinder(self):
 		utils.print_good('Starting subfinder')
@@ -30,7 +29,7 @@ class SubdomainScanning(object):
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
-		print()
+		utils.check_output(self.options, '$WORKSPACE/subdomain/$OUTPUT-subfinder.txt')
 
 
 	def massdns(self):
@@ -39,7 +38,7 @@ class SubdomainScanning(object):
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
-		print()
+		utils.check_output(self.options, '$WORKSPACE/subdomain/$OUTPUT-massdns.txt')
 
 
 	def unique_result(self):
@@ -48,6 +47,8 @@ class SubdomainScanning(object):
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
+		utils.check_output(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
+		
 
 			
 

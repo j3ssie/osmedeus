@@ -5,18 +5,36 @@ CWD=$(pwd)
 WORKSPACE="$CWD/workspaces/"
 PLUGINS_PATH="$CWD/plugins/"
 
-echo -e "\033[1;32m[+] Downloading wordlists \033[1;37m"
+#some function
+install_banner()
+{
+  name=$1
+  echo -e "\033[1;32m[+] Installing $name \033[1;37m"
+}
+
+install_banner "wordlists"
 mkdir -p $PLUGINS_PATH/wordlists/
 [[ -f $PLUGINS_PATH/wordlists/all.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/all.txt https://gist.githubusercontent.com/jhaddix/86a06c5dc309d08580a018c66354a056/raw/96f4e51d96b2203f19f6381c8c545b278eaa0837/all.txt
 
 [[ -f $PLUGINS_PATH/wordlists/dir-all.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/dir-all.txt https://gist.githubusercontent.com/jhaddix/b80ea67d85c13206125806f0828f4d10/raw/c81a34fe84731430741e0463eb6076129c20c4c0/content_discovery_all.txt
 
+install_banner "vulners nse"
+# Install vulners nse script
+[[ -f /usr/share/nmap/scripts/vulners.nse ]] ||  wget -q -O /usr/share/nmap/scripts/vulners.nse https://raw.githubusercontent.com/vulnersCom/nmap-vulners/master/vulners.nse
+
+
+install_banner "nmap bootstrap"
+# Install nmap bootstrap
+[[ -f $PLUGINS_PATH/nmap-bootstrap.xsl ]] ||  wget -q -O $PLUGINS_PATH/nmap-bootstrap.xsl https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl
+
 
 ##
 chmod +x osmedeus.py
-echo -e "\033[1;32m[+] Installing Golang"
 
+install_banner "Golang"
 apt install golang -y
+
+###
 if ! (grep -Fxq "GOPATH" "$HOME/.bashrc" )
 then
 	echo 'export GOPATH=$HOME/go' >> ~/.bashrc
@@ -27,36 +45,34 @@ fi
 ##
 # Install go stuff
 ##
-echo -e "\033[1;32m[+] Installing amass \033[1;37m"
+install_banner "amass"
 go get -u github.com/OWASP/Amass/...
-echo -e "\033[1;32m[+] Installing subfinder \033[1;37m"
+install_banner "subfinder"
 go get github.com/subfinder/subfinder
-echo -e "\033[1;32m[+] Installing gobuster \033[1;37m"
+install_banner "gobuster"
 go get github.com/OJ/gobuster
-echo -e "\033[1;32m[+] Installing aquatone \033[1;37m"
+install_banner "aquatone"
 go get github.com/michenriksen/aquatone
-echo -e "\033[1;32m[+] Installing gitrob \033[1;37m"
+install_banner "gitrob"
 go get github.com/michenriksen/gitrob
-
-echo -e "\033[1;32m[+] Installing subjack \033[1;37m"
+install_banner "subjack"
 go get github.com/haccer/subjack
-
-echo -e "\033[1;32m[+] Installing gobuster \033[1;37m"
+install_banner "gobuster"
 go get github.com/OJ/gobuster
-# echo -e "\033[1;32m[+] Installing SubOver \033[1;37m"
-# go get github.com/haccer/subjack
 
 
-echo -e "\033[1;32m[+] Installing massdns \033[1;37m"
+install_banner "massdns"
 cd $PLUGINS_PATH
 git clone https://github.com/blechschmidt/massdns
 cd massdns
 make
 
 
+
 ##
 # Install python stuff
 ##
+install_banner "brutespray"
 cd $PLUGINS_PATH
 git clone https://github.com/x90skysn3k/brutespray
 cd brutespray
@@ -65,45 +81,45 @@ cd $CWD
 
 
 
-echo -e "\033[1;32m[+] Installing truffleHog \033[1;37m"
+install_banner "truffleHog"
 pip install truffleHog
 
 
-echo -e "\033[1;32m[+] Installing EyeWitness \033[1;37m"
+install_banner "EyeWitness"
 cd $PLUGINS_PATH
 git clone https://github.com/FortyNorthSecurity/EyeWitness
 cd EyeWitness
 bash setup/setup.sh
 
 
-echo -e "\033[1;32m[+] Installing LinkFinder \033[1;37m"
+install_banner "LinkFinder"
 cd $PLUGINS_PATH
 git clone https://github.com/GerbenJavado/LinkFinder.git
 cd LinkFinder
 python setup.py install
 
 cd $PLUGINS_PATH
-echo -e "\033[1;32m[+] Installing Sqlmap \033[1;37m"
+install_banner "sqlmap"
 git clone https://github.com/sqlmapproject/sqlmap
 
 
-echo -e "\033[1;32m[+] Installing SleuthQL \033[1;37m"
+install_banner "SleuthQL"
 git clone https://github.com/RhinoSecurityLabs/SleuthQL
 pip install bs4
 cd $CWD
 
 cd $PLUGINS_PATH
-echo -e "\033[1;32m[+] Installing dirsearch \033[1;37m"
+install_banner "dirsearch"
 git clone https://github.com/maurosoria/dirsearch
 
-echo -e "\033[1;32m[+] Installing dirhunt \033[1;37m"
+install_banner "dirhunt"
 git clone https://github.com/Nekmo/dirhunt
 cd dirhunt
 python3 setup.py install
 cd $CWD
 
 
-echo -e "\033[1;32m[+] Installing JSParser \033[1;37m"
+install_banner "JSParser"
 cd $PLUGINS_PATH
 git clone https://github.com/nahamsec/JSParser
 cd JSParser/

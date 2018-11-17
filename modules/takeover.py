@@ -4,13 +4,13 @@ from core import utils
 
 class TakeOverScanning(object):
 	def __init__(self, options):
-		utils.print_banner("Scanning for Subdomain Take Over")
+		utils.print_banner("Scanning for Subdomain TakeOver")
 		self.options = options
 		self.initial()
 
 	def initial(self):
-		# self.subover()
 		self.subjack()
+		# self.subover()
 
 	def subover(self):
 		utils.print_good('Starting SubOver')
@@ -18,7 +18,8 @@ class TakeOverScanning(object):
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
-		print()
+		utils.check_output(self.options, '$WORKSPACE/subdomain/takeover-$TARGET-subover.txt')
+
 
 	def subjack(self):
 		utils.print_good('Starting subjack')
@@ -26,4 +27,4 @@ class TakeOverScanning(object):
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
-		print()
+		utils.check_output(self.options, '$WORKSPACE/subdomain/takeover-$TARGET-subjack.txt')

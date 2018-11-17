@@ -12,7 +12,7 @@ class GitScan(object):
 
 	def initial(self):
 		self.truffleHog()
-		self.gitrob()
+		# self.gitrob()
 
 	def truffleHog(self):
 		utils.print_good('Starting truffleHog')
@@ -20,6 +20,7 @@ class GitScan(object):
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
+		utils.check_output(self.options, '$WORKSPACE/gitscan/$TARGET-trufflehog.txt')
 
 	def gitrob(self):
 		utils.print_good('Starting gitrob')
