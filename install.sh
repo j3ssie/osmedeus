@@ -48,17 +48,17 @@ fi
 install_banner "amass"
 go get -u github.com/OWASP/Amass/...
 install_banner "subfinder"
-go get github.com/subfinder/subfinder
+go get -u github.com/subfinder/subfinder
 install_banner "gobuster"
-go get github.com/OJ/gobuster
+go get -u github.com/OJ/gobuster
 install_banner "aquatone"
-go get github.com/michenriksen/aquatone
+go get -u github.com/michenriksen/aquatone
 install_banner "gitrob"
-go get github.com/michenriksen/gitrob
+go get -u github.com/michenriksen/gitrob
 install_banner "subjack"
-go get github.com/haccer/subjack
+go get -u github.com/haccer/subjack
 install_banner "gobuster"
-go get github.com/OJ/gobuster
+go get -u github.com/OJ/gobuster
 
 
 install_banner "massdns"
