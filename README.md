@@ -11,7 +11,7 @@ git clone https://github.com/j3ssie/Osmedeus
 cd Osmedeus
 ./install.sh
 ```
-This install only forcus on Kali linux, check more install on [Wiki page](https://github.com/j3ssie/Osmedeus/wiki)
+This install only focus on Kali linux, check more install on [Wiki page](https://github.com/j3ssie/Osmedeus/wiki)
 
 
 # How to use

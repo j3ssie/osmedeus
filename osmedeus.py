@@ -50,7 +50,7 @@ SPECIAL_ARGUMENT = {
 
 	'PLUGINS_PATH' : current_path + '/plugins',
 	'GO_PATH' : '~/go/bin',
-	'DIRECTORY_FULL' : '',
+	'DIRECTORY_FULL' : current_path + '/plugins/wordlists/dir-all.txt',
 	'DOMAIN_FULL' : current_path + '/plugins/wordlists/all.txt',
 	'DEFAULT_WORDLIST' : '',
 
@@ -139,6 +139,9 @@ def single_target(args):
 		if 'subdomain' in module:
 			subdomain.SubdomainScanning(options)
 			takeover.TakeOverScanning(options)
+			screenshot.ScreenShot(options)
+
+		elif 'screenshot' in module:
 			screenshot.ScreenShot(options)
 
 		elif 'portscan' in module:

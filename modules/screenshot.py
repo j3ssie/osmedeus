@@ -15,11 +15,11 @@ class ScreenShot(object):
 
 	def aquaton(self):
 		utils.print_good('Starting aquatone')
-		cmd ='cat $WORKSPACE/subdomain/final-$TARGET.txt | $GO_PATH/aquatone -threads 20 -out $WORKSPACE/portscan/aquatone-common/$OUTPUT'
+		cmd ='cat $WORKSPACE/subdomain/final-$TARGET.txt | $GO_PATH/aquatone -threads 20 -out $WORKSPACE/subdomain/$OUTPUT-aquatone.html'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
-		utils.check_output(self.options, '$WORKSPACE/portscan/aquatone-common/$OUTPUT')
+		utils.check_output(self.options, '$WORKSPACE/subdomain/$OUTPUT-aquatone.html')
 
 	def eyewitness_common(self):
 		utils.print_good('Starting EyeWitness for web')
