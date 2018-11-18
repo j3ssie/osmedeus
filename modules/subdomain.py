@@ -12,7 +12,8 @@ class SubdomainScanning(object):
 	def initial(self):
 		self.amass()
 		self.subfinder()
-		self.massdns()
+		self.gobuster()
+		# self.massdns()
 		self.unique_result()
 
 	def amass(self):
@@ -30,6 +31,14 @@ class SubdomainScanning(object):
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
 		utils.check_output(self.options, '$WORKSPACE/subdomain/$OUTPUT-subfinder.txt')
+
+	def gobuster(self):
+		utils.print_good('Starting gobuster')
+		cmd = '$GO_PATH/gobuster -m dns -np -t 100 -w $PLUGINS_PATH/wordlists/all.txt -u $TARGET -o $WORKSPACE/directory/$OUTPUT-gobuster.txt'
+		cmd = utils.replace_argument(self.options, cmd)
+		utils.print_info("Execute: {0} ".format(cmd))
+		execute.run(cmd)
+		utils.check_output(self.options, '$WORKSPACE/directory/$OUTPUT-gobuster.txt')
 
 
 	def massdns(self):
