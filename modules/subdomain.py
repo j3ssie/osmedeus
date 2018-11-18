@@ -26,7 +26,7 @@ class SubdomainScanning(object):
 
 	def subfinder(self):
 		utils.print_good('Starting subfinder')
-		cmd = '$GO_PATH/subfinder -d $TARGET -b -t 100 -o $WORKSPACE/subdomain/$OUTPUT-subfinder.txt'
+		cmd = '$GO_PATH/subfinder -d $TARGET -t 100 -o $WORKSPACE/subdomain/$OUTPUT-subfinder.txt'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
