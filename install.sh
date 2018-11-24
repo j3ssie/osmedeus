@@ -4,6 +4,8 @@
 CWD=$(pwd)
 WORKSPACE="$CWD/workspaces/"
 PLUGINS_PATH="$CWD/plugins/"
+DEFAULT_SHELL="$HOME/.bashrc"
+
 
 #some function
 install_banner()
@@ -11,6 +13,11 @@ install_banner()
   name=$1
   echo -e "\033[1;32m[+] Installing $name \033[1;37m"
 }
+
+install_banner "git, nmap, masscan"
+[ -x "$(command -v git)" ] || apt-get install git -y
+[ -x "$(command -v nmap)" ] || apt-get install nmap -y
+[ -x "$(command -v masscan)" ] || apt-get install masscan -y
 
 install_banner "wordlists"
 mkdir -p $PLUGINS_PATH/wordlists/
@@ -34,12 +41,12 @@ chmod +x osmedeus.py
 install_banner "Golang"
 apt install golang -y
 
-###
-if ! (grep -Fxq "GOPATH" "$HOME/.bashrc" )
+### adding gopath
+if ! (grep -Fxq "GOPATH" "$DEFAULT_SHELL" )
 then
-	echo 'export GOPATH=$HOME/go' >> ~/.bashrc
-	echo 'PATH=$GOPATH/bin:$PATH' >> ~/.bashrc
-	source ~/.bashrc
+	echo 'export GOPATH=$HOME/go' >> $DEFAULT_SHELL
+	echo 'PATH=$GOPATH/bin:$PATH' >> $DEFAULT_SHELL
+	source $DEFAULT_SHELL
 fi
 
 ##

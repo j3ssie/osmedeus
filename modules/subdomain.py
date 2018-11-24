@@ -41,10 +41,10 @@ class SubdomainScanning(object):
 		utils.check_output(self.options, '$WORKSPACE/directory/$OUTPUT-gobuster.txt')
 
 
+	#don't use massdns if you use this tool via ssh cause these gonna maake you lose connection
 	def massdns(self):
 		utils.print_good('Starting massdns')
 		cmd = '$PLUGINS_PATH/massdns/scripts/subbrute.py $DOMAIN_FULL $TARGET | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o Sm -w $WORKSPACE/subdomain/raw-massdns.txt'
-		# cmd = '$PLUGINS_PATH/massdns/scripts/subbrute.py $PLUGINS_PATH/massdns/lists/names.txt $TARGET | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -t A -o S -w $WORKSPACE/subdomain/$OUTPUT-massdns.txt'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)

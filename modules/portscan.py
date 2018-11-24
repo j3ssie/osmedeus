@@ -25,21 +25,11 @@ class PortScan(object):
 	#just for the masscan
 	def create_ip_result(self):
 		utils.print_good('Create IP for list of domain result')
-		domains = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
-		with open(domains, 'r+') as d:
-			ds = d.read().splitlines()
-		for domain in ds:
-			try:
-				ip = socket.gethostbyname(domain.strip())
-				print('.',end='')
-				cmd = 'echo {0} >> $WORKSPACE/subdomain/IP-$OUTPUT.txt'.format(ip)
-				cmd = utils.replace_argument(self.options, cmd)
-				execute.run(cmd)
-			except:
-				pass
-		cmd = 'cat $WORKSPACE/subdomain/IP-$OUTPUT.txt | sort | uniq > $WORKSPACE/subdomain/final-IP-$OUTPUT.txt'
+		cmd = '$PLUGINS_PATH/massdns/scripts/ptr.py | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t PTR -w $WORKSPACE/subdomain/final-IP-$OUTPUT.txt'
 		cmd = utils.replace_argument(self.options, cmd)
 		execute.run(cmd)
+		utils.check_output(self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
+
 
 	def masscan(self):
 		utils.print_good('Starting masscan')
@@ -57,7 +47,7 @@ class PortScan(object):
 		execute.run(cmd)
 		utils.check_output(self.options, '$WORKSPACE/portscan/$OUTPUT-html.html')
 
-	#disable because this take really long time :(
+	#disable because this take really long time :v
 	def eyewitness_all(self):
 		utils.print_good('Starting EyeWitness for all protocol')
 		cmd = 'python $PLUGINS_PATH/EyeWitness/EyeWitness.py -x  $WORKSPACE/portscan/$OUTPUT-masscan.xml --web --all-protocols --prepend-https --threads 20 -d $WORKSPACE/screenshot/all/'	
