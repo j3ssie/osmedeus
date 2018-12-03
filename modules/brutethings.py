@@ -5,6 +5,7 @@ from core import utils
 class BruteThings(object):
 	"""docstring for BruteThings"""
 	def __init__(self, options):
+		utils.make_directory(options['env']['WORKSPACE'] + '/bruteforce/')
 		self.options = options
 		self.routine()
 

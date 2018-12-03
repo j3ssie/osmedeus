@@ -14,10 +14,11 @@ install_banner()
   echo -e "\033[1;32m[+] Installing $name \033[1;37m"
 }
 
-install_banner "git, nmap, masscan"
+install_banner "git, nmap, masscan, chromium"
 [ -x "$(command -v git)" ] || apt-get install git -y
 [ -x "$(command -v nmap)" ] || apt-get install nmap -y
 [ -x "$(command -v masscan)" ] || apt-get install masscan -y
+[ -x "$(command -v chromium)" ] || apt-get install chromium -y
 
 install_banner "wordlists"
 mkdir -p $PLUGINS_PATH/wordlists/

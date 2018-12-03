@@ -7,6 +7,7 @@ class PortScan(object):
 	"""docstring for PortScan"""
 	def __init__(self, options):
 		utils.print_banner("Services Scanning")
+		utils.make_directory(options['env']['WORKSPACE'] + '/portscan')
 		self.options = options
 		self.initial()
 

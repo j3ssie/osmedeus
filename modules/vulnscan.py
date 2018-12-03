@@ -7,6 +7,7 @@ class VulnScan(object):
 	''' Scanning vulnerable service based version '''
 	def __init__(self, options):
 		utils.print_banner("Vulnerable Scanning")
+		utils.make_directory(options['env']['WORKSPACE'] + '/vulnscan/')
 		self.options = options
 		self.initial()
 

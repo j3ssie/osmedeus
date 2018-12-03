@@ -5,6 +5,8 @@ from core import utils
 class DirBrute(object):
 	"""docstring for BruteThings"""
 	def __init__(self, options):
+		utils.print_banner("Scanning Directory")
+		utils.make_directory(options['env']['WORKSPACE'] + '/directory/')
 		self.options = options
 		self.initial()
 

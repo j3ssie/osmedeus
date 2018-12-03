@@ -131,7 +131,9 @@ def single_target(args):
 			options['env']['WORKSPACE'] = current_path + '/workspaces/' + options['env']['STRIP_TARGET']
 
 		#create workspace folder for the target
-		utils.initial_stuff(options)
+		make_directory(options['env']['WORKSPACE'])
+
+		# utils.initial_stuff(options)
 
 	#run specific task otherwise run the normal routine
 	if args.module:
@@ -182,7 +184,7 @@ def routine(options):
 	screenshot.ScreenShot(options)
 
 	##### Note: From here the module gonna take really long time for scanning service and stuff like that
-	utils.print_info('This will take a while')
+	utils.print_info('This gonna take a while')
 
 	#Scanning all port using result from subdomain scanning and also checking vulnerable service based on version
 	portscan.PortScan(options)
@@ -227,6 +229,8 @@ def main():
 
 	parser.add_argument('-M', '--list_module', action='store_true', help='List all module')
 	parser.add_argument('-v', '--verbose', action='store_true', help='show verbose output')
+	parser.add_argument('-f', '--force', action='store_true', help='force to run the module again if output exists')
+	parser.add_argument('--mode', action='store_true', help='Choose mode to run normal routine(quick or slow)', default='quick')
 	parser.add_argument('--update', action='store_true', help='update lastest from git')
 
 	args = parser.parse_args()

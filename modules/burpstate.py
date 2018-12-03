@@ -5,6 +5,8 @@ from core import utils
 class BurpState(object):
 	"""docstring for PortScan"""
 	def __init__(self, options):
+		utils.print_banner("Scanning through BurpState")
+		utils.make_directory(options['env']['WORKSPACE'] + '/burpstate/')
 		self.options = options
 		self.initial()
 

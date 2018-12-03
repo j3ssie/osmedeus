@@ -6,8 +6,17 @@ class SubdomainScanning(object):
 	"""docstring for subdomain"""
 	def __init__(self, options):
 		utils.print_banner("Scanning Subdomain")
+		utils.make_directory(options['env']['WORKSPACE'] + '/subdomain')
 		self.options = options
 		self.initial()
+
+		#check if the screenshot success or not, if not run it again
+		while True:
+			if os.stat(utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')).st_size == 0:
+				utils.print_bad('Something wrong with these module ... run it again')
+				self.initial()
+			else:
+				break
 
 	def initial(self):
 		self.amass()
@@ -15,6 +24,8 @@ class SubdomainScanning(object):
 		self.gobuster()
 		# self.massdns()
 		self.unique_result()
+
+
 
 	def amass(self):
 		utils.print_good('Starting amass')
@@ -41,7 +52,7 @@ class SubdomainScanning(object):
 		utils.check_output(self.options, '$WORKSPACE/directory/$OUTPUT-gobuster.txt')
 
 
-	#don't use massdns if you use this tool via ssh cause these gonna maake you lose connection
+	#don't use massdns if you use this tool via ssh cause these gonna make you lose connection
 	def massdns(self):
 		utils.print_good('Starting massdns')
 		cmd = '$PLUGINS_PATH/massdns/scripts/subbrute.py $DOMAIN_FULL $TARGET | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o Sm -w $WORKSPACE/subdomain/raw-massdns.txt'
