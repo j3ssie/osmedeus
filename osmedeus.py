@@ -131,7 +131,7 @@ def single_target(args):
 			options['env']['WORKSPACE'] = current_path + '/workspaces/' + options['env']['STRIP_TARGET']
 
 		#create workspace folder for the target
-		make_directory(options['env']['WORKSPACE'])
+		utils.make_directory(options['env']['WORKSPACE'])
 
 		# utils.initial_stuff(options)
 
