@@ -42,7 +42,7 @@ Update
   * [SubOver](https://github.com/Ice3man543/SubOver)
 
 * Screenshot the target
-  * [aquaton](https://github.com/michenriksen/aquatone)
+  * [aquatone](https://github.com/michenriksen/aquatone)
   * [EyeWitness](https://github.com/FortyNorthSecurity/EyeWitness)
 
 * Port Scanning
