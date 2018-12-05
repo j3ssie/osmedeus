@@ -7,6 +7,7 @@ class SubdomainScanning(object):
 	def __init__(self, options):
 		utils.print_banner("Scanning Subdomain")
 		utils.make_directory(options['env']['WORKSPACE'] + '/subdomain')
+		utils.make_directory(options['env']['WORKSPACE'] + '/directory')
 		self.options = options
 		self.initial()
 
