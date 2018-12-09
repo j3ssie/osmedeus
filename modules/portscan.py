@@ -26,7 +26,11 @@ class PortScan(object):
 	#just for the masscan
 	def create_ip_result(self):
 		utils.print_good('Create IP for list of domain result')
-		cmd = '$PLUGINS_PATH/massdns/scripts/ptr.py | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t PTR -w $WORKSPACE/subdomain/final-IP-$OUTPUT.txt'
+		cmd = '$PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -t A -o S -w $WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt $WORKSPACE/subdomain/final-$OUTPUT.txt'
+		cmd = utils.replace_argument(self.options, cmd)
+		execute.run(cmd)
+
+		cmd = '''cat $WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt | grep -e ' A ' |  cut -d 'A' -f 2 | tr -d ' ' > $WORKSPACE/subdomain/final-IP-$OUTPUT.txt'''
 		cmd = utils.replace_argument(self.options, cmd)
 		execute.run(cmd)
 		utils.check_output(self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')

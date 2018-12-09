@@ -10,7 +10,7 @@ class SubdomainScanning(object):
 		self.options = options
 		self.initial()
 
-		#check if the screenshot success or not, if not run it again
+		#check if the module success or not, if not run it again
 		while True:
 			if os.stat(utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')).st_size == 0:
 				utils.print_bad('Something wrong with these module ... run it again')
@@ -45,11 +45,11 @@ class SubdomainScanning(object):
 
 	def gobuster(self):
 		utils.print_good('Starting gobuster')
-		cmd = '$GO_PATH/gobuster -m dns -np -t 100 -w $PLUGINS_PATH/wordlists/all.txt -u $TARGET -o $WORKSPACE/directory/$OUTPUT-gobuster.txt'
+		cmd = '$GO_PATH/gobuster -m dns -np -t 100 -w $PLUGINS_PATH/wordlists/all.txt -u $TARGET -o $WORKSPACE/subdomain/$OUTPUT-gobuster.txt'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
-		utils.check_output(self.options, '$WORKSPACE/directory/$OUTPUT-gobuster.txt')
+		utils.check_output(self.options, '$WORKSPACE/subdomain/$OUTPUT-gobuster.txt')
 
 
 	#don't use massdns if you use this tool via ssh cause these gonna make you lose connection
