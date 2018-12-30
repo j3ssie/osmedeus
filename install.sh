@@ -126,6 +126,10 @@ cd dirhunt
 python3 setup.py install
 cd $CWD
 
+install_banner "CORStest"
+cd $PLUGINS_PATH
+git clone https://github.com/RUB-NDS/CORStest
+
 
 install_banner "JSParser"
 cd $PLUGINS_PATH
