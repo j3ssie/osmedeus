@@ -13,7 +13,7 @@ class GitScan(object):
 
 	def initial(self):
 		self.truffleHog()
-		# self.gitrob()
+		self.gitrob()
 
 	def truffleHog(self):
 		utils.print_good('Starting truffleHog')
@@ -25,7 +25,9 @@ class GitScan(object):
 
 	def gitrob(self):
 		utils.print_good('Starting gitrob')
-		cmd = '$GO_PATH/gitrob -github-access-token $GITHUB_API_KEY $TARGET | tee $WORKSPACE/gitscan/$TARGET-gitrob.txt'
+		really_target = utils.replace_argument(self.options, '$TARGET').split('/')[3] # only get organization name
+
+		cmd = '$GO_PATH/gitrob -save $WORKSPACE/gitscan/$TARGET-gitrob -threads 10 -github-access-token $GITHUB_API_KEY {0}'.format(really_target)
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
 		execute.run(cmd)
