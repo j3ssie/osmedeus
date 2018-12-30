@@ -17,6 +17,7 @@ from modules import burpstate
 from modules import brutethings
 from modules import dirbrute
 from modules import vulnscan
+from modules import cors
 
 # Console colors
 W = '\033[1;0m'   # white 
@@ -54,7 +55,7 @@ SPECIAL_ARGUMENT = {
 	'DOMAIN_FULL' : current_path + '/plugins/wordlists/all.txt',
 	'DEFAULT_WORDLIST' : '',
 
-	'GITHUB_API_KEY' : 'db683e65d46c0dc1ba29a5e275c511685b49e17d', # this isn't work api :D 
+	'GITHUB_API_KEY' : 'abc123poi456', # this isn't work api :D 
 	'MORE' : '',
 	'CWD' : os.path.dirname(os.path.realpath(__file__)),
 }
@@ -142,6 +143,8 @@ def single_target(args):
 			subdomain.SubdomainScanning(options)
 			takeover.TakeOverScanning(options)
 			screenshot.ScreenShot(options)
+			cors.CorsScan(options)
+
 
 		elif 'screenshot' in module:
 			screenshot.ScreenShot(options)
@@ -182,6 +185,9 @@ def routine(options):
 
 	#Screen shot the target on common service
 	screenshot.ScreenShot(options)
+
+	#Scanning for CorsScan
+	cors.CorsScan(options)
 
 	##### Note: From here the module gonna take really long time for scanning service and stuff like that
 	utils.print_info('This gonna take a while')
