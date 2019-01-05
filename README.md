@@ -3,32 +3,67 @@ Osmedeus
 Automatic Reconnaisance and Scanning in Penetration Testing
 
 # What is Osmedeus?
-Osmedeus allow you to do boring stuff in Pentesting automatically like reconnaissance and scanning the target by run the collection of awesome tools.
+Osmedeus allow you to doing boring stuff in Pentesting automatically like reconnaissance and scanning the target by run the collection of awesome tools.
 
 # Installation
 ```
 git clone https://github.com/j3ssie/Osmedeus
 cd Osmedeus
+chmod +x install.sh
 ./install.sh
 ```
-This install only focus on Kali linux, check more install on [Wiki page](https://github.com/j3ssie/Osmedeus/wiki)
-
 
 # How to use
-If you have no idea what are you doing just type the command below or check out the [Advance Usage](https://github.com/j3ssie/Osmedeus/wiki/Advanced-Usage)
+
+* Doing normal routine include: Subdomain Scanning, Subdomain TakeOver Scanning, Port Scanning and ScreenShot the target.
 ```
 ./osmedeus.py -t example.com
 ```
 
-List all module 
+* Scanning subdomain and Subdomain TakeOver
+```
+./osmedeus.py -m subdomain -t example.com
+```
+
+* Screenshot the list of domain and do Port Scan on it
+```
+./osmedeus.py -m portscan -t example.com
+```
+
+* Doing blind directory search on the target 
+```
+./osmedeus.py -m dirbrute -t example.com
+```
+
+
+* Doing brute force on the service result from scanning service
+```
+./osmedeus.py -m brute -t example.com
+```
+
+
+* Git repo scanning
+```
+./osmedeus.py -m git --git https://github.com/whatever/repo
+```
+
+* Doing some stuff with Burp State file
+```
+./osmedeus.py -m burp -t example.com --burp yourburpstate.xml
+```
+
+
+* List all module 
 ```
 ./osmedeus.py -M
 ```
 
-Update 
+* Update 
 ```
 ./osmedeus.py --update
 ```
+
+
 
 
 # Available modules with list tool being used
@@ -41,17 +76,13 @@ Update
   * [subjack](https://github.com/haccer/subjack)
   * [SubOver](https://github.com/Ice3man543/SubOver)
 
-* Screenshot the target
+* IP Discovery
+  * [IPOsint](https://github.com/j3ssie/IPOsint)
+
+* Port Scanning and ScreenShot the target
   * [aquaton](https://github.com/michenriksen/aquatone)
   * [EyeWitness](https://github.com/FortyNorthSecurity/EyeWitness)
-
-* Port Scanning
   * [masscan](https://github.com/robertdavidgraham/masscan)
-  * [nmap](https://github.com/nmap/nmap)
-
-* Vulnerable Scan and beautify html report
-  * [nmap-vulners](https://github.com/vulnersCom/nmap-vulners)
-  * [nmap-bootstrap-xsl](https://github.com/honze-net/nmap-bootstrap-xsl/)
 
 * Git repo scanning
   * [truffleHog](https://github.com/dxa4481/truffleHog)

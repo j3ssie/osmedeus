@@ -137,6 +137,12 @@ git clone https://github.com/nahamsec/JSParser
 cd JSParser/
 python setup.py install
 
+install_banner "IPOsint"
+cd $PLUGINS_PATH
+git clone https://github.com/j3ssie/IPOsint
+pip3 install -r requirement.txt
+cd $CWD
+
 
 
 

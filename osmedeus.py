@@ -18,6 +18,7 @@ from modules import brutethings
 from modules import dirbrute
 from modules import vulnscan
 from modules import cors
+from modules import ipspace
 
 # Console colors
 W = '\033[1;0m'   # white 
@@ -167,6 +168,11 @@ def single_target(args):
 			# running brute force things based on scanning result
 			brutethings.BruteThings(options)
 
+		elif 'ip' in module:
+			#Discovery IP space
+			ipspace.IPSpace(options)
+
+
 		elif 'dir' in module:
 			# run blind directory brute force directly
 			dirbrute.DirBrute(options)
@@ -188,6 +194,9 @@ def routine(options):
 
 	#Scanning for CorsScan
 	cors.CorsScan(options)
+
+	#Discovery IP space
+	ipspace.IPSpace(options)
 
 	##### Note: From here the module gonna take really long time for scanning service and stuff like that
 	utils.print_info('This gonna take a while')
