@@ -34,7 +34,6 @@ class ScreenShot(object):
 
 	def eyewitness_common(self):
 		utils.print_good('Starting EyeWitness for web')
-		utils.make_directory(utils.replace_argument(self.options, '$WORKSPACE/screenshot/eyewitness-$TARGET'))
 		cmd = 'python $PLUGINS_PATH/EyeWitness/EyeWitness.py -f $WORKSPACE/subdomain/final-$TARGET.txt --web --prepend-https --threads 20 -d $WORKSPACE/screenshot/eyewitness-$TARGET/'	
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
