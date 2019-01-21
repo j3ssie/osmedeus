@@ -21,7 +21,8 @@ class ScreenShot(object):
 
 	def initial(self):
 		self.aquaton()
-		self.eyewitness_common()
+		# really slow the flow so disable for now
+		# self.eyewitness_common()
 
 	def aquaton(self):
 		utils.print_good('Starting aquatone')

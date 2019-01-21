@@ -15,7 +15,7 @@ class CorsScan(object):
 		self.corstest()
 
 	def corstest(self):
-		utils.print_good('Starting truffleHog')
+		utils.print_good('Starting CORS')
 		cmd = '$PLUGINS_PATH/CORStest/corstest.py -q $WORKSPACE/subdomain/final-$OUTPUT.txt | tee $WORKSPACE/cors/$TARGET-corstest.txt'
 		cmd = utils.replace_argument(self.options, cmd)
 		utils.print_info("Execute: {0} ".format(cmd))
