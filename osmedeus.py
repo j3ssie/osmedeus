@@ -194,7 +194,7 @@ def single_target(args):
 
 #runnning normal routine if none of module specific
 def routine(options):
-    utils.print_good("Running with {0}".format(options['speed']))
+    utils.print_good("Running with {0} speed".format(options['speed']))
 
     #Finding subdomain
     subdomain.SubdomainScanning(options)
