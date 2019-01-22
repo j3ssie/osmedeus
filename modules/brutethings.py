@@ -7,7 +7,12 @@ class BruteThings(object):
 	def __init__(self, options):
 		utils.make_directory(options['env']['WORKSPACE'] + '/bruteforce/')
 		self.options = options
-		self.routine()
+		
+		if self.options['speed'] == 'slow':
+			self.routine()
+		elif self.options['speed'] == 'quick':
+			utils.print_good("Skipping for quick speed")
+
 
 	# if previous module not done this module gonna run in another routine
 	def routine(self):

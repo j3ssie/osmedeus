@@ -12,7 +12,10 @@ class CorsScan(object):
 
 
 	def initial(self):
-		self.corstest()
+		if self.options['speed'] == 'slow':
+			self.corstest()
+		elif self.options['speed'] == 'quick':
+			utils.print_good("Skipping for quick speed")
 
 	def corstest(self):
 		utils.print_good('Starting CORS')

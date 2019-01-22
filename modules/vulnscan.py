@@ -1,7 +1,6 @@
 import os
 from core import execute
 from core import utils
-from . import gitscan
 
 class VulnScan(object):
 	''' Scanning vulnerable service based version '''

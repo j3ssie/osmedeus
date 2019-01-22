@@ -19,6 +19,7 @@ from modules import dirbrute
 from modules import vulnscan
 from modules import cors
 from modules import ipspace
+from modules import sslscan
 
 # Console colors
 W = '\033[1;0m'   # white 
@@ -46,6 +47,7 @@ current_path = os.path.dirname(os.path.realpath(__file__))
 SPECIAL_ARGUMENT = {
 	'TARGET' : 'example.com',
 	'STRIP_TARGET' : 'example.com',
+	'IP' : '1.2.3.4',
 	'BURPSTATE' : '',
 	'OUTPUT' : 'out.txt',
 	'WORKSPACE' : current_path + '/workspaces',
@@ -66,6 +68,7 @@ options = {
 	'target' : '',
 	'targetlist' : '',
 	'env' : SPECIAL_ARGUMENT,
+	'speed' : 'quick',
 }
 
 
@@ -93,6 +96,13 @@ def parsing_argument(args):
 
 	if args.more:
 		options['env']['MORE'] = args.more
+
+	#choose speed to run this, default is quick
+	if args.quick:
+		options['speed'] = 'quick'
+	if args.slow:
+		options['speed'] = 'slow'
+
 
 	if args.targetlist:
 		options['targetlist'] = args.targetlist
@@ -135,7 +145,8 @@ def single_target(args):
 		#create workspace folder for the target
 		utils.make_directory(options['env']['WORKSPACE'])
 
-		# utils.initial_stuff(options)
+        options['env']['IP'] = socket.gethostbyname(options['env']['TARGET'])
+
 
 	#run specific task otherwise run the normal routine
 	if args.module:
@@ -183,6 +194,8 @@ def single_target(args):
 
 #runnning normal routine if none of module specific
 def routine(options):
+	utils.print_good("Running with {0}".format(options['speed']))
+
 	#Finding subdomain
 	subdomain.SubdomainScanning(options)
 
@@ -197,6 +210,9 @@ def routine(options):
 
 	#Discovery IP space
 	ipspace.IPSpace(options)
+
+	#SSL Scan
+	sslscan.SSLScan(options)
 
 	##### Note: From here the module gonna take really long time for scanning service and stuff like that
 	utils.print_info('This gonna take a while')
@@ -245,12 +261,14 @@ def main():
 	parser.add_argument('-M', '--list_module', action='store_true', help='List all module')
 	parser.add_argument('-v', '--verbose', action='store_true', help='show verbose output')
 	parser.add_argument('-f', '--force', action='store_true', help='force to run the module again if output exists')
+	parser.add_argument('-q', '--quick', action='store_true', help='run this tool with quick routine', default=True)
+	parser.add_argument('-s', '--slow', action='store_true', help='run this tool with slow routine', default=False)
 	parser.add_argument('--mode', action='store_true', help='Choose mode to run normal routine(quick or slow)', default='quick')
 	parser.add_argument('--update', action='store_true', help='update lastest from git')
 
 	args = parser.parse_args()
 	if len(sys.argv) == 1:
-		# help_message()
+		# list_module()
 		sys.exit(0)
 
 	if args.list_module:
