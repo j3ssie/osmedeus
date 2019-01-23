@@ -36,6 +36,8 @@ Update
   * [amass](https://github.com/caffix/amass)
   * [subfinder](https://github.com/subfinder/subfinder)
   * [massdns](https://github.com/blechschmidt/massdns)
+  * [gobuster](https://github.com/OJ/gobuster)
+
 
 * Subdomain TakeOver Scanning
   * [subjack](https://github.com/haccer/subjack)
@@ -50,6 +52,9 @@ Update
 
 * CORS Scanning
   * [CORStest](https://github.com/RUB-NDS/CORStest)
+
+* SSL Scanning
+  * [testssl](https://github.com/drwetter/testssl.sh)
 
 * Port Scanning
   * [masscan](https://github.com/robertdavidgraham/masscan)
@@ -71,14 +76,14 @@ Update
 * Directory search
   * [dirhunt](https://github.com/Nekmo/dirhunt)
   * [dirsearch](https://github.com/maurosoria/dirsearch)
-  * [gobuster](https://github.com/OJ/gobuster)
 
 * Bruteforce services
   * [brutespray](https://github.com/x90skysn3k/brutespray)
 
 * Wordlists
   * [domain](https://gist.githubusercontent.com/jhaddix/86a06c5dc309d08580a018c66354a056/raw/96f4e51d96b2203f19f6381c8c545b278eaa0837/all.txt)
-  * [web-content](https://gist.githubusercontent.com/jhaddix/b80ea67d85c13206125806f0828f4d10/raw/c81a34fe84731430741e0463eb6076129c20c4c0/content_discovery_all.txt)
+  * [web-content full](https://gist.githubusercontent.com/jhaddix/b80ea67d85c13206125806f0828f4d10/raw/c81a34fe84731430741e0463eb6076129c20c4c0/content_discovery_all.txt)
+  * [web-content short](https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1mil-20000.txt)
 
 # Contribute
 This is just beta version if you have any problem or an idea, feel free to create an issue or contact me.
