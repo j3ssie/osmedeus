@@ -1,6 +1,6 @@
 Osmedeus
 ============
-Automatic Reconnaisance and Scanning in Penetration Testing
+Automatic Reconnaissance and Scanning in Penetration Testing
 
 # What is Osmedeus?
 Osmedeus allow you to do boring stuff in Pentesting automatically like reconnaissance and scanning the target by run the collection of awesome tools.
