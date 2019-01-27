@@ -238,6 +238,7 @@ vuln        - Scanning version of services and checking vulnerable service
 git         - Scanning for git repo
 burp        - Scanning for burp state
 dirb        - Do directory search on the target
+ip          - IP discovery on the target
 
         ''')
     sys.exit(0)
