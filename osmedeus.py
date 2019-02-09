@@ -145,6 +145,8 @@ def single_target(args):
         #create workspace folder for the target
         utils.make_directory(options['env']['WORKSPACE'])
 
+
+        #checking for connection to target
         options['env']['IP'] = socket.gethostbyname(options['env']['TARGET'])
 
 

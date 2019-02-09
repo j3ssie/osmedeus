@@ -51,6 +51,9 @@ def make_directory(directory):
 def not_empty_file(fpath):  
 	return os.path.isfile(fpath) and os.path.getsize(fpath) > 0
 
+#checking connection
+def connection_check(target):
+	return True
 
 #checking the workspace and plugin path
 def initial_stuff(options):

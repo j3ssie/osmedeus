@@ -5,6 +5,8 @@ plugins
 workspaces
 
 # Byte-compiled / optimized / DLL files
+core/__pycache__/
+modules/__pycache__/
 __pycache__/
 core/__pycache__/
 modules/__pycache__/
