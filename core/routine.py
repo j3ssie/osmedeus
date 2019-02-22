@@ -15,6 +15,7 @@ from modules import vulnscan
 from modules import cors
 from modules import ipspace
 from modules import sslscan
+from modules import headers
 from modules import conclusion
 
 #runnning normal routine if none of module specific
@@ -46,6 +47,9 @@ def normal(options):
 
     # ##SSL Scan
     # sslscan.SSLScan(options)
+
+    # ##Headers Scan
+    headers.HeadersScan(options)
 
     # ##### Note: From here the module gonna take really long time for scanning service and stuff like that
     utils.print_info('This gonna take a while')
@@ -94,6 +98,11 @@ def specific(options, module):
     elif 'ip' in module:
         #Discovery IP space
         ipspace.IPSpace(options)
+
+
+    elif 'headers' in module:
+        #Headers Scan
+        headers.HeadersScan(options)
 
 
     elif 'dir' in module:

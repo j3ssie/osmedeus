@@ -22,6 +22,7 @@ class PortScan(object):
 
         utils.just_waiting(self.module_name)
         self.result_parsing()
+        self.conclude()
 
     def initial(self):
         self.create_ip_result()
@@ -136,24 +137,7 @@ class PortScan(object):
             utils.just_write(utils.replace_argument(
                 self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
 
-    def create_html(self):
-        utils.print_good('Create beautify HTML report')
-
-        utils.make_directory(
-            self.options['env']['WORKSPACE'] + '/portscan/html-report')
-        result_path = utils.replace_argument(
-            self.options, '$WORKSPACE/portscan')
-
-        for file in glob.iglob(result_path + '/**/*.xml'):
-            ip = file.split('/')[-1].split('-masscan.xml')[0]
-
-            cmd = 'xsltproc -o $WORKSPACE/portscan/html-report/{0}-html.html $PLUGINS_PATH/nmap-bootstrap.xsl {1}'.format(
-                ip, file)
-
-            cmd = utils.replace_argument(self.options, cmd)
-            output_path = utils.replace_argument(
-                self.options, '$WORKSPACE/portscan/html-report/{0}-html.html'.format(ip))
-            std_path = utils.replace_argument(
-                self.options, '$WORKSPACE/portscan/html-report/std-{0}-html.std'.format(ip))
-            execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
+        #update the main json file
+    def conclude(self):
+        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
+        utils.save_all_cmd(logfile)

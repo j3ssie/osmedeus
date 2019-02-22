@@ -31,9 +31,9 @@ class HeadersScan(object):
             domains = d.read().splitlines()
 
         # for domain in domains:
-        for part in list(utils.chunks(domains, 10)):
+        for part in list(utils.chunks(domains, 5)):
             for domain in part:
-                cmd = 'observatory {0} --format=json -z  | tee $WORKSPACE/headers/details/$TARGET-observatory.json'.format(
+                cmd = 'observatory {0} --format=json -z --attempts 5 | tee $WORKSPACE/headers/details/$TARGET-observatory.json'.format(
                     domain)
 
                 cmd = utils.replace_argument(self.options, cmd)
@@ -71,10 +71,7 @@ class HeadersScan(object):
         
         utils.check_output(report_path)
         main_json['Modules'][self.module_name] = {"path": report_path}
-        # main_json['Modules'][self.module_name] = utils.checking_done(
-        #     module=self.module_name, get_json=True)
 
-        # #write that json again
-        # utils.just_write(utils.reading_json(utils.replace_argument(
-        #     self.options, '$WORKSPACE/$COMPANY.json')), main_json, is_json=True)
-        
+    def conclude(self):
+    logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
+    utils.save_all_cmd(logfile)
