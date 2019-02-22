@@ -37,6 +37,9 @@ install_banner "nmap bootstrap"
 # Install nmap bootstrap
 [[ -f $PLUGINS_PATH/nmap-bootstrap.xsl ]] ||  wget -q -O $PLUGINS_PATH/nmap-bootstrap.xsl https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl
 
+install_banner "providers-data for subdomain takeover"
+[[ -f $PLUGINS_PATH/providers-data.csv ]] ||  wget -q -O $PLUGINS_PATH/providers-data.csv https://raw.githubusercontent.com/anshumanbh/tko-subs/master/providers-data.csv
+
 
 ##
 chmod +x osmedeus.py
@@ -67,9 +70,19 @@ install_banner "gitrob"
 go get -u github.com/michenriksen/gitrob
 install_banner "subjack"
 go get -u github.com/haccer/subjack
-install_banner "gobuster"
-go get -u github.com/OJ/gobuster
+install_banner "tko-subs"
+go get -u github.com/anshumanbh/tko-subs
+install_banner "gitleaks"
+go get -u github.com/zricethezav/gitleaks
 
+#Install flask stuff
+pip3 install flask flask_restful flask_jwt python-libnmap
+
+install_banner "IPOsint"
+cd $PLUGINS_PATH
+git clone https://github.com/j3ssie/IPOsint
+pip3 install -r IPOsint/requirements.txt
+cd $CWD
 
 install_banner "massdns"
 cd $PLUGINS_PATH
@@ -94,11 +107,7 @@ install_banner "truffleHog"
 pip install truffleHog
 
 
-install_banner "IPOsint"
-cd $PLUGINS_PATH
-git clone https://github.com/j3ssie/IPOsint
-pip3 install -r IPOsint/requirements.txt
-cd $CWD
+
 
 install_banner "testssl.sh"
 cd $PLUGINS_PATH

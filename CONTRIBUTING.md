@@ -1,0 +1,1 @@
+This is just beta version if you have any problem or an idea, feel free to create an issue or DM me.

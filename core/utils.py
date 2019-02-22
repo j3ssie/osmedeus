@@ -1,4 +1,6 @@
-import os
+import os, json, requests, time
+
+#################
 
 # Console colors
 W = '\033[1;0m'   # white 
@@ -32,10 +34,10 @@ def print_good(text):
 def print_bad(text):
 	print(bad + text)
 
-def check_output(options, raw_output):
-	output = replace_argument(options, raw_output)
-	print('{1}--==[ Check the output: {2}{0}'.format(output, G, P))
+def check_output(output):
+	print('{1}--==[ Check the output: {2}{0}{1}'.format(output, G, P))
 
+#################
 
 def replace_argument(options, cmd):
 	for key,value in options['env'].items():
@@ -55,21 +57,81 @@ def not_empty_file(fpath):
 def connection_check(target):
 	return True
 
-#checking the workspace and plugin path
-def initial_stuff(options):
-	make_directory(options['env']['WORKSPACE'])
-	utils.make_directory(options['env']['WORKSPACE'] + '/subdomain')
-	utils.make_directory(options['env']['WORKSPACE'] + '/portscan')
-	utils.make_directory(options['env']['WORKSPACE'] + '/screenshot')
-	utils.make_directory(options['env']['WORKSPACE'] + '/screenshot/all')
-
-	utils.make_directory(options['env']['WORKSPACE'] + '/gitscan/')
-	utils.make_directory(options['env']['WORKSPACE'] + '/bruteforce/')
-	utils.make_directory(options['env']['WORKSPACE'] + '/directory/')
-	utils.make_directory(options['env']['WORKSPACE'] + '/burpstate/')
-	utils.make_directory(options['env']['WORKSPACE'] + '/vulnscan/')
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
 
 
+def just_write(filename, data, is_json=False):
+    try:
+        parent_dir = '/'.join(filename.split('/')[:-1])
+        if not os.path.exists(parent_dir):
+            print_bad("Something wrong with the path: {0}".format(filename))
+            return False
+
+        print_good("Writing {0}".format(filename))
+        if is_json:
+            with open(filename, 'w+') as f:
+                json.dump(data, f)
+        else:
+            with open(filename, 'w+') as f:
+                f.write(data)
+    except:
+        print_bad("Something wrong with the path: {0}".format(filename))
+        return False
+
+def just_waiting(module_name, seconds=30):
+    while not checking_done(module=module_name):
+        print_info('Waiting for {0} module'.format(module_name))
+        time.sleep(seconds)
+
+
+def reading_json(filename):
+    if os.path.isfile(filename):
+        with open(filename, 'r') as f:
+            main_json = json.load(f)
+        return main_json
+
+    return None
+
+###
+# checking if command was done or not? and return a json result
+def checking_done(cmd=None, module=None, get_json=False, url='http://127.0.0.1:5000/activities'):
+    headers = {"User-Agent": "Osmedeus/v1.0", "Accept": "*/*", "Content-type": "application/json", "Connection": "close"}
+    
+    if cmd:
+        r = requests.post(url, headers=headers, json={'cmd' : cmd})
+    if module:
+        r = requests.post(url + "?module=" + module, headers=headers, json={})
+
+    commands = json.loads(r.text)['commands']
+    for cmd in commands:
+        if cmd['status'] != 'Done':
+
+            return False if not get_json else commands
+
+    return True if not get_json else commands
+
+
+def looping(cmd=None, module=None, times=5, url='http://127.0.0.1:5000/activities'):
+    while times != 0:
+        done = checking_done(cmd, module, url)
+        if done:
+            return
+
+        times -= 1
+
+#just for conclusion
+def save_all_cmd(logfile, url='http://127.0.0.1:5000/activities'):
+    r = requests.get(url)
+    with open(logfile, 'w+') as l:
+        l.write(r.text)
+    # commands = json.loads(r.text)['commands']
+
+
+def just_shutdown_flask(url='http://127.0.0.1:5000/shutdown'):
+    requests.post(url)
 
 
 

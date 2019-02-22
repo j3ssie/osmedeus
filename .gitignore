@@ -4,6 +4,10 @@
 plugins
 workspaces
 
+#testing
+modules/testing.py
+local-install.sh
+
 # Byte-compiled / optimized / DLL files
 core/__pycache__/
 modules/__pycache__/

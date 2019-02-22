@@ -1,25 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os, sys, glob, socket
+import os, sys, glob, socket, time
 import argparse
+from multiprocessing import Process
 from pprint import pprint
 
 from core import execute
 from core import utils
-
-# import modules 
-from modules import subdomain
-from modules import takeover
-from modules import screenshot
-from modules import portscan
-from modules import gitscan
-from modules import burpstate
-from modules import brutethings
-from modules import dirbrute
-from modules import vulnscan
-from modules import cors
-from modules import ipspace
-from modules import sslscan
+from core import routine
 
 # Console colors
 W = '\033[1;0m'   # white 
@@ -46,6 +34,7 @@ __version__ = '1.0'
 current_path = os.path.dirname(os.path.realpath(__file__))
 SPECIAL_ARGUMENT = {
     'TARGET' : 'example.com',
+    'COMPANY' : 'example.com',
     'STRIP_TARGET' : 'example.com',
     'IP' : '1.2.3.4',
     'BURPSTATE' : '',
@@ -85,7 +74,15 @@ def cowsay():
         """.format(C, G, P, __author__))
 
 
+def flask_run():
+    utils.print_banner("Staarting Flask API")
+    os.system('python3.7 core/app.py')
+
 def parsing_argument(args):
+    
+    p = Process(target=flask_run)
+    p.start()
+
     #parsing agument
     if args.git:
         options['env']['TARGET'] = args.git
@@ -119,6 +116,7 @@ def parsing_argument(args):
     else:
         single_target(args)
 
+
 def single_target(args):
     print('{2}---<---<--{1}@{2} Target: {0} {1}@{2}-->--->---'.format(args.target, P, G))
     if args.target:
@@ -145,7 +143,7 @@ def single_target(args):
         #create workspace folder for the target
         utils.make_directory(options['env']['WORKSPACE'])
 
-
+        options['env']['COMPANY'] = args.target
         #checking for connection to target
         options['env']['IP'] = socket.gethostbyname(options['env']['TARGET'])
 
@@ -153,80 +151,12 @@ def single_target(args):
     #run specific task otherwise run the normal routine
     if args.module:
         module = args.module
-        if 'subdomain' in module:
-            subdomain.SubdomainScanning(options)
-            takeover.TakeOverScanning(options)
-            screenshot.ScreenShot(options)
-            cors.CorsScan(options)
-
-
-        elif 'screenshot' in module:
-            screenshot.ScreenShot(options)
-
-        elif 'portscan' in module:
-            # scanning port, service and vuln with masscan and nmap
-            portscan.PortScan(options)
-
-        elif 'vuln' in module:
-            # scanning vulnerable service based on version
-            vulnscan.VulnScan(options)
-
-        elif 'git' in module:
-            gitscan.GitScan(options)
-
-        elif 'burp' in module:
-            burpstate.BurpState(options)
-
-        elif 'brute' in module or 'force' in module:
-            # running brute force things based on scanning result
-            brutethings.BruteThings(options)
-
-        elif 'ip' in module:
-            #Discovery IP space
-            ipspace.IPSpace(options)
-
-
-        elif 'dir' in module:
-            # run blind directory brute force directly
-            dirbrute.DirBrute(options)
+        routine.specific(options, module)
 
     else:
-        routine(options)
+        routine.normal(options)
 
 
-#runnning normal routine if none of module specific
-def routine(options):
-    utils.print_good("Running with {0} speed".format(options['speed']))
-
-    #Finding subdomain
-    subdomain.SubdomainScanning(options)
-
-    #Scanning for subdomain take over
-    takeover.TakeOverScanning(options)
-
-    #Screen shot the target on common service
-    screenshot.ScreenShot(options)
-
-    #Scanning for CorsScan
-    cors.CorsScan(options)
-
-    #Discovery IP space
-    ipspace.IPSpace(options)
-
-    #SSL Scan
-    sslscan.SSLScan(options)
-
-    ##### Note: From here the module gonna take really long time for scanning service and stuff like that
-    utils.print_info('This gonna take a while')
-
-    #Scanning all port using result from subdomain scanning and also checking vulnerable service based on version
-    portscan.PortScan(options)
-
-    #Starting vulnerable scan
-    vulnscan.VulnScan(options)
-
-    #Brute force service from port scan result
-    brutethings.BruteThings(options)
 
 
 def list_module():
@@ -271,7 +201,7 @@ def main():
 
     args = parser.parse_args()
     if len(sys.argv) == 1:
-        # list_module()
+        list_module()
         sys.exit(0)
 
     if args.list_module:
