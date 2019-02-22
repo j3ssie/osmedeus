@@ -67,6 +67,8 @@ def normal(options):
 
 
 def specific(options, module):
+    #wait for flask API start
+    time.sleep(2)
 
     if 'subdomain' in module:
         subdomain.SubdomainScanning(options)
