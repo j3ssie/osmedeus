@@ -78,6 +78,8 @@ go get -u github.com/zricethezav/gitleaks
 #Install flask stuff
 pip3 install flask flask_restful flask_jwt python-libnmap
 
+npm install -g observatory-cli
+
 install_banner "IPOsint"
 cd $PLUGINS_PATH
 git clone https://github.com/j3ssie/IPOsint

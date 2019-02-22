@@ -3,20 +3,16 @@ from core import execute
 from core import utils
 
 class DirBrute(object):
-    """docstring for BruteThings"""
+    """docstring for DirbBrute"""
     def __init__(self, options):
         utils.print_banner("Scanning Directory")
-        utils.make_directory(options['env']['WORKSPACE'] + '/directory/')
+        utils.make_directory(options['env']['WORKSPACE'] + '/directory')
         self.module_name = self.__class__.__name__
         self.options = options
 
-        while not utils.checking_done(module='SubdomainScanning'):
-            utils.print_info('Waiting SubdomainScanning module')
-            time.sleep(20)
         self.initial()
 
     def initial(self):
-        # self.dirhunt()
         self.dirsearch()
         self.gobuster()
 
@@ -27,15 +23,12 @@ class DirBrute(object):
         domains = [x.get('domain') for x in main_json['Subdomains']]
 
         for domain in domains:
-            cmd = 'python3 $PLUGINS_PˀATH/dirsearch/dirsearch.py --json-report=$WORKSPACE/directory/{0}-dirsearch.json  -u "{0}" -e php,jsp,aspx,js,html -t 20 -b'.format(domain)
+            cmd = 'python3 $PLUGINS_PATH/dirsearch/dirsearch.py --json-report=$WORKSPACE/directory/{0}-dirsearch.json  -u "{0}" -e php,jsp,aspx,js,html -t 20 -b'.format(domain)
 
             cmd = utils.replace_argument(self.options, cmd)
             output_path = utils.replace_argument(self.options, '$WORKSPACE/directory/{0}-dirsearch.json'.format(domain))
             std_path = utils.replace_argument(self.options, '$WORKSPACE/directory/std-{0}-dirsearch.std'.format(domain))
             execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
-
-
 
     def gobuster(self):
         utils.print_good('Starting gobuster')
