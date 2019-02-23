@@ -55,10 +55,10 @@ def normal(options):
     utils.print_info('This gonna take a while')
 
     # #Scanning all port using result from subdomain scanning and also checking vulnerable service based on version
-    portscan.PortScan(options)
+    # portscan.PortScan(options)
 
     # #Starting vulnerable scan
-    vulnscan.VulnScan(options)
+    # vulnscan.VulnScan(options)
 
     # #Brute force service from port scan result
     # brutethings.BruteThings(options)

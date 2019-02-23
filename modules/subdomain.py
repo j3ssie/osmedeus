@@ -17,7 +17,7 @@ class SubdomainScanning(object):
         self.conclude()
 
     def initial(self):
-        # self.amass()
+        self.amass()
         self.subfinder()
         self.gobuster()
         # self.massdns()

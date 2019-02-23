@@ -15,6 +15,7 @@ class ScreenShot(object):
             if not os.listdir(utils.replace_argument(self.options, '$WORKSPACE/screenshot/')):
                 utils.print_bad('Something wrong with these module ... run it again')
                 self.initial()
+                utils.just_waiting(self.module_name)
             else:
                 break
 

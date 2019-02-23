@@ -8,6 +8,7 @@ class TakeOverScanning(object):
         self.module_name = self.__class__.__name__
         self.options = options
         self.initial()
+        utils.just_waiting(self.module_name)
         self.conclude()
 
 
