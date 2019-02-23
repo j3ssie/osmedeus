@@ -51,8 +51,8 @@ class GitScan(object):
     #update the main json file
     def conclude(self):
         main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
-        main_json['Modules'][self.module_name] = checking_done(module=self.module_name, get_json=True)
+        main_json['Modules'][self.module_name] = utils.checking_done(module=self.module_name, get_json=True)
 
         #write that json again
-        utils.just_write(utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json')), main_json, is_json=True)
+        utils.just_write(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
             

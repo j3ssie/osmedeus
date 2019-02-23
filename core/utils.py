@@ -65,11 +65,10 @@ def chunks(l, n):
 
 def just_write(filename, data, is_json=False):
     try:
-        parent_dir = '/'.join(filename.split('/')[:-1])
-        if not os.path.exists(parent_dir):
-            print_bad("Something wrong with the path: {0}".format(filename))
-            return False
-
+    #     parent_dir = '/'.join(filename.split('/')[:-1])
+    #     if not os.path.exists(parent_dir):
+    #         print_bad("Something wrong with the path: {0}".format(filename))
+    #         return False
         print_good("Writing {0}".format(filename))
         if is_json:
             with open(filename, 'w+') as f:
@@ -78,7 +77,7 @@ def just_write(filename, data, is_json=False):
             with open(filename, 'w+') as f:
                 f.write(data)
     except:
-        print_bad("Something wrong with the path: {0}".format(filename))
+        print_bad("Writing fail: {0}".format(filename))
         return False
 
 def just_waiting(module_name, seconds=30):
@@ -105,8 +104,8 @@ def checking_done(cmd=None, module=None, get_json=False, url='http://127.0.0.1:5
     if module:
         r = requests.post(url + "?module=" + module, headers=headers, json={})
 
-    commands = json.loads(r.text)['commands']
-    for cmd in commands:
+    commands = json.loads(r.text)
+    for cmd in commands['commands']:
         if cmd['status'] != 'Done':
 
             return False if not get_json else commands

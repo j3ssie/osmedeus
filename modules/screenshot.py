@@ -5,28 +5,31 @@ from core import utils
 class ScreenShot(object):
     """Screenshot all domain on common service"""
     def __init__(self, options):
-        utils.print_banner("Services Scanning")
+        utils.print_banner("ScreenShot the target")
         utils.make_directory(options['env']['WORKSPACE'] + '/screenshot')
         self.module_name = self.__class__.__name__
         self.options = options
 
+        self.initial()
         #check if the screenshot success or not, if not run it again
-        while True:
-            if not os.listdir(utils.replace_argument(self.options, '$WORKSPACE/screenshot/')):
-                utils.print_bad('Something wrong with these module ... run it again')
-                self.initial()
-                utils.just_waiting(self.module_name)
-            else:
-                break
+        # while True:
+        #     if not os.listdir(utils.replace_argument(self.options, '$WORKSPACE/screenshot/')):
+        #         utils.print_bad('Something wrong with these module ... run it again')
+        #         self.initial()
+        #         utils.just_waiting(self.module_name)
+        #     else:
+        #         break
 
-        #this gonna run after module is done to update the main json
-        self.conclude()
+
 
 
     def initial(self):
         self.aquaton()
         # really slow the flow so disable for now
         # self.eyewitness_common()
+        utils.just_waiting(self.module_name, seconds=10)
+        #this gonna run after module is done to update the main json
+        self.conclude()
 
     def aquaton(self):
         utils.print_good('Starting aquatone')
@@ -53,9 +56,11 @@ class ScreenShot(object):
         main_json['Modules'][self.module_name] = utils.checking_done(module=self.module_name, get_json=True)
 
         #write that json again
-        utils.just_write(utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json')), main_json, is_json=True)
+        utils.just_write(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
         
         #logging
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(logfile)
+
+        utils.print_banner("{0} Done".format(self.module_name))
 

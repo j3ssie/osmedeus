@@ -19,9 +19,9 @@ class SSLScan(object):
     def testssl(self):
         utils.print_good('Starting testssl')
         if self.options['speed'] == 'slow':
-            cmd = 'bash $PLUGINS_PATH/testssl.sh/testssl.sh --parallel --logfile $WORKSPACE/ssl/$TARGET-testssl.txt --file $WORKSPACE/subdomain/final-$OUTPUT.txt'
+            cmd = 'bash $PLUGINS_PATH/testssl.sh/testssl.sh --parallel --append --logfile $WORKSPACE/ssl/$TARGET-testssl.txt --file $WORKSPACE/subdomain/final-$OUTPUT.txt'
         elif self.options['speed'] == 'quick':
-            cmd = 'bash $PLUGINS_PATH/testssl.sh/testssl.sh --parallel --logfile $WORKSPACE/ssl/$TARGET-testssl.txt $TARGET'
+            cmd = 'bash $PLUGINS_PATH/testssl.sh/testssl.sh --parallel --append --logfile $WORKSPACE/ssl/$TARGET-testssl.txt $TARGET'
 
         cmd = utils.replace_argument(self.options, cmd)
         output_path = utils.replace_argument(self.options, '$WORKSPACE/ssl/$TARGET-testssl.txt')
@@ -35,6 +35,11 @@ class SSLScan(object):
         main_json['Modules'][self.module_name] = utils.checking_done(module=self.module_name, get_json=True)
 
         #write that json again
-        utils.just_write(utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json')), main_json, is_json=True)
+        utils.just_write(utils.replace_argument(
+            self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
             
+        #logging
+        logfile=utils.replace_argument(self.options, '$WORKSPACE/log.json')
+        utils.save_all_cmd(logfile)
+        utils.print_banner("{0} Done".format(self.module_name))
 

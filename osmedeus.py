@@ -59,6 +59,7 @@ options = {
     'targetlist' : '',
     'env' : SPECIAL_ARGUMENT,
     'speed' : 'quick',
+    'DEBUG' : False
 }
 
 
@@ -70,6 +71,10 @@ def parsing_argument(args):
     
     p = Process(target=flask_run)
     p.start()
+
+    #parsing agument
+    if args.debug:
+        options['DEBUG'] = True
 
     #parsing agument
     if args.git:
@@ -142,7 +147,10 @@ def single_target(args):
         routine.specific(options, module)
 
     else:
-        routine.normal(options)
+        if options['DEBUG']:
+            routine.debug(options)
+        else:
+            routine.normal(options)
 
 
 
@@ -159,6 +167,7 @@ git         - Scanning for git repo
 burp        - Scanning for burp state
 dirb        - Do directory search on the target
 ip          - IP discovery on the target
+headers     - Headers Scan on the target
 
         ''')
     sys.exit(0)
@@ -186,6 +195,7 @@ def main():
     parser.add_argument('-s', '--slow', action='store_true', help='run this tool with slow routine', default=False)
     parser.add_argument('--mode', action='store_true', help='Choose mode to run normal routine(quick or slow)', default='quick')
     parser.add_argument('--update', action='store_true', help='update lastest from git')
+    parser.add_argument('--debug', action='store_true', help='just for debug purpose')
 
     args = parser.parse_args()
     if len(sys.argv) == 1:

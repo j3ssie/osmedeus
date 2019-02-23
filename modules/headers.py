@@ -73,6 +73,3 @@ class HeadersScan(object):
         utils.check_output(report_path)
         main_json['Modules'][self.module_name] = {"path": report_path}
 
-    def conclude(self):
-        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
-        utils.save_all_cmd(logfile)

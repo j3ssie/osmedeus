@@ -6,7 +6,7 @@ class CorsScan(object):
     """docstring for PortScan"""
     def __init__(self, options):
         utils.print_banner("CORS Scanning")
-        utils.make_directory(options['env']['WORKSPACE'] + '/cors/')
+        utils.make_directory(options['env']['WORKSPACE'] + '/cors')
         self.module_name = self.__class__.__name__
         self.options = options
         self.initial()

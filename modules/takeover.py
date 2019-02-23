@@ -40,11 +40,12 @@ class TakeOverScanning(object):
         main_json['Modules'][self.module_name] = utils.checking_done(module=self.module_name, get_json=True)
 
         #write that json again
-        utils.just_write(utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json')), main_json, is_json=True)
+        utils.just_write(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
             
         #logging
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(logfile)
+        utils.print_banner("{0} Done".format(self.module_name))
 
 
 

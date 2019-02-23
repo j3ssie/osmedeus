@@ -17,10 +17,14 @@ class SubdomainScanning(object):
         self.conclude()
 
     def initial(self):
-        self.amass()
-        self.subfinder()
-        self.gobuster()
-        # self.massdns()
+        #just for debug purpose
+        if self.options['DEBUG']:
+            self.subfinder()
+        else:
+            self.amass()
+            self.subfinder()
+            self.gobuster()
+            self.massdns()
 
 
 
@@ -115,6 +119,9 @@ class SubdomainScanning(object):
         #logging
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(logfile)
+
+        utils.print_banner("{0} Done".format(self.module_name))
+
 
 
 

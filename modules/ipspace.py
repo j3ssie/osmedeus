@@ -29,6 +29,7 @@ class IPSpace(object):
 
     #update the main json file
     def conclude(self):
+        utils.print_banner("Conclusion for {0}".format(self.module_name))
         main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
         main_json['Modules'][self.module_name] = utils.checking_done(module=self.module_name, get_json=True)
 
@@ -36,11 +37,14 @@ class IPSpace(object):
         with open(ips_file, 'r') as s:
             ips = s.read().splitlines()
         main_json['IP Space'] = ips
+        print(main_json['IP Space'])
 
         #write that json again
-        utils.just_write(utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json')), main_json, is_json=True)
+        utils.just_write(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
         
         #logging
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(logfile)
+
+        utils.print_banner("{0} Done".format(self.module_name))
 

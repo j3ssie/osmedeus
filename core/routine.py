@@ -55,10 +55,10 @@ def normal(options):
     utils.print_info('This gonna take a while')
 
     # #Scanning all port using result from subdomain scanning and also checking vulnerable service based on version
-    # portscan.PortScan(options)
+    portscan.PortScan(options)
 
     # #Starting vulnerable scan
-    # vulnscan.VulnScan(options)
+    vulnscan.VulnScan(options)
 
     # #Brute force service from port scan result
     # brutethings.BruteThings(options)
@@ -111,3 +111,50 @@ def specific(options, module):
         # run blind directory brute force directly
         dirbrute.DirBrute(options)
 
+#just for debug purpose
+def debug(options):
+    #wait for flask API start
+    time.sleep(2)
+
+    utils.print_good("Debug routine")
+    utils.print_good("Running with {0} speed".format(options['speed']))
+    # Create skeleton json
+    # initials.Initials(options)
+
+    ##Finding subdomain
+    # subdomain.SubdomainScanning(options)
+
+    ##waiting for previous module
+    # utils.just_waiting('SubdomainScanning')
+
+    ##Scanning for subdomain take over
+    takeover.TakeOverScanning(options)
+
+    ##Screen shot the target on common service
+    screenshot.ScreenShot(options)
+
+    ##Scanning for CorsScan
+    cors.CorsScan(options)
+
+    # # ##Discovery IP space
+    ipspace.IPSpace(options)
+
+    # # ##SSL Scan
+    # sslscan.SSLScan(options)
+
+    # # ##Headers Scan
+    # headers.HeadersScan(options)
+
+    # ##### Note: From here the module gonna take really long time for scanning service and stuff like that
+    # utils.print_info('This gonna take a while')
+
+    # # #Scanning all port using result from subdomain scanning and also checking vulnerable service based on version
+    # portscan.PortScan(options)
+
+    # # #Starting vulnerable scan
+    # vulnscan.VulnScan(options)
+
+    # # #Brute force service from port scan result
+    # brutethings.BruteThings(options)
+
+    conclusion.Conclusion(options)
