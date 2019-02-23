@@ -5,9 +5,10 @@ import argparse
 from multiprocessing import Process
 from pprint import pprint
 
+from core import routine
+from core import config
 from core import execute
 from core import utils
-from core import routine
 
 # Console colors
 W = '\033[1;0m'   # white 
@@ -61,22 +62,9 @@ options = {
 }
 
 
-def cowsay():
-    print ("""{1}
-      -----------------------------
-    < You didn't say the {2}MAGIC WORD{1} >
-      ----------------------------- 
-             \   ^__^
-              \  (oo)\_______
-                 (__)\       )\/
-                    \||----w |    
-                     ||     ||    Contact: {2}{3}{1}
-        """.format(C, G, P, __author__))
-
-
 def flask_run():
     utils.print_banner("Staarting Flask API")
-    os.system('python3.7 core/app.py')
+    os.system('python3 core/app.py')
 
 def parsing_argument(args):
     
@@ -180,7 +168,7 @@ def update():
     sys.exit(0)
 
 def main():
-    cowsay()
+    config.banner()
     parser = argparse.ArgumentParser(description="Collection tool for automatic pentesting")
     parser.add_argument('-m','--module' , action='store', dest='module', help='specific module to action')
     parser.add_argument('-t','--target' , action='store', dest='target', help='target')
