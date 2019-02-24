@@ -7,7 +7,7 @@ workspaces
 #testing
 modules/testing.py
 local-install.sh
-config.conf
+# config.conf
 
 # Byte-compiled / optimized / DLL files
 core/__pycache__/
