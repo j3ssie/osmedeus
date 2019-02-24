@@ -117,12 +117,12 @@ def debug(options):
     time.sleep(2)
 
     utils.print_good("Debug routine")
-    utils.print_good("Running with {0} speed".format(options['speed']))
+    utils.print_good("Running with {0} speed".format(options['SPEED']))
     # Create skeleton json
-    # initials.Initials(options)
+    initials.Initials(options)
 
     ##Finding subdomain
-    # subdomain.SubdomainScanning(options)
+    subdomain.SubdomainScanning(options)
 
     ##waiting for previous module
     # utils.just_waiting('SubdomainScanning')

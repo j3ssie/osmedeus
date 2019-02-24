@@ -22,11 +22,11 @@ class VulnScan(object):
             self.options, '$WORKSPACE/$COMPANY.json'))
         main_json['Modules'][self.module_name] = []
 
-        if self.options['speed'] == 'slow':
+        if self.options['SPEED'] == 'slow':
             ip_list = [x.get("IP")
                        for x in main_json['Subdomains']] + main_json['IP Space']
 
-        elif self.options['speed'] == 'quick':
+        elif self.options['SPEED'] == 'quick':
             ip_list = [x.get("IP") for x in main_json['Subdomains']]
 
         # Scan every 5 IP at time Increse if you want

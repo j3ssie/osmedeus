@@ -18,9 +18,9 @@ class SSLScan(object):
 
     def testssl(self):
         utils.print_good('Starting testssl')
-        if self.options['speed'] == 'slow':
+        if self.options['SPEED'] == 'slow':
             cmd = 'bash $PLUGINS_PATH/testssl.sh/testssl.sh --parallel --append --logfile $WORKSPACE/ssl/$TARGET-testssl.txt --file $WORKSPACE/subdomain/final-$OUTPUT.txt'
-        elif self.options['speed'] == 'quick':
+        elif self.options['SPEED'] == 'quick':
             cmd = 'bash $PLUGINS_PATH/testssl.sh/testssl.sh --parallel --append --logfile $WORKSPACE/ssl/$TARGET-testssl.txt $TARGET'
 
         cmd = utils.replace_argument(self.options, cmd)

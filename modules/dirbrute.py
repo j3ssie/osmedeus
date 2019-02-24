@@ -32,7 +32,7 @@ class DirBrute(object):
 
     def gobuster(self):
         utils.print_good('Starting gobuster')
-        if self.options['speed'] == 'quick':
+        if self.options['SPEED'] == 'quick':
             utils.print_good("Skipping in quick mode")
             return
 

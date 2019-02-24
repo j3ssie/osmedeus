@@ -52,7 +52,7 @@ def parsing_config(config_path, args):
     config.read(config_path)
 
     ##some default path
-    go_path = str(os.getenv("GOPATH"))
+    go_path = str(os.getenv("GOPATH")) + "/bin"
     github_api_key = str(os.getenv("GITROB_ACCESS_TOKEN"))
     cwd = str(os.getcwd())
 

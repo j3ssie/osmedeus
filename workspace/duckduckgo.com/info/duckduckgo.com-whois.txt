@@ -1,0 +1,137 @@
+% IANA WHOIS server
+% for more information on IANA, visit http://www.iana.org
+% This query returned 1 object
+
+refer:        whois.verisign-grs.com
+
+domain:       COM
+
+organisation: VeriSign Global Registry Services
+address:      12061 Bluemont Way
+address:      Reston Virginia 20190
+address:      United States
+
+contact:      administrative
+name:         Registry Customer Service
+organisation: VeriSign Global Registry Services
+address:      12061 Bluemont Way
+address:      Reston Virginia 20190
+address:      United States
+phone:        +1 703 925-6999
+fax-no:       +1 703 948 3978
+e-mail:       info@verisign-grs.com
+
+contact:      technical
+name:         Registry Customer Service
+organisation: VeriSign Global Registry Services
+address:      12061 Bluemont Way
+address:      Reston Virginia 20190
+address:      United States
+phone:        +1 703 925-6999
+fax-no:       +1 703 948 3978
+e-mail:       info@verisign-grs.com
+
+nserver:      A.GTLD-SERVERS.NET 192.5.6.30 2001:503:a83e:0:0:0:2:30
+nserver:      B.GTLD-SERVERS.NET 192.33.14.30 2001:503:231d:0:0:0:2:30
+nserver:      C.GTLD-SERVERS.NET 192.26.92.30 2001:503:83eb:0:0:0:0:30
+nserver:      D.GTLD-SERVERS.NET 192.31.80.30 2001:500:856e:0:0:0:0:30
+nserver:      E.GTLD-SERVERS.NET 192.12.94.30 2001:502:1ca1:0:0:0:0:30
+nserver:      F.GTLD-SERVERS.NET 192.35.51.30 2001:503:d414:0:0:0:0:30
+nserver:      G.GTLD-SERVERS.NET 192.42.93.30 2001:503:eea3:0:0:0:0:30
+nserver:      H.GTLD-SERVERS.NET 192.54.112.30 2001:502:8cc:0:0:0:0:30
+nserver:      I.GTLD-SERVERS.NET 192.43.172.30 2001:503:39c1:0:0:0:0:30
+nserver:      J.GTLD-SERVERS.NET 192.48.79.30 2001:502:7094:0:0:0:0:30
+nserver:      K.GTLD-SERVERS.NET 192.52.178.30 2001:503:d2d:0:0:0:0:30
+nserver:      L.GTLD-SERVERS.NET 192.41.162.30 2001:500:d937:0:0:0:0:30
+nserver:      M.GTLD-SERVERS.NET 192.55.83.30 2001:501:b1f9:0:0:0:0:30
+ds-rdata:     30909 8 2 E2D3C916F6DEEAC73294E8268FB5885044A833FC5459588F4A9184CFC41A5766
+
+whois:        whois.verisign-grs.com
+
+status:       ACTIVE
+remarks:      Registration information: http://www.verisigninc.com
+
+created:      1985-01-01
+changed:      2017-10-05
+source:       IANA
+
+   Domain Name: DUCKDUCKGO.COM
+   Registry Domain ID: 1330407230_DOMAIN_COM-VRSN
+   Registrar WHOIS Server: whois.namecheap.com
+   Registrar URL: http://www.namecheap.com
+   Updated Date: 2018-02-06T18:27:37Z
+   Creation Date: 2007-11-11T17:24:08Z
+   Registry Expiry Date: 2019-06-23T03:59:59Z
+   Registrar: NameCheap, Inc.
+   Registrar IANA ID: 1068
+   Registrar Abuse Contact Email: abuse@namecheap.com
+   Registrar Abuse Contact Phone: +1.6613102107
+   Domain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited
+   Name Server: NS-1027.AWSDNS-00.ORG
+   Name Server: NS-175.AWSDNS-21.COM
+   Name Server: NS-1816.AWSDNS-35.CO.UK
+   Name Server: NS-691.AWSDNS-22.NET
+   DNSSEC: unsigned
+   URL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/
+>>> Last update of whois database: 2019-02-24T12:44:12Z <<<
+
+Domain name: duckduckgo.com
+Registry Domain ID: 1330407230_DOMAIN_COM-VRSN
+Registrar WHOIS Server: whois.namecheap.com
+Registrar URL: http://www.namecheap.com
+Updated Date: 2018-02-06T18:27:37.00Z
+Creation Date: 2007-11-11T17:24:08.00Z
+Registrar Registration Expiration Date: 2019-06-23T03:59:59.00Z
+Registrar: NAMECHEAP INC
+Registrar IANA ID: 1068
+Registrar Abuse Contact Email: abuse@namecheap.com
+Registrar Abuse Contact Phone: +1.6613102107
+Reseller: NAMECHEAP INC
+Domain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited 
+Registry Registrant ID: 
+Registrant Name: WhoisGuard Protected
+Registrant Organization: WhoisGuard, Inc.
+Registrant Street: P.O. Box 0823-03411 
+Registrant City: Panama
+Registrant State/Province: Panama
+Registrant Postal Code: 00000
+Registrant Country: PA
+Registrant Phone: +507.8365503
+Registrant Phone Ext: 
+Registrant Fax: +51.17057182
+Registrant Fax Ext: 
+Registrant Email: f4eb5e41fe984201b776cb57946d7451.protect@whoisguard.com
+Registry Admin ID: 
+Admin Name: WhoisGuard Protected
+Admin Organization: WhoisGuard, Inc.
+Admin Street: P.O. Box 0823-03411 
+Admin City: Panama
+Admin State/Province: Panama
+Admin Postal Code: 00000
+Admin Country: PA
+Admin Phone: +507.8365503
+Admin Phone Ext: 
+Admin Fax: +51.17057182
+Admin Fax Ext: 
+Admin Email: f4eb5e41fe984201b776cb57946d7451.protect@whoisguard.com
+Registry Tech ID: 
+Tech Name: WhoisGuard Protected
+Tech Organization: WhoisGuard, Inc.
+Tech Street: P.O. Box 0823-03411 
+Tech City: Panama
+Tech State/Province: Panama
+Tech Postal Code: 00000
+Tech Country: PA
+Tech Phone: +507.8365503
+Tech Phone Ext: 
+Tech Fax: +51.17057182
+Tech Fax Ext: 
+Tech Email: f4eb5e41fe984201b776cb57946d7451.protect@whoisguard.com
+Name Server: ns-175.awsdns-21.com 
+Name Server: ns-691.awsdns-22.net 
+Name Server: ns-1027.awsdns-00.org 
+Name Server: ns-1816.awsdns-35.co.uk 
+DNSSEC: unsigned
+URL of the ICANN WHOIS Data Problem Reporting System: http://wdprs.internic.net/
+>>> Last update of WHOIS database: 2019-02-23T22:18:01.10Z <<<
+

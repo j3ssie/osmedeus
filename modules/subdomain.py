@@ -51,9 +51,9 @@ class SubdomainScanning(object):
     def gobuster(self):
         utils.print_good('Starting gobuster')
         
-        if self.options['speed'] == 'slow':
+        if self.options['SPEED'] == 'slow':
             cmd = '$GO_PATH/gobuster -m dns -np -t 100 -w $PLUGINS_PATH/wordlists/all.txt -u $TARGET -o $WORKSPACE/subdomain/$OUTPUT-gobuster.txt'
-        elif self.options['speed'] == 'quick':
+        elif self.options['SPEED'] == 'quick':
             cmd = '$GO_PATH/gobuster -m dns -np -t 100 -w $PLUGINS_PATH/wordlists/shorts.txt -u $TARGET -o $WORKSPACE/subdomain/$OUTPUT-gobuster.txt'
         
         cmd = utils.replace_argument(self.options, cmd)
@@ -63,9 +63,9 @@ class SubdomainScanning(object):
 
     def massdns(self):
         utils.print_good('Starting massdns')
-        if self.options['speed'] == 'slow':
+        if self.options['SPEED'] == 'slow':
             cmd = '$PLUGINS_PATH/massdns/scripts/subbrute.py $DOMAIN_FULL $TARGET | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o Sm -w $WORKSPACE/subdomain/raw-massdns.txt'
-        elif self.options['speed'] == 'quick':
+        elif self.options['SPEED'] == 'quick':
             cmd = '$PLUGINS_PATH/massdns/scripts/subbrute.py $PLUGINS_PATH/wordlists/shorts.txt $TARGET | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o Sm -w $WORKSPACE/subdomain/raw-massdns.txt'
 
         cmd = utils.replace_argument(self.options, cmd)

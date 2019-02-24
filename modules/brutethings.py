@@ -8,9 +8,9 @@ class BruteThings(object):
         utils.make_directory(options['WORKSPACE'] + '/bruteforce/')
         self.options = options
         
-        if self.options['speed'] == 'slow':
+        if self.options['SPEED'] == 'slow':
             self.routine()
-        elif self.options['speed'] == 'quick':
+        elif self.options['SPEED'] == 'quick':
             utils.print_good("Skipping for quick speed")
 
 

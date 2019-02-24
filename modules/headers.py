@@ -22,7 +22,7 @@ class HeadersScan(object):
     def observatory(self):
         utils.print_good('Starting observatory')
 
-        if self.options['speed'] == 'quick':
+        if self.options['SPEED'] == 'quick':
             utils.print_good('Skipping {0} in quick mode'.format(self.module_name))
             return None
     
