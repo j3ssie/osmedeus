@@ -110,6 +110,9 @@ def specific(options, module):
     elif 'dir' in module:
         # run blind directory brute force directly
         dirbrute.DirBrute(options)
+    
+    conclusion.Conclusion(options)
+
 
 #just for debug purpose
 def debug(options):

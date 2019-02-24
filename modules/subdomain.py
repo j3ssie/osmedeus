@@ -18,7 +18,7 @@ class SubdomainScanning(object):
 
     def initial(self):
         #just for debug purpose
-        if self.options['DEBUG']:
+        if self.options['DEBUG'] == "True":
             self.subfinder()
         else:
             self.amass()

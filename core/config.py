@@ -59,7 +59,7 @@ def parsing_config(config_path, args):
     config.set('Enviroments', 'cwd', cwd)
     config.set('Enviroments', 'go_path', go_path)
     config.set('Enviroments', 'github_api_key', github_api_key)
-    workspace = cwd + "/workspace/"
+    workspace = cwd + "/workspaces/"
 
     ##config of the tool
     if args.slow:
@@ -106,9 +106,6 @@ def parsing_config(config_path, args):
 
 
 
-
-    # workspace += '/' + strip_target
-
     config.set('Target', 'git_target', str(git_target))
     config.set('Target', 'burpstate_target', str(burpstate_target))
     config.set('Target', 'target_list', str(target_list))
@@ -122,9 +119,6 @@ def parsing_config(config_path, args):
 
         #create workspace folder for the target
     utils.make_directory(workspace)
-
-        # options['env']['COMPANY'] = args.target
-        #checking for connection to target
 
 
 
@@ -158,7 +152,3 @@ def parsing_config(config_path, args):
 
     return options
 
-
-
-# if __name__ == "__main__":
-# 	parsing_config("/Users/j3ssie/myGit/Osmedeus/config.conf")

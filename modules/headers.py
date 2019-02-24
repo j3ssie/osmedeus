@@ -15,9 +15,9 @@ class HeadersScan(object):
         self.initial()
 
     def initial(self):
-        self.observatory()
-        utils.just_waiting(self.module_name)
-        self.conclude()
+        if self.observatory():
+            utils.just_waiting(self.module_name)
+            self.conclude()
 
     def observatory(self):
         utils.print_good('Starting observatory')
@@ -44,7 +44,7 @@ class HeadersScan(object):
 
             while not utils.checking_done(module=self.module_name):
                 time.sleep(15)
-
+        return True
     #update the main json file
 
     def conclude(self):

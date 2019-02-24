@@ -37,7 +37,7 @@ class IPSpace(object):
         with open(ips_file, 'r') as s:
             ips = s.read().splitlines()
         main_json['IP Space'] = ips
-        print(main_json['IP Space'])
+        # print(main_json['IP Space'])
 
         #write that json again
         utils.just_write(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
