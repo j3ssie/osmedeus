@@ -7,7 +7,7 @@ class SubdomainScanning(object):
     """docstring for subdomain"""
     def __init__(self, options):
         utils.print_banner("Scanning Subdomain")
-        utils.make_directory(options['env']['WORKSPACE'] + '/subdomain')
+        utils.make_directory(options['WORKSPACE'] + '/subdomain')
         self.module_name = self.__class__.__name__
         self.options = options
         self.initial()
@@ -120,7 +120,7 @@ class SubdomainScanning(object):
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(logfile)
 
-        utils.print_banner("{0} Done".format(self.module_name))
+        utils.print_banner("{0}".format(self.module_name))
 
 
 

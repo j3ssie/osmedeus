@@ -22,7 +22,7 @@ from modules import conclusion
 def normal(options):
     #wait for flask API start
     time.sleep(2)
-    utils.print_good("Running with {0} speed".format(options['speed']))
+    utils.print_good("Running with {0} speed".format(options['SPEED']))
 
     # Create skeleton json
     initials.Initials(options)

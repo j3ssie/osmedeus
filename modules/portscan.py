@@ -15,7 +15,7 @@ class PortScan(object):
 
     def __init__(self, options):
         utils.print_banner("Services Scanning")
-        utils.make_directory(options['env']['WORKSPACE'] + '/portscan')
+        utils.make_directory(options['WORKSPACE'] + '/portscan')
         self.module_name = self.__class__.__name__
         self.options = options
         self.initial()
@@ -104,7 +104,7 @@ class PortScan(object):
     def result_parsing(self):
         utils.print_good('Parsing XML for masscan report')
         utils.make_directory(
-            self.options['env']['WORKSPACE'] + '/portscan/parsed')
+            self.options['WORKSPACE'] + '/portscan/parsed')
         result_path = utils.replace_argument(
             self.options, '$WORKSPACE/portscan')
 

@@ -6,7 +6,7 @@ class SSLScan(object):
     """docstring for SslScan"""
     def __init__(self, options):
         utils.print_banner("SSL Scanning")
-        utils.make_directory(options['env']['WORKSPACE'] + '/ssl/')
+        utils.make_directory(options['WORKSPACE'] + '/ssl/')
         self.module_name = self.__class__.__name__
         self.options = options
         self.initial()

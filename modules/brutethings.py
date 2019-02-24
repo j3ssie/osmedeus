@@ -5,7 +5,7 @@ from core import utils
 class BruteThings(object):
     """docstring for BruteThings"""
     def __init__(self, options):
-        utils.make_directory(options['env']['WORKSPACE'] + '/bruteforce/')
+        utils.make_directory(options['WORKSPACE'] + '/bruteforce/')
         self.options = options
         
         if self.options['speed'] == 'slow':
@@ -39,7 +39,7 @@ class BruteThings(object):
     #direct stuff
     def direct_nmap(self):
         utils.print_good('Starting nmap')
-        ip = socket.gethostbyname(self.options['env']['STRIP_TARGET'])
+        ip = socket.gethostbyname(self.options['STRIP_TARGET'])
         cmd = 'sudo nmap -sS -T4 -Pn -n -p- {0} -oG $WORKSPACE/portscan/$OUTPUT-nmap.gnmap -oX $WORKSPACE/portscan/$OUTPUT-nmap.xml '.format(ip)
         cmd = utils.replace_argument(self.options, cmd)
         utils.print_info("Execute: {0} ".format(cmd))

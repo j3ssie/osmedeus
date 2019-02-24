@@ -8,7 +8,7 @@ class Initials(object):
     """Just create skeleton and get some basic information"""
     def __init__(self, options):
         utils.print_banner("Create Skeleton JSON file")
-        utils.make_directory(options['env']['WORKSPACE'] + '/info')
+        utils.make_directory(options['WORKSPACE'] + '/info')
         self.module_name = self.__class__.__name__
         self.options = options
         self.initial()

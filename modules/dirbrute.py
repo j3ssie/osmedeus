@@ -6,7 +6,7 @@ class DirBrute(object):
     """docstring for DirbBrute"""
     def __init__(self, options):
         utils.print_banner("Scanning Directory")
-        utils.make_directory(options['env']['WORKSPACE'] + '/directory')
+        utils.make_directory(options['WORKSPACE'] + '/directory')
         self.module_name = self.__class__.__name__
         self.options = options
 

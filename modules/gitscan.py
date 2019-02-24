@@ -6,7 +6,7 @@ class GitScan(object):
     """docstring for PortScan"""
     def __init__(self, options):
         utils.print_banner("Github Repo Scanning")
-        utils.make_directory(options['env']['WORKSPACE'] + '/gitscan/')
+        utils.make_directory(options['WORKSPACE'] + '/gitscan/')
         self.module_name = self.__class__.__name__
         self.options = options
         self.initial()

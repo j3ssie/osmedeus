@@ -33,34 +33,34 @@ __version__ = '1.0'
 
 ### Global stuff
 current_path = os.path.dirname(os.path.realpath(__file__))
-SPECIAL_ARGUMENT = {
-    'TARGET' : 'example.com',
-    'COMPANY' : 'example.com',
-    'STRIP_TARGET' : 'example.com',
-    'IP' : '1.2.3.4',
-    'BURPSTATE' : '',
-    'OUTPUT' : 'out.txt',
-    'WORKSPACE' : current_path + '/workspaces',
+# SPECIAL_ARGUMENT = {
+#     'TARGET' : 'example.com',
+#     'COMPANY' : 'example.com',
+#     'STRIP_TARGET' : 'example.com',
+#     'IP' : '1.2.3.4',
+#     'BURPSTATE' : '',
+#     'OUTPUT' : 'out.txt',
+#     'WORKSPACE' : current_path + '/workspaces',
 
-    'PLUGINS_PATH' : current_path + '/plugins',
-    'GO_PATH' : '~/go/bin',
-    'DIRECTORY_FULL' : current_path + '/plugins/wordlists/dir-all.txt',
-    'DOMAIN_FULL' : current_path + '/plugins/wordlists/all.txt',
-    'DEFAULT_WORDLIST' : '',
+#     'PLUGINS_PATH' : current_path + '/plugins',
+#     'GO_PATH' : '~/go/bin',
+#     'DIRECTORY_FULL' : current_path + '/plugins/wordlists/dir-all.txt',
+#     'DOMAIN_FULL' : current_path + '/plugins/wordlists/all.txt',
+#     'DEFAULT_WORDLIST' : '',
 
-    'GITHUB_API_KEY' : 'abc123poi456', # this isn't work api :D 
-    'MORE' : '',
-    'CWD' : os.path.dirname(os.path.realpath(__file__)),
-}
+#     'GITHUB_API_KEY' : 'abc123poi456', # this isn't work api :D 
+#     'MORE' : '',
+#     'CWD' : os.path.dirname(os.path.realpath(__file__)),
+# }
 ###
 
-options = {
-    'target' : '',
-    'targetlist' : '',
-    'env' : SPECIAL_ARGUMENT,
-    'speed' : 'quick',
-    'DEBUG' : False
-}
+# options = {
+#     'target' : '',
+#     'targetlist' : '',
+#     'env' : SPECIAL_ARGUMENT,
+#     'speed' : 'quick',
+#     'DEBUG' : False
+# }
 
 
 def flask_run():
@@ -68,86 +68,57 @@ def flask_run():
     os.system('python3 core/app.py')
 
 def parsing_argument(args):
-    
+
     p = Process(target=flask_run)
     p.start()
 
-    #parsing agument
-    if args.debug:
-        options['DEBUG'] = True
+
+    # config_path = args.config
+    # options = config.parsing_config(config_path, args)
 
     #parsing agument
-    if args.git:
-        options['env']['TARGET'] = args.git
-        # git_routine(options)
+    if args.config:
+        config_path = args.config
+        options = config.parsing_config(config_path, args)
 
-    if args.burp:
-        options['env']['BURPSTATE'] = args.burp
+        #testing
+        cmd = '$GO_PATH/subfinder -d $TARGET -t 100 -o $WORKSPACE/subdomain/$OUTPUT-subfinder.txt -nW'
+        cmd = utils.replace_argument(options, cmd)
+        print(cmd)
 
-    if args.more:
-        options['env']['MORE'] = args.more
+        # return "Testing"
 
-    #choose speed to run this, default is quick
-    if args.quick:
-        options['speed'] = 'quick'
-    if args.slow:
-        options['speed'] = 'slow'
+    # pprint(options)
 
 
-    if args.targetlist:
-        options['targetlist'] = args.targetlist
+
+    if options['TARGET_LIST'] != "None":
         #check if target list file exist and loop throught the target
-        if os.path.exists(options['targetlist']):
-            with open(options['targetlist'], 'r+') as ts:
+        if os.path.exists(options['TARGET_LIST']):
+            with open(options['TARGET_LIST'], 'r+') as ts:
                 targetlist = ts.read().splitlines()
             
             for target in targetlist:
-                args.target = target
-                single_target(args)
-                print("{2}>++('> >++('{1}>{2} Target done: {0} {1}<{2}')++< <')++<".format(args.target, P, G))
+                options['TARGET'] = target
+                single_target(options)
+                print(
+                    "{2}>++('> >++('{1}>{2} Target done: {0} {1}<{2}')++< <')++<".format(options['TARGET'], P, G))
 
     else:
-        single_target(args)
+        single_target(options)
 
 
-def single_target(args):
-    print('{2}---<---<--{1}@{2} Target: {0} {1}@{2}-->--->---'.format(args.target, P, G))
-    if args.target:
-        if args.output:
-            options['env']['OUTPUT'] = args.output
-        else:
-            options['env']['OUTPUT'] = args.target
-
-        #just loop in the for if the target list
-        options['target'] = args.target
-        options['env']['TARGET'] = args.target
-        options['env']['STRIP_TARGET'] = args.target.replace('https://','').replace('http://','')
-        if '/' in options['env']['STRIP_TARGET']:
-            options['env']['STRIP_TARGET'] = options['env']['STRIP_TARGET'].split('/')[0]
-
-        if args.workspace:
-            if args.workspace[-1] == '/':
-                options['env']['WORKSPACE'] = args.workspace + options['env']['STRIP_TARGET']
-            else:
-                options['env']['WORKSPACE'] = args.workspace + '/' + options['env']['STRIP_TARGET']
-        else:
-            options['env']['WORKSPACE'] = current_path + '/workspaces/' + options['env']['STRIP_TARGET']
-
-        #create workspace folder for the target
-        utils.make_directory(options['env']['WORKSPACE'])
-
-        options['env']['COMPANY'] = args.target
-        #checking for connection to target
-        options['env']['IP'] = socket.gethostbyname(options['env']['TARGET'])
-
+def single_target(options):
+    print(
+        '{2}---<---<--{1}@{2} Target: {0} {1}@{2}-->--->---'.format(options['TARGET'], P, G))
 
     #run specific task otherwise run the normal routine
-    if args.module:
-        module = args.module
+    if options['MODULE'] != "None":
+        module = options['MODULE']
         routine.specific(options, module)
 
     else:
-        if options['DEBUG']:
+        if options['DEBUG'] == "True":
             routine.debug(options)
         else:
             routine.normal(options)
@@ -179,12 +150,14 @@ def update():
 def main():
     config.banner()
     parser = argparse.ArgumentParser(description="Collection tool for automatic pentesting")
+    parser.add_argument('-c','--config' , action='store', dest='config', help='config file', default='config.conf')
     parser.add_argument('-m','--module' , action='store', dest='module', help='specific module to action')
     parser.add_argument('-t','--target' , action='store', dest='target', help='target')
-    parser.add_argument('-T','--target_list' , action='store', dest='targetlist', help='list of target')
-    parser.add_argument('-o','--output' , action='store', dest='output', help='output')
+    parser.add_argument('--company', action='store', dest='company', help='Company name')
     parser.add_argument('-b','--burp' , action='store', dest='burp', help='burp http file')
     parser.add_argument('-g','--git' , action='store', dest='git', help='git repo to scan')
+    parser.add_argument('-T','--target_list' , action='store', dest='targetlist', help='list of target')
+    parser.add_argument('-o','--output' , action='store', dest='output', help='output')
     parser.add_argument('-w','--workspace' , action='store', dest='workspace', help='Domain')
     parser.add_argument('--more' , action='store', dest='more', help='append more command for some tools')
 

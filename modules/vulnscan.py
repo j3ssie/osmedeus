@@ -6,7 +6,7 @@ class VulnScan(object):
     ''' Scanning vulnerable service based version '''
     def __init__(self, options):
         utils.print_banner("Vulnerable Scanning")
-        utils.make_directory(options['env']['WORKSPACE'] + '/vulnscan')
+        utils.make_directory(options['WORKSPACE'] + '/vulnscan')
         self.module_name = self.__class__.__name__
         self.options = options
         self.initial()
@@ -32,7 +32,7 @@ class VulnScan(object):
         # Scan every 5 IP at time Increse if you want
         for part in list(utils.chunks(ip_list, 5)):
             for ip in part:
-                cmd = 'sudo nmap -T4 -Pn -n -sSV -p- $STRIP_TARGET --script vulners --oA $WORKSPACE/vulnscan/$OUTPUT-nmap'.format(ip)
+                cmd = 'sudo nmap -T4 -Pn -n -sSV -p- {0} --script vulners --oA $WORKSPACE/vulnscan/$OUTPUT-nmap'.format(ip)
 
                 cmd = utils.replace_argument(self.options, cmd)
                 output_path = utils.replace_argument(

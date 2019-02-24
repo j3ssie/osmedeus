@@ -6,7 +6,7 @@ class IPSpace(object):
     ''' Scanning vulnerable service based version '''
     def __init__(self, options):
         utils.print_banner("IP Discovery")
-        utils.make_directory(options['env']['WORKSPACE'] + '/ipspace')
+        utils.make_directory(options['WORKSPACE'] + '/ipspace')
         self.module_name = self.__class__.__name__
         self.options = options
 

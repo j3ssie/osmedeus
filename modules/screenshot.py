@@ -6,7 +6,7 @@ class ScreenShot(object):
     """Screenshot all domain on common service"""
     def __init__(self, options):
         utils.print_banner("ScreenShot the target")
-        utils.make_directory(options['env']['WORKSPACE'] + '/screenshot')
+        utils.make_directory(options['WORKSPACE'] + '/screenshot')
         self.module_name = self.__class__.__name__
         self.options = options
 

@@ -6,7 +6,7 @@ class BurpState(object):
     """docstring for PortScan"""
     def __init__(self, options):
         utils.print_banner("Scanning through BurpState")
-        utils.make_directory(options['env']['WORKSPACE'] + '/burpstate/')
+        utils.make_directory(options['WORKSPACE'] + '/burpstate/')
         self.module_name = self.__class__.__name__
         self.options = options
         self.initial()

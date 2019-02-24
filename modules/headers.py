@@ -8,16 +8,16 @@ class HeadersScan(object):
     """docstring for Headers Scan"""
     def __init__(self, options):
         utils.print_banner("Headers Scanning")
-        utils.make_directory(options['env']['WORKSPACE'] + '/headers')
-        utils.make_directory(options['env']['WORKSPACE'] + '/headers/details')
+        utils.make_directory(options['WORKSPACE'] + '/headers')
+        utils.make_directory(options['WORKSPACE'] + '/headers/details')
         self.module_name = self.__class__.__name__
         self.options = options
         self.initial()
-        utils.just_waiting(self.module_name)
-        self.conclude()
 
     def initial(self):
         self.observatory()
+        utils.just_waiting(self.module_name)
+        self.conclude()
 
     def observatory(self):
         utils.print_good('Starting observatory')

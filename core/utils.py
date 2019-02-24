@@ -40,7 +40,8 @@ def check_output(output):
 #################
 
 def replace_argument(options, cmd):
-	for key,value in options['env'].items():
+	# for key,value in options['env'].items():
+	for key,value in options.items():
 		if key in cmd:
 			cmd = cmd.replace('$' + str(key), str(value))	
 	return cmd
