@@ -20,8 +20,7 @@ from modules import conclusion
 
 #runnning normal routine if none of module specific
 def normal(options):
-    #wait for flask API start
-    time.sleep(2)
+
     utils.print_good("Running with {0} speed".format(options['SPEED']))
 
     # Create skeleton json
@@ -67,8 +66,6 @@ def normal(options):
 
 
 def specific(options, module):
-    #wait for flask API start
-    time.sleep(2)
 
     if 'subdomain' in module:
         subdomain.SubdomainScanning(options)
@@ -116,31 +113,28 @@ def specific(options, module):
 
 #just for debug purpose
 def debug(options):
-    #wait for flask API start
-    time.sleep(2)
-
     utils.print_good("Debug routine")
     utils.print_good("Running with {0} speed".format(options['SPEED']))
     # Create skeleton json
-    initials.Initials(options)
+    # initials.Initials(options)
 
     ##Finding subdomain
-    subdomain.SubdomainScanning(options)
+    # subdomain.SubdomainScanning(options)
 
     ##waiting for previous module
     # utils.just_waiting('SubdomainScanning')
 
-    ##Scanning for subdomain take over
-    takeover.TakeOverScanning(options)
+    # ##Scanning for subdomain take over
+    # takeover.TakeOverScanning(options)
 
-    ##Screen shot the target on common service
-    screenshot.ScreenShot(options)
+    # ##Screen shot the target on common service
+    # screenshot.ScreenShot(options)
 
-    ##Scanning for CorsScan
-    cors.CorsScan(options)
+    # ##Scanning for CorsScan
+    # cors.CorsScan(options)
 
-    # # ##Discovery IP space
-    ipspace.IPSpace(options)
+    # # # ##Discovery IP space
+    # ipspace.IPSpace(options)
 
     # # ##SSL Scan
     # sslscan.SSLScan(options)
@@ -152,7 +146,7 @@ def debug(options):
     # utils.print_info('This gonna take a while')
 
     # # #Scanning all port using result from subdomain scanning and also checking vulnerable service based on version
-    # portscan.PortScan(options)
+    portscan.PortScan(options)
 
     # # #Starting vulnerable scan
     # vulnscan.VulnScan(options)

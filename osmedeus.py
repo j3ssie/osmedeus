@@ -72,25 +72,13 @@ def parsing_argument(args):
     p = Process(target=flask_run)
     p.start()
 
-
-    # config_path = args.config
-    # options = config.parsing_config(config_path, args)
-
     #parsing agument
     if args.config:
         config_path = args.config
         options = config.parsing_config(config_path, args)
 
-        #testing
-        cmd = '$GO_PATH/subfinder -d $TARGET -t 100 -o $WORKSPACE/subdomain/$OUTPUT-subfinder.txt -nW'
-        cmd = utils.replace_argument(options, cmd)
-        print(cmd)
-
-        # return "Testing"
-
-    # pprint(options)
-
-
+    #wait for flask API start
+    time.sleep(2)
 
     if options['TARGET_LIST'] != "None":
         #check if target list file exist and loop throught the target

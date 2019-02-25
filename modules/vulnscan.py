@@ -24,10 +24,12 @@ class VulnScan(object):
 
         if self.options['SPEED'] == 'slow':
             ip_list = [x.get("IP")
-                       for x in main_json['Subdomains']] + main_json['IP Space']
+                       for x in main_json['Subdomains'] if x.get("IP") is not None] + main_json['IP Space']
 
         elif self.options['SPEED'] == 'quick':
-            ip_list = [x.get("IP") for x in main_json['Subdomains']]
+            ip_list = [x.get("IP")
+                       for x in main_json['Subdomains'] if x.get("IP") is not None]
+
 
         # Scan every 5 IP at time Increse if you want
         for part in list(utils.chunks(ip_list, 5)):

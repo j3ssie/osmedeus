@@ -20,7 +20,7 @@ class DirBrute(object):
         utils.print_good('Starting dirsearch')
         #matching IP with subdomain
         main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
-        domains = [x.get('domain') for x in main_json['Subdomains']]
+        domains = [x.get('Domain') for x in main_json['Subdomains']]
 
         for domain in domains:
             cmd = 'python3 $PLUGINS_PATH/dirsearch/dirsearch.py --json-report=$WORKSPACE/directory/{0}-dirsearch.json  -u "{0}" -e php,jsp,aspx,js,html -t 20 -b'.format(domain)
@@ -37,7 +37,7 @@ class DirBrute(object):
             return
 
         main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
-        domains = [x.get('domain') for x in main_json['Subdomains']]
+        domains = [x.get('Domain') for x in main_json['Subdomains']]
 
         for domain in domains:
             cmd = '$GO_PATH/gobuster -k -q -e -fw -x php,jsp,aspx,html,json -w $PLUGINS_PATH/wordlists/dir-all.txt -t 100 -o $WORKSPACE/directory/$TARGET-gobuster.txt  -u "$TARGET" '

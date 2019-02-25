@@ -23,7 +23,7 @@ class SubdomainScanning(object):
         else:
             self.amass()
             self.subfinder()
-            self.gobuster()
+            # self.gobuster()
             self.massdns()
 
 
@@ -52,14 +52,18 @@ class SubdomainScanning(object):
         utils.print_good('Starting gobuster')
         
         if self.options['SPEED'] == 'slow':
-            cmd = '$GO_PATH/gobuster -m dns -np -t 100 -w $PLUGINS_PATH/wordlists/all.txt -u $TARGET -o $WORKSPACE/subdomain/$OUTPUT-gobuster.txt'
+            cmd = '$GO_PATH/gobuster -m dns -np -t 100 -w $PLUGINS_PATH/wordlists/all.txt -u $TARGET -o $WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt'
         elif self.options['SPEED'] == 'quick':
-            cmd = '$GO_PATH/gobuster -m dns -np -t 100 -w $PLUGINS_PATH/wordlists/shorts.txt -u $TARGET -o $WORKSPACE/subdomain/$OUTPUT-gobuster.txt'
+            cmd = '$GO_PATH/gobuster -m dns -np -t 100 -w $PLUGINS_PATH/wordlists/shorts.txt -u $TARGET -o $WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt'
         
         cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/$OUTPUT-gobuster.txt')
-        std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-$OUTPUT-gobuster.std')
+        output_path = utils.replace_argument(
+            self.options, '$WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt')
+        std_path = utils.replace_argument(
+            self.options, '$WORKSPACE/subdomain/std-raw-$OUTPUT-gobuster.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
+
+
 
     def massdns(self):
         utils.print_good('Starting massdns')
@@ -73,8 +77,21 @@ class SubdomainScanning(object):
         std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-raw-massdns.txt')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
-        massdns_raw = utils.replace_argument(self.options, '$WORKSPACE/subdomain/raw-massdns.txt')
-        massdns_output = utils.replace_argument(self.options, '$WORKSPACE/subdomain/$OUTPUT-massdns.txt')
+    def unique_result(self):
+        #just clean up some output
+
+        #gobuster clean up
+        cmd = 'cat $WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt | cut -d ' ' -f 2 > $WORKSPACE/subdomain/$OUTPUT-gobuster.txt'
+        cmd = utils.replace_argument(self.options, cmd)
+        output_path = utils.replace_argument(
+            self.options, '$WORKSPACE/subdomain/$OUTPUT-gobuster.txt')
+        execute.send_cmd(cmd, output_path, '', self.module_name)
+
+        #massdns clean up
+        massdns_raw = utils.replace_argument(
+            self.options, '$WORKSPACE/subdomain/raw-massdns.txt')
+        massdns_output = utils.replace_argument(
+            self.options, '$WORKSPACE/subdomain/$OUTPUT-massdns.txt')
         if not os.path.exists(massdns_raw):
             with open(massdns_raw, 'r+') as d:
                 ds = d.read().splitlines()
@@ -83,15 +100,14 @@ class SubdomainScanning(object):
                 with open(massdns_output, 'a+') as m:
                     m.write(newline + "\n")
 
-            utils.check_output(utils.replace_argument(self.options, '$WORKSPACE/subdomain/$OUTPUT-massdns.txt'))
+            utils.check_output(utils.replace_argument(
+                self.options, '$WORKSPACE/subdomain/$OUTPUT-massdns.txt'))
 
-    def unique_result(self):
         utils.print_good('Unique result')
         cmd = "cat $WORKSPACE/subdomain/$OUTPUT-*.txt | sort | awk '{print tolower($0)}' | uniq >> $WORKSPACE/subdomain/final-$OUTPUT.txt"
         
         cmd = utils.replace_argument(self.options, cmd)
         output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
-        # std_path = utils.replace_argument(self.options, 'std-$WORKSPACE/subdomain/std-final-$OUTPUT.std')
         execute.send_cmd(cmd, output_path, '', self.module_name)
 
     #update the main json file

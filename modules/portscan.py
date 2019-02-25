@@ -41,20 +41,21 @@ class PortScan(object):
             self.options, '$WORKSPACE/subdomain/std-massdns-IP-$OUTPUT.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
+        utils.just_waiting(self.module_name, seconds=5)
+
         # matching IP with subdomain
         main_json = utils.reading_json(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'))
         with open(output_path, 'r') as i:
             data = i.read().splitlines()
-
         ips = []
         for line in data:
-            if ' A ' in line:
+            if " A " in line:
                 subdomain = line.split('. A ')[0]
                 ip = line.split('. A ')[1]
-                ips.append(ips)
+                ips.append(ip)
                 for i in range(len(main_json['Subdomains'])):
-                    if subdomain == main_json['Subdomains'][i]['domain']:
+                    if subdomain == main_json['Subdomains'][i]['Domain']:
                         main_json['Subdomains'][i]['IP'] = ip
 
         final_ip = utils.replace_argument(
@@ -63,8 +64,8 @@ class PortScan(object):
         with open(final_ip, 'w+') as fip:
             fip.write("\n".join(str(ip) for ip in ips))
 
-        utils.just_write(utils.reading_json(utils.replace_argument(
-            self.options, '$WORKSPACE/$COMPANY.json')), main_json, is_json=True)
+        utils.just_write(utils.replace_argument(
+            self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
 
     def masscan(self):
         utils.print_good('Starting masscan')
@@ -75,10 +76,12 @@ class PortScan(object):
 
         if self.options['SPEED'] == 'slow':
             ip_list = [x.get("IP")
-                       for x in main_json['Subdomains']] + main_json['IP Space']
+                       for x in main_json['Subdomains'] if x.get("IP") is not None] + main_json['IP Space']
 
         elif self.options['SPEED'] == 'quick':
-            ip_list = [x.get("IP") for x in main_json['Subdomains']]
+            ip_list = [x.get("IP")
+                       for x in main_json['Subdomains'] if x.get("IP") is not None]
+
 
         # Scan every 5 IP at time Increse if you want
         for part in list(utils.chunks(ip_list, 5)):
