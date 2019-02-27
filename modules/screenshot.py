@@ -1,5 +1,6 @@
 import os, time
 from core import execute
+from core import slack
 from core import utils
 
 class ScreenShot(object):
@@ -9,7 +10,10 @@ class ScreenShot(object):
         utils.make_directory(options['WORKSPACE'] + '/screenshot')
         self.module_name = self.__class__.__name__
         self.options = options
-
+        slack.slack_info(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start ScreenShot for {0}'.format(self.options['TARGET'])
+        })
         self.initial()
         #check if the screenshot success or not, if not run it again
         # while True:
@@ -19,7 +23,10 @@ class ScreenShot(object):
         #         utils.just_waiting(self.module_name)
         #     else:
         #         break
-
+        slack.slack_good(self.options, mess={
+            'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
+            'content': 'Done ScreenShot for {0}'.format(self.options['TARGET'])
+        })
 
 
 
@@ -39,6 +46,10 @@ class ScreenShot(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/screenshot/$OUTPUT-aquatone.html')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/screenshot/std-$OUTPUT-aquatone.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
+        slack.send_log(self.options, mess={
+            'title':  "{0} | aquatone | {1} | Execute".format(self.options['TARGET'], self.module_name),
+            'content': '```{0}```'.format(cmd),
+        })
 
     def eyewitness_common(self):
         utils.print_good('Starting EyeWitness for web')

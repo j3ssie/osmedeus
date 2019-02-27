@@ -1,5 +1,6 @@
 import os, time
 from core import execute
+from core import slack
 from core import utils
 
 class VulnScan(object):
@@ -9,9 +10,17 @@ class VulnScan(object):
         utils.make_directory(options['WORKSPACE'] + '/vulnscan')
         self.module_name = self.__class__.__name__
         self.options = options
+        slack.slack_info(self.options, mess={
+            'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
+            'content': 'Done Vulnerable Scanning for {0}'.format(self.options['TARGET'])
+        })
         self.initial()
         utils.just_waiting(self.module_name)
         self.conclude()
+        slack.slack_good(self.options, mess={
+            'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
+            'content': 'Done Vulnerable Scanning for {0}'.format(self.options['TARGET'])
+        })
 
     def initial(self):
         self.nmap_vuln()

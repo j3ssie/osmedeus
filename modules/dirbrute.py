@@ -1,5 +1,6 @@
 import os, time
 from core import execute
+from core import slack
 from core import utils
 
 class DirBrute(object):
@@ -9,8 +10,15 @@ class DirBrute(object):
         utils.make_directory(options['WORKSPACE'] + '/directory')
         self.module_name = self.__class__.__name__
         self.options = options
-
+        slack.slack_info(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start Scanning Directory for {0}'.format(self.options['TARGET'])
+        })
         self.initial()
+        slack.slack_good(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start Scanning Directory for {0}'.format(self.options['TARGET'])
+        })
 
     def initial(self):
         self.dirsearch()

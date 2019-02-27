@@ -1,5 +1,6 @@
 import os, time
 from core import execute
+from core import slack
 from core import utils
 
 class SSLScan(object):
@@ -9,9 +10,17 @@ class SSLScan(object):
         utils.make_directory(options['WORKSPACE'] + '/ssl/')
         self.module_name = self.__class__.__name__
         self.options = options
+        slack.slack_info(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start SSL Scanning for {0}'.format(self.options['TARGET'])
+        })
         self.initial()
         utils.just_waiting(self.module_name)
         self.conclude()
+        slack.slack_good(self.options, mess={
+            'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
+            'content': 'Done SSL Scanning for {0}'.format(self.options['TARGET'])
+        })
 
     def initial(self):
         self.testssl()
@@ -27,7 +36,11 @@ class SSLScan(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/ssl/$TARGET-testssl.txt')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/ssl/std-$TARGET-testssl.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
+        #log the command
+        slack.send_log(self.options, mess={
+            'title':  "{0} | testssl | {1} | Execute".format(self.options['TARGET'], self.module_name),
+            'content': '```{0}```'.format(cmd),
+        })
 
     #update the main json file
     def conclude(self):

@@ -1,5 +1,6 @@
 import os, json, requests, time
 
+# from core import slack
 #################
 
 # Console colors
@@ -132,6 +133,5 @@ def save_all_cmd(logfile, url='http://127.0.0.1:5000/activities'):
 
 def just_shutdown_flask(url='http://127.0.0.1:5000/shutdown'):
     requests.post(url)
-
 
 

@@ -1,5 +1,6 @@
 import os
 from core import execute
+from core import slack
 from core import utils
 
 class GitScan(object):
@@ -9,9 +10,17 @@ class GitScan(object):
         utils.make_directory(options['WORKSPACE'] + '/gitscan/')
         self.module_name = self.__class__.__name__
         self.options = options
+        slack.slack_info(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start Github Repo Scanning for {0}'.format(self.options['TARGET'])
+        })
         self.initial()
 
         self.conclude()
+        slack.slack_good(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start Github Repo Scanning for {0}'.format(self.options['TARGET'])
+        })
 
 
     def initial(self):

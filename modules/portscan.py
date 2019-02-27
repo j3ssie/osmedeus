@@ -4,6 +4,7 @@ import socket
 import time
 import json
 from core import execute
+from core import slack
 from core import utils
 
 from libnmap.parser import NmapParser
@@ -14,15 +15,23 @@ class PortScan(object):
     """docstring for PortScan"""
 
     def __init__(self, options):
-        utils.print_banner("Services Scanning")
+        utils.print_banner("Port Scanning")
         utils.make_directory(options['WORKSPACE'] + '/portscan')
         self.module_name = self.__class__.__name__
         self.options = options
+        slack.slack_info(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start Port Scanning for {0}'.format(self.options['TARGET'])
+        })
         self.initial()
 
         utils.just_waiting(self.module_name)
         self.result_parsing()
         self.conclude()
+        slack.slack_good(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start Port Scanning for {0}'.format(self.options['TARGET'])
+        })
 
     def initial(self):
         self.create_ip_result()

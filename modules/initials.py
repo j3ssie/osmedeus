@@ -1,6 +1,7 @@
-import os, glob
+import os, glob, time
 from pprint import pprint
 from core import execute
+from core import slack
 from core import utils
 
 
@@ -35,6 +36,10 @@ class Initials(object):
 
         utils.just_write(outout, main_json, is_json=True)
         utils.check_output(outout)
+        slack.slack_info(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Create skeleton json'
+        })
 
     def whois(self):
         utils.print_good('Starting Whois')
@@ -44,7 +49,20 @@ class Initials(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/info/$OUTPUT-whois.txt')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/info/std-$OUTPUT-whois.std')
 
+        #log the command
+        slack.send_log(self.options, mess={
+            'title':  "{0} | Whois | {1} | Execute".format(self.options['TARGET'], self.module_name),
+            'content': '```{0}```'.format(cmd),
+        })
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
+
+        # upload the output
+        utils.just_waiting(self.module_name, seconds=2)
+        slack.slack_file(self.options, mess={
+            'title':  "{0} | Whois | {1} | Output".format(self.options['TARGET'], self.module_name),
+            'filename': '{0}'.format(output_path),
+        })
+
 
     # def conclude():
     #     pass

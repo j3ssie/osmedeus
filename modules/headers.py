@@ -1,6 +1,7 @@
 import os, glob
 import time
 from core import execute
+from core import slack
 from core import utils
 
 
@@ -12,7 +13,15 @@ class HeadersScan(object):
         utils.make_directory(options['WORKSPACE'] + '/headers/details')
         self.module_name = self.__class__.__name__
         self.options = options
+        slack.slack_info(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start Headers Scanning for {0}'.format(self.options['TARGET'])
+        })
         self.initial()
+        slack.slack_good(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start Headers Scanning for {0}'.format(self.options['TARGET'])
+        })
 
     def initial(self):
         if self.observatory():

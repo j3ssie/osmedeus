@@ -1,5 +1,6 @@
 import os, time
 from core import execute
+from core import slack
 from core import utils
 
 class IPSpace(object):
@@ -9,11 +10,18 @@ class IPSpace(object):
         utils.make_directory(options['WORKSPACE'] + '/ipspace')
         self.module_name = self.__class__.__name__
         self.options = options
-
+        slack.slack_info(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start IP Discovery for {0}'.format(self.options['TARGET'])
+        })
         self.initial()
         utils.just_waiting(self.module_name)
         self.conclude()
 
+        slack.slack_good(self.options, mess={
+            'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
+            'content': 'Done IP Discovery for {0}'.format(self.options['TARGET'])
+        })
     def initial(self):
         self.ipOinst()
 
@@ -25,7 +33,10 @@ class IPSpace(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/ipspace/$OUTPUT-ipspace.txt')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/ipspace/std-$OUTPUT-ipspace.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
+        slack.send_log(self.options, mess={
+            'title':  "{0} | IPOsint | {1} | Execute".format(self.options['TARGET'], self.module_name),
+            'content': '```{0}```'.format(cmd),
+        })
 
     #update the main json file
     def conclude(self):

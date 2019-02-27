@@ -1,6 +1,7 @@
 import os, glob, json, time
 from pprint import pprint
 from core import execute
+from core import slack
 from core import utils
 
 class SubdomainScanning(object):
@@ -10,11 +11,22 @@ class SubdomainScanning(object):
         utils.make_directory(options['WORKSPACE'] + '/subdomain')
         self.module_name = self.__class__.__name__
         self.options = options
+
+        slack.slack_info(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start Scanning Subdomain for {0}'.format(self.options['TARGET'])
+        })
         self.initial()
 
         utils.just_waiting(self.module_name)
         #this gonna run after module is done to update the main json
         self.conclude()
+
+        slack.slack_good(self.options, mess={
+            'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
+            'content': 'Done Scanning Subdomain for {0}'.format(self.options['TARGET'])
+        })
+
 
     def initial(self):
         #just for debug purpose
@@ -23,7 +35,7 @@ class SubdomainScanning(object):
         else:
             self.amass()
             self.subfinder()
-            # self.gobuster()
+            self.gobuster()
             self.massdns()
 
 
@@ -37,6 +49,12 @@ class SubdomainScanning(object):
         std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-$TARGET-amass.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
+        #log the command
+        slack.send_log(self.options, mess={
+            'title':  "{0} | amass | {1} | Execute".format(self.options['TARGET'], self.module_name),
+            'content': '```{0}```'.format(cmd),
+        })
+
     def subfinder(self):
         utils.print_good('Starting subfinder')
         cmd = '$GO_PATH/subfinder -d $TARGET -t 100 -o $WORKSPACE/subdomain/$OUTPUT-subfinder.txt -nW'
@@ -46,6 +64,11 @@ class SubdomainScanning(object):
         std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-$OUTPUT-subfinder.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
+        #log the command
+        slack.send_log(self.options, mess={
+            'title':  "{0} | subfinder | {1} | Execute".format(self.options['TARGET'], self.module_name),
+            'content': '```{0}```'.format(cmd),
+        })
 
     #just use massdns for directory bruteforce
     def gobuster(self):
@@ -63,6 +86,11 @@ class SubdomainScanning(object):
             self.options, '$WORKSPACE/subdomain/std-raw-$OUTPUT-gobuster.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
+        #log the command
+        slack.send_log(self.options, mess={
+            'title':  "{0} | gobuster | {1} | Execute".format(self.options['TARGET'], self.module_name),
+            'content': 'Command:\n ```{0}```'.format(cmd),
+        })
 
 
     def massdns(self):
@@ -76,6 +104,12 @@ class SubdomainScanning(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/raw-massdns.txt')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-raw-massdns.txt')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
+
+        #log the command
+        slack.send_log(self.options, mess={
+            'title':  "{0} | massdns | {1} | Execute".format(self.options['TARGET'], self.module_name),
+            'content': '```{0}```'.format(cmd),
+        })
 
     def unique_result(self):
         #just clean up some output
@@ -110,6 +144,11 @@ class SubdomainScanning(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
         execute.send_cmd(cmd, output_path, '', self.module_name)
 
+        slack.slack_file(self.options, mess={
+            'title':  "{0} | {1} | Output".format(self.options['TARGET'], self.module_name),
+            'filename': '{0}'.format(output_path),
+        })
+
     #update the main json file
     def conclude(self):
         self.unique_result()
@@ -137,6 +176,7 @@ class SubdomainScanning(object):
         utils.save_all_cmd(logfile)
 
         utils.print_banner("{0}".format(self.module_name))
+
 
 
 

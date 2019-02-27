@@ -1,5 +1,6 @@
 import os
 from core import execute
+from core import slack
 from core import utils
 
 class BurpState(object):
@@ -9,7 +10,15 @@ class BurpState(object):
         utils.make_directory(options['WORKSPACE'] + '/burpstate/')
         self.module_name = self.__class__.__name__
         self.options = options
+        slack.slack_info(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start Scanning BurpState for {0}'.format(self.options['TARGET'])
+        })
         self.initial()
+        slack.slack_good(self.options, mess={
+            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+            'content': 'Start Scanning BurpState for {0}'.format(self.options['TARGET'])
+        })
         self.conclude()
 
     def initial(self):

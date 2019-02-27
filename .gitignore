@@ -8,10 +8,10 @@ workspaces
 modules/testing.py
 local-install.sh
 config.conf
+paused.conf
 
 # Byte-compiled / optimized / DLL files
 core/__pycache__/
-# core/config.py
 modules/__pycache__/
 __pycache__/
 *.py[cod]

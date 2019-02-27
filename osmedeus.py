@@ -76,7 +76,11 @@ def parsing_argument(args):
     if args.config:
         config_path = args.config
         options = config.parsing_config(config_path, args)
-
+        # if options['DEBUG'] == "True":
+        #     pprint(options)
+        #     sm = slack.Messages(options)
+        #     sm.testing()
+            
     #wait for flask API start
     time.sleep(2)
 
