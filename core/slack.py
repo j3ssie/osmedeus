@@ -9,6 +9,8 @@ import random
 
 ###Slack printing
 def slack_info(options, text='', title='Execute', mess=None):
+    if options['BOT_TOKEN'] == "None":
+        return
     sm = Messages(options)
     if not mess:
         mess = {
@@ -20,6 +22,8 @@ def slack_info(options, text='', title='Execute', mess=None):
 
 ###Slack printing
 def send_log(options, text='', title='Execute', mess=None):
+    if options['BOT_TOKEN'] == "None":
+        return
     sm = Messages(options)
     if not mess:
         mess = {
@@ -31,6 +35,8 @@ def send_log(options, text='', title='Execute', mess=None):
 
 
 def slack_good(options, text='', title='Done', mess=None):
+    if options['BOT_TOKEN'] == "None":
+        return
     sm = Messages(options)
     if not mess:
         mess = {
@@ -38,10 +44,13 @@ def slack_good(options, text='', title='Done', mess=None):
             'title': title,
             'content': text,
         }
-    sm.send_info(mess)
+    sm.send_good(mess)
 
 
 def slack_file(options, filename='', title='Done', mess=None):
+    if options['BOT_TOKEN'] == "None":
+        return
+
     sm = Messages(options)
     if not mess:
         mess = {

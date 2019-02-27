@@ -180,3 +180,4 @@ api.add_resource(Activity, '/activities')
 
 if __name__ == '__main__':
     app.run(debug=True)  # important to mention debug=True
+    # app.run(debug=False)  # important to mention debug=True

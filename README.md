@@ -20,20 +20,23 @@ If you have no idea what are you doing just type the command below or check out 
 ./osmedeus.py -t example.com
 ```
 
-List all module 
-```
-./osmedeus.py -M
-```
+# Main Features
+* Collection of awesome tools againt the target. [Details](https://github.com/j3ssie/Osmedeus/CREDITS.md)
+* Seperate workspaces to store all scan output and details logging.
+* REST API.
+* Slack notifications.
 
-Update 
-```
-./osmedeus.py --update
-```
+![Slack Noti](https://github.com/j3ssie/Osmedeus/tree/master/imgs/slack_noti.png)
+
+![Slack Report](https://github.com/j3ssie/Osmedeus/tree/master/imgs/slack_report.png)
+
+![REST API](https://github.com/j3ssie/Osmedeus/tree/master/imgs/rest_api.png)
+
 
 # Demo
-[![asciicast](https://asciinema.org/a/ZudWoY9mRbXaqmYqHwB6Ky6lm.svg)](https://asciinema.org/a/ZudWoY9mRbXaqmYqHwB6Ky6lm)
+[![asciicast](https://asciinema.org/a/230164.svg)](https://asciinema.org/a/230164)
 
-[![Osmedeus](https://img.youtube.com/vi/SnGPedyJvig/0.jpg)](https://www.youtube.com/watch?v=SnGPedyJvig)
+
 
 # Disclaimer
 Most of this tool done by the authors of the tool that you can see in the module folder.

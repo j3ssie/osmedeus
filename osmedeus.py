@@ -33,35 +33,6 @@ __version__ = '1.0'
 
 ### Global stuff
 current_path = os.path.dirname(os.path.realpath(__file__))
-# SPECIAL_ARGUMENT = {
-#     'TARGET' : 'example.com',
-#     'COMPANY' : 'example.com',
-#     'STRIP_TARGET' : 'example.com',
-#     'IP' : '1.2.3.4',
-#     'BURPSTATE' : '',
-#     'OUTPUT' : 'out.txt',
-#     'WORKSPACE' : current_path + '/workspaces',
-
-#     'PLUGINS_PATH' : current_path + '/plugins',
-#     'GO_PATH' : '~/go/bin',
-#     'DIRECTORY_FULL' : current_path + '/plugins/wordlists/dir-all.txt',
-#     'DOMAIN_FULL' : current_path + '/plugins/wordlists/all.txt',
-#     'DEFAULT_WORDLIST' : '',
-
-#     'GITHUB_API_KEY' : 'abc123poi456', # this isn't work api :D 
-#     'MORE' : '',
-#     'CWD' : os.path.dirname(os.path.realpath(__file__)),
-# }
-###
-
-# options = {
-#     'target' : '',
-#     'targetlist' : '',
-#     'env' : SPECIAL_ARGUMENT,
-#     'speed' : 'quick',
-#     'DEBUG' : False
-# }
-
 
 def flask_run():
     utils.print_banner("Staarting Flask API")
@@ -76,10 +47,7 @@ def parsing_argument(args):
     if args.config:
         config_path = args.config
         options = config.parsing_config(config_path, args)
-        # if options['DEBUG'] == "True":
-        #     pprint(options)
-        #     sm = slack.Messages(options)
-        #     sm.testing()
+
             
     #wait for flask API start
     time.sleep(2)

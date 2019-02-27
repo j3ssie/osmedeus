@@ -8,7 +8,6 @@ workspaces
 modules/testing.py
 local-install.sh
 config.conf
-paused.conf
 
 # Byte-compiled / optimized / DLL files
 core/__pycache__/
