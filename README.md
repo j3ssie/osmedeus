@@ -20,22 +20,20 @@ If you have no idea what are you doing just type the command below or check out 
 ./osmedeus.py -t example.com
 ```
 
-# Main Features
+# Demo
+[![asciicast](https://asciinema.org/a/230164.svg)](https://asciinema.org/a/230164)
+
+# Features
 * Collection of awesome tools againt the target. [Details](https://github.com/j3ssie/Osmedeus/CREDITS.md)
 * Seperate workspaces to store all scan output and details logging.
 * REST API.
 * Slack notifications.
 
-![Slack Noti](https://github.com/j3ssie/Osmedeus/tree/master/imgs/slack_noti.png)
+![Slack Noti](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_noti.png)
 
-![Slack Report](https://github.com/j3ssie/Osmedeus/tree/master/imgs/slack_report.png)
+![Slack Report](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_report.png)
 
-![REST API](https://github.com/j3ssie/Osmedeus/tree/master/imgs/rest_api.png)
-
-
-# Demo
-[![asciicast](https://asciinema.org/a/230164.svg)](https://asciinema.org/a/230164)
-
+![REST API](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/rest_api.png)
 
 
 # Disclaimer

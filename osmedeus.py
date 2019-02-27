@@ -110,7 +110,7 @@ def update():
 def main():
     config.banner()
     parser = argparse.ArgumentParser(description="Collection tool for automatic pentesting")
-    parser.add_argument('-c','--config' , action='store', dest='config', help='config file', default='config.conf')
+    parser.add_argument('-c','--config' , action='store', dest='config', help='config file', default='core/config.conf')
     parser.add_argument('-m','--module' , action='store', dest='module', help='specific module to action')
     parser.add_argument('-t','--target' , action='store', dest='target', help='target')
     parser.add_argument('--company', action='store', dest='company', help='Company name')
