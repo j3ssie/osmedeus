@@ -52,6 +52,7 @@ def parsing_config(config_path, args):
     config.read(config_path)
 
     ##some default path
+    bot_token = str(os.getenv("SLACK_BOT_TOKEN"))
     go_path = str(os.getenv("GOPATH")) + "/bin"
     github_api_key = str(os.getenv("GITROB_ACCESS_TOKEN"))
     cwd = str(os.getcwd())
@@ -59,6 +60,7 @@ def parsing_config(config_path, args):
     config.set('Enviroments', 'cwd', cwd)
     config.set('Enviroments', 'go_path', go_path)
     config.set('Enviroments', 'github_api_key', github_api_key)
+    config.set('Slack', 'bot_token', bot_token)
     workspace = cwd + "/workspaces/"
 
     ##config of the tool

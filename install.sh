@@ -48,7 +48,7 @@ install_banner "Golang"
 apt install golang -y
 
 ### adding gopath
-if ! (grep -Fxq "GOPATH" "$DEFAULT_SHELL" )
+if grep -Fxq "GOPATH" "$DEFAULT_SHELL"
 then
 	echo 'export GOPATH=$HOME/go' >> $DEFAULT_SHELL
 	echo 'PATH=$GOPATH/bin:$PATH' >> $DEFAULT_SHELL
@@ -76,8 +76,10 @@ install_banner "gitleaks"
 go get -u github.com/zricethezav/gitleaks
 
 #Install flask stuff
+install_banner "flask"
 pip3 install flask flask_restful flask_jwt python-libnmap
 
+install_banner "observatory"
 npm install -g observatory-cli
 
 install_banner "IPOsint"

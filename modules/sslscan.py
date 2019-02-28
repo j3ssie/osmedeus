@@ -37,7 +37,7 @@ class SSLScan(object):
         std_path = utils.replace_argument(self.options, '$WORKSPACE/ssl/std-$TARGET-testssl.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
         #log the command
-        slack.send_log(self.options, mess={
+        slack.slack_log(self.options, mess={
             'title':  "{0} | testssl | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': '```{0}```'.format(cmd),
         })

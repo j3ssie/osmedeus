@@ -50,7 +50,7 @@ class SubdomainScanning(object):
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
         #log the command
-        slack.send_log(self.options, mess={
+        slack.slack_log(self.options, mess={
             'title':  "{0} | amass | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': '```{0}```'.format(cmd),
         })
@@ -65,7 +65,7 @@ class SubdomainScanning(object):
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
         #log the command
-        slack.send_log(self.options, mess={
+        slack.slack_log(self.options, mess={
             'title':  "{0} | subfinder | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': '```{0}```'.format(cmd),
         })
@@ -87,7 +87,7 @@ class SubdomainScanning(object):
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
         #log the command
-        slack.send_log(self.options, mess={
+        slack.slack_log(self.options, mess={
             'title':  "{0} | gobuster | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': 'Command:\n ```{0}```'.format(cmd),
         })
@@ -106,7 +106,7 @@ class SubdomainScanning(object):
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
         #log the command
-        slack.send_log(self.options, mess={
+        slack.slack_log(self.options, mess={
             'title':  "{0} | massdns | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': '```{0}```'.format(cmd),
         })

@@ -33,7 +33,7 @@ class TakeOverScanning(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/takeover-$TARGET-tko-subs.txt')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-takeover-$TARGET-tko-subs.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
-        slack.send_log(self.options, mess={
+        slack.slack_log(self.options, mess={
             'title':  "{0} | tko-subs | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': '```{0}```'.format(cmd),
         })
@@ -46,7 +46,7 @@ class TakeOverScanning(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/takeover-$TARGET-subjack.txt')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-takeover-$TARGET-subjack.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
-        slack.send_log(self.options, mess={
+        slack.slack_log(self.options, mess={
             'title':  "{0} | subjack | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': '```{0}```'.format(cmd),
         })

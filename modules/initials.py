@@ -50,7 +50,7 @@ class Initials(object):
         std_path = utils.replace_argument(self.options, '$WORKSPACE/info/std-$OUTPUT-whois.std')
 
         #log the command
-        slack.send_log(self.options, mess={
+        slack.slack_log(self.options, mess={
             'title':  "{0} | Whois | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': '```{0}```'.format(cmd),
         })

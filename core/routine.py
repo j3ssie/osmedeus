@@ -1,5 +1,6 @@
 import time
 from core import utils
+from pprint import pprint
 
 
 from modules import initials
@@ -116,31 +117,32 @@ def debug(options):
     utils.print_good("Debug routine")
     utils.print_good("Running with {0} speed".format(options['SPEED']))
     # Create skeleton json
-    # initials.Initials(options)
+    pprint(options)
+    initials.Initials(options)
 
-    ##Finding subdomain
+    #Finding subdomain
     # subdomain.SubdomainScanning(options)
 
     ##waiting for previous module
     # utils.just_waiting('SubdomainScanning')
 
-    # ##Scanning for subdomain take over
-    takeover.TakeOverScanning(options)
+    # # ##Scanning for subdomain take over
+    # takeover.TakeOverScanning(options)
 
-    # ##Screen shot the target on common service
-    screenshot.ScreenShot(options)
+    # # ##Screen shot the target on common service
+    # screenshot.ScreenShot(options)
 
-    # ##Scanning for CorsScan
-    cors.CorsScan(options)
+    # # ##Scanning for CorsScan
+    # cors.CorsScan(options)
 
-    # # # ##Discovery IP space
-    ipspace.IPSpace(options)
+    # # # # ##Discovery IP space
+    # ipspace.IPSpace(options)
 
-    # # ##SSL Scan
-    sslscan.SSLScan(options)
+    # # # ##SSL Scan
+    # sslscan.SSLScan(options)
 
-    # # ##Headers Scan
-    headers.HeadersScan(options)
+    # # # ##Headers Scan
+    # headers.HeadersScan(options)
 
     # ##### Note: From here the module gonna take really long time for scanning service and stuff like that
     # utils.print_info('This gonna take a while')

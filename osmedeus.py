@@ -8,6 +8,7 @@ from pprint import pprint
 from core import routine
 from core import config
 from core import execute
+from core import slack
 from core import utils
 
 # Console colors
@@ -19,7 +20,7 @@ B = '\033[1;34m'  # blue
 Y = '\033[1;93m'  # yellow
 P = '\033[1;35m'  # purple
 C = '\033[1;36m'  # cyan
-GR = '\033[1;37m'  # gray
+GR = '\033[1;37m'  # grays
 colors = [G,R,B,P,C,O,GR]
 
 
@@ -71,7 +72,7 @@ def parsing_argument(args):
 def single_target(options):
     print(
         '{2}---<---<--{1}@{2} Target: {0} {1}@{2}-->--->---'.format(options['TARGET'], P, G))
-
+    slack.slack_seperate(options)
     #run specific task otherwise run the normal routine
     if options['MODULE'] != "None":
         module = options['MODULE']

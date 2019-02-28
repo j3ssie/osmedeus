@@ -8,9 +8,28 @@ import random
 
 
 ###Slack printing
+def slack_seperate(options):
+    if options['BOT_TOKEN'] == "None":
+        return
+    mess = {
+        'title': "Just Seperated stuff",
+        'color': "#44475A",
+        'image_url': get_emoji(),
+        'icon': get_emoji(),
+    }
+    sm = Messages(options)
+
+    mess['channel'] = options['STATUS_CHANNEL']
+    sm.send_mess(mess)
+    mess['channel'] = options['LOG_CHANNEL']
+    sm.send_mess(mess)
+    mess['channel'] = options['REPORT_CHANNEL']
+    sm.send_mess(mess)
+
 def slack_info(options, text='', title='Execute', mess=None):
     if options['BOT_TOKEN'] == "None":
         return
+    
     sm = Messages(options)
     if not mess:
         mess = {
@@ -21,7 +40,7 @@ def slack_info(options, text='', title='Execute', mess=None):
     sm.send_info(mess)
 
 ###Slack printing
-def send_log(options, text='', title='Execute', mess=None):
+def slack_log(options, text='', title='Execute', mess=None):
     if options['BOT_TOKEN'] == "None":
         return
     sm = Messages(options)
@@ -122,7 +141,8 @@ class Messages():
         author_name = get_value(mess, 'author_name')
         
         title = mess['title']
-        content = mess['content']
+        content = get_value(mess, 'content', '')
+        image_url = get_value(mess, 'image_url', '')
         color = mess['color']
         icon = mess['icon']
 
@@ -131,6 +151,7 @@ class Messages():
             "channel": channel,
             "attachments": [
                 {
+                    "image_url": image_url,
                     "author_name": author_name,
                     "fallback": title,
                     "title": title,
@@ -169,7 +190,12 @@ Utilities stuff
 def get_emoji():
     emojis = [
         'https://emoji.slack-edge.com/TC2BSM362/jemoji1/164b2f1f9acbaeba.png',
-        'https://emoji.slack-edge.com/TC2BSM362/jemoji2/d759e0cca7025869.png'
+        'https://emoji.slack-edge.com/TC2BSM362/jemoji2/d759e0cca7025869.png',
+        'https://emoji.slack-edge.com/TE7PBEN9H/jemoji1/8774d419e10124c2.png',
+        'https://emoji.slack-edge.com/TE7PBEN9H/jemoji2/2b6950cdfaad8087.png',
+        'https://emoji.slack-edge.com/TE7PBEN9H/jemoji3/62f09c4a09e334d8.png',
+        'https://emoji.slack-edge.com/TE7PBEN9H/jemoji4/fa10edce4f481653.png',
+        'https://emoji.slack-edge.com/TE7PBEN9H/jemoji5/dd199bf8963d863c.png'
         # ''
     ]
     return random.choice(emojis)

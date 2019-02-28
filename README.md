@@ -24,7 +24,17 @@ If you have no idea what are you doing just type the command below or check out 
 [![asciicast](https://asciinema.org/a/230164.svg)](https://asciinema.org/a/230164)
 
 # Features
-* Collection of awesome tools againt the target. [Details](https://github.com/j3ssie/Osmedeus/CREDITS.md)
+* Run collection of awesome tools againt the target. [Details](https://github.com/j3ssie/Osmedeus/CREDITS.md)
+    * Subdomain Scan.
+    * Subdomain TakeOver Scan.
+    * Screenshot the target.
+    * IP Discovery.
+    * CORS Scan.
+    * SSL Scan.
+    * Headers Scan.
+    * Port Scan.
+    * Vulnerable Scan.
+
 * Seperate workspaces to store all scan output and details logging.
 * REST API.
 * Slack notifications.

@@ -33,7 +33,7 @@ class IPSpace(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/ipspace/$OUTPUT-ipspace.txt')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/ipspace/std-$OUTPUT-ipspace.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
-        slack.send_log(self.options, mess={
+        slack.slack_log(self.options, mess={
             'title':  "{0} | IPOsint | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': '```{0}```'.format(cmd),
         })
