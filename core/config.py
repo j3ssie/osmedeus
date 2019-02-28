@@ -51,10 +51,16 @@ def parsing_config(config_path, args):
     options = {}
 
     ##some default path
-    bot_token = str(os.getenv("SLACK_BOT_TOKEN"))
     go_path = str(os.getenv("GOPATH")) + "/bin"
     github_api_key = str(os.getenv("GITROB_ACCESS_TOKEN"))
     cwd = str(os.getcwd())
+    bot_token = str(os.getenv("SLACK_BOT_TOKEN"))
+    log_channel = str(os.getenv("LOG_CHANNEL"))
+    status_channel = str(os.getenv("STATUS_CHANNEL"))
+    report_channel = str(os.getenv("REPORT_CHANNEL"))
+
+
+
 
     if os.path.isfile(config_path):
         utils.print_info('Config file detected: {0}'.format(config_path))

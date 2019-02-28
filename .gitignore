@@ -3,6 +3,8 @@
 #plugins dir
 plugins
 workspaces
+amass
+
 
 #testing
 config.conf
