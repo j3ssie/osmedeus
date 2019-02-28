@@ -77,8 +77,13 @@ def parsing_config(config_path, args):
     config.set('Enviroments', 'cwd', cwd)
     config.set('Enviroments', 'go_path', go_path)
     config.set('Enviroments', 'github_api_key', github_api_key)
-    config.set('Slack', 'bot_token', bot_token)
     workspace = cwd + "/workspaces/"
+
+    config.set('Slack', 'bot_token', bot_token)
+    config.set('Slack', 'log_channel', log_channel)
+    config.set('Slack', 'status_channel', status_channel)
+    config.set('Slack', 'report_channel', report_channel)
+
 
     ##config of the tool
     if args.slow:
