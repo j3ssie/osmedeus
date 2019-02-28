@@ -1,4 +1,6 @@
 import os, socket, time
+import shutil
+
 from core import utils
 from pprint import pprint
 from configparser import ConfigParser, ExtendedInterpolation
@@ -47,15 +49,24 @@ def banner():
 
 def parsing_config(config_path, args):
     options = {}
-    #config to logging some output
-    config = ConfigParser(interpolation=ExtendedInterpolation())
-    config.read(config_path)
 
     ##some default path
     bot_token = str(os.getenv("SLACK_BOT_TOKEN"))
     go_path = str(os.getenv("GOPATH")) + "/bin"
     github_api_key = str(os.getenv("GITROB_ACCESS_TOKEN"))
     cwd = str(os.getcwd())
+
+    if os.path.isfile(config_path):
+        utils.print_info('Config file detected: {0}'.format(config_path))
+        #config to logging some output
+        config = ConfigParser(interpolation=ExtendedInterpolation())
+        config.read(config_path)
+    else:
+        utils.print_info('New config file created: {0}'.format(config_path))
+        shutil.copyfile(cwd + '/template-config.conf', config_path)
+
+        config = ConfigParser(interpolation=ExtendedInterpolation())
+        config.read(config_path)
 
     config.set('Enviroments', 'cwd', cwd)
     config.set('Enviroments', 'go_path', go_path)

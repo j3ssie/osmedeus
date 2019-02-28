@@ -118,7 +118,7 @@ def debug(options):
     utils.print_good("Running with {0} speed".format(options['SPEED']))
     # Create skeleton json
     pprint(options)
-    initials.Initials(options)
+    # initials.Initials(options)
 
     #Finding subdomain
     # subdomain.SubdomainScanning(options)
