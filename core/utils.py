@@ -1,6 +1,4 @@
 import os, json, requests, time
-
-# from core import slack
 #################
 
 # Console colors
@@ -67,10 +65,6 @@ def chunks(l, n):
 
 def just_write(filename, data, is_json=False):
     try:
-    #     parent_dir = '/'.join(filename.split('/')[:-1])
-    #     if not os.path.exists(parent_dir):
-    #         print_bad("Something wrong with the path: {0}".format(filename))
-    #         return False
         print_good("Writing {0}".format(filename))
         if is_json:
             with open(filename, 'w+') as f:

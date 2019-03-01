@@ -121,13 +121,13 @@ def debug(options):
     # initials.Initials(options)
 
     #Finding subdomain
-    # subdomain.SubdomainScanning(options)
+    subdomain.SubdomainScanning(options)
 
     ##waiting for previous module
     # utils.just_waiting('SubdomainScanning')
 
     # # ##Scanning for subdomain take over
-    # takeover.TakeOverScanning(options)
+    takeover.TakeOverScanning(options)
 
     # # ##Screen shot the target on common service
     # screenshot.ScreenShot(options)

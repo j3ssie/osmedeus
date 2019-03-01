@@ -10,14 +10,14 @@ class CorsScan(object):
         utils.make_directory(options['WORKSPACE'] + '/cors')
         self.module_name = self.__class__.__name__
         self.options = options
-        slack.slack_info(self.options, mess={
+        slack.slack_noti('status', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Scanning CORS for {0}'.format(self.options['TARGET'])
         })
         self.initial()
         utils.just_waiting(self.module_name)
         self.conclude()
-        slack.slack_good(self.options, mess={
+        slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done Scanning CORS for {0}'.format(self.options['TARGET'])
         })
@@ -35,7 +35,7 @@ class CorsScan(object):
         std_path = utils.replace_argument(self.options, '$WORKSPACE/cors/std-$TARGET-corstest.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
         #log the command
-        slack.slack_log(self.options, mess={
+        slack.slack_noti('log', self.options, mess={
             'title':  "{0} | corstest | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': '```{0}```'.format(cmd),
         })
@@ -51,4 +51,11 @@ class CorsScan(object):
         #logging
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(logfile)
+
+        cmds_json = utils.checking_done(module=self.module_name, get_json=True)
+        slack.slack_std(self.options, cmds_json)
+        
+        #sending slack std
+        cmds_json = utils.checking_done(module=self.module_name, get_json=True)
+        slack.slack_std(self.options, cmds_json)
 

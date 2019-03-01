@@ -10,7 +10,7 @@ class ScreenShot(object):
         utils.make_directory(options['WORKSPACE'] + '/screenshot')
         self.module_name = self.__class__.__name__
         self.options = options
-        slack.slack_info(self.options, mess={
+        slack.slack_noti('status', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start ScreenShot for {0}'.format(self.options['TARGET'])
         })
@@ -23,7 +23,7 @@ class ScreenShot(object):
         #         utils.just_waiting(self.module_name)
         #     else:
         #         break
-        slack.slack_good(self.options, mess={
+        slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done ScreenShot for {0}'.format(self.options['TARGET'])
         })
@@ -46,7 +46,7 @@ class ScreenShot(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/screenshot/$OUTPUT-aquatone.html')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/screenshot/std-$OUTPUT-aquatone.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
-        slack.slack_log(self.options, mess={
+        slack.slack_noti('log', self.options, mess={
             'title':  "{0} | aquatone | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': '```{0}```'.format(cmd),
         })
@@ -75,3 +75,6 @@ class ScreenShot(object):
 
         utils.print_banner("{0} Done".format(self.module_name))
 
+        #sending slack std
+        cmds_json = utils.checking_done(module=self.module_name, get_json=True)
+        slack.slack_std(self.options, cmds_json)

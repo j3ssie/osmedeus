@@ -58,6 +58,7 @@ def parsing_config(config_path, args):
     log_channel = str(os.getenv("LOG_CHANNEL"))
     status_channel = str(os.getenv("STATUS_CHANNEL"))
     report_channel = str(os.getenv("REPORT_CHANNEL"))
+    stds_channel = str(os.getenv("STDS_CHANNEL"))
 
 
 
@@ -83,6 +84,7 @@ def parsing_config(config_path, args):
     config.set('Slack', 'log_channel', log_channel)
     config.set('Slack', 'status_channel', status_channel)
     config.set('Slack', 'report_channel', report_channel)
+    config.set('Slack', 'stds_channel', stds_channel)
 
 
     ##config of the tool

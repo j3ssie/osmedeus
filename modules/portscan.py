@@ -19,7 +19,7 @@ class PortScan(object):
         utils.make_directory(options['WORKSPACE'] + '/portscan')
         self.module_name = self.__class__.__name__
         self.options = options
-        slack.slack_info(self.options, mess={
+        slack.slack_noti('status', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Port Scanning for {0}'.format(self.options['TARGET'])
         })
@@ -28,7 +28,7 @@ class PortScan(object):
         utils.just_waiting(self.module_name)
         self.result_parsing()
         self.conclude()
-        slack.slack_good(self.options, mess={
+        slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Port Scanning for {0}'.format(self.options['TARGET'])
         })

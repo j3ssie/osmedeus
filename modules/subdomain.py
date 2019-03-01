@@ -12,7 +12,7 @@ class SubdomainScanning(object):
         self.module_name = self.__class__.__name__
         self.options = options
 
-        slack.slack_info(self.options, mess={
+        slack.slack_noti('status', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Scanning Subdomain for {0}'.format(self.options['TARGET'])
         })
@@ -22,7 +22,7 @@ class SubdomainScanning(object):
         #this gonna run after module is done to update the main json
         self.conclude()
 
-        slack.slack_good(self.options, mess={
+        slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done Scanning Subdomain for {0}'.format(self.options['TARGET'])
         })
@@ -32,6 +32,7 @@ class SubdomainScanning(object):
         #just for debug purpose
         if self.options['DEBUG'] == "True":
             self.subfinder()
+            self.gobuster()
         else:
             self.amass()
             self.subfinder()
@@ -50,7 +51,7 @@ class SubdomainScanning(object):
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
         #log the command
-        slack.slack_log(self.options, mess={
+        slack.slack_noti('log', self.options, mess={
             'title':  "{0} | amass | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': '```{0}```'.format(cmd),
         })
@@ -65,7 +66,7 @@ class SubdomainScanning(object):
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
         #log the command
-        slack.slack_log(self.options, mess={
+        slack.slack_noti('log', self.options, mess={
             'title':  "{0} | subfinder | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': '```{0}```'.format(cmd),
         })
@@ -87,7 +88,7 @@ class SubdomainScanning(object):
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
         #log the command
-        slack.slack_log(self.options, mess={
+        slack.slack_noti('log', self.options, mess={
             'title':  "{0} | gobuster | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': 'Command:\n ```{0}```'.format(cmd),
         })
@@ -106,7 +107,7 @@ class SubdomainScanning(object):
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
         #log the command
-        slack.slack_log(self.options, mess={
+        slack.slack_noti('log', self.options, mess={
             'title':  "{0} | massdns | {1} | Execute".format(self.options['TARGET'], self.module_name),
             'content': '```{0}```'.format(cmd),
         })
@@ -174,6 +175,9 @@ class SubdomainScanning(object):
         #logging
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(logfile)
+
+        cmds_json = utils.checking_done(module=self.module_name, get_json=True)
+        slack.slack_std(self.options, cmds_json)
 
         utils.print_banner("{0}".format(self.module_name))
 

@@ -13,12 +13,12 @@ class HeadersScan(object):
         utils.make_directory(options['WORKSPACE'] + '/headers/details')
         self.module_name = self.__class__.__name__
         self.options = options
-        slack.slack_info(self.options, mess={
+        slack.slack_noti('status', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Headers Scanning for {0}'.format(self.options['TARGET'])
         })
         self.initial()
-        slack.slack_good(self.options, mess={
+        slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Headers Scanning for {0}'.format(self.options['TARGET'])
         })
@@ -81,4 +81,7 @@ class HeadersScan(object):
         
         utils.check_output(report_path)
         main_json['Modules'][self.module_name] = {"path": report_path}
+        #sending slack std
+        cmds_json = utils.checking_done(module=self.module_name, get_json=True)
+        slack.slack_std(self.options, cmds_json)
 
