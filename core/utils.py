@@ -18,6 +18,9 @@ ques =  '{0}[?]{1} '.format(C,W)
 bad = '{0}[-]{1} '.format(R,W)
 good = '{0}[+]{1} '.format(G,W)
 
+headers = {"User-Agent": "Osmedeus/v1.0", "Accept": "*/*",
+           "Content-type": "application/json", "Connection": "close"}
+
 def print_banner(text):
 	print('{1}--~~~=:>[ {2}{0}{1} ]>'.format(text, G, C))
 
@@ -93,8 +96,6 @@ def reading_json(filename):
 ###
 # checking if command was done or not? and return a json result
 def checking_done(cmd=None, module=None, get_json=False, url='http://127.0.0.1:5000/activities'):
-    headers = {"User-Agent": "Osmedeus/v1.0", "Accept": "*/*", "Content-type": "application/json", "Connection": "close"}
-    
     if cmd:
         r = requests.post(url, headers=headers, json={'cmd' : cmd})
     if module:
@@ -124,6 +125,12 @@ def save_all_cmd(logfile, url='http://127.0.0.1:5000/activities'):
         l.write(r.text)
     # commands = json.loads(r.text)['commands']
 
+
+def set_config(options, url='http://127.0.0.1:5000/config'):
+    #set workspaces
+    r = requests.post(url, headers=headers, json={'workspaces' : options['WORKSPACES']})
+
+    return r
 
 def just_shutdown_flask(url='http://127.0.0.1:5000/shutdown'):
     requests.post(url)

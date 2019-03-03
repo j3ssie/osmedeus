@@ -43,7 +43,7 @@ def slack_noti(mode, options, text='', title='Execute', mess=None):
     if mode == 'info':
         sm.send_info(mess)
     elif mode == 'good':
-        sm.send_info(mess)
+        sm.send_good(mess)
     elif mode == 'log':
         sm.send_log(mess)
 

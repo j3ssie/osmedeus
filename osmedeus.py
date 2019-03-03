@@ -48,10 +48,10 @@ def parsing_argument(args):
     if args.config:
         config_path = args.config
         options = config.parsing_config(config_path, args)
-
             
     #wait for flask API start
     time.sleep(2)
+    utils.set_config(options)
 
     if options['TARGET_LIST'] != "None":
         #check if target list file exist and loop throught the target

@@ -7,26 +7,30 @@ import execute
 import utils
 import logging
 
+from flask import abort
+
 from flask import Flask, jsonify, render_template, request
 from flask_jwt import JWT, current_identity, jwt_required
 from flask_restful import Api, Resource, reqparse
 
 
+###
 # # turn off the http log
 # log = logging.getLogger('werkzeug')
 # log.setLevel(logging.ERROR)
+###
 
 app = Flask(__name__)
 # app = Flask(__name__, template_folder="templates/sample1/build/", static_folder="templates/sample1/build/static")
 api = Api(app)
 
-activities_log = {
-}
+#some global variable
+activities_log = {}
 processes = []
+options = {}
+# ws = {}
 
 # only allow local executed
-
-
 def local_only(f):
     @functools.wraps(f)
     def function_name(*args, **kwargs):
@@ -51,6 +55,23 @@ def shutdown_server():
 def shutdown():
     shutdown_server()
     return 'Server shutting down...'
+
+#set some config
+class Config(Resource):
+    parser = reqparse.RequestParser()
+    parser.add_argument('workspaces',
+                        type=str,
+                        required=True,
+                        help="This field cannot be left blank!"
+                        )
+
+    @local_only
+    def post(self):
+        data = Config.parser.parse_args()
+        ws = data['workspaces']
+        options['workspaces'] = os.path.normpath(ws)
+
+        return {'options': options}
 
 
 class Cmd(Resource):
@@ -160,21 +181,32 @@ class Activity(Resource):
             return {'commands': commands}
 
 # reading report stuff
-class Report(Resource):
-    parser = reqparse.RequestParser()
-    parser.add_argument('cmd',
-                        type=str,
-                        required=True,
-                        help="This field cannot be left blank!"
-                        )
-
+class Workspaces(Resource):
+    # just return list of workspaces
     def get(self):
-        pass
+        return {'workspaces': os.listdir(options['workspaces'])}
+
+#get main json by workspace name
+class Workspace(Resource):
+    def get(self, workspace):
+        #
+        ## @TODO LFI potential here
+        # 
+        ws_name = os.path.basename(os.path.normpath(workspace))
+        if ws_name in os.listdir(options['workspaces']):
+            ws_json = options['workspaces'] + "/" + ws_name + "/" + ws_name + '.json'
+            if os.path.isfile(ws_json):
+                utils.reading_json(ws_json)
+                return utils.reading_json(ws_json)
+        return 'Custom 404 here', 404
 
 
+
+api.add_resource(Config, '/config')
 api.add_resource(Cmd, '/cmd')
 api.add_resource(Activity, '/activities')
-# api.add_resource(Report, '/report/<string:workspace>')
+api.add_resource(Workspaces, '/workspace')
+api.add_resource(Workspace, '/workspace/<string:workspace>')
 # api.add_resource(Report, '/report/<string:workspace>/<string:host>')
 
 

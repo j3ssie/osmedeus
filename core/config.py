@@ -75,10 +75,12 @@ def parsing_config(config_path, args):
         config = ConfigParser(interpolation=ExtendedInterpolation())
         config.read(config_path)
 
+    workspace = cwd + "/workspaces/"
     config.set('Enviroments', 'cwd', cwd)
     config.set('Enviroments', 'go_path', go_path)
     config.set('Enviroments', 'github_api_key', github_api_key)
-    workspace = cwd + "/workspaces/"
+    config.set('Enviroments', 'workspaces', str(workspace))
+
 
     config.set('Slack', 'bot_token', bot_token)
     config.set('Slack', 'log_channel', log_channel)
@@ -175,6 +177,5 @@ def parsing_config(config_path, args):
 
 
     #make all the keys upper and return the options
-
     return options
 
