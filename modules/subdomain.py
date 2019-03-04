@@ -20,6 +20,8 @@ class SubdomainScanning(object):
         self.initial()
 
         utils.just_waiting(self.module_name)
+        self.conclude()
+
         #this gonna run after module is done to update the main json
         slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
@@ -38,7 +40,6 @@ class SubdomainScanning(object):
             self.gobuster()
             self.massdns()
 
-            self.conclude()
 
 
 
