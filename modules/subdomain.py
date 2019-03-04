@@ -98,7 +98,7 @@ class SubdomainScanning(object):
         #just clean up some output
 
         #gobuster clean up
-        cmd = 'cat $WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt | cut -d ' ' -f 2 > $WORKSPACE/subdomain/$OUTPUT-gobuster.txt'
+        cmd = "cat $WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt | cut -d ' ' -f 2 > $WORKSPACE/subdomain/$OUTPUT-gobuster.txt"
         cmd = utils.replace_argument(self.options, cmd)
         output_path = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/$OUTPUT-gobuster.txt')
