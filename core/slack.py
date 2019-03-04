@@ -26,6 +26,8 @@ def slack_seperate(options):
     sm.send_mess(mess)
     mess['channel'] = options['REPORT_CHANNEL']
     sm.send_mess(mess)
+    mess['channel'] = options['VERBOSE_REPORT_CHANNEL']
+    sm.send_mess(mess)
 
 
 def slack_noti(mode, options, text='', title='Execute', mess=None):
