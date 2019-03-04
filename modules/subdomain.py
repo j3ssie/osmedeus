@@ -125,7 +125,7 @@ class SubdomainScanning(object):
         
         cmd = utils.replace_argument(self.options, cmd)
         output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
-        execute.send_cmd(cmd, output_path, '', self.module_name)
+        execute.send_cmd(cmd, '', '', self.module_name)
 
         slack.slack_file('report', self.options, mess={
             'title':  "{0} | {1} | Output".format(self.options['TARGET'], self.module_name),
@@ -135,13 +135,11 @@ class SubdomainScanning(object):
     #update the main json file
     def conclude(self):
         self.unique_result()
-
         utils.print_banner("Conclusion for {0}".format(self.module_name))
-
         main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
 
         all_subdomain = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
-        with open(all_subdomain, 'r') as s:
+        with open(all_subdomain, 'r+') as s:
             subdomains = s.read().splitlines()
 
         for subdomain in subdomains:

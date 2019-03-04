@@ -53,22 +53,24 @@ def slack_noti(mode, options, text='', title='Execute', mess=None):
 def slack_file(mode, options, filename='', title='Done', mess=None):
     if options['BOT_TOKEN'] == "None":
         return
-    sm = Messages(options)
-
-    if not mess:
-        mess = {
-            'filename': filename,
-            'title': title
-        }
-    
-    if mode == 'std':
-        mess['channel'] = options['STDS_CHANNEL']
-    elif mode == 'verbose-report':
-        mess['channel'] = options['VERBOSE_REPORT_CHANNEL']
-    elif mode == 'report':
-        mess['channel'] = options['REPORT_CHANNEL']
-    
-    sm.send_file(mess)
+    try:
+        sm = Messages(options)
+        if not mess:
+            mess = {
+                'filename': filename,
+                'title': title
+            }
+        
+        if mode == 'std':
+            mess['channel'] = options['STDS_CHANNEL']
+        elif mode == 'verbose-report':
+            mess['channel'] = options['VERBOSE_REPORT_CHANNEL']
+        elif mode == 'report':
+            mess['channel'] = options['REPORT_CHANNEL']
+        
+        sm.send_file(mess)
+    except:
+        print("Fail to send {0} to slack".format(mess['filename']))
 
 
 
