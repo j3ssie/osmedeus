@@ -15,19 +15,10 @@ class ScreenShot(object):
             'content': 'Start ScreenShot for {0}'.format(self.options['TARGET'])
         })
         self.initial()
-        #check if the screenshot success or not, if not run it again
-        # while True:
-        #     if not os.listdir(utils.replace_argument(self.options, '$WORKSPACE/screenshot/')):
-        #         utils.print_bad('Something wrong with these module ... run it again')
-        #         self.initial()
-        #         utils.just_waiting(self.module_name)
-        #     else:
-        #         break
         slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done ScreenShot for {0}'.format(self.options['TARGET'])
         })
-
 
 
     def initial(self):
@@ -46,10 +37,7 @@ class ScreenShot(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/screenshot/$OUTPUT-aquatone.html')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/screenshot/std-$OUTPUT-aquatone.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
-        slack.slack_noti('log', self.options, mess={
-            'title':  "{0} | aquatone | {1} | Execute".format(self.options['TARGET'], self.module_name),
-            'content': '```{0}```'.format(cmd),
-        })
+
 
     def eyewitness_common(self):
         utils.print_good('Starting EyeWitness for web')
@@ -68,13 +56,5 @@ class ScreenShot(object):
 
         #write that json again
         utils.just_write(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
-        
-        #logging
-        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
-        utils.save_all_cmd(logfile)
 
         utils.print_banner("{0} Done".format(self.module_name))
-
-        #sending slack std
-        cmds_json = utils.checking_done(module=self.module_name, get_json=True)
-        slack.slack_std(self.options, cmds_json)

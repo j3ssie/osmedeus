@@ -49,18 +49,8 @@ class Initials(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/info/$OUTPUT-whois.txt')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/info/std-$OUTPUT-whois.std')
 
-        #log the command
-        slack.slack_noti('log', self.options, mess={
-            'title':  "{0} | Whois | {1} | Execute".format(self.options['TARGET'], self.module_name),
-            'content': '```{0}```'.format(cmd),
-        })
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
-        # upload the output
         utils.just_waiting(self.module_name, seconds=2)
-
-    # def conclude():
-    #     pass
 
 
 

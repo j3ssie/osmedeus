@@ -60,6 +60,8 @@ def normal(options):
     # #Starting vulnerable scan
     vulnscan.VulnScan(options)
 
+    dirbrute.DirBrute(options)
+
     # #Brute force service from port scan result
     # brutethings.BruteThings(options)
 
@@ -118,16 +120,16 @@ def debug(options):
     utils.print_good("Running with {0} speed".format(options['SPEED']))
     # Create skeleton json
     pprint(options)
-    # initials.Initials(options)
+    initials.Initials(options)
 
     #Finding subdomain
     subdomain.SubdomainScanning(options)
 
     ##waiting for previous module
-    # utils.just_waiting('SubdomainScanning')
+    utils.just_waiting('SubdomainScanning')
 
     # # ##Scanning for subdomain take over
-    takeover.TakeOverScanning(options)
+    # takeover.TakeOverScanning(options)
 
     # # ##Screen shot the target on common service
     # screenshot.ScreenShot(options)

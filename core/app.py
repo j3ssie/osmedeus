@@ -1,11 +1,15 @@
 import functools
 import os
+import json
 import sys
 import subprocess
 import time
-import execute
-import utils
 import logging
+from pprint import pprint
+
+import execute
+import slack
+import utils
 
 from flask import abort
 
@@ -59,19 +63,21 @@ def shutdown():
 #set some config
 class Config(Resource):
     parser = reqparse.RequestParser()
-    parser.add_argument('workspaces',
-                        type=str,
+    parser.add_argument('options',
+                        type=dict,
                         required=True,
                         help="This field cannot be left blank!"
                         )
 
+    def get(self):
+        return options
+
     @local_only
     def post(self):
+        global options
         data = Config.parser.parse_args()
-        ws = data['workspaces']
-        options['workspaces'] = os.path.normpath(ws)
-
-        return {'options': options}
+        options = data['options']
+        return options
 
 
 class Cmd(Resource):
@@ -113,18 +119,21 @@ class Cmd(Resource):
             'status': 'Running'
         }
 
-        # this
         if activities_log.get(module):
             activities_log[module].append(activity)
         else:
             activities_log[module] = [activity]
 
         utils.print_info("Execute: {0} ".format(cmd))
+
+        slack.slack_noti('log', options, mess={
+            'title':  "{0} | {1} | Execute".format(options['TARGET'], module),
+            'content': '```{0}```'.format(cmd),
+        })
+
         stdout = execute.run(cmd)
         # just ignore for testing purpose
         # stdout = "<< stdoutput >> << {0} >>".format(cmd)
-        if std_path != '':
-            utils.just_write(std_path, stdout)
         utils.check_output(output_path)
 
         # change status of log
@@ -133,7 +142,25 @@ class Cmd(Resource):
             if item['cmd'] == cmd:
                 if stdout is None:
                     item['status'] = 'Error'
-                item['status'] = 'Done'
+                else:
+                    item['status'] = 'Done'
+
+                    try:
+                        if std_path != '':
+                            utils.just_write(std_path, stdout)
+                            slack.slack_file('std', options, mess={
+                                'title':  "{0} | {1} | std".format(options['TARGET'], module),
+                                'filename': '{0}'.format(std_path),
+                            })
+                        if output_path != '':
+                            slack.slack_file('verbose-report', options, mess={
+                                'channel': options['VERBOSE_REPORT_CHANNEL'],
+                                'filename': output_path
+                            })
+                    except:
+                        pass
+
+
 
         return jsonify(status="200", output_path=output_path)
 
@@ -184,17 +211,14 @@ class Activity(Resource):
 class Workspaces(Resource):
     # just return list of workspaces
     def get(self):
-        return {'workspaces': os.listdir(options['workspaces'])}
+        return {'workspaces': os.listdir(options['WORKSPACES'])}
 
 #get main json by workspace name
 class Workspace(Resource):
     def get(self, workspace):
-        #
-        ## @TODO LFI potential here
-        # 
         ws_name = os.path.basename(os.path.normpath(workspace))
-        if ws_name in os.listdir(options['workspaces']):
-            ws_json = options['workspaces'] + "/" + ws_name + "/" + ws_name + '.json'
+        if ws_name in os.listdir(options['WORKSPACES']):
+            ws_json = options['WORKSPACES'] + "/{0}/{0}.json".format(ws_name)
             if os.path.isfile(ws_json):
                 utils.reading_json(ws_json)
                 return utils.reading_json(ws_json)

@@ -128,8 +128,8 @@ def save_all_cmd(logfile, url='http://127.0.0.1:5000/activities'):
 
 def set_config(options, url='http://127.0.0.1:5000/config'):
     #set workspaces
-    r = requests.post(url, headers=headers, json={'workspaces' : options['WORKSPACES']})
-
+    data = {'options': options}
+    r = requests.post(url, headers=headers, json=data)
     return r
 
 def just_shutdown_flask(url='http://127.0.0.1:5000/shutdown'):

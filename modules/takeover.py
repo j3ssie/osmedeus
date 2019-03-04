@@ -16,6 +16,7 @@ class TakeOverScanning(object):
         })
         self.initial()
         utils.just_waiting(self.module_name)
+
         self.conclude()
         slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
@@ -38,10 +39,7 @@ class TakeOverScanning(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/takeover-$TARGET-tko-subs.txt')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-takeover-$TARGET-tko-subs.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
-        slack.slack_noti('log', self.options, mess={
-            'title':  "{0} | tko-subs | {1} | Execute".format(self.options['TARGET'], self.module_name),
-            'content': '```{0}```'.format(cmd),
-        })
+
 
     def subjack(self):
         utils.print_good('Starting subjack')
@@ -51,10 +49,7 @@ class TakeOverScanning(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/takeover-$TARGET-subjack.txt')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-takeover-$TARGET-subjack.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
-        slack.slack_noti('log', self.options, mess={
-            'title':  "{0} | subjack | {1} | Execute".format(self.options['TARGET'], self.module_name),
-            'content': '```{0}```'.format(cmd),
-        })
+
 
     #update the main json file
     def conclude(self):
@@ -69,11 +64,6 @@ class TakeOverScanning(object):
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(logfile)
         utils.print_banner("{0} Done".format(self.module_name))
-
-        #sending slack std
-        cmds_json = utils.checking_done(module=self.module_name, get_json=True)
-        slack.slack_std(self.options, cmds_json)
-
 
 
 

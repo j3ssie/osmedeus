@@ -26,7 +26,10 @@ class HeadersScan(object):
     def initial(self):
         if self.observatory():
             utils.just_waiting(self.module_name)
-            self.conclude()
+            try:
+                self.conclude()
+            except:
+                utils.print_bad("Something wrong with conclude for {0}".format(self.module_name))
 
     def observatory(self):
         utils.print_good('Starting observatory')
@@ -71,7 +74,6 @@ class HeadersScan(object):
             self.options, '$WORKSPACE/headers/summary-$TARGET.csv')
         with open(report_path, 'w+') as r:
             r.write(summary_head)
-        # really_details = {}
 
         for filename in glob.iglob(result_path + '/**/*.json'):
             details = utils.reading_json(filename)
@@ -81,7 +83,4 @@ class HeadersScan(object):
         
         utils.check_output(report_path)
         main_json['Modules'][self.module_name] = {"path": report_path}
-        #sending slack std
-        cmds_json = utils.checking_done(module=self.module_name, get_json=True)
-        slack.slack_std(self.options, cmds_json)
 

@@ -16,12 +16,11 @@ class SubdomainScanning(object):
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Scanning Subdomain for {0}'.format(self.options['TARGET'])
         })
+
         self.initial()
 
         utils.just_waiting(self.module_name)
         #this gonna run after module is done to update the main json
-        self.conclude()
-
         slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done Scanning Subdomain for {0}'.format(self.options['TARGET'])
@@ -39,6 +38,9 @@ class SubdomainScanning(object):
             self.gobuster()
             self.massdns()
 
+            self.conclude()
+
+
 
 
     def amass(self):
@@ -50,11 +52,6 @@ class SubdomainScanning(object):
         std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-$TARGET-amass.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
-        #log the command
-        slack.slack_noti('log', self.options, mess={
-            'title':  "{0} | amass | {1} | Execute".format(self.options['TARGET'], self.module_name),
-            'content': '```{0}```'.format(cmd),
-        })
 
     def subfinder(self):
         utils.print_good('Starting subfinder')
@@ -65,11 +62,6 @@ class SubdomainScanning(object):
         std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-$OUTPUT-subfinder.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
-        #log the command
-        slack.slack_noti('log', self.options, mess={
-            'title':  "{0} | subfinder | {1} | Execute".format(self.options['TARGET'], self.module_name),
-            'content': '```{0}```'.format(cmd),
-        })
 
     #just use massdns for directory bruteforce
     def gobuster(self):
@@ -87,11 +79,6 @@ class SubdomainScanning(object):
             self.options, '$WORKSPACE/subdomain/std-raw-$OUTPUT-gobuster.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
-        #log the command
-        slack.slack_noti('log', self.options, mess={
-            'title':  "{0} | gobuster | {1} | Execute".format(self.options['TARGET'], self.module_name),
-            'content': 'Command:\n ```{0}```'.format(cmd),
-        })
 
 
     def massdns(self):
@@ -105,12 +92,6 @@ class SubdomainScanning(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/raw-massdns.txt')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-raw-massdns.txt')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
-        #log the command
-        slack.slack_noti('log', self.options, mess={
-            'title':  "{0} | massdns | {1} | Execute".format(self.options['TARGET'], self.module_name),
-            'content': '```{0}```'.format(cmd),
-        })
 
     def unique_result(self):
         #just clean up some output
@@ -145,7 +126,7 @@ class SubdomainScanning(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
         execute.send_cmd(cmd, output_path, '', self.module_name)
 
-        slack.slack_file(self.options, mess={
+        slack.slack_file('report', self.options, mess={
             'title':  "{0} | {1} | Output".format(self.options['TARGET'], self.module_name),
             'filename': '{0}'.format(output_path),
         })
@@ -169,15 +150,11 @@ class SubdomainScanning(object):
 
         utils.just_write(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
-        #write that json again
-        # utils.just_write(utils.reading_json(), main_json, is_json=True)
 
         #logging
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(logfile)
 
-        cmds_json = utils.checking_done(module=self.module_name, get_json=True)
-        slack.slack_std(self.options, cmds_json)
 
         utils.print_banner("{0}".format(self.module_name))
 

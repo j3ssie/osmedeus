@@ -40,7 +40,7 @@ def slack_noti(mode, options, text='', title='Execute', mess=None):
             'content': text,
         }
     
-    if mode == 'info':
+    if mode == 'status':
         sm.send_info(mess)
     elif mode == 'good':
         sm.send_good(mess)
@@ -48,33 +48,24 @@ def slack_noti(mode, options, text='', title='Execute', mess=None):
         sm.send_log(mess)
 
 
-def slack_std(options, cmds_json):
+def slack_file(mode, options, filename='', title='Done', mess=None):
     if options['BOT_TOKEN'] == "None":
         return
-    
-    sm = Messages(options)    
-    for item in cmds_json['commands']:
-        command = item['cmd']
-        std_path = item['std_path']
-        if os.path.isfile(std_path):
-            mess = {
-                'channel': options['STDS_CHANNEL'],
-                'filename': std_path,
-                'title': command
-            }
-            sm.send_file(mess)
-
-
-def slack_file(options, filename='', title='Done', mess=None):
-    if options['BOT_TOKEN'] == "None":
-        return
-
     sm = Messages(options)
+
     if not mess:
         mess = {
             'filename': filename,
             'title': title
         }
+    
+    if mode == 'std':
+        mess['channel'] = options['STDS_CHANNEL']
+    elif mode == 'verbose-report':
+        mess['channel'] = options['VERBOSE_REPORT_CHANNEL']
+    elif mode == 'report':
+        mess['channel'] = options['REPORT_CHANNEL']
+    
     sm.send_file(mess)
 
 
@@ -107,13 +98,6 @@ class Messages():
         mess['icon'] = get_emoji()
         self.send_attachment(mess)
 
-    def send_std(self, mess):
-        mess['color'] = '#76FF03'
-        mess['channel'] = self.slack_options['STDS_CHANNEL']
-        mess['icon'] = get_emoji()
-        self.send_attachment(mess)
-
-
     def send_good(self, mess):
         mess['color'] = '#32cb00'
         mess['icon'] = get_emoji()
@@ -129,11 +113,14 @@ class Messages():
         try:
             with open(mess['filename'], 'r+') as f:
                 mess['content'] = f.read()
-
             mess['title'] = get_value(mess, 'title', mess['filename'])
             self.send_snippet(mess)
         except:
-            print("File not found {0}".format(mess['filename']))
+            with open(mess['filename'], 'r+') as f:
+                mess['content'] = f.read().encode('utf-8')
+            mess['title'] = get_value(mess, 'title', mess['filename'])
+            self.send_snippet(mess)
+
 
 
     ######
@@ -178,7 +165,6 @@ class Messages():
 
     def send_snippet(self, mess):
         token = self.slack_options['BOT_TOKEN']
-
         #message stuff
         channel = get_value(
             mess, 'channel', self.slack_options['REPORT_CHANNEL'])

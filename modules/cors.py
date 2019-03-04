@@ -34,11 +34,6 @@ class CorsScan(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/cors/$TARGET-corstest.txt')
         std_path = utils.replace_argument(self.options, '$WORKSPACE/cors/std-$TARGET-corstest.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
-        #log the command
-        slack.slack_noti('log', self.options, mess={
-            'title':  "{0} | corstest | {1} | Execute".format(self.options['TARGET'], self.module_name),
-            'content': '```{0}```'.format(cmd),
-        })
 
     #update the main json file
     def conclude(self):
@@ -51,11 +46,4 @@ class CorsScan(object):
         #logging
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(logfile)
-
-        cmds_json = utils.checking_done(module=self.module_name, get_json=True)
-        slack.slack_std(self.options, cmds_json)
-        
-        #sending slack std
-        cmds_json = utils.checking_done(module=self.module_name, get_json=True)
-        slack.slack_std(self.options, cmds_json)
 
