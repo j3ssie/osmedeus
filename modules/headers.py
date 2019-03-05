@@ -50,7 +50,7 @@ class HeadersScan(object):
         for part in list(utils.chunks(domains, 10)):
             for domain in part:
                 cmd = 'observatory -q {0} --format=json -z --attempts 5 | tee $WORKSPACE/headers/details/{0}-observatory.json'.format(
-                    domain)
+                    domain.strip())
                 cmd = utils.replace_argument(self.options, cmd)
                 execute.send_cmd(cmd, '', '', self.module_name)
 
