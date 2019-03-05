@@ -26,8 +26,8 @@ class PortScan(object):
         self.initial()
 
         utils.just_waiting(self.module_name)
-        self.result_parsing()
-        self.conclude()
+        # self.result_parsing()
+        # self.conclude()
         slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Port Scanning for {0}'.format(self.options['TARGET'])
