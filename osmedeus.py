@@ -72,8 +72,10 @@ def parsing_argument(args):
 def single_target(options):
     print(
         '{2}---<---<--{1}@{2} Target: {0} {1}@{2}-->--->---'.format(options['TARGET'], P, G))
-    
-    slack.slack_seperate(options)
+
+    if options['DEBUG'] != "True":    
+        slack.slack_seperate(options)
+
     #run specific task otherwise run the normal routine
     if options['MODULE'] != "None":
         module = options['MODULE']

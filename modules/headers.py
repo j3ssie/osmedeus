@@ -43,16 +43,16 @@ class HeadersScan(object):
         with open(domain_file, 'r') as d:
             domains = d.read().splitlines()
 
-        # for domain in domains:
+        if self.options['DEBUG'] == "True":
+            utils.print_info("Only get 30 target debug mode")
+            domains = domains[:10]
+
         for part in list(utils.chunks(domains, 10)):
             for domain in part:
-                cmd = 'observatory {0} --format=json -z --attempts 5 | tee $WORKSPACE/headers/details/$TARGET-observatory.json'.format(
+                cmd = 'observatory -q {0} --format=json -z --attempts 5 | tee $WORKSPACE/headers/details/{0}-observatory.json'.format(
                     domain)
-
                 cmd = utils.replace_argument(self.options, cmd)
-                output_path = utils.replace_argument(
-                    self.options, '$WORKSPACE/headers/details/$TARGET-observatory.json')
-                execute.send_cmd(cmd, output_path, '', self.module_name)
+                execute.send_cmd(cmd, '', '', self.module_name)
 
             while not utils.checking_done(module=self.module_name):
                 time.sleep(15)
@@ -67,20 +67,34 @@ class HeadersScan(object):
             self.options, '$WORKSPACE/$COMPANY.json'))
 
         #head of csv file
-        random_json = utils.reading_json(os.listdir(result_path)[0])
-        summary_head = ','.join(random_json.keys()) + ",source\n"
+        random_json = utils.reading_json(
+            result_path + "/" + os.listdir(result_path)[0])
+
+
+        summary_head = "domain," + ','.join(random_json.keys()) + ",details\n"
 
         report_path = utils.replace_argument(
             self.options, '$WORKSPACE/headers/summary-$TARGET.csv')
+        
         with open(report_path, 'w+') as r:
             r.write(summary_head)
 
-        for filename in glob.iglob(result_path + '/**/*.json'):
-            details = utils.reading_json(filename)
-            summarybody = ",".join([v['pass'] for k, v in details.items()]) + "," + filename + "\n"
-            with open(report_path, 'a+') as r:
-                r.write(summarybody)
-        
+        for filename in os.listdir(result_path):
+            real_path = result_path + "/" + filename
+            details = utils.reading_json(real_path)
+            if details:
+                summarybody = filename.replace('.json','')
+                for k, v in details.items():
+                    summarybody += ',' + str(v.get('pass'))
+                
+                summarybody += ',' + real_path + "\n"
+                with open(report_path, 'a+') as r:
+                    r.write(summarybody)
+
+        slack.slack_file('report', self.options, mess={
+            'title':  "{0} | {1} | Output".format(self.options['TARGET'], self.module_name),
+            'filename': '{0}'.format(report_path),
+        })
         utils.check_output(report_path)
         main_json['Modules'][self.module_name] = {"path": report_path}
 

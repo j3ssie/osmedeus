@@ -86,10 +86,13 @@ def just_waiting(module_name, seconds=30):
 
 
 def reading_json(filename):
-    if os.path.isfile(filename):
-        with open(filename, 'r') as f:
-            main_json = json.load(f)
-        return main_json
+    try:
+        if os.path.isfile(filename):
+            with open(filename, 'r') as f:
+                main_json = json.load(f)
+            return main_json
+    except:
+        print_bad("Reading fail: {0}".format(filename))
 
     return None
 
