@@ -34,7 +34,7 @@ class PortScan(object):
         })
 
     def initial(self):
-        self.create_ip_result()
+        # self.create_ip_result()
         self.masscan()
 
     # just for the masscan
@@ -95,7 +95,7 @@ class PortScan(object):
         # Scan every 5 IP at time Increse if you want
         for part in list(utils.chunks(ip_list, 5)):
             for ip in part:
-                cmd = 'sudo masscan --rate 10000 -p0-65535 {0} -oG $WORKSPACE/portscan/{0}-masscan.gnmap -oX $WORKSPACE/portscan/{0}-masscan.xml --wait 0'.format(
+                cmd = 'sudo masscan --rate 10000 -p0-65535 {0} -oJ $WORKSPACE/portscan/{0}-masscan.json --wait 0'.format(
                     ip)
 
                 cmd = utils.replace_argument(self.options, cmd)
@@ -103,7 +103,7 @@ class PortScan(object):
                     self.options, '$WORKSPACE/portscan/{0}-masscan.gnmap'.format(ip))
                 std_path = utils.replace_argument(
                     self.options, '$WORKSPACE/portscan/std-{0}-masscan.gnmap.std'.format(ip))
-                execute.send_cmd(cmd, output_path, std_path, self.module_name)
+                execute.send_cmd(cmd, '', '', self.module_name)
 
             # check if previous task done or not every 30 second
             while not utils.checking_done(module=self.module_name):
@@ -113,43 +113,3 @@ class PortScan(object):
             main_json['Modules'][self.module_name] += utils.checking_done(
                 module=self.module_name, get_json=True)
 
-    def result_parsing(self):
-        utils.print_good('Parsing XML for masscan report')
-        utils.make_directory(
-            self.options['WORKSPACE'] + '/portscan/parsed')
-        result_path = utils.replace_argument(
-            self.options, '$WORKSPACE/portscan')
-
-        main_json = utils.reading_json(utils.replace_argument(
-            self.options, '$WORKSPACE/$COMPANY.json'))
-
-        for filename in glob.iglob(result_path + '/**/*.xml'):
-            ip = filename.split('/')[-1].split('-masscan.xml')[0]
-            masscan_report = NmapParser.parse_fromfile(filename)
-            masscan_report_json = json.dumps(masscan_report)
-
-            # store the raw json
-            utils.just_write(utils.replace_argument(
-                self.options, '$WORKSPACE/portscan/parsed/{0}.json'.format(ip)), masscan_report_json, is_json=True)
-
-            services = [x['__NmapHost__']['_services']
-                        for x in masscan_report_json['_host']]
-
-            # ports = [y.get('_portid') for y in services]
-            ports = []
-            for service in services:
-                for element in service:
-                    ports.append(
-                        {"port": str(element['_portid']), "service": str(element['_protocol'])})
-
-            for i in range(len(main_json['Subdomains'])):
-                if main_json['Subdomains'][i]['IP'] == ip:
-                    main_json['Subdomains'][i]['Network']['Ports'] = ports
-
-            utils.just_write(utils.replace_argument(
-                self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
-
-        #update the main json file
-    def conclude(self):
-        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
-        utils.save_all_cmd(logfile)

@@ -41,9 +41,6 @@ class SubdomainScanning(object):
             self.massdns()
 
 
-
-
-
     def amass(self):
         utils.print_good('Starting amass')
         cmd = '$GO_PATH/amass -active -d $TARGET -o $WORKSPACE/subdomain/$OUTPUT-amass.txt'
@@ -94,31 +91,38 @@ class SubdomainScanning(object):
         std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-raw-massdns.txt')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
-    def unique_result(self):
-        #just clean up some output
 
+        
+
+    #just clean up some output
+    def unique_result(self):
         #gobuster clean up
-        cmd = "cat $WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt | cut -d ' ' -f 2 > $WORKSPACE/subdomain/$OUTPUT-gobuster.txt"
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(
-            self.options, '$WORKSPACE/subdomain/$OUTPUT-gobuster.txt')
-        execute.send_cmd(cmd, output_path, '', self.module_name)
+        go_raw = utils.replace_argument(
+            self.options, '$WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt')
+        if utils.not_empty_file(go_raw):
+            cmd = "cat $WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt | cut -d ' ' -f 2 > $WORKSPACE/subdomain/$OUTPUT-gobuster.txt"
+            cmd = utils.replace_argument(self.options, cmd)
+            output_path = utils.replace_argument(
+                self.options, '$WORKSPACE/subdomain/$OUTPUT-gobuster.txt')
+            execute.send_cmd(cmd, output_path, '', self.module_name)
+
 
         #massdns clean up
         massdns_raw = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/raw-massdns.txt')
-        massdns_output = utils.replace_argument(
-            self.options, '$WORKSPACE/subdomain/$OUTPUT-massdns.txt')
-        if not os.path.exists(massdns_raw):
-            with open(massdns_raw, 'r+') as d:
-                ds = d.read().splitlines()
-            for line in ds:
-                newline = line.split(' ')[0][:-1]
-                with open(massdns_output, 'a+') as m:
-                    m.write(newline + "\n")
+        if utils.not_empty_file(massdns_raw):
+            massdns_output = utils.replace_argument(
+                self.options, '$WORKSPACE/subdomain/$OUTPUT-massdns.txt')
+            if not os.path.exists(massdns_raw):
+                with open(massdns_raw, 'r+') as d:
+                    ds = d.read().splitlines()
+                for line in ds:
+                    newline = line.split(' ')[0][:-1]
+                    with open(massdns_output, 'a+') as m:
+                        m.write(newline + "\n")
 
-            utils.check_output(utils.replace_argument(
-                self.options, '$WORKSPACE/subdomain/$OUTPUT-massdns.txt'))
+                utils.check_output(utils.replace_argument(
+                    self.options, '$WORKSPACE/subdomain/$OUTPUT-massdns.txt'))
 
         utils.print_good('Unique result')
         cmd = "cat $WORKSPACE/subdomain/$OUTPUT-*.txt | sort | awk '{print tolower($0)}' | uniq >> $WORKSPACE/subdomain/final-$OUTPUT.txt"
@@ -127,10 +131,14 @@ class SubdomainScanning(object):
         output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
         execute.send_cmd(cmd, '', '', self.module_name)
 
+        # if utils.not_empty_file(all_subdomain):
+        time.sleep(1)
         slack.slack_file('report', self.options, mess={
             'title':  "{0} | {1} | Output".format(self.options['TARGET'], self.module_name),
             'filename': '{0}'.format(output_path),
         })
+
+
 
     #update the main json file
     def conclude(self):
@@ -139,6 +147,7 @@ class SubdomainScanning(object):
         main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
 
         all_subdomain = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
+
         with open(all_subdomain, 'r+') as s:
             subdomains = s.read().splitlines()
 
@@ -155,7 +164,7 @@ class SubdomainScanning(object):
         utils.save_all_cmd(logfile)
 
 
-        utils.print_banner("{0}".format(self.module_name))
+        utils.print_banner("Done for {0}".format(self.module_name))
 
 
 

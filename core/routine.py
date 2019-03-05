@@ -120,13 +120,13 @@ def debug(options):
     utils.print_good("Running with {0} speed".format(options['SPEED']))
     # Create skeleton json
     pprint(options)
-    initials.Initials(options)
+    # initials.Initials(options)
 
     #Finding subdomain
-    subdomain.SubdomainScanning(options)
+    # subdomain.SubdomainScanning(options)
 
     ##waiting for previous module
-    utils.just_waiting('SubdomainScanning')
+    # utils.just_waiting('SubdomainScanning')
 
     # # ##Scanning for subdomain take over
     # takeover.TakeOverScanning(options)
@@ -153,7 +153,7 @@ def debug(options):
     # portscan.PortScan(options)
 
     # # #Starting vulnerable scan
-    # vulnscan.VulnScan(options)
+    vulnscan.VulnScan(options)
 
     # # #Brute force service from port scan result
     # brutethings.BruteThings(options)
