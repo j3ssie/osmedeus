@@ -26,15 +26,13 @@ class PortScan(object):
         self.initial()
 
         utils.just_waiting(self.module_name)
-        # self.result_parsing()
-        # self.conclude()
         slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Port Scanning for {0}'.format(self.options['TARGET'])
         })
 
     def initial(self):
-        # self.create_ip_result()
+        self.create_ip_result()
         self.masscan()
 
     # just for the masscan
@@ -46,9 +44,7 @@ class PortScan(object):
         cmd = utils.replace_argument(self.options, cmd)
         output_path = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt')
-        std_path = utils.replace_argument(
-            self.options, '$WORKSPACE/subdomain/std-massdns-IP-$OUTPUT.std')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
+        execute.send_cmd(cmd, '', '', self.module_name)
 
         utils.just_waiting(self.module_name, seconds=5)
 
@@ -78,6 +74,7 @@ class PortScan(object):
 
     def masscan(self):
         utils.print_good('Starting masscan')
+        time.sleep(1)
 
         main_json = utils.reading_json(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'))
@@ -91,25 +88,17 @@ class PortScan(object):
             ip_list = [x.get("IP")
                        for x in main_json['Subdomains'] if x.get("IP") is not None]
 
+        utils.just_write(utils.replace_argument(
+            self.options, '$WORKSPACE/subdomain/IP-$TARGET.txt'), "\n".join(ip_list))
 
-        # Scan every 5 IP at time Increse if you want
-        for part in list(utils.chunks(ip_list, 5)):
-            for ip in part:
-                cmd = 'sudo masscan --rate 10000 -p0-65535 {0} -oJ $WORKSPACE/portscan/{0}-masscan.json --wait 0'.format(
-                    ip)
+        # print(ip_list)
+        time.sleep(1)
 
-                cmd = utils.replace_argument(self.options, cmd)
-                output_path = utils.replace_argument(
-                    self.options, '$WORKSPACE/portscan/{0}-masscan.gnmap'.format(ip))
-                std_path = utils.replace_argument(
-                    self.options, '$WORKSPACE/portscan/std-{0}-masscan.gnmap.std'.format(ip))
-                execute.send_cmd(cmd, '', '', self.module_name)
+        cmd = "sudo masscan --rate 10000 -p0-65535 -iL $WORKSPACE/subdomain/IP-$TARGET.txt -oJ $WORKSPACE/portscan/$OUTPUT-masscan.json --wait 0"
 
-            # check if previous task done or not every 30 second
-            while not utils.checking_done(module=self.module_name):
-                time.sleep(20)
-
-            # update main json
-            main_json['Modules'][self.module_name] += utils.checking_done(
-                module=self.module_name, get_json=True)
-
+        cmd = utils.replace_argument(self.options, cmd)
+        output_path = utils.replace_argument(
+            self.options, '$WORKSPACE/portscan/$OUTPUT-masscan.json')
+        std_path = utils.replace_argument(
+            self.options, '$WORKSPACE/portscan/std-$OUTPUT-masscan..std')
+        execute.send_cmd(cmd, output_path, std_path, self.module_name)

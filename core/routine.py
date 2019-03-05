@@ -57,18 +57,19 @@ def normal(options):
     # #Scanning all port using result from subdomain scanning and also checking vulnerable service based on version
     portscan.PortScan(options)
 
+    #Directory scan
+    dirbrute.DirBrute(options)
+
     # #Starting vulnerable scan
     vulnscan.VulnScan(options)
 
-    dirbrute.DirBrute(options)
-
-    # #Brute force service from port scan result
     # brutethings.BruteThings(options)
 
     conclusion.Conclusion(options)
 
 
 def specific(options, module):
+    module = module.lower()
 
     if 'subdomain' in module:
         subdomain.SubdomainScanning(options)
