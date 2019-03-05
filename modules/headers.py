@@ -49,7 +49,7 @@ class HeadersScan(object):
 
         for part in list(utils.chunks(domains, 10)):
             for domain in part:
-                cmd = 'observatory -q {0} --format=json -z --attempts 5 | tee $WORKSPACE/headers/details/{0}-observatory.json'.format(
+                cmd = 'observatory -q {0} --format=json -z --attempts 10 | tee $WORKSPACE/headers/details/{0}-observatory.json'.format(
                     domain.strip())
                 cmd = utils.replace_argument(self.options, cmd)
                 execute.send_cmd(cmd, '', '', self.module_name)
@@ -83,7 +83,7 @@ class HeadersScan(object):
             real_path = result_path + "/" + filename
             details = utils.reading_json(real_path)
             if details:
-                summarybody = filename.replace('.json','')
+                summarybody = filename.replace('-observatory.json', '')
                 for k, v in details.items():
                     summarybody += ',' + str(v.get('pass'))
                 
