@@ -53,10 +53,10 @@ I just put all the pieces together, plus some extra boring stuff that we don't w
 This tool is for educational purposes only. You are responsible for your own actions. If you mess something up or break any laws while using this software, it's your fault, and your fault only.
 
 # Contribute
-Please take a look at [CONTRIBUTING.md](https://github.com/j3ssie/Osmedeus/CONTRIBUTING.md)
+Please take a look at [CONTRIBUTING.md](https://github.com/j3ssie/Osmedeus/blob/master/CONTRIBUTING.md)
 
 # CREDITS
-Please take a look at [CREDITS.md](https://github.com/j3ssie/Osmedeus/CREDITS.md)
+Please take a look at [CREDITS.md](https://github.com/j3ssie/Osmedeus/blob/master/CREDITS.md)
 
 # Contact
 [@j3ssiejjj](https://twitter.com/j3ssiejjj)

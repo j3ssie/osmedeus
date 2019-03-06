@@ -22,6 +22,8 @@ class HeadersScan(object):
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Headers Scanning for {0}'.format(self.options['TARGET'])
         })
+        # self.conclude()
+
 
     def initial(self):
         if self.observatory():
@@ -71,7 +73,7 @@ class HeadersScan(object):
             result_path + "/" + os.listdir(result_path)[0])
 
 
-        summary_head = "domain," + ','.join(random_json.keys()) + ",details\n"
+        summary_head = "domain," + ','.join(random_json.keys()) + ",score,details\n"
 
         report_path = utils.replace_argument(
             self.options, '$WORKSPACE/headers/summary-$TARGET.csv')
@@ -84,10 +86,16 @@ class HeadersScan(object):
             details = utils.reading_json(real_path)
             if details:
                 summarybody = filename.replace('-observatory.json', '')
+                score = 100
                 for k, v in details.items():
                     summarybody += ',' + str(v.get('pass'))
+                    score += int(v.get('score_modifier'))
+
+                #if score is below zero just make it 0 like observatory.mozilla.org
+                if score < 0:
+                    score = 0
                 
-                summarybody += ',' + real_path + "\n"
+                summarybody += ',' + str(score) + ',' + real_path + "\n"
                 with open(report_path, 'a+') as r:
                     r.write(summarybody)
 
@@ -95,6 +103,7 @@ class HeadersScan(object):
             'title':  "{0} | {1} | Output".format(self.options['TARGET'], self.module_name),
             'filename': '{0}'.format(report_path),
         })
+
         utils.check_output(report_path)
         main_json['Modules'][self.module_name] = {"path": report_path}
 

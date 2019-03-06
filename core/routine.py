@@ -145,7 +145,7 @@ def debug(options):
     # sslscan.SSLScan(options)
 
     # # # ##Headers Scan
-    # headers.HeadersScan(options)
+    headers.HeadersScan(options)
 
     # ##### Note: From here the module gonna take really long time for scanning service and stuff like that
     # utils.print_info('This gonna take a while')
@@ -154,7 +154,7 @@ def debug(options):
     # portscan.PortScan(options)
 
     # # #Starting vulnerable scan
-    vulnscan.VulnScan(options)
+    # vulnscan.VulnScan(options)
 
     # # #Brute force service from port scan result
     # brutethings.BruteThings(options)
