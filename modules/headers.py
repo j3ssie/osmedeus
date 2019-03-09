@@ -13,16 +13,16 @@ class HeadersScan(object):
         utils.make_directory(options['WORKSPACE'] + '/headers/details')
         self.module_name = self.__class__.__name__
         self.options = options
-        slack.slack_noti('status', self.options, mess={
-            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
-            'content': 'Start Headers Scanning for {0}'.format(self.options['TARGET'])
-        })
-        self.initial()
-        slack.slack_noti('good', self.options, mess={
-            'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
-            'content': 'Start Headers Scanning for {0}'.format(self.options['TARGET'])
-        })
-        # self.conclude()
+        # slack.slack_noti('status', self.options, mess={
+        #     'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+        #     'content': 'Start Headers Scanning for {0}'.format(self.options['TARGET'])
+        # })
+        # self.initial()
+        # slack.slack_noti('good', self.options, mess={
+        #     'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
+        #     'content': 'Start Headers Scanning for {0}'.format(self.options['TARGET'])
+        # })
+        self.conclude()
 
 
     def initial(self):
@@ -65,18 +65,23 @@ class HeadersScan(object):
         result_path = utils.replace_argument(
             self.options, '$WORKSPACE/headers/details')
 
+        report_path = utils.replace_argument(
+            self.options, '$WORKSPACE/headers/summary-$TARGET.csv')
+
         main_json = utils.reading_json(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'))
+
+        print("Custom -->>")
+        result_path = "/Users/j3ssie/Desktop/headers-zalo/zaloapp.com"
+        report_path = "/Users/j3ssie/Desktop/headers-zalo/summary-zaloapp.com.csv"
 
         #head of csv file
         random_json = utils.reading_json(
             result_path + "/" + os.listdir(result_path)[0])
 
-
         summary_head = "domain," + ','.join(random_json.keys()) + ",score,details\n"
 
-        report_path = utils.replace_argument(
-            self.options, '$WORKSPACE/headers/summary-$TARGET.csv')
+
         
         with open(report_path, 'w+') as r:
             r.write(summary_head)
@@ -88,10 +93,16 @@ class HeadersScan(object):
                 summarybody = filename.replace('-observatory.json', '')
                 score = 100
                 for k, v in details.items():
-                    summarybody += ',' + str(v.get('pass'))
+                    if "not-implemented" in v.get('result'):
+                        summarybody += ',' + "Not Implement"
+                    elif v.get('pass') == True:
+                        summarybody += ',' + "Pass"
+                    else:
+                        summarybody += ',' + "Fail"
+
                     score += int(v.get('score_modifier'))
 
-                #if score is below zero just make it 0 like observatory.mozilla.org
+                #if score is below zero just make it 0 like
                 if score < 0:
                     score = 0
                 
@@ -99,11 +110,10 @@ class HeadersScan(object):
                 with open(report_path, 'a+') as r:
                     r.write(summarybody)
 
-        slack.slack_file('report', self.options, mess={
-            'title':  "{0} | {1} | Output".format(self.options['TARGET'], self.module_name),
-            'filename': '{0}'.format(report_path),
-        })
-
-        utils.check_output(report_path)
-        main_json['Modules'][self.module_name] = {"path": report_path}
+        # slack.slack_file('report', self.options, mess={
+        #     'title':  "{0} | {1} | Output".format(self.options['TARGET'], self.module_name),
+        #     'filename': '{0}'.format(report_path),
+        # })
+        # utils.check_output(report_path)
+        # main_json['Modules'][self.module_name] = {"path": report_path}
 

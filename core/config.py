@@ -136,7 +136,7 @@ def parsing_config(config_path, args):
             ip = socket.gethostbyname(strip_target)
         except:
             ip = "None"
-            utils.print_bad("Something wrong to connect to {0}").format(target)
+            utils.print_bad("Something wrong to connect to {0}".format(target))
 
 
     config.set('Target', 'git_target', str(git_target))
