@@ -71,10 +71,6 @@ class HeadersScan(object):
         main_json = utils.reading_json(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'))
 
-        print("Custom -->>")
-        result_path = "/Users/j3ssie/Desktop/headers-zalo/zaloapp.com"
-        report_path = "/Users/j3ssie/Desktop/headers-zalo/summary-zaloapp.com.csv"
-
         #head of csv file
         random_json = utils.reading_json(
             result_path + "/" + os.listdir(result_path)[0])
