@@ -59,7 +59,6 @@ class HeadersScan(object):
                 time.sleep(15)
         return True
     #update the main json file
-
     def conclude(self):
         result_path = utils.replace_argument(
             self.options, '$WORKSPACE/headers/details')
@@ -76,8 +75,6 @@ class HeadersScan(object):
 
         summary_head = "domain," + ','.join(random_json.keys()) + ",score,details\n"
 
-
-        
         with open(report_path, 'w+') as r:
             r.write(summary_head)
 
@@ -104,11 +101,3 @@ class HeadersScan(object):
                 summarybody += ',' + str(score) + ',' + real_path + "\n"
                 with open(report_path, 'a+') as r:
                     r.write(summarybody)
-
-        # slack.slack_file('report', self.options, mess={
-        #     'title':  "{0} | {1} | Output".format(self.options['TARGET'], self.module_name),
-        #     'filename': '{0}'.format(report_path),
-        # })
-        # utils.check_output(report_path)
-        # main_json['Modules'][self.module_name] = {"path": report_path}
-

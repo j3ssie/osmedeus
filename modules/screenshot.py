@@ -22,39 +22,52 @@ class ScreenShot(object):
 
 
     def initial(self):
-        self.aquaton()
-        # really slow the flow so disable for now
-        # self.eyewitness_common()
+        self.run()
         utils.just_waiting(self.module_name, seconds=10)
         #this gonna run after module is done to update the main json
         self.conclude()
 
-    def aquaton(self):
-        utils.print_good('Starting aquatone')
-        cmd ='cat $WORKSPACE/subdomain/final-$TARGET.txt | $GO_PATH/aquatone -threads 20 -out $WORKSPACE/screenshot/$OUTPUT-aquatone.html'
-        
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/screenshot/$OUTPUT-aquatone.html')
-        std_path = utils.replace_argument(self.options, '$WORKSPACE/screenshot/std-$OUTPUT-aquatone.std')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
+    def run(self):
+        commands = execute.get_commands(self.module_name).get('routines')
 
+        for item in commands:
+            utils.print_good('Starting {0}'.format(item.get('banner')))
+            #really execute it
+            execute.send_cmd(item.get('cmd'), item.get(
+                'output_path'), item.get('std_path'), self.module_name)
+            time.sleep(1)
 
-    def eyewitness_common(self):
-        utils.print_good('Starting EyeWitness for web')
-        cmd = 'python $PLUGINS_PATH/EyeWitness/EyeWitness.py -f $WORKSPACE/subdomain/final-$TARGET.txt --web --prepend-https --threads 20 -d $WORKSPACE/screenshot/eyewitness-$TARGET/' 
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/screenshot/')
-        std_path = utils.replace_argument(self.options, '$WORKSPACE/screenshot/std-eyewitness-$TARGET.std')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
-        
+        utils.just_waiting(self.module_name, seconds=30)
+        #just save commands
+        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
+        utils.save_all_cmd(logfile)
+    
 
     #update the main json file
     def conclude(self):
-        main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
-        main_json['Modules'][self.module_name] = utils.checking_done(module=self.module_name, get_json=True)
+        output_path = utils.replace_argument(
+            self.options, '$WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt')
 
-        #write that json again
-        utils.just_write(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
+        # matching IP with subdomain
+        main_json = utils.reading_json(utils.replace_argument(
+            self.options, '$WORKSPACE/$COMPANY.json'))
+        with open(output_path, 'r') as i:
+            data = i.read().splitlines()
+        ips = []
+        for line in data:
+            if " A " in line:
+                subdomain = line.split('. A ')[0]
+                ip = line.split('. A ')[1]
+                ips.append(ip)
+                for i in range(len(main_json['Subdomains'])):
+                    if subdomain == main_json['Subdomains'][i]['Domain']:
+                        main_json['Subdomains'][i]['IP'] = ip
 
-        utils.print_banner("{0} Done".format(self.module_name))
+        final_ip = utils.replace_argument(
+            self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
+
+        with open(final_ip, 'w+') as fip:
+            fip.write("\n".join(str(ip) for ip in ips))
+
+        utils.just_write(utils.replace_argument(
+            self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)

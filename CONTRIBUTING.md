@@ -1,1 +1,2 @@
-This is just beta version if you have any problem or an idea, feel free to create an issue or DM me.
+If you have some new idea about this project or you have found some valuable tool feel free to open an issue for just DM me via @j3ssiejjj.
+

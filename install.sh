@@ -78,7 +78,7 @@ go get -u github.com/zricethezav/gitleaks
 
 #Install flask stuff
 install_banner "flask"
-pip3 install flask flask_restful flask_jwt python-libnmap
+pip3 install flask flask_restful flask_jwt flask_cors
 
 install_banner "observatory"
 npm install -g observatory-cli
@@ -157,11 +157,11 @@ git clone https://github.com/nahamsec/JSParser
 cd JSParser/
 python setup.py install
 
-install_banner "EyeWitness"
-cd $PLUGINS_PATH
-git clone https://github.com/FortyNorthSecurity/EyeWitness
-cd EyeWitness
-bash setup/setup.sh
+# install_banner "EyeWitness"
+# cd $PLUGINS_PATH
+# git clone https://github.com/FortyNorthSecurity/EyeWitness
+# cd EyeWitness
+# bash setup/setup.sh
 
 
 

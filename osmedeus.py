@@ -29,20 +29,21 @@ colors = [G,R,B,P,C,O,GR]
 #############
 
 __author__ = '@j3ssiejjj'
-__version__ = '1.0'
+__version__ = '1.1'
 
 
 ### Global stuff
 current_path = os.path.dirname(os.path.realpath(__file__))
 
 def flask_run():
-    utils.print_banner("Staarting Flask API")
+    utils.print_banner("Starting Flask API")
     os.system('python3 core/app.py')
 
 def parsing_argument(args):
 
-    p = Process(target=flask_run)
-    p.start()
+    if not args.client:
+        p = Process(target=flask_run)
+        p.start()
 
     #parsing agument
     if args.config:
@@ -51,7 +52,11 @@ def parsing_argument(args):
             
     #wait for flask API start
     time.sleep(2)
-    utils.set_config(options)
+    try:
+        utils.set_config(options)
+    except:
+        utils.print_bad("Fail to set config, Please check Flask API !!!")
+        sys.exit(-1)
 
     if options['TARGET_LIST'] != "None":
         #check if target list file exist and loop throught the target
@@ -73,7 +78,8 @@ def single_target(options):
     print(
         '{2}---<---<--{1}@{2} Target: {0} {1}@{2}-->--->---'.format(options['TARGET'], P, G))
 
-    if options['DEBUG'] != "True":    
+    #just disable slack noti in debug mode
+    if options['DEBUG'] != "True":
         slack.slack_seperate(options)
 
     #run specific task otherwise run the normal routine
@@ -132,6 +138,7 @@ def main():
     parser.add_argument('-s', '--slow', action='store_true', help='run this tool with slow routine', default=False)
     parser.add_argument('--mode', action='store_true', help='Choose mode to run normal routine(quick or slow)', default='quick')
     parser.add_argument('--update', action='store_true', help='update lastest from git')
+    parser.add_argument('--client', action='store_true', help='just run client stuff in case you ran the flask server before')
     parser.add_argument('--debug', action='store_true', help='just for debug purpose')
 
     args = parser.parse_args()

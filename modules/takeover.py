@@ -15,55 +15,65 @@ class TakeOverScanning(object):
             'content': 'Start Scanning TakeOver for {0}'.format(self.options['TARGET'])
         })
         self.initial()
-        utils.just_waiting(self.module_name)
 
-        self.conclude()
         slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done Scanning TakeOver for {0}'.format(self.options['TARGET'])
         })
 
+        utils.print_banner("{0} Done".format(self.module_name))
+
 
     def initial(self):
-        if self.options['DEBUG'] == "True":
-            self.tko_subs()
-        else:
-            self.tko_subs()
-            self.subjack()
+        # self.run()
+        # if self.options['SPEED'] == 'slow':
+        self.dig_info()
 
-    def tko_subs(self):
-        utils.print_good('Starting tko-subs')
-        cmd = '$GO_PATH/tko-subs -data $PLUGINS_PATH/providers-data.csv -domains $WORKSPACE/subdomain/final-$TARGET.txt -output $WORKSPACE/subdomain/takeover-$TARGET-tko-subs.txt'
+    def run(self):
+        commands = execute.get_commands(self.module_name).get('routines')
+        for item in commands:
+            utils.print_good('Starting {0}'.format(item.get('banner')))
+            #really execute it
+            execute.send_cmd(item.get('cmd'), item.get(
+                'output_path'), item.get('std_path'), self.module_name)
 
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/takeover-$TARGET-tko-subs.txt')
-        std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-takeover-$TARGET-tko-subs.std')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
-
-    def subjack(self):
-        utils.print_good('Starting subjack')
-        cmd = '$GO_PATH/subjack -w $WORKSPACE/subdomain/final-$TARGET.txt -t 100 -timeout 30 -o $WORKSPACE/subdomain/takeover-$TARGET-subjack.txt -ssl'
-
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/takeover-$TARGET-subjack.txt')
-        std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-takeover-$TARGET-subjack.std')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
-
-    #update the main json file
-    def conclude(self):
-
-        main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
-        main_json['Modules'][self.module_name] = utils.checking_done(module=self.module_name, get_json=True)
-
-        #write that json again
-        utils.just_write(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
-            
-        #logging
+        utils.just_waiting(self.module_name, seconds=10)
+        #just save commands
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(logfile)
-        utils.print_banner("{0} Done".format(self.module_name))
+
+    def dig_info(self):
+        utils.print_good('Starting basic Dig')
+        utils.make_directory(self.options['WORKSPACE'] + '/screenshot/digs')
+        final_subdomains = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
+
+        #run command directly instead of run it via module cause there're a lot of command to run
+        all_domains = utils.just_read(final_subdomains).splitlines()
+        
+        if self.options['DEBUG'] == 'True':
+            all_domains = all_domains[:10]
+
+        custom_logs = {"module": self.module_name, "content": []}
+        for part in list(utils.chunks(all_domains, 5)):
+            for domain in part:
+                cmd = utils.replace_argument(
+                    self.options, 'dig all {0} | tee $WORKSPACE/screenshot/digs/{0}.txt'.format(domain))
+                
+                output_path =  utils.replace_argument(self.options, 'tee $WORKSPACE/screenshot/digs/{0}.txt'.format(domain))
+                execute.send_cmd(cmd, '', '', self.module_name, True)
+                # time.sleep(0.5)
+
+                custom_logs['content'].append(
+                    {"cmd": cmd, "std_path": '', "output_path": output_path, "status": "Done"})
+            #just wait couple seconds and continue but not completely stop the routine
+            time.sleep(5)
+            
+        print(custom_logs)
+        #submit a log
+        utils.print_info('Update activities log')
+        utils.update_activities(str(custom_logs))
+            
+
 
 
 

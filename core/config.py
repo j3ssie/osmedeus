@@ -82,14 +82,20 @@ def parsing_config(config_path, args):
     config.set('Enviroments', 'github_api_key', github_api_key)
     config.set('Enviroments', 'workspaces', str(workspace))
 
-
-    config.set('Slack', 'bot_token', bot_token)
-    config.set('Slack', 'log_channel', log_channel)
-    config.set('Slack', 'status_channel', status_channel)
-    config.set('Slack', 'report_channel', report_channel)
-    config.set('Slack', 'stds_channel', stds_channel)
-    config.set('Slack', 'verbose_report_channel', verbose_report_channel)
-
+    if args.debug:
+        config.set('Slack', 'bot_token', 'bot_token')
+        config.set('Slack', 'log_channel', 'log_channel')
+        config.set('Slack', 'status_channel', 'status_channel')
+        config.set('Slack', 'report_channel', 'report_channel')
+        config.set('Slack', 'stds_channel', 'stds_channel')
+        config.set('Slack', 'verbose_report_channel', 'verbose_report_channel')
+    else:
+        config.set('Slack', 'bot_token', bot_token)
+        config.set('Slack', 'log_channel', log_channel)
+        config.set('Slack', 'status_channel', status_channel)
+        config.set('Slack', 'report_channel', report_channel)
+        config.set('Slack', 'stds_channel', stds_channel)
+        config.set('Slack', 'verbose_report_channel', verbose_report_channel)
 
     ##config of the tool
     if args.slow:
@@ -169,18 +175,9 @@ def parsing_config(config_path, args):
         for key in config[sec]:
             # if key = 
             options[key.upper()] = config.get(sec, key)
-            # print("{0}:{1} -> ".format(sec, key) ,config.get(sec, key))
-        # print('-'*20)
 
-    # print(config.get('Enviroments', 'CWD'))
-    # print(config.get('Enviroments', 'WORKSPACE'))
-    # print(config.get('Enviroments', 'PLUGINS_PATH'))
-    # print(config.get('Enviroments', 'GO_PATH'))
-    # print('-'*20)
-    # print(config.get('Resources', 'directory_full'))
-    # print(config.get('Resources', 'domain_full'))
+    ######
+    ## Store this to a json file
 
-
-    #make all the keys upper and return the options
     return options
 

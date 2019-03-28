@@ -1,4 +1,6 @@
 import os, json, requests, time
+from urllib.parse import quote, unquote
+
 #################
 
 # Console colors
@@ -20,6 +22,12 @@ good = '{0}[+]{1} '.format(G,W)
 
 headers = {"User-Agent": "Osmedeus/v1.0", "Accept": "*/*",
            "Content-type": "application/json", "Connection": "close"}
+
+#send request through Burp proxy for debug purpose
+PROXY = {
+    'http': 'http://127.0.0.1:8081',
+    'https': 'http://127.0.0.1:8081'
+}
 
 def print_banner(text):
 	print('{1}--~~~=:>[ {2}{0}{1} ]>'.format(text, G, C))
@@ -50,7 +58,7 @@ def replace_argument(options, cmd):
 
 def make_directory(directory):
 	if not os.path.exists(directory):
-		print_good('Make new workspace: {0}'.format(directory))
+		print_good('Make new directory: {0}'.format(directory))
 		os.makedirs(directory)
 
 def not_empty_file(fpath):  
@@ -65,6 +73,14 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         yield l[i:i + n]
 
+
+def just_read(filename):
+    if os.path.isfile(filename):
+        with open(filename, 'r') as f:
+            data = f.read()
+        return data
+        
+    return False
 
 def just_write(filename, data, is_json=False):
     try:
@@ -98,7 +114,7 @@ def reading_json(filename):
 
 ###
 # checking if command was done or not? and return a json result
-def checking_done(cmd=None, module=None, get_json=False, url='http://127.0.0.1:5000/activities'):
+def checking_done(cmd=None, module=None, get_json=False, url='http://127.0.0.1:5000/api/activities'):
     if cmd:
         r = requests.post(url, headers=headers, json={'cmd' : cmd})
     if module:
@@ -113,29 +129,37 @@ def checking_done(cmd=None, module=None, get_json=False, url='http://127.0.0.1:5
     return True if not get_json else commands
 
 
-def looping(cmd=None, module=None, times=5, url='http://127.0.0.1:5000/activities'):
+def looping(cmd=None, module=None, times=5, url='http://127.0.0.1:5000/api/activities'):
     while times != 0:
         done = checking_done(cmd, module, url)
         if done:
             return
-
         times -= 1
 
+
+def update_activities(data, url='http://127.0.0.1:5000/api/activities'):
+    data = quote(str(data))
+    # r = requests.patch(url, headers=headers, data=data)
+    r = requests.patch(url, headers={"User-Agent": "Osmedeus/v1.0"}, data={'data': data}, proxies=PROXY)
+
 #just for conclusion
-def save_all_cmd(logfile, url='http://127.0.0.1:5000/activities'):
-    r = requests.get(url)
+def save_all_cmd(logfile, module=None, url='http://127.0.0.1:5000/api/activities'):
+    if module:
+        url += '?module=' + module
+    
+    r = requests.get(url, headers=headers)
     with open(logfile, 'w+') as l:
         l.write(r.text)
     # commands = json.loads(r.text)['commands']
 
 
-def set_config(options, url='http://127.0.0.1:5000/config'):
+def set_config(options, url='http://127.0.0.1:5000/api/config'):
     #set workspaces
     data = {'options': options}
     r = requests.post(url, headers=headers, json=data)
     return r
 
-def just_shutdown_flask(url='http://127.0.0.1:5000/shutdown'):
+def just_shutdown_flask(url='http://127.0.0.1:5000/api/shutdown'):
     requests.post(url)
 
 

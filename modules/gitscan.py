@@ -16,7 +16,6 @@ class GitScan(object):
         })
         self.initial()
 
-        self.conclude()
         slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Github Repo Scanning for {0}'.format(self.options['TARGET'])
@@ -24,27 +23,21 @@ class GitScan(object):
 
 
     def initial(self):
-        self.gitleaks()
-        self.truffleHog()
+        self.run()
         self.gitrob()
 
-    def gitleaks(self):
-        cmd = '$GO_PATH/gitleaks -v --repo=$TARGET --report=$WORKSPACE/gitscan/$TARGET-gitleaks.json'
+    def run(self):
+        commands = execute.get_commands(self.module_name).get('routines')
+        for item in commands:
+            utils.print_good('Starting {0}'.format(item.get('banner')))
+            #really execute it
+            execute.send_cmd(item.get('cmd'), item.get(
+                'output_path'), item.get('std_path'), self.module_name)
 
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/gitscan/$TARGET-gitleaks.json')
-        std_path = utils.replace_argument(self.options, '$WORKSPACE/gitscan/std-$TARGET-gitleaks.std')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
-    def truffleHog(self):
-        utils.print_good('Starting truffleHog')
-        cmd = 'trufflehog --regex --entropy=True $TARGET | tee $WORKSPACE/gitscan/$TARGET-trufflehog.txt'
-
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/gitscan/$TARGET-trufflehog.txt')
-        std_path = utils.replace_argument(self.options, '$WORKSPACE/gitscan/std-$TARGET-trufflehog.std')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
+        utils.just_waiting(self.module_name, seconds=2)
+        #just save commands
+        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
+        utils.save_all_cmd(logfile)
 
     def gitrob(self):
         utils.print_good('Starting gitrob')
@@ -56,12 +49,3 @@ class GitScan(object):
         std_path = utils.replace_argument(self.options, '$WORKSPACE/gitscan/std-$TARGET-gitrob.std')
         execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
-
-    #update the main json file
-    def conclude(self):
-        main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
-        main_json['Modules'][self.module_name] = utils.checking_done(module=self.module_name, get_json=True)
-
-        #write that json again
-        utils.just_write(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
-            

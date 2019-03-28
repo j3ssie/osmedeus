@@ -19,7 +19,7 @@ class SubdomainScanning(object):
 
         self.initial()
 
-        utils.just_waiting(self.module_name)
+        utils.just_waiting(self.module_name, seconds=10)
         self.conclude()
 
         #this gonna run after module is done to update the main json
@@ -30,82 +30,35 @@ class SubdomainScanning(object):
 
 
     def initial(self):
-        #just for debug purpose
+        self.run()
+
+
+    def run(self):
+        commands = execute.get_commands(self.module_name).get('routines')
         if self.options['DEBUG'] == "True":
-            self.subfinder()
-            self.gobuster()
-        else:
-            self.amass()
-            self.subfinder()
-            self.gobuster()
-            self.massdns()
+            commands = commands[1:]
 
+        for item in commands:
+            utils.print_good('Starting {0}'.format(item.get('banner')))
+            #really execute it
+            execute.send_cmd(item.get('cmd'), item.get(
+                'output_path'), item.get('std_path'), self.module_name)
+            time.sleep(1)
 
-    def amass(self):
-        utils.print_good('Starting amass')
-        cmd = '$GO_PATH/amass -active -d $TARGET -o $WORKSPACE/subdomain/$OUTPUT-amass.txt'
-
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/$OUTPUT-amass.txt')
-        std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-$TARGET-amass.std')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
-
-    def subfinder(self):
-        utils.print_good('Starting subfinder')
-        cmd = '$GO_PATH/subfinder -d $TARGET -t 100 -o $WORKSPACE/subdomain/$OUTPUT-subfinder.txt -nW'
-
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/$OUTPUT-subfinder.txt')
-        std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-$OUTPUT-subfinder.std')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
-
-    #just use massdns for directory bruteforce
-    def gobuster(self):
-        utils.print_good('Starting gobuster')
-        
-        if self.options['SPEED'] == 'slow':
-            cmd = '$GO_PATH/gobuster -m dns -np -t 100 -w $PLUGINS_PATH/wordlists/all.txt -u $TARGET -o $WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt'
-        elif self.options['SPEED'] == 'quick':
-            cmd = '$GO_PATH/gobuster -m dns -np -t 100 -w $PLUGINS_PATH/wordlists/shorts.txt -u $TARGET -o $WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt'
-        
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(
-            self.options, '$WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt')
-        std_path = utils.replace_argument(
-            self.options, '$WORKSPACE/subdomain/std-raw-$OUTPUT-gobuster.std')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
-
-
-    def massdns(self):
-        utils.print_good('Starting massdns')
-        if self.options['SPEED'] == 'slow':
-            cmd = '$PLUGINS_PATH/massdns/scripts/subbrute.py $DOMAIN_FULL $TARGET | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o Sm -w $WORKSPACE/subdomain/raw-massdns.txt'
-        elif self.options['SPEED'] == 'quick':
-            cmd = '$PLUGINS_PATH/massdns/scripts/subbrute.py $PLUGINS_PATH/wordlists/shorts.txt $TARGET | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o Sm -w $WORKSPACE/subdomain/raw-massdns.txt'
-
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/raw-massdns.txt')
-        std_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/std-raw-massdns.txt')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
-
-
-        
+        utils.just_waiting(self.module_name, seconds=30)
 
     #just clean up some output
     def unique_result(self):
         #gobuster clean up
+        utils.print_good('Unique result')
+
         go_raw = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt')
         if utils.not_empty_file(go_raw):
-            cmd = "cat $WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt | cut -d ' ' -f 2 > $WORKSPACE/subdomain/$OUTPUT-gobuster.txt"
-            cmd = utils.replace_argument(self.options, cmd)
-            output_path = utils.replace_argument(
+            go_clean = [ x.split(' ')[1] for x in utils.just_read(go_raw).splitlines()]
+            go_output = utils.replace_argument(
                 self.options, '$WORKSPACE/subdomain/$OUTPUT-gobuster.txt')
-            execute.send_cmd(cmd, output_path, '', self.module_name)
-
+            utils.just_write(go_output, "\n".join(go_clean))
 
         #massdns clean up
         massdns_raw = utils.replace_argument(
@@ -124,14 +77,17 @@ class SubdomainScanning(object):
                 utils.check_output(utils.replace_argument(
                     self.options, '$WORKSPACE/subdomain/$OUTPUT-massdns.txt'))
 
-        utils.print_good('Unique result')
-        cmd = "cat $WORKSPACE/subdomain/$OUTPUT-*.txt | sort | awk '{print tolower($0)}' | uniq >> $WORKSPACE/subdomain/final-$OUTPUT.txt"
-        
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
-        execute.send_cmd(cmd, '', '', self.module_name)
+        #joining the output
+        all_output = glob.glob(utils.replace_argument(self.options,
+            '$WORKSPACE/subdomain/$OUTPUT-*.txt'))
+        domains = []
+        for file in all_output:
+            domains += utils.just_read(file).splitlines()
 
-        # if utils.not_empty_file(all_subdomain):
+        output_path = utils.replace_argument(self.options,
+                               '$WORKSPACE/subdomain/final-$OUTPUT.txt')
+        utils.just_write(output_path, "\n".join(set(domains)))
+
         time.sleep(1)
         slack.slack_file('report', self.options, mess={
             'title':  "{0} | {1} | Output".format(self.options['TARGET'], self.module_name),
@@ -147,22 +103,19 @@ class SubdomainScanning(object):
         main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
 
         all_subdomain = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
-
         with open(all_subdomain, 'r+') as s:
             subdomains = s.read().splitlines()
 
         for subdomain in subdomains:
-            main_json['Subdomains'].append({"Domain": subdomain})
-
-        main_json['Modules'][self.module_name] = utils.checking_done(module=self.module_name, get_json=True)
+            main_json['Subdomains'].append({
+                "Domain": subdomain,
+                "IP": "N/A",
+                "Technology": [],
+                "Ports": [],
+            })
 
         utils.just_write(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
-
-        #logging
-        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
-        utils.save_all_cmd(logfile)
-
 
         utils.print_banner("Done for {0}".format(self.module_name))
 

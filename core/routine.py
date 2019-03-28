@@ -65,7 +65,7 @@ def normal(options):
 
     # brutethings.BruteThings(options)
 
-    conclusion.Conclusion(options)
+    # conclusion.Conclusion(options)
 
 
 def specific(options, module):
@@ -123,35 +123,41 @@ def debug(options):
     pprint(options)
     # initials.Initials(options)
 
-    #Finding subdomain
+    ###Finding subdomain
     # subdomain.SubdomainScanning(options)
 
-    ##waiting for previous module
-    # utils.just_waiting('SubdomainScanning')
+    ####waiting for previous module
+    # # utils.just_waiting('SubdomainScanning')
 
-    # # ##Scanning for subdomain take over
+    ###Screen shot the target on common service
+    # screenshot.ScreenShot(options)
+
+
+    ###Scanning for subdomain take over
     # takeover.TakeOverScanning(options)
 
-    # # ##Screen shot the target on common service
-    # screenshot.ScreenShot(options)
+    ##Discovery IP space
+
+    # ipspace.IPSpace(options)
+
 
     # # ##Scanning for CorsScan
     # cors.CorsScan(options)
 
-    # # # # ##Discovery IP space
-    # ipspace.IPSpace(options)
 
-    # # # ##SSL Scan
+    ### SSL Scan
     # sslscan.SSLScan(options)
 
-    # # # ##Headers Scan
-    headers.HeadersScan(options)
+    ##Headers Scan
+    # headers.HeadersScan(options)
 
-    # ##### Note: From here the module gonna take really long time for scanning service and stuff like that
-    # utils.print_info('This gonna take a while')
+    ##### Note: From here the module gonna take really long time for scanning service and stuff like that
+    utils.print_info('This gonna take a while')
 
-    # # #Scanning all port using result from subdomain scanning and also checking vulnerable service based on version
-    # portscan.PortScan(options)
+    # dirbrute.DirBrute(options)
+
+    #Scanning all port using result from subdomain scanning and also checking vulnerable service based on version
+    portscan.PortScan(options)
 
     # # #Starting vulnerable scan
     # vulnscan.VulnScan(options)

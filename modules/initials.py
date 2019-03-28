@@ -20,7 +20,7 @@ class Initials(object):
 
     def initial(self):
         self.create_skeleton_json()
-        self.whois()
+        self.run()
 
     def create_skeleton_json(self):
         main_json = {
@@ -41,18 +41,18 @@ class Initials(object):
             'content': 'Create skeleton json'
         })
 
-    def whois(self):
-        utils.print_good('Starting Whois')
-        cmd = 'whois $TARGET | tee $WORKSPACE/info/$TARGET-whois.txt'
+    def run(self):
+        commands = execute.get_commands(self.module_name).get('routines')
+        # print(commands)
+        for item in commands:
+            utils.print_good('Starting {0}'.format(item.get('banner')))
+            #really execute it
+            execute.send_cmd(item.get('cmd'), item.get('output_path'), item.get('std_path'), self.module_name)
 
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/info/$OUTPUT-whois.txt')
-        std_path = utils.replace_argument(self.options, '$WORKSPACE/info/std-$OUTPUT-whois.std')
-
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
         utils.just_waiting(self.module_name, seconds=2)
-
-
+        #just save commands
+        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
+        utils.save_all_cmd(logfile)
 
 
 

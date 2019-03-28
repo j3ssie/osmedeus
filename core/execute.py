@@ -1,7 +1,9 @@
-import sys, os
+import sys, os, json
 import subprocess, requests
 # import utils
 
+headers = {"User-Agent": "Osmedeus/v1.0", "Accept": "*/*",
+           "Content-type": "application/json", "Connection": "close"}
 
 def run1(command):
     os.system(command)
@@ -40,12 +42,24 @@ def run_as_background(command):
     return process
 
 
-def send_cmd(cmd, output_path='', std_path='', module=''):
+#get all commaands by module
+def get_commands(module):
+    url = 'http://127.0.0.1:5000/api/routines?module=' + module
+
+    r = requests.get(url, headers=headers)
+    if r.status_code == 200:
+        return json.loads(r.text)
+
+    return None
+
+def send_cmd(cmd, output_path='', std_path='', module='', nolog=False):
     json_cmd = {}
     json_cmd['cmd'] = cmd
     json_cmd['output_path'] = output_path
     json_cmd['std_path'] = std_path
     json_cmd['module'] = module
+    #don't push this to activities log
+    json_cmd['nolog'] = str(nolog)
     
     send_JSON(json_cmd)
 
@@ -53,9 +67,8 @@ def send_cmd(cmd, output_path='', std_path='', module=''):
 
 #leave token blank for now
 def send_JSON(json_body, token=''):
-    url = 'http://127.0.0.1:5000/cmd'
-    headers = {"User-Agent": "Osmedeus/v1.0", "Accept": "*/*", "Content-type": "application/json", "Connection": "close"}
-    # headers = {"User-Agent": "Osmedeus/v1.0", "Accept": "*/*", "Authorization": "Bearer " + token, "Content-type": "application/json", "Connection": "close"}
+    url = 'http://127.0.0.1:5000/api/cmd'
+
     #ignore the timeout
     try:
         r = requests.post(url, headers=headers, json=json_body, timeout=0.1)

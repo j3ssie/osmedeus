@@ -16,36 +16,20 @@ class SSLScan(object):
         })
         self.initial()
         utils.just_waiting(self.module_name)
-        self.conclude()
 
     def initial(self):
-        self.testssl()
+        self.run()
 
-    def testssl(self):
-        utils.print_good('Starting testssl')
-        if self.options['SPEED'] == 'slow':
-            cmd = 'bash $PLUGINS_PATH/testssl.sh/testssl.sh --parallel --append --logfile $WORKSPACE/ssl/$TARGET-testssl.txt --file $WORKSPACE/subdomain/final-$OUTPUT.txt'
-        elif self.options['SPEED'] == 'quick':
-            cmd = 'bash $PLUGINS_PATH/testssl.sh/testssl.sh --parallel --append --logfile $WORKSPACE/ssl/$TARGET-testssl.txt $TARGET'
+    def run(self):
+        commands = execute.get_commands(self.module_name).get('routines')
+        for item in commands:
+            utils.print_good('Starting {0}'.format(item.get('banner')))
+            #really execute it
+            execute.send_cmd(item.get('cmd'), item.get(
+                'output_path'), item.get('std_path'), self.module_name)
 
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/ssl/$TARGET-testssl.txt')
-        std_path = utils.replace_argument(self.options, '$WORKSPACE/ssl/std-$TARGET-testssl.std')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
-        
-
-    #update the main json file
-    def conclude(self):
-        main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
-        main_json['Modules'][self.module_name] = utils.checking_done(module=self.module_name, get_json=True)
-
-        #write that json again
-        utils.just_write(utils.replace_argument(
-            self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
-            
-        #logging
-        logfile=utils.replace_argument(self.options, '$WORKSPACE/log.json')
+        utils.just_waiting(self.module_name, seconds=10)
+        #just save commands
+        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(logfile)
-        utils.print_banner("{0} Done".format(self.module_name))
-
 
