@@ -55,6 +55,7 @@ then
 	echo 'PATH=$GOPATH/bin:$PATH' >> $DEFAULT_SHELL
 	source $DEFAULT_SHELL
 fi
+source $DEFAULT_SHELL
 
 ##
 # Install go stuff
