@@ -17,7 +17,7 @@ C = '\033[1;36m'  # cyan
 GR = '\033[1;37m'  # gray
 
 __author__ = '@j3ssiejjj'
-__version__ = '1.0'
+__version__ = '1.1'
 
 def banner():
     print(r"""{1}

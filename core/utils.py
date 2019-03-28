@@ -139,8 +139,8 @@ def looping(cmd=None, module=None, times=5, url='http://127.0.0.1:5000/api/activ
 
 def update_activities(data, url='http://127.0.0.1:5000/api/activities'):
     data = quote(str(data))
-    # r = requests.patch(url, headers=headers, data=data)
-    r = requests.patch(url, headers={"User-Agent": "Osmedeus/v1.0"}, data={'data': data}, proxies=PROXY)
+    # r = requests.patch(url, headers={"User-Agent": "Osmedeus/v1.0"}, data={'data': data}, proxies=PROXY)
+    r = requests.patch(url, headers={"User-Agent": "Osmedeus/v1.0"}, data={'data': data})
 
 #just for conclusion
 def save_all_cmd(logfile, module=None, url='http://127.0.0.1:5000/api/activities'):
