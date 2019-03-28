@@ -38,7 +38,7 @@ If you have no idea what are you doing just type the command below or check out 
 # Demo
 [![asciicast](https://asciinema.org/a/230164.svg)](https://asciinema.org/a/230164)
 
-![Web UI](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/spa_0.png)
+![Web UI 1](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/spa_0.png)
 
 ![Web UI](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/spa_1.png)
 
