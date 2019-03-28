@@ -48,8 +48,8 @@ chmod +x osmedeus.py
 install_banner "Golang"
 apt install golang -y
 
-### adding gopath
-if grep -Fxq "GOPATH" "$DEFAULT_SHELL"
+### adding gopath if GOPATH not in default shellrc
+if ! grep -Fxq "GOPATH" "$DEFAULT_SHELL"
 then
 	echo 'export GOPATH=$HOME/go' >> $DEFAULT_SHELL
 	echo 'PATH=$GOPATH/bin:$PATH' >> $DEFAULT_SHELL
