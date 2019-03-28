@@ -78,7 +78,7 @@ go get -u github.com/zricethezav/gitleaks
 
 #Install flask stuff
 install_banner "flask"
-pip3 install flask flask_restful flask_jwt flask_cors
+pip3 install flask flask_restful flask_jwt flask_cors python-libnmap
 
 install_banner "observatory"
 npm install -g observatory-cli

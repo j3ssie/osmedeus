@@ -11,7 +11,6 @@ config.conf
 core/config.conf
 modules/testing.py
 local-install.sh
-core/rest/storages/
 core/rest/storages/options.json
 
 # Byte-compiled / optimized / DLL files

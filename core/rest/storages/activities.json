@@ -1,0 +1,1 @@
+{"Initials": [{"cmd": "whois example.com", "std_path": "", "output_path": "", "status": "Done"}], "SubdomainScanning": [], "ScreenShot": [], "TakeOverScanning": [], "IPSpace": [], "CorsScan": [], "HeadersScan": [], "SSLScan": [], "PortScan": [], "DirBrute": [], "VulnScan": [], "BruteThings": [], "BurpState": [], "GitScan": []}
