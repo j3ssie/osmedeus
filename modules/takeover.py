@@ -25,9 +25,9 @@ class TakeOverScanning(object):
 
 
     def initial(self):
-        # self.run()
-        # if self.options['SPEED'] == 'slow':
-        self.dig_info()
+        self.run()
+        if self.options['SPEED'] == 'slow':
+            self.dig_info()
 
     def run(self):
         commands = execute.get_commands(self.module_name).get('routines')

@@ -52,12 +52,6 @@
                 "cmd": "cat $WORKSPACE/subdomain/final-$TARGET.txt | $GO_PATH/aquatone -threads 20 -out $WORKSPACE/screenshot/$OUTPUT-aquatone",
                 "output_path": "$WORKSPACE/screenshot/$OUTPUT-aquatone/aquatone_report",
                 "std_path": "$WORKSPACE/screenshot/std-$OUTPUT-aquatone.std"
-            },
-            {
-                "banner": "Resolve IP Adress",
-                "cmd": "$PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -t A -o S -w $WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt $WORKSPACE/subdomain/final-$OUTPUT.txt",
-                "output_path": "$WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt",
-                "std_path": ""
             }
         ]
     },
