@@ -9,7 +9,6 @@
 </p>
 
 
-
 # What is Osmedeus?
 Osmedeus allow you automated run the collection of awesome tools to reconnaissance and vulnerability scanning against the target.
 
@@ -18,6 +17,16 @@ If you have no idea what are you doing just type the command below or check out 
 ```
 ./osmedeus.py -t example.com
 ```
+
+
+# Installation
+```
+git clone https://github.com/j3ssie/Osmedeus
+cd Osmedeus
+./install.sh
+```
+This install only focus on Kali linux, check more install on [Wiki page](https://github.com/j3ssie/Osmedeus/wiki)
+
 
 # Features
 - [x] Subdomain Scan.
@@ -47,16 +56,6 @@ If you have no idea what are you doing just type the command below or check out 
 ![Slack Noti](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_noti.png)
 
 ![REST API](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/rest_api.png)
-
-
-# Installation
-```
-git clone https://github.com/j3ssie/Osmedeus
-cd Osmedeus
-./install.sh
-```
-This install only focus on Kali linux, check more install on [Wiki page](https://github.com/j3ssie/Osmedeus/wiki)
-
 
 
 # Disclaimer

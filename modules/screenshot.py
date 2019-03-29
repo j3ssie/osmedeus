@@ -25,7 +25,7 @@ class ScreenShot(object):
         self.run()
         utils.just_waiting(self.module_name, seconds=10)
         #this gonna run after module is done to update the main json
-        self.conclude()
+        # self.conclude()
 
     def run(self):
         commands = execute.get_commands(self.module_name).get('routines')
@@ -43,31 +43,31 @@ class ScreenShot(object):
         utils.save_all_cmd(logfile)
     
 
-    #update the main json file
-    def conclude(self):
-        output_path = utils.replace_argument(
-            self.options, '$WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt')
+    # #update the main json file
+    # def conclude(self):
+    #     output_path = utils.replace_argument(
+    #         self.options, '$WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt')
 
-        # matching IP with subdomain
-        main_json = utils.reading_json(utils.replace_argument(
-            self.options, '$WORKSPACE/$COMPANY.json'))
-        with open(output_path, 'r') as i:
-            data = i.read().splitlines()
-        ips = []
-        for line in data:
-            if " A " in line:
-                subdomain = line.split('. A ')[0]
-                ip = line.split('. A ')[1]
-                ips.append(ip)
-                for i in range(len(main_json['Subdomains'])):
-                    if subdomain == main_json['Subdomains'][i]['Domain']:
-                        main_json['Subdomains'][i]['IP'] = ip
+    #     # matching IP with subdomain
+    #     main_json = utils.reading_json(utils.replace_argument(
+    #         self.options, '$WORKSPACE/$COMPANY.json'))
+    #     with open(output_path, 'r') as i:
+    #         data = i.read().splitlines()
+    #     ips = []
+    #     for line in data:
+    #         if " A " in line:
+    #             subdomain = line.split('. A ')[0]
+    #             ip = line.split('. A ')[1]
+    #             ips.append(ip)
+    #             for i in range(len(main_json['Subdomains'])):
+    #                 if subdomain == main_json['Subdomains'][i]['Domain']:
+    #                     main_json['Subdomains'][i]['IP'] = ip
 
-        final_ip = utils.replace_argument(
-            self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
+    #     final_ip = utils.replace_argument(
+    #         self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
 
-        with open(final_ip, 'w+') as fip:
-            fip.write("\n".join(str(ip) for ip in ips))
+    #     with open(final_ip, 'w+') as fip:
+    #         fip.write("\n".join(str(ip) for ip in ips))
 
-        utils.just_write(utils.replace_argument(
-            self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
+    #     utils.just_write(utils.replace_argument(
+    #         self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
