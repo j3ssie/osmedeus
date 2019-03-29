@@ -38,7 +38,7 @@ log.setLevel(logging.ERROR)
 
 app = Flask('Osmedeus')
 #just for testing
-app = Flask(__name__, template_folder='ui/', static_folder='ui/')
+app = Flask(__name__, template_folder='ui/', static_folder='ui/static/')
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 api = Api(app)
 
@@ -83,10 +83,10 @@ def custom_static(filename):
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
-    if path != "" and os.path.exists("ui/" + path):
-        return send_from_directory('ui', path)
+    if path != "" and os.path.exists(current_path + "/ui/" + path):
+        return send_from_directory(current_path + '/ui/', path)
     else:
-        return send_from_directory('ui', 'index.html')
+        return send_from_directory(current_path + '/ui/', 'index.html')
 ####
 
 if __name__ == '__main__':
