@@ -24,7 +24,7 @@ class PortScan(object):
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Port Scanning for {0}'.format(self.options['TARGET'])
         })
-        # self.initial()
+        self.initial()
 
         utils.just_waiting(self.module_name, seconds=60)
         # self.create_ip_result()

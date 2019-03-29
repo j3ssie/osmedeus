@@ -38,11 +38,11 @@ class DirBrute(object):
 
         for part in list(utils.chunks(domains, 2)):
             for domain in part:
-                cmd = "python3 $PLUGINS_PATH/dirsearch/dirsearch.py --json-report=$WORKSPACE/directory/{0}-dirsearch.json  -u '{0}' -e php,jsp,aspx,js,html -t 20 -b".format(domain)
+                cmd = "python3 $PLUGINS_PATH/dirsearch/dirsearch.py --json-report=$WORKSPACE/directory/{0}-dirsearch.json  -u '{0}' -e php,jsp,aspx,js,html -t 20 -b".format(domain.strip())
 
                 cmd = utils.replace_argument(self.options, cmd)
-                output_path = utils.replace_argument(self.options, '$WORKSPACE/directory/{0}-dirsearch.json'.format(domain))
-                std_path = utils.replace_argument(self.options, '$WORKSPACE/directory/std-{0}-dirsearch.std'.format(domain))
+                output_path = utils.replace_argument(self.options, '$WORKSPACE/directory/{0}-dirsearch.json'.format(domain.strip()))
+                std_path = utils.replace_argument(self.options, '$WORKSPACE/directory/std-{0}-dirsearch.std'.format(domain.strip()))
                 execute.send_cmd(cmd, output_path, std_path, self.module_name, True)
                 
                 # time.sleep(0.5)

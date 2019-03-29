@@ -47,13 +47,13 @@ class VulnScan(object):
         for part in list(utils.chunks(ip_list, 2)):
             for ip in part:
                 cmd = 'sudo nmap -T4 -Pn -n -sSV -p- {0} --script $PLUGINS_PATH/vulners --oA $WORKSPACE/vulnscan/{0}-nmap'.format(
-                    ip)
+                    ip.strip())
 
                 cmd = utils.replace_argument(self.options, cmd)
                 output_path = utils.replace_argument(
-                    self.options, '$WORKSPACE/vulnscan/{0}-nmap.nmap'.format(ip))
+                    self.options, '$WORKSPACE/vulnscan/{0}-nmap.nmap'.format(ip.strip()))
                 std_path = utils.replace_argument(
-                    self.options, '$WORKSPACE/vulnscan/std-{0}-nmap.std'.format(ip))
+                    self.options, '$WORKSPACE/vulnscan/std-{0}-nmap.std'.format(ip.strip()))
                 execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
             # check if previous task done or not every 30 second
