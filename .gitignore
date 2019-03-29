@@ -12,6 +12,7 @@ core/config.conf
 modules/testing.py
 local-install.sh
 core/rest/storages/options.json
+core/rest/storages/activities.json
 
 # Byte-compiled / optimized / DLL files
 core/__pycache__/

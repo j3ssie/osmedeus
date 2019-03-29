@@ -34,12 +34,11 @@ current_path = os.path.dirname(os.path.realpath(__file__))
 ## turn off the http log
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
-##
+# ##
 
 app = Flask('Osmedeus')
 #just for testing
-app = Flask(__name__, static_folder='ui/static/')
-
+app = Flask(__name__, template_folder='ui/', static_folder='ui/')
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 api = Api(app)
 
