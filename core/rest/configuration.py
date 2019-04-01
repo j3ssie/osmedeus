@@ -19,7 +19,7 @@ class Configurations(Resource):
                         )
 
     def get(self):
-        print(current_path)
+        # print(current_path)
         options = utils.reading_json(current_path + '/storages/options.json')
         return options
 

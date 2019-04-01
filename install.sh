@@ -55,7 +55,7 @@ then
 	echo 'PATH=$GOPATH/bin:$PATH' >> $DEFAULT_SHELL
 	source $DEFAULT_SHELL
 fi
-source $DEFAULT_SHELL
+
 
 ##
 # Install go stuff
@@ -158,6 +158,7 @@ git clone https://github.com/nahamsec/JSParser
 cd JSParser/
 python setup.py install
 
+source ~/.bashrc
 # install_banner "EyeWitness"
 # cd $PLUGINS_PATH
 # git clone https://github.com/FortyNorthSecurity/EyeWitness
