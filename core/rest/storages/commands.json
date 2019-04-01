@@ -4,8 +4,8 @@
             {
                 "banner": "Whois",
                 "cmd": "whois $TARGET",
-                "output_path": "",
-                "std_path": ""
+                "output_path": "$WORKSPACE/info/$OUTPUT-whois.txt",
+                "std_path": "$WORKSPACE/info/$OUTPUT-whois.txt"
             }
         ]
     },

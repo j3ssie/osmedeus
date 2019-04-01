@@ -95,10 +95,24 @@ def just_write(filename, data, is_json=False):
         print_bad("Writing fail: {0}".format(filename))
         return False
 
-def just_waiting(module_name, seconds=30):
+#adding times to waiting default is infinity times
+def just_waiting(module_name, seconds=30, times=False):
+    if times:
+        count = 0
+
     while not checking_done(module=module_name):
-        print_info('Waiting for {0} module'.format(module_name))
-        time.sleep(seconds)
+        if not times:
+            print_info('Waiting for {0} module'.format(module_name))
+            time.sleep(seconds)
+        
+        if times:
+            print_info('Waiting for {0} module {1}/{2}'.format(module_name, str(count), str(times)))
+            if count == int(times):
+                print_bad("Something bad with {0} module but force to continue".format(module_name))
+                break
+            count += 1
+            time.sleep(seconds)
+            
 
 
 def reading_json(filename):

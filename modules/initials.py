@@ -49,8 +49,9 @@ class Initials(object):
             #really execute it
             execute.send_cmd(item.get('cmd'), item.get('output_path'), item.get('std_path'), self.module_name)
 
-        utils.just_waiting(self.module_name, seconds=2)
+        utils.just_waiting(self.module_name, seconds=2, times=10)
         #just save commands
+
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(logfile)
 
