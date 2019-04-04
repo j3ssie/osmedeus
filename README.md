@@ -23,7 +23,7 @@ If you have no idea what are you doing just type the command below or check out 
 ```
 git clone https://github.com/j3ssie/Osmedeus
 cd Osmedeus
-./install.sh
+sudo ./install.sh
 ```
 This install only focus on Kali linux, check more install on [Wiki page](https://github.com/j3ssie/Osmedeus/wiki)
 
