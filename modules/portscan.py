@@ -8,10 +8,6 @@ from core import execute
 from core import slack
 from core import utils
 
-from libnmap.parser import NmapParser
-from libnmap.reportjson import ReportDecoder, ReportEncoder
-
-
 class PortScan(object):
     """docstring for PortScan"""
 
