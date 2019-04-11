@@ -13,7 +13,7 @@
 Osmedeus allow you automated run the collection of awesome tools to reconnaissance and vulnerability scanning against the target.
 
 # How to use
-If you have no idea what are you doing just type the command below or check out the [Advance Usage](https://github.com/j3ssie/Osmedeus/wiki/Advanced-Usage)
+If you have no idea what are you doing just type the command below or check out the [Advanced Usage](https://github.com/j3ssie/Osmedeus/wiki/Advanced-Usage)
 ```
 ./osmedeus.py -t example.com
 ```
