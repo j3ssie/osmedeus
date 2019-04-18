@@ -56,9 +56,10 @@ def parsing_config(config_path, args):
     cwd = str(os.getcwd())
 
     #just hardcode if gopath not loaded
-    go_path = str(os.getenv("GOPATH")) + "/bin"
-    if "None" in go_path:
-        go_path = cwd + "/plugins/go"
+    go_path = cwd + "/plugins/go"
+    # go_path = str(os.getenv("GOPATH")) + "/bin"
+    # if "None" in go_path:
+    #     go_path = cwd + "/plugins/go"
 
     bot_token = str(os.getenv("SLACK_BOT_TOKEN"))
     log_channel = str(os.getenv("LOG_CHANNEL"))
