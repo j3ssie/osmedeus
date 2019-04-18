@@ -52,17 +52,20 @@ def parsing_config(config_path, args):
     options = {}
 
     ##some default path
-    go_path = str(os.getenv("GOPATH")) + "/bin"
     github_api_key = str(os.getenv("GITROB_ACCESS_TOKEN"))
     cwd = str(os.getcwd())
+
+    #just hardcode if gopath not loaded
+    go_path = str(os.getenv("GOPATH")) + "/bin"
+    if "None" in go_path:
+        go_path = cwd + "/plugins/go"
+
     bot_token = str(os.getenv("SLACK_BOT_TOKEN"))
     log_channel = str(os.getenv("LOG_CHANNEL"))
     status_channel = str(os.getenv("STATUS_CHANNEL"))
     report_channel = str(os.getenv("REPORT_CHANNEL"))
     stds_channel = str(os.getenv("STDS_CHANNEL"))
     verbose_report_channel = str(os.getenv("VERBOSE_REPORT_CHANNEL"))
-
-
 
 
     if os.path.isfile(config_path):
@@ -79,7 +82,7 @@ def parsing_config(config_path, args):
 
     workspace = cwd + "/workspaces/"
     config.set('Enviroments', 'cwd', cwd)
-    # config.set('Enviroments', 'go_path', go_path)
+    config.set('Enviroments', 'go_path', go_path)
     config.set('Enviroments', 'github_api_key', github_api_key)
     config.set('Enviroments', 'workspaces', str(workspace))
 

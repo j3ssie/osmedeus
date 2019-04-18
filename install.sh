@@ -63,23 +63,24 @@ source $DEFAULT_SHELL
 ##
 mkdir -p "$PLUGINS_PATH/go/"
 install_banner "amass"
-cd ~/go/bin; go get -u github.com/OWASP/Amass/...; cp amass* "$PLUGINS_PATH/go/"
+cd ~/go/bin
+go get -u github.com/OWASP/Amass/...; cp amass* "$PLUGINS_PATH/go/"
 install_banner "subfinder"
-cd ~/go/bin; go get -u github.com/subfinder/subfinder; cp subfinder "$PLUGINS_PATH/go/"
+go get -u github.com/subfinder/subfinder; cp subfinder "$PLUGINS_PATH/go/"
 install_banner "gobuster"
-cd ~/go/bin; go get -u github.com/OJ/gobuster; cp gobuster "$PLUGINS_PATH/go/"
+go get -u github.com/OJ/gobuster; cp gobuster "$PLUGINS_PATH/go/"
 install_banner "aquatone"
-cd ~/go/bin; go get -u github.com/michenriksen/aquatone; cp aquatone "$PLUGINS_PATH/go/"
+go get -u github.com/michenriksen/aquatone; cp aquatone "$PLUGINS_PATH/go/"
 install_banner "gitrob"
-cd ~/go/bin; go get -u github.com/michenriksen/gitrob; cp gitrob "$PLUGINS_PATH/go/"
+go get -u github.com/michenriksen/gitrob; cp gitrob "$PLUGINS_PATH/go/"
 install_banner "subjack"
-cd ~/go/bin; go get -u github.com/haccer/subjack; cp subjack "$PLUGINS_PATH/go/"
+go get -u github.com/haccer/subjack; cp subjack "$PLUGINS_PATH/go/"
 install_banner "tko-subs"
-cd ~/go/bin; go get -u github.com/anshumanbh/tko-subs; cp subs "$PLUGINS_PATH/go/"
+go get -u github.com/anshumanbh/tko-subs; cp tko-subs "$PLUGINS_PATH/go/"
 install_banner "gitleaks"
-cd ~/go/bin; go get -u github.com/zricethezav/gitleaks; cp gitleaks "$PLUGINS_PATH/go/"
+go get -u github.com/zricethezav/gitleaks; cp gitleaks "$PLUGINS_PATH/go/"
 install_banner "webanalyze"
-cd ~/go/bin; go get -u github.com/rverton/webanalyze/...; cp webanalyze "$PLUGINS_PATH/go/"
+go get -u github.com/rverton/webanalyze/...; cp webanalyze "$PLUGINS_PATH/go/"
 
 
 
