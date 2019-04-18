@@ -2,7 +2,7 @@ import sys, os, json
 import subprocess, requests
 # import utils
 
-headers = {"User-Agent": "Osmedeus/v1.0", "Accept": "*/*",
+headers = {"User-Agent": "Osmedeus/v1.2", "Accept": "*/*",
            "Content-type": "application/json", "Connection": "close"}
 
 def run1(command):
@@ -36,15 +36,10 @@ def run(command):
         print('Something went wrong with the command below: ')
         print(command)
         return None
-
-def run_as_background(command):
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    return process
-
-
 #get all commaands by module
-def get_commands(module):
-    url = 'http://127.0.0.1:5000/api/routines?module=' + module
+def get_commands(options, module):
+    headers['Authorization'] = options['JWT']
+    url = options['REMOTE_API'] + "/api/routines?module=" + module
 
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
@@ -52,7 +47,9 @@ def get_commands(module):
 
     return None
 
-def send_cmd(cmd, output_path='', std_path='', module='', nolog=False):
+def send_cmd(options, cmd, output_path='', std_path='', module='', nolog=False):
+    headers['Authorization'] = options['JWT']
+    # url = options['REMOTE_API'] + "/api/activities"
     json_cmd = {}
     json_cmd['cmd'] = cmd
     json_cmd['output_path'] = output_path
@@ -61,19 +58,17 @@ def send_cmd(cmd, output_path='', std_path='', module='', nolog=False):
     #don't push this to activities log
     json_cmd['nolog'] = str(nolog)
     
-    send_JSON(json_cmd)
-
+    send_JSON(options, json_cmd)
 
 
 #leave token blank for now
-def send_JSON(json_body, token=''):
-    url = 'http://127.0.0.1:5000/api/cmd'
-
+def send_JSON(options, json_body, token=''):
+    headers['Authorization'] = options['JWT']
+    url = options['REMOTE_API'] + "/api/cmd"
     #ignore the timeout
     try:
         r = requests.post(url, headers=headers, json=json_body, timeout=0.1)
     except:
         pass
-    # return r
 
 

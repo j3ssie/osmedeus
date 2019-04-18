@@ -26,7 +26,7 @@ class HeadersScan(object):
 
     def initial(self):
         if self.observatory():
-            utils.just_waiting(self.module_name)
+            utils.just_waiting(self.options, self.module_name)
             try:
                 self.conclude()
             except:
@@ -53,7 +53,7 @@ class HeadersScan(object):
                 cmd = 'observatory -q {0} --format=json -z --attempts 10 | tee $WORKSPACE/headers/details/{0}-observatory.json'.format(
                     domain.strip())
                 cmd = utils.replace_argument(self.options, cmd)
-                execute.send_cmd(cmd, '', '', self.module_name)
+                execute.send_cmd(self.options, cmd, '', '', self.module_name)
 
             while not utils.checking_done(module=self.module_name):
                 time.sleep(15)

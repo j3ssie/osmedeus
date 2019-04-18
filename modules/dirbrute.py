@@ -43,7 +43,7 @@ class DirBrute(object):
                 cmd = utils.replace_argument(self.options, cmd)
                 output_path = utils.replace_argument(self.options, '$WORKSPACE/directory/{0}-dirsearch.json'.format(domain.strip()))
                 std_path = utils.replace_argument(self.options, '$WORKSPACE/directory/std-{0}-dirsearch.std'.format(domain.strip()))
-                execute.send_cmd(cmd, output_path, std_path, self.module_name, True)
+                execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name, True)
                 
                 # time.sleep(0.5)
                 #set status to done because this gonna will be submit when all command was done
@@ -53,7 +53,7 @@ class DirBrute(object):
         
         #submit a log
         utils.print_info('Update activities log')
-        utils.update_activities(str(custom_logs))
+        utils.update_activities(self.options, str(custom_logs))
 
 
     def gobuster(self):
@@ -73,7 +73,7 @@ class DirBrute(object):
                 self.options, '$WORKSPACE/directory/{0}-gobuster.json'.format(domain))
             std_path = utils.replace_argument(
                 self.options, '$WORKSPACE/directory/std-{0}-gobuster.std'.format(domain))
-            execute.send_cmd(cmd, output_path, std_path, self.module_name)
+            execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
 
     def dirhunt(self):
         utils.print_good('Starting dirhunt')

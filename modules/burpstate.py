@@ -34,21 +34,21 @@ class BurpState(object):
             self.options, '$WORKSPACE/burp-$TARGET-linkfinder.txt')
         std_path = utils.replace_argument(
             self.options, '$WORKSPACE/burp-$TARGET-linkfinder.txt')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
+        execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
 
 
     def sqlmap(self):
         utils.print_good('Starting sqlmap')
         cmd = '$PLUGINS_PATH/sqlmap/sqlmap.py -l $BURPSTATE --batch $MORE'
         cmd = utils.replace_argument(self.options, cmd)
-        execute.send_cmd(cmd, '', '', self.module_name)
+        execute.send_cmd(self.options, cmd, '', '', self.module_name)
 
 
     def sleuthql(self):
         utils.print_good('Starting sleuthql')
         cmd = 'python3 $PLUGINS_PATH/sleuthql/sleuthql.py -d $TARGET -f $BURPSTATE'
         cmd = utils.replace_argument(self.options, cmd)
-        execute.send_cmd(cmd, '', '', self.module_name)
+        execute.send_cmd(self.options, cmd, '', '', self.module_name)
 
 
     #update the main json file

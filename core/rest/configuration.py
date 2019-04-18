@@ -26,7 +26,6 @@ class Configurations(Resource):
     @local_only
     def post(self):
         current_path = os.path.dirname(os.path.realpath(__file__))
-        print(current_path)
         # global options
         data = Configurations.parser.parse_args()
         options = data['options']

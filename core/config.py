@@ -1,9 +1,10 @@
 import os, socket, time
-import shutil
+import shutil, string, random
 
 from core import utils
 from pprint import pprint
 from configparser import ConfigParser, ExtendedInterpolation
+import string
 
 # Console colors
 W = '\033[1;0m'   # white
@@ -17,7 +18,7 @@ C = '\033[1;36m'  # cyan
 GR = '\033[1;37m'  # gray
 
 __author__ = '@j3ssiejjj'
-__version__ = '1.1'
+__version__ = '1.2'
 
 def banner():
     print(r"""{1}
@@ -156,10 +157,14 @@ def parsing_config(config_path, args):
     config.set('Enviroments', 'workspace', str(workspace))
 
 
-        #create workspace folder for the target
+    #create workspace folder for the target
     utils.make_directory(workspace)
 
-
+    #set random password if default password detect
+    if config['Server']['password'] == 'super_secret':
+        new_pass = ''.join(random.choice(string.ascii_lowercase)
+                           for i in range(6)).upper()
+        config.set('Server', 'password', new_pass)
 
 
     #save the config

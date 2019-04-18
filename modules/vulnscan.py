@@ -15,7 +15,7 @@ class VulnScan(object):
             'content': 'Done Vulnerable Scanning for {0}'.format(self.options['TARGET'])
         })
         self.initial()
-        utils.just_waiting(self.module_name)
+        utils.just_waiting(self.options, self.module_name)
         # self.conclude()
         slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
@@ -54,7 +54,7 @@ class VulnScan(object):
                     self.options, '$WORKSPACE/vulnscan/{0}-nmap.nmap'.format(ip.strip()))
                 std_path = utils.replace_argument(
                     self.options, '$WORKSPACE/vulnscan/std-{0}-nmap.std'.format(ip.strip()))
-                execute.send_cmd(cmd, output_path, std_path, self.module_name)
+                execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
 
             # check if previous task done or not every 30 second
             while not utils.checking_done(module=self.module_name):
@@ -69,4 +69,4 @@ class VulnScan(object):
     #         self.options, '$WORKSPACE/portscan/final-$OUTPUT.html')
     #     std_path = utils.replace_argument(
     #         self.options, '')
-    #     execute.send_cmd(cmd, output_path, std_path, self.module_name)
+    #     execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)

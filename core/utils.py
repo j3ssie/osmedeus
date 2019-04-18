@@ -1,4 +1,5 @@
 import os, json, requests, time
+from pprint import pprint
 from urllib.parse import quote, unquote
 
 #################
@@ -20,7 +21,7 @@ ques =  '{0}[?]{1} '.format(C,W)
 bad = '{0}[-]{1} '.format(R,W)
 good = '{0}[+]{1} '.format(G,W)
 
-headers = {"User-Agent": "Osmedeus/v1.0", "Accept": "*/*",
+headers = {"User-Agent": "Osmedeus/v1.2", "Accept": "*/*",
            "Content-type": "application/json", "Connection": "close"}
 
 #send request through Burp proxy for debug purpose
@@ -95,24 +96,6 @@ def just_write(filename, data, is_json=False):
         print_bad("Writing fail: {0}".format(filename))
         return False
 
-#adding times to waiting default is infinity times
-def just_waiting(module_name, seconds=30, times=False):
-    if times:
-        count = 0
-
-    while not checking_done(module=module_name):
-        if not times:
-            print_info('Waiting for {0} module'.format(module_name))
-            time.sleep(seconds)
-        
-        if times:
-            print_info('Waiting for {0} module {1}/{2}'.format(module_name, str(count), str(times)))
-            if count == int(times):
-                print_bad("Something bad with {0} module but force to continue".format(module_name))
-                break
-            count += 1
-            time.sleep(seconds)
-            
 
 
 def reading_json(filename):
@@ -126,38 +109,82 @@ def reading_json(filename):
 
     return None
 
+#adding times to waiting default is infinity times
+def just_waiting(options, module_name, seconds=30, times=False):
+    if times:
+        count = 0
+
+    while not checking_done(options, module=module_name):
+        if not times:
+            print_info('Waiting for {0} module'.format(module_name))
+            time.sleep(seconds)
+        
+        if times:
+            print_info('Waiting for {0} module {1}/{2}'.format(module_name, str(count), str(times)))
+            if count == int(times):
+                print_bad("Something bad with {0} module but force to continue".format(module_name))
+                break
+            count += 1
+            time.sleep(seconds)
+
 ###
 # checking if command was done or not? and return a json result
-def checking_done(cmd=None, module=None, get_json=False, url='http://127.0.0.1:5000/api/activities'):
+def checking_done(options, cmd=None, module=None, get_json=False):
+    # print('-'*30)
+    # pprint(options)
+    # print('-'*30)
+
+    headers['Authorization'] = options['JWT']
+    url = options['REMOTE_API'] + "/api/activities"
+
     if cmd:
         r = requests.post(url, headers=headers, json={'cmd' : cmd})
     if module:
         r = requests.post(url + "?module=" + module, headers=headers, json={})
 
-    commands = json.loads(r.text)
-    for cmd in commands['commands']:
-        if cmd['status'] != 'Done':
+    if r.status_code == 401:
+        if cmd:
+            r = requests.post(url, headers=headers, json={'cmd' : cmd})
+        if module:
+            r = requests.post(url + "?module=" + module, headers=headers, json={})
+        
+        print('#'*30)
+        pprint(headers)
+        print('#'*30)
+        pprint(options)
+        print('#'*30)
 
-            return False if not get_json else commands
+    if r.status_code == 200:
+        commands = json.loads(r.text)
+        for cmd in commands['commands']:
+            if cmd['status'] != 'Done':
+                return False if not get_json else commands
 
     return True if not get_json else commands
 
 
-def looping(cmd=None, module=None, times=5, url='http://127.0.0.1:5000/api/activities'):
+def looping(options, cmd=None, module=None, times=5):
+    headers['Authorization'] = options['JWT']
+    url = options['REMOTE_API'] + "/api/activities"
     while times != 0:
-        done = checking_done(cmd, module, url)
+        done = checking_done(options, cmd, module, url)
         if done:
             return
         times -= 1
 
 
-def update_activities(data, url='http://127.0.0.1:5000/api/activities'):
+def update_activities(options, data):
+    headers['Authorization'] = options['JWT']
+    url = options['REMOTE_API'] + "/api/activities"
     data = quote(str(data))
     # r = requests.patch(url, headers={"User-Agent": "Osmedeus/v1.0"}, data={'data': data}, proxies=PROXY)
-    r = requests.patch(url, headers={"User-Agent": "Osmedeus/v1.0"}, data={'data': data})
+    r = requests.patch(url, headers=headers, data={'data': data})
 
 #just for conclusion
-def save_all_cmd(logfile, module=None, url='http://127.0.0.1:5000/api/activities'):
+def save_all_cmd(options, logfile, module=None):
+    headers['Authorization'] = options['JWT']
+    url = options['REMOTE_API'] + "/api/activities"
+
     if module:
         url += '?module=' + module
     
@@ -167,13 +194,31 @@ def save_all_cmd(logfile, module=None, url='http://127.0.0.1:5000/api/activities
     # commands = json.loads(r.text)['commands']
 
 
-def set_config(options, url='http://127.0.0.1:5000/api/config'):
+def get_jwt(options):
+    url = options['REMOTE_API'] + "/api/auth"
+    username = options['USERNAME']
+    password = options['PASSWORD']
+    #set workspaces
+    data = {'username': username, 'password': password}
+    r = requests.post(url, headers=headers, json=data)
+
+    if r.status_code == 200:
+        if json.loads(r.text).get('access_token'):
+            print_good("Authentication success")
+            token =  "Bearer " + json.loads(r.text).get('access_token')
+            return token
+    return False
+
+def set_config(options):
+    url = options['REMOTE_API'] + "/api/config"
     #set workspaces
     data = {'options': options}
     r = requests.post(url, headers=headers, json=data)
     return r
 
-def just_shutdown_flask(url='http://127.0.0.1:5000/api/shutdown'):
+def just_shutdown_flask(options):
+    headers['Authorization'] = options['JWT']
+    url = options['REMOTE_API'] + "/api/shutdown"
     requests.post(url)
 
 

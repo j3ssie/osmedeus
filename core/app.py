@@ -14,12 +14,16 @@ from flask import abort
 from flask_cors import CORS
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
-from flask_jwt import JWT, current_identity, jwt_required
+from flask_jwt_extended import (
+    JWTManager, jwt_required, create_access_token,
+    get_jwt_identity
+)
 from flask_restful import Api, Resource, reqparse
 
 from rest.decorators import local_only
 
 from rest.cmd import Cmd
+from rest.authentication import Authentication
 from rest.configuration import Configurations
 from rest.workspace import Workspace, Workspaces
 from rest.activities import Activities
@@ -32,15 +36,21 @@ current_path = os.path.dirname(os.path.realpath(__file__))
 ## Flask config 
 ##
 ## turn off the http log
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+# log = logging.getLogger('werkzeug')
+# log.setLevel(logging.ERROR)
 # ##
 
 app = Flask('Osmedeus')
-#just for testing
+
 app = Flask(__name__, template_folder='ui/', static_folder='ui/static/')
+#just for testing whitelist your domain if you wanna run this server remotely
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 api = Api(app)
+
+# setup jwt secret, make sure you change this!
+app.config['JWT_SECRET_KEY'] = '-----BEGIN RSA PRIVATE KEY-----' # go ahead, spider
+jwt = JWTManager(app)
+
 
 
 ############
@@ -61,6 +71,7 @@ def shutdown():
 
 
 api.add_resource(Configurations, '/api/config')
+api.add_resource(Authentication, '/api/auth')
 api.add_resource(Cmd, '/api/cmd')
 api.add_resource(Activities, '/api/activities')
 api.add_resource(Workspaces, '/api/workspace')

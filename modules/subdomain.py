@@ -19,7 +19,7 @@ class SubdomainScanning(object):
 
         self.initial()
 
-        utils.just_waiting(self.module_name, seconds=10)
+        utils.just_waiting(self.options, self.module_name, seconds=10)
         self.conclude()
 
         #this gonna run after module is done to update the main json
@@ -34,18 +34,19 @@ class SubdomainScanning(object):
 
 
     def run(self):
-        commands = execute.get_commands(self.module_name).get('routines')
+        commands = execute.get_commands(self.options, self.module_name).get('routines')
         if self.options['DEBUG'] == "True":
-            commands = commands[1:]
+            commands = [commands[1]]
 
         for item in commands:
             utils.print_good('Starting {0}'.format(item.get('banner')))
             #really execute it
-            execute.send_cmd(item.get('cmd'), item.get(
+            execute.send_cmd(self.options, item.get('cmd'), item.get(
                 'output_path'), item.get('std_path'), self.module_name)
             time.sleep(1)
 
-        utils.just_waiting(self.module_name, seconds=30)
+        utils.just_waiting(self.options, self.module_name, seconds=5)
+        # utils.just_waiting(self.options, self.module_name, seconds=30)
 
     #just clean up some output
     def unique_result(self):
@@ -86,7 +87,7 @@ class SubdomainScanning(object):
 
         output_path = utils.replace_argument(self.options,
                                '$WORKSPACE/subdomain/final-$OUTPUT.txt')
-        utils.just_write(output_path, "\n".join(set(domains)))
+        utils.just_write(output_path, "\n".join(set([x.strip() for x in domains])))
 
         time.sleep(1)
         slack.slack_file('report', self.options, mess={
@@ -110,8 +111,8 @@ class SubdomainScanning(object):
             main_json['Subdomains'].append({
                 "Domain": subdomain,
                 "IP": "N/A",
-                "Technology": [],
-                "Ports": [],
+                "Technology": ["N/A"],
+                "Ports": ["N/A"],
             })
 
         utils.just_write(utils.replace_argument(

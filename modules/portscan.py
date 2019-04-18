@@ -22,7 +22,7 @@ class PortScan(object):
         })
         self.initial()
 
-        utils.just_waiting(self.module_name, seconds=60)
+        utils.just_waiting(self.options, self.module_name, seconds=60)
         # self.create_ip_result()
         self.conclude()
         slack.slack_noti('good', self.options, mess={
@@ -48,9 +48,9 @@ class PortScan(object):
         cmd = utils.replace_argument(self.options, cmd)
         output_path = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt')
-        execute.send_cmd(cmd, '', '', self.module_name)
+        execute.send_cmd(self.options, cmd, '', '', self.module_name)
 
-        utils.just_waiting(self.module_name, seconds=5)
+        utils.just_waiting(self.options, self.module_name, seconds=5)
 
         # matching IP with subdomain
         main_json = utils.reading_json(utils.replace_argument(
@@ -114,7 +114,7 @@ class PortScan(object):
             self.options, '$WORKSPACE/portscan/$OUTPUT-masscan.xml')
         std_path = utils.replace_argument(
             self.options, '$WORKSPACE/portscan/std-$OUTPUT-masscan.std')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
+        execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
     
     #Create beautiful HTML report for masscan
     def create_html_report(self):
@@ -124,7 +124,7 @@ class PortScan(object):
             self.options, '$WORKSPACE/portscan/final-$OUTPUT.html')
         std_path = utils.replace_argument(
             self.options, '')
-        execute.send_cmd(cmd, output_path, std_path, self.module_name)
+        execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
 
     def conclude(self):
         output_path = utils.replace_argument(

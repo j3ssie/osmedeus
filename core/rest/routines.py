@@ -1,6 +1,7 @@
 import os
 import json
 from flask_restful import Api, Resource, reqparse
+from flask_jwt_extended import jwt_required
 from flask import Flask, jsonify, render_template, request
 import utils
 current_path = os.path.dirname(os.path.realpath(__file__))
@@ -16,7 +17,8 @@ class Routines(Resource):
     def __init__(self, **kwargs):
         self.options = utils.reading_json(current_path + '/storages/options.json')
         self.commands = utils.reading_json(current_path + '/storages/commands.json')
-
+    
+    @jwt_required
     def get(self):
         profile = request.args.get('profile')
         module = request.args.get('module')
@@ -33,6 +35,7 @@ class Routines(Resource):
         return {'routines': routines}
     
     #get list of commands by profile
+    @jwt_required
     def get_routine(self, profile):
         raw_routine = {}
         for key, value in self.commands.items():

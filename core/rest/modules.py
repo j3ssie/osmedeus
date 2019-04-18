@@ -1,6 +1,7 @@
 import os
 import json
 from flask_restful import Api, Resource, reqparse
+from flask_jwt_extended import jwt_required
 from flask import Flask, jsonify, render_template, request
 import utils
 current_path = os.path.dirname(os.path.realpath(__file__))
@@ -17,7 +18,7 @@ class Modules(Resource):
         self.options = utils.reading_json(current_path + '/storages/options.json')
         self.commands = utils.reading_json(current_path + '/storages/commands.json')
 
-
+    @jwt_required
     def get(self, workspace):
         module = request.args.get('module')
         ws_name = os.path.basename(os.path.normpath(workspace))

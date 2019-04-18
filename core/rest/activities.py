@@ -1,6 +1,7 @@
 import os
 import json
 from flask_restful import Api, Resource, reqparse
+from flask_jwt_extended import jwt_required
 from flask import Flask, jsonify, render_template, request
 from urllib.parse import quote, unquote
 from ast import literal_eval
@@ -32,6 +33,7 @@ class Activities(Resource):
         self.activities = utils.reading_json(current_path + '/storages/activities.json')
 
     # get all activity log or by module
+    @jwt_required
     def get(self):
         # get specific module
         module = request.args.get('module')
@@ -41,6 +43,7 @@ class Activities(Resource):
         else:
             return self.activities
 
+    @jwt_required
     def post(self):
         data = Activities.parser.parse_args()
         cmd = data['cmd']
@@ -62,7 +65,8 @@ class Activities(Resource):
             commands = [x for x in cmds if cmd in x['cmd']]
 
             return {'commands': commands}
-    
+
+    @jwt_required
     def patch(self):
         data = Activities.parser.parse_args()
         raw_data = data['data']

@@ -29,7 +29,7 @@ colors = [G,R,B,P,C,O,GR]
 #############
 
 __author__ = '@j3ssiejjj'
-__version__ = '1.1'
+__version__ = '1.2'
 
 
 ### Global stuff
@@ -54,6 +54,7 @@ def parsing_argument(args):
     time.sleep(2)
     try:
         utils.set_config(options)
+        options['JWT'] = utils.get_jwt(options)
     except:
         utils.print_bad("Fail to set config, Please check Flask API !!!")
         sys.exit(-1)
