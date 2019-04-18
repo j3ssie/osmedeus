@@ -2,8 +2,8 @@
 
 #global stuff
 CWD=$(pwd)
-WORKSPACE="$CWD/workspaces/"
-PLUGINS_PATH="$CWD/plugins/"
+WORKSPACE="$CWD/workspaces"
+PLUGINS_PATH="$CWD/plugins"
 DEFAULT_SHELL="$HOME/.bashrc"
 PACKGE_MANAGER="apt-get"
 
@@ -71,6 +71,8 @@ install_banner "gitleaks"
 go get -u github.com/zricethezav/gitleaks
 install_banner "webanalyze"
 go get -u github.com/rverton/webanalyze/...
+
+
 
 #Install flask stuff
 install_banner "Flask API stuff"
