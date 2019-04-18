@@ -6,6 +6,7 @@ WORKSPACE="$CWD/workspaces"
 PLUGINS_PATH="$CWD/plugins"
 DEFAULT_SHELL="$HOME/.bashrc"
 PACKGE_MANAGER="apt-get"
+GO_DIR=~/go/bin
 
 #some function
 install_banner()
@@ -47,30 +48,38 @@ install_banner "providers-data for subdomain takeover"
 
 ##
 chmod +x osmedeus.py
+### adding gopath if GOPATH not in default shellrc
+if ! grep -Fxq "GOPATH" "$DEFAULT_SHELL"
+then
+	echo 'export GOPATH=$HOME/go' >> $DEFAULT_SHELL
+	echo 'PATH=$GOPATH/bin:$PATH' >> $DEFAULT_SHELL
+	source $DEFAULT_SHELL
+fi
+PS="$ "
+source $DEFAULT_SHELL
 
 ##
 # Install go stuff
 ##
 mkdir -p "$PLUGINS_PATH/go/"
-GOPATH="$PLUGINS_PATH/go/"
 install_banner "amass"
-go get -u github.com/OWASP/Amass/...
+cd ~/go/bin; go get -u github.com/OWASP/Amass/...; cp amass* "$PLUGINS_PATH/go/"
 install_banner "subfinder"
-go get -u github.com/subfinder/subfinder
+cd ~/go/bin; go get -u github.com/subfinder/subfinder; cp subfinder "$PLUGINS_PATH/go/"
 install_banner "gobuster"
-go get -u github.com/OJ/gobuster
+cd ~/go/bin; go get -u github.com/OJ/gobuster; cp gobuster "$PLUGINS_PATH/go/"
 install_banner "aquatone"
-go get -u github.com/michenriksen/aquatone
+cd ~/go/bin; go get -u github.com/michenriksen/aquatone; cp aquatone "$PLUGINS_PATH/go/"
 install_banner "gitrob"
-go get -u github.com/michenriksen/gitrob
+cd ~/go/bin; go get -u github.com/michenriksen/gitrob; cp gitrob "$PLUGINS_PATH/go/"
 install_banner "subjack"
-go get -u github.com/haccer/subjack
+cd ~/go/bin; go get -u github.com/haccer/subjack; cp subjack "$PLUGINS_PATH/go/"
 install_banner "tko-subs"
-go get -u github.com/anshumanbh/tko-subs
+cd ~/go/bin; go get -u github.com/anshumanbh/tko-subs; cp subs "$PLUGINS_PATH/go/"
 install_banner "gitleaks"
-go get -u github.com/zricethezav/gitleaks
+cd ~/go/bin; go get -u github.com/zricethezav/gitleaks; cp gitleaks "$PLUGINS_PATH/go/"
 install_banner "webanalyze"
-go get -u github.com/rverton/webanalyze/...
+cd ~/go/bin; go get -u github.com/rverton/webanalyze/...; cp webanalyze "$PLUGINS_PATH/go/"
 
 
 
@@ -134,6 +143,7 @@ cd sherlock
 pip3 install -r requirements.txt
 cd $CWD
 
+cd $PLUGINS_PATH
 install_banner "SleuthQL"
 git clone https://github.com/RhinoSecurityLabs/SleuthQL
 pip install bs4
