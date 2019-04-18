@@ -79,7 +79,7 @@ def parsing_config(config_path, args):
 
     workspace = cwd + "/workspaces/"
     config.set('Enviroments', 'cwd', cwd)
-    config.set('Enviroments', 'go_path', go_path)
+    # config.set('Enviroments', 'go_path', go_path)
     config.set('Enviroments', 'github_api_key', github_api_key)
     config.set('Enviroments', 'workspaces', str(workspace))
 

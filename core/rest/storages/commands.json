@@ -31,38 +31,37 @@
                 "std_path": "$WORKSPACE/subdomain/std-raw-$OUTPUT-gobuster.std"
             }
         ],
-
-        "slow" : [
+        "slow": [
             {
                 "banner": "gobuster",
                 "cmd": "$PLUGINS_PATH/massdns/scripts/subbrute.py $DOMAIN_FULL $TARGET | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o Sm -w $WORKSPACE/subdomain/raw-massdns.txt",
                 "output_path": "$WORKSPACE/subdomain/raw-massdns.txt",
                 "std_path": "$WORKSPACE/subdomain/std-raw-massdns.txt"
             }
-
         ]
     },
-    
-
     "Recon": {
-        "report": "$WORKSPACE/recon/$OUTPUT-aquatone/aquatone_report.html",
         "quick": [
             {
                 "banner": "Whois",
                 "cmd": "whois $TARGET",
                 "output_path": "$WORKSPACE/info/$OUTPUT-whois.txt",
-                "std_path": "$WORKSPACE/info/$OUTPUT-whois.txt"
+                "std_path": "$WORKSPACE/info/std-$OUTPUT-whois.std"
             },
             {
                 "banner": "Dig",
                 "cmd": "dig all $TARGET | tee $WORKSPACE/info/dig-$OUTPUT.txt",
-                "output_path": "$WORKSPACE/recon/$OUTPUT-aquatone/aquatone_report",
-                "std_path": "$WORKSPACE/recon/std-$OUTPUT-aquatone.std"
+                "output_path": "$WORKSPACE/info/dig-$OUTPUT.txt",
+                "std_path": "$WORKSPACE/info/std-dig-$OUTPUT.std"
+            },
+            {
+                "banner": "Sherlock",
+                "cmd": "python3 $PLUGINS_PATH/sherlock/sherlock.py -o $WORKSPACE/recon/$OUTPUT-sherlock.txt $COMPANY",
+                "output_path": "$WORKSPACE/recon/$OUTPUT-sherlock.txt",
+                "std_path": "$WORKSPACE/recon/std-$OUTPUT-sherlock.std"
             }
         ]
     },
-    
-
     "ScreenShot": {
         "report": "$WORKSPACE/screenshot/$OUTPUT-aquatone/aquatone_report.html",
         "quick": [
@@ -74,8 +73,6 @@
             }
         ]
     },
-
-
     "TakeOverScanning": {
         "quick": [
             {
@@ -92,9 +89,6 @@
             }
         ]
     },
-
-
-
     "IPSpace": {
         "report": "$WORKSPACE/ipspace/$OUTPUT-ipspace.txt",
         "quick": [
@@ -106,7 +100,6 @@
             }
         ]
     },
-    
     "CorsScan": {
         "quick": [
             {
@@ -117,17 +110,14 @@
             }
         ]
     },
-
     "HeadersScan": {
         "report": "$WORKSPACE/headers/summary-$TARGET.csv",
         "quick": [
             {
                 "banner": "Custom"
             }
-        ]    
+        ]
     },
-    
-
     "SSLScan": {
         "slow": [
             {
@@ -145,11 +135,7 @@
                 "std_path": "$WORKSPACE/ssl/std-$TARGET-testssl.std"
             }
         ]
-        
     },
-    
-
-
     "PortScan": {
         "report": "$WORKSPACE/portscan/final-$OUTPUT.html",
         "quick": [
@@ -158,23 +144,20 @@
             }
         ]
     },
-
     "DirBrute": {
         "quick": [
             {
                 "banner": "Custom"
             }
-        ]  
+        ]
     },
-
     "VulnScan": {
         "quick": [
             {
                 "banner": "Custom"
             }
-        ]     
+        ]
     },
-
     "BruteThings": {
         "slow": [
             {
@@ -185,8 +168,6 @@
             }
         ]
     },
-
-
     "BurpState": {
         "quick": [
             {
@@ -194,8 +175,6 @@
             }
         ]
     },
-    
-
     "GitScan": {
         "quick": [
             {
@@ -211,7 +190,5 @@
                 "std_path": "$WORKSPACE/gitscan/std-$TARGET-trufflehog.std"
             }
         ]
-        
     }
-
 }

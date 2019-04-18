@@ -6,7 +6,6 @@ WORKSPACE="$CWD/workspaces/"
 PLUGINS_PATH="$CWD/plugins/"
 DEFAULT_SHELL="$HOME/.bashrc"
 PACKGE_MANAGER="apt-get"
-GOPATH="$PLUGINS_PATH/go/"
 
 #some function
 install_banner()
@@ -52,7 +51,8 @@ chmod +x osmedeus.py
 ##
 # Install go stuff
 ##
-
+mkdir -p "$PLUGINS_PATH/go/"
+GOPATH="$PLUGINS_PATH/go/"
 install_banner "amass"
 go get -u github.com/OWASP/Amass/...
 install_banner "subfinder"
@@ -115,7 +115,6 @@ cd $PLUGINS_PATH
 git clone https://github.com/drwetter/testssl.sh
 cd $CWD
 
-
 install_banner "LinkFinder"
 cd $PLUGINS_PATH
 git clone https://github.com/GerbenJavado/LinkFinder.git
@@ -126,6 +125,12 @@ cd $PLUGINS_PATH
 install_banner "sqlmap"
 git clone https://github.com/sqlmapproject/sqlmap
 
+cd $PLUGINS_PATH
+install_banner "sherlock"
+git clone https://github.com/sherlock-project/sherlock.git
+cd sherlock
+pip3 install -r requirements.txt
+cd $CWD
 
 install_banner "SleuthQL"
 git clone https://github.com/RhinoSecurityLabs/SleuthQL
@@ -145,7 +150,6 @@ cd $CWD
 install_banner "CORStest"
 cd $PLUGINS_PATH
 git clone https://github.com/RUB-NDS/CORStest
-
 
 install_banner "JSParser"
 cd $PLUGINS_PATH
