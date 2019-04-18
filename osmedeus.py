@@ -94,9 +94,6 @@ def single_target(options):
         else:
             routine.normal(options)
 
-
-
-
 def list_module():
     print(''' 
 List module
