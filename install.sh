@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Checks arguments
+if test "a$1" != "a"; then
+	echo "USAGE: $0
+	Installs Osmedus"
+	exit 0
+fi
+
 #global stuff
 CWD=$(pwd)
 WORKSPACE="$CWD/workspaces"
@@ -171,13 +178,4 @@ cd $PLUGINS_PATH
 git clone https://github.com/nahamsec/JSParser
 cd JSParser/
 python setup.py install
-
-
-
-
-
-
-
-
-
 
