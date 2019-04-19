@@ -20,7 +20,7 @@ class Conclusion(object):
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(self.options, logfile)
 
-        utils.just_shutdown_flask()
+        utils.just_shutdown_flask(self.options)
 
 
 
