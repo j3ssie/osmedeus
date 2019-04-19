@@ -51,20 +51,19 @@ class Recon(object):
                 'output_path'), item.get('std_path'), self.module_name)
             time.sleep(1)
 
-        utils.just_waiting(self.options, self.module_name,
-                           seconds=10, times=10)
-        
+        utils.just_waiting(self.options, self.module_name, seconds=30)
 
         main_json = utils.reading_json(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'))
-        
+
         for item in commands:
             if "Whois" in item.get('cmd'):
                 main_json["Info"]["Whois"] = {"path": item.get('output_path')}
             if "Dig" in item.get('cmd'):
                 main_json["Info"]["Dig"] = {"path": item.get('output_path')}
-        
-        utils.just_write(outout, main_json, is_json=True)
+
+        utils.just_write(utils.replace_argument(
+            self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
 
     def technology_detection(self):
         all_subdomain_path = utils.replace_argument(
@@ -72,12 +71,13 @@ class Recon(object):
 
         if not utils.not_empty_file(all_subdomain_path):
             return
-        
+
         #add https:// prefix for all domain
         domains = utils.just_read(all_subdomain_path).splitlines()
         scheme_path = utils.replace_argument(
             self.options, '$WORKSPACE/recon/all-scheme-$OUTPUT.txt')
-        utils.just_write(scheme_path, "\n".join(domains + [("https://" + x.strip()) for x in domains]))
+        utils.just_write(scheme_path, "\n".join(
+            domains + [("https://" + x.strip()) for x in domains]))
 
         #really execute command
         cmd = '$GO_PATH/webanalyze -apps $PLUGINS_PATH/apps.json -hosts $WORKSPACE/recon/all-scheme-$OUTPUT.txt -output json -worker 20 | tee $WORKSPACE/recon/$OUTPUT-technology.json'
@@ -91,7 +91,7 @@ class Recon(object):
 
         with open(output_path, encoding='utf-8') as o:
             data = o.read().splitlines()
-        
+
         #parsing output to get technology
         techs = {}
         for line in data:
@@ -99,7 +99,8 @@ class Recon(object):
             if jsonl.get('matches'):
                 subdomain = jsonl.get('hostname').replace('https://', '')
                 if techs.get(subdomain):
-                    techs[subdomain] += [x.get('app_name') for x in jsonl.get('matches')]
+                    techs[subdomain] += [x.get('app_name')
+                                         for x in jsonl.get('matches')]
                 else:
                     techs[subdomain] = [x.get('app_name')
                                         for x in jsonl.get('matches')]
@@ -109,25 +110,24 @@ class Recon(object):
         #update the main json and rewrite that
         main_json = utils.reading_json(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'))
-        
+
         for i in range(len(main_json['Subdomains'])):
             sub = main_json['Subdomains'][i].get('Domain')
             if techs.get(sub):
                 main_json['Subdomains'][i]["Technology"] = techs.get(sub)
 
         utils.just_write(utils.replace_argument(
-                   self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
-
+            self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
 
     # just for the masscan
+
     def resolve_ip(self):
         utils.print_good('Create IP for list of domain result')
         final_ip = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
 
         if utils.not_empty_file(final_ip):
-            return 
-
+            return
 
         cmd = '$PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -t A -o S -w $WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt $WORKSPACE/subdomain/final-$OUTPUT.txt'
 
@@ -162,14 +162,7 @@ class Recon(object):
         utils.just_write(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
 
-
-
     #update the main json file
+
     def conclude(self):
-        self.unique_result()
         utils.print_banner("Conclusion for {0}".format(self.module_name))
-        main_json = utils.reading_json(utils.replace_argument(
-            self.options, '$WORKSPACE/$COMPANY.json'))
-
-        #update basic info whois, dig
-
