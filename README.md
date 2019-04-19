@@ -10,7 +10,7 @@
 
 
 # What is Osmedeus?
-Osmedeus allow you automated run the collection of awesome tools to reconnaissance and vulnerability scanning against the target.
+Osmedeus allows you automated run the collection of awesome tools to reconnaissance and vulnerability scanning against the target.
 
 # How to use
 If you have no idea what are you doing just type the command below or check out the [Advanced Usage](https://github.com/j3ssie/Osmedeus/wiki/Advanced-Usage)
@@ -48,18 +48,18 @@ This install only focus on Kali linux, check more install on [Wiki page](https:/
 # Demo
 [![asciicast](https://asciinema.org/a/230164.svg)](https://asciinema.org/a/230164)
 
-![Web UI 1](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/spa_0.png)
+![Web UI 1](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-1.png)
 
-![Web UI](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/spa_1.png)
+![Web UI 2](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-2.png)
 
-![Web UI](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/spa_2.png)
+![Web UI 3](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-3.png)
 
 ![Slack Noti](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_noti.png)
 
 
 # Disclaimer
-Most of this tool done by the authors of the tool that you can see in the module folder.
-I just put all the pieces together, plus some extra boring stuff that we don't wanna do everyday.
+Most of this tool done by the authors of the tool that list in [CREDITS.md](https://github.com/j3ssie/Osmedeus/blob/master/CREDITS.md).
+I'm just put all the pieces together, plus some extra boring stuff that we don't wanna do everyday.
 
 This tool is for educational purposes only. You are responsible for your own actions. If you mess something up or break any laws while using this software, it's your fault, and your fault only.
 
