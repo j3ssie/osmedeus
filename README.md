@@ -5,6 +5,7 @@
     <a href=""><img alt="Software License" src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square"></a>
     <a href=""><img alt="OS" src="https://img.shields.io/badge/OS-Linux,%20macOS-green.svg"></a>
     <a href="https://github.com/j3ssie/Osmedeus"><img alt="Release" src="https://img.shields.io/badge/version-1.2-red.svg"></a>
+    <a href="https://youtu.be/8L5BAyyrNc0"><img alt="Demo" src="https://img.shields.io/badge/demo-youtube-blue.svg"></a>
   </p>
 </p>
 
@@ -48,13 +49,15 @@ This install only focus on Kali linux, check more install on [Wiki page](https:/
 # Demo
 [![asciicast](https://asciinema.org/a/230164.svg)](https://asciinema.org/a/230164)
 
+![Slack Noti](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_noti.png)
+
+![Slack Report](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_report.png)
+
 ![Web UI 1](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-1.png)
 
 ![Web UI 2](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-2.png)
 
 ![Web UI 3](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-3.png)
-
-![Slack Noti](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_noti.png)
 
 
 # Disclaimer

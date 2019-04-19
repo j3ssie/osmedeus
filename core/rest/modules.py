@@ -11,6 +11,9 @@ current_path = os.path.dirname(os.path.realpath(__file__))
 show content of file in log command
 '''
 
+#get main json by workspace name
+
+
 class Modules(Resource):
 
     def __init__(self, **kwargs):
@@ -34,7 +37,8 @@ class Modules(Resource):
             if "report" in self.commands[k].keys():
                 report = utils.replace_argument(
                     self.options, self.commands[k].get("report"))
-                report_item = {"module": k, "report": report}
+                report_item = {"module": k, "report": report.replace(
+                    self.options['WORKSPACE'], ws_name)}
                 reports.append(report_item)
 
         return {'reports': reports}

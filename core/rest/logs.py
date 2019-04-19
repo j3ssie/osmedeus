@@ -10,9 +10,6 @@ current_path = os.path.dirname(os.path.realpath(__file__))
 get local logs command by workspace
 '''
 
-#get main json by workspace name
-
-
 class Logs(Resource):
     def __init__(self, **kwargs):
         self.options = utils.reading_json(
@@ -65,6 +62,11 @@ class Logs(Resource):
             for k in raw_logs.keys():
                 for item in raw_logs[k]:
                     cmd_item = item
+                    cmd_item["module"] = k
+                    cmd_item['std_path'] = utils.replace_argument(
+                        self.options, item.get('std_path')).replace(self.options['WORKSPACES'], '')
+                    cmd_item['output_path'] = utils.replace_argument(
+                        self.options, item.get('output_path')).replace(self.options['WORKSPACES'], '')
                     cmd_item["module"] = k
                     all_commands.append(cmd_item)
 
