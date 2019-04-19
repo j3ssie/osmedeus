@@ -33,6 +33,7 @@ This install only focus on Kali linux, check more install on [Wiki page](https:/
 - [x] Subdomain TakeOver Scan.
 - [x] Screenshot the target.
 - [x] Basic recon like Whois, Dig info.
+- [x] Web Technology detection.
 - [x] IP Discovery.
 - [x] CORS Scan.
 - [x] SSL Scan.
@@ -41,7 +42,7 @@ This install only focus on Kali linux, check more install on [Wiki page](https:/
 - [x] Vulnerable Scan.
 - [x] Seperate workspaces to store all scan output and details logging.
 - [x] REST API.
-- [x] SPA Web UI.
+- [x] React Web UI.
 - [x] Slack notifications.
 
 # Demo
@@ -54,8 +55,6 @@ This install only focus on Kali linux, check more install on [Wiki page](https:/
 ![Web UI](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/spa_2.png)
 
 ![Slack Noti](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_noti.png)
-
-![REST API](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/rest_api.png)
 
 
 # Disclaimer
