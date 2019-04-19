@@ -61,27 +61,28 @@ source $DEFAULT_SHELL
 ##
 # Install go stuff
 ##
+mkdir -p "$GO_DIR"
 mkdir -p "$PLUGINS_PATH/go/"
 install_banner "amass"
-cd ~/go/bin
-go get -u github.com/OWASP/Amass/...; cp amass* "$PLUGINS_PATH/go/"
+go get -u github.com/OWASP/Amass/...
 install_banner "subfinder"
-go get -u github.com/subfinder/subfinder; cp subfinder "$PLUGINS_PATH/go/"
+go get -u github.com/subfinder/subfinder
 install_banner "gobuster"
-go get -u github.com/OJ/gobuster; cp gobuster "$PLUGINS_PATH/go/"
+go get -u github.com/OJ/gobuster
 install_banner "aquatone"
-go get -u github.com/michenriksen/aquatone; cp aquatone "$PLUGINS_PATH/go/"
+go get -u github.com/michenriksen/aquatone
 install_banner "gitrob"
-go get -u github.com/michenriksen/gitrob; cp gitrob "$PLUGINS_PATH/go/"
+go get -u github.com/michenriksen/gitrob
 install_banner "subjack"
-go get -u github.com/haccer/subjack; cp subjack "$PLUGINS_PATH/go/"
+go get -u github.com/haccer/subjack
 install_banner "tko-subs"
-go get -u github.com/anshumanbh/tko-subs; cp tko-subs "$PLUGINS_PATH/go/"
+go get -u github.com/anshumanbh/tko-subs
 install_banner "gitleaks"
-go get -u github.com/zricethezav/gitleaks; cp gitleaks "$PLUGINS_PATH/go/"
+go get -u github.com/zricethezav/gitleaks
 install_banner "webanalyze"
-go get -u github.com/rverton/webanalyze/...; cp webanalyze "$PLUGINS_PATH/go/"
+go get -u github.com/rverton/webanalyze/...
 
+cp $GO_DIR/* "$PLUGINS_PATH/go/"
 
 
 #Install flask stuff
