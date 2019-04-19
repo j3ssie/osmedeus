@@ -83,7 +83,7 @@
             },
             {
                 "banner": "Subjack",
-                "cmd": "$GO_PATH/subjack -w $WORKSPACE/subdomain/final-$TARGET.txt -t 100 -timeout 30 -o $WORKSPACE/subdomain/takeover-$TARGET-subjack.txt -ssl",
+                "cmd": "$GO_PATH/subjack -v -m -c $PLUGINS_PATH/fingerprints.json -w $WORKSPACE/subdomain/final-$TARGET.txt -t 100 -timeout 30 -o $WORKSPACE/subdomain/takeover-$TARGET-subjack.txt -ssl",
                 "output_path": "$WORKSPACE/subdomain/takeover-$TARGET-subjack.txt",
                 "std_path": "$WORKSPACE/subdomain/std-takeover-$TARGET-subjack.std"
             }

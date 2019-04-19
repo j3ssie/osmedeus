@@ -45,6 +45,7 @@ install_banner "nmap bootstrap"
 
 install_banner "providers-data for subdomain takeover"
 [[ -f $PLUGINS_PATH/providers-data.csv ]] ||  wget -q -O $PLUGINS_PATH/providers-data.csv https://raw.githubusercontent.com/anshumanbh/tko-subs/master/providers-data.csv
+[[ -f $PLUGINS_PATH/fingerprints.json ]] ||  wget -q -O $PLUGINS_PATH/fingerprints.json https://raw.githubusercontent.com/haccer/subjack/master/fingerprints.json
 
 ##
 chmod +x osmedeus.py

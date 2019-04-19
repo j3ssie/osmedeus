@@ -37,7 +37,7 @@ class TakeOverScanning(object):
             execute.send_cmd(self.options, item.get('cmd'), item.get(
                 'output_path'), item.get('std_path'), self.module_name)
 
-        utils.just_waiting(self.options, self.module_name, seconds=10)
+        utils.just_waiting(self.options, self.module_name, seconds=20, times=5)
         #just save commands
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(self.options, logfile)
