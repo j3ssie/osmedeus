@@ -16,12 +16,12 @@ install_banner()
 }
 
 install_banner "git, nmap, masscan, chromium, npm, golang"
-[ -x "$(command -v git)" ] || $PACKGE_MANAGER install git -y
-[ -x "$(command -v nmap)" ] || $PACKGE_MANAGER install nmap -y
-[ -x "$(command -v masscan)" ] || $PACKGE_MANAGER install masscan -y
-[ -x "$(command -v chromium)" ] || $PACKGE_MANAGER install chromium -y
-[ -x "$(command -v npm)" ] || $PACKGE_MANAGER install npm -y
-[ -x "$(command -v go)" ] || $PACKGE_MANAGER install golang -y
+[ -x "$(command -v git)" ] || sudo $PACKGE_MANAGER install git -y
+[ -x "$(command -v nmap)" ] || sudo $PACKGE_MANAGER install nmap -y
+[ -x "$(command -v masscan)" ] || sudo $PACKGE_MANAGER install masscan -y
+[ -x "$(command -v chromium)" ] || sudo $PACKGE_MANAGER install chromium -y
+[ -x "$(command -v npm)" ] || sudo $PACKGE_MANAGER install npm -y
+[ -x "$(command -v go)" ] || sudo $PACKGE_MANAGER install golang -y
 
 #### Download stuff directly
 install_banner "wordlists"
