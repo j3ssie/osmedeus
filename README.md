@@ -44,6 +44,7 @@ This install only focus on Kali linux, check more install on [Wiki page](https:/
 - [x] Seperate workspaces to store all scan output and details logging.
 - [x] REST API.
 - [x] React Web UI.
+- [x] Support Continuous Scan.
 - [x] Slack notifications.
 
 # Demo

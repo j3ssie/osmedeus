@@ -10,6 +10,13 @@ class DirBrute(object):
         utils.make_directory(options['WORKSPACE'] + '/directory')
         self.module_name = self.__class__.__name__
         self.options = options
+        if utils.resume(self.options, self.module_name):
+            utils.print_info("Detect is already done. use '-f' options to force rerun the module")
+            return
+
+        self.is_direct = utils.is_direct_mode(options, require_input=True)
+
+
         slack.slack_noti('status', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Scanning Directory for {0}'.format(self.options['TARGET'])
@@ -26,28 +33,34 @@ class DirBrute(object):
 
     def dirsearch(self):
         utils.print_good('Starting dirsearch')
-
-        #matching IP with subdomain
-        main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
-        domains = [x.get('Domain') for x in main_json['Subdomains']]
+        if self.is_direct:
+            domains = utils.just_read(self.is_direct).splitlines()
+        else:
+            #matching IP with subdomain
+            main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
+            domains = [x.get('Domain') for x in main_json['Subdomains']]
 
         if self.options['DEBUG'] == 'True':
             domains = domains[:5]
 
         custom_logs = {"module": self.module_name, "content": []}
 
-        for part in list(utils.chunks(domains, 2)):
+        for part in list(utils.chunks(domains, 3)):
             for domain in part:
                 cmd = "python3 $PLUGINS_PATH/dirsearch/dirsearch.py --json-report=$WORKSPACE/directory/{0}-dirsearch.json  -u '{0}' -e php,jsp,aspx,js,html -t 20 -b".format(domain.strip())
 
                 cmd = utils.replace_argument(self.options, cmd)
                 output_path = utils.replace_argument(self.options, '$WORKSPACE/directory/{0}-dirsearch.json'.format(domain.strip()))
                 std_path = utils.replace_argument(self.options, '$WORKSPACE/directory/std-{0}-dirsearch.std'.format(domain.strip()))
-                execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name, True)
+
+                if utils.is_force(self.options, output_path):
+                    execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
+                # execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name, True)
                 
                 # time.sleep(0.5)
                 #set status to done because this gonna will be submit when all command was done
                 custom_logs['content'].append({"cmd": cmd, "std_path": std_path, "output_path": output_path, "status": "Done"})
+            
             #just wait couple seconds and continue but not completely stop the routine
             time.sleep(20)
         
@@ -73,7 +86,7 @@ class DirBrute(object):
                 self.options, '$WORKSPACE/directory/{0}-gobuster.json'.format(domain))
             std_path = utils.replace_argument(
                 self.options, '$WORKSPACE/directory/std-{0}-gobuster.std'.format(domain))
-            execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
+            execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name, True)
 
     def dirhunt(self):
         utils.print_good('Starting dirhunt')

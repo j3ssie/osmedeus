@@ -64,7 +64,7 @@ def shutdown_server():
     func()
 
 @local_only
-@app.route('/shutdown', methods=['POST'])
+@app.route('/api/shutdown', methods=['POST'])
 def shutdown():
     shutdown_server()
     return 'Server shutting down...'

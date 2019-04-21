@@ -179,15 +179,21 @@
         "quick": [
             {
                 "banner": "gitleaks",
-                "cmd": "$GO_PATH/gitleaks -v --repo=$TARGET --report=$WORKSPACE/gitscan/$TARGET-gitleaks.json",
+                "cmd": "$GO_PATH/gitleaks -v --repo=$INPUT --report=$WORKSPACE/gitscan/$TARGET-gitleaks.json",
                 "output_path": "$WORKSPACE/gitscan/$TARGET-gitleaks.json",
                 "std_path": "$WORKSPACE/gitscan/std-$TARGET-gitleaks.std"
             },
             {
                 "banner": "trufflehog",
-                "cmd": "trufflehog --regex --entropy=True $TARGET | tee $WORKSPACE/gitscan/$TARGET-trufflehog.txt",
+                "cmd": "trufflehog --regex --entropy=True $INPUT | tee $WORKSPACE/gitscan/$TARGET-trufflehog.txt",
                 "output_path": "$WORKSPACE/gitscan/$TARGET-trufflehog.txt",
                 "std_path": "$WORKSPACE/gitscan/std-$TARGET-trufflehog.std"
+            },
+            {
+                "banner": "trufflehog",
+                "cmd": "$GO_PATH/gitrob -save $WORKSPACE/gitscan/$TARGET-gitrob -threads 10 -github-access-token $GITHUB_API_KEY $INPUT",
+                "output_path": "$WORKSPACE/gitscan/$TARGET-gitrob.txt",
+                "std_path": "$WORKSPACE/gitscan/std-$TARGET-gitrob.std"
             }
         ]
     }

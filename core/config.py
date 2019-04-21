@@ -110,21 +110,20 @@ def parsing_config(config_path, args):
 
     module = str(args.module)
     debug = str(args.debug)
+    force = str(args.force)
 
     config.set('Mode', 'speed', speed)
     config.set('Mode', 'module', module)
     config.set('Mode', 'debug', debug)
+    config.set('Mode', 'force', force)
 
     ##target stuff
     #parsing agument
-
-
     git_target = args.git if args.git else None
     burpstate_target = args.burp if args.burp else None
     target_list = args.targetlist if args.targetlist else None
     company = args.company if args.company else None
-
-
+    direct_input = args.input if args.input else None
 
     if args.target:
         target = args.target
@@ -143,13 +142,16 @@ def parsing_config(config_path, args):
         else:
             workspace += strip_target
 
-        try:
-            ip = socket.gethostbyname(strip_target)
-        except:
-            ip = "None"
-            utils.print_bad("Something wrong to connect to {0}".format(target))
+        if not direct_input:
+            try:
+                ip = socket.gethostbyname(strip_target)
+            except:
+                ip = "None"
+                utils.print_bad("Something wrong to connect to {0}".format(target))
+        else:
+            ip = None
 
-
+    config.set('Target', 'input', str(direct_input))
     config.set('Target', 'git_target', str(git_target))
     config.set('Target', 'burpstate_target', str(burpstate_target))
     config.set('Target', 'target_list', str(target_list))

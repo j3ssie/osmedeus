@@ -21,6 +21,13 @@ class Initials(object):
         self.create_skeleton_json()
 
     def create_skeleton_json(self):
+        outout = utils.replace_argument(
+            self.options, '$WORKSPACE/$COMPANY.json')
+
+        if utils.not_empty_file(outout):
+            utils.print_info("Modules is already done")
+            return
+
         main_json = {
             "Company": utils.replace_argument(self.options, '$COMPANY'),
             "Main_domain": utils.replace_argument(self.options, '$TARGET'),
@@ -30,7 +37,6 @@ class Initials(object):
             "IP Space": []
         }
 
-        outout = utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json')
 
         utils.just_write(outout, main_json, is_json=True)
         utils.check_output(outout)

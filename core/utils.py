@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import requests
 import time
@@ -147,9 +148,68 @@ def just_waiting(options, module_name, seconds=30, times=False):
             time.sleep(seconds)
 
 ###
+
+
+def is_direct_mode(options, require_input=False):
+    if options['MODULE'] != "None":
+        print_good("Direct mode detect")
+        if require_input:
+            if not_empty_file(options['INPUT']):
+                return options['INPUT']
+            else:
+                print_bad("You you want to specific -i options")
+                sys.exit(-1)
+        else:
+            return True
+
+    return False
+
+#return True if the module was done and False if this modile not done 
+def resume(options, module):
+    headers['Authorization'] = options['JWT']
+
+    #force to run the module again
+    if options.get('FORCE') != "False":
+        return False
+
+    try:
+        #checking final report for the module
+        url = options['REMOTE_API'] + "/api/module/{0}".format(options['OUTPUT']) 
+        r = requests.get(url, headers=headers)
+        if r.status_code == 200:
+            reports = json.loads(r.text).get('reports')
+            for item in reports:
+                if item.get('module') == module:
+                    return not_empty_file(options['WORKSPACES'] + "/" + item.get('report'))
+            
+        #checking for each command of module
+        url = options['REMOTE_API'] + "/api/routines?module=" + module
+        r = requests.get(url, headers=headers)
+        if r.status_code == 200:
+            routines = json.loads(r.text).get('routines')
+
+        is_all_command_done = False
+        for item in routines:
+            if not_empty_file(item.get('output_path')):
+                is_all_command_done = True
+            else:
+                is_all_command_done = False
+
+        return is_all_command_done
+    except:
+        return False
+
+def is_force(options, filename):
+    if options['FORCE'] != "False":
+        return True
+
+    if not_empty_file(filename):
+        print_info(
+            "Command is already done. use '-f' options to force rerun the command")
+        return True
+    return False
+
 # checking if command was done or not? and return a json result
-
-
 def checking_done(options, cmd=None, module=None, get_json=False):
     headers['Authorization'] = options['JWT']
     url = options['REMOTE_API'] + "/api/activities"

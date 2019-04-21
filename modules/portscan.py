@@ -14,8 +14,16 @@ class PortScan(object):
     def __init__(self, options):
         utils.print_banner("Port Scanning")
         utils.make_directory(options['WORKSPACE'] + '/portscan')
+        utils.make_directory(options['WORKSPACE'] + '/subdomain')
         self.module_name = self.__class__.__name__
         self.options = options
+
+        if utils.resume(self.options, self.module_name):
+            utils.print_info(
+                "Detect is already done. use '-f' options to force rerun the module")
+            return
+        self.is_direct = utils.is_direct_mode(options, require_input=True)
+
         slack.slack_noti('status', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Port Scanning for {0}'.format(self.options['TARGET'])
@@ -37,18 +45,23 @@ class PortScan(object):
     # just for the masscan
     def create_ip_result(self):
         utils.print_good('Create IP for list of domain result')
-        final_ip = utils.replace_argument(
-            self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
-        
-        # if utils.not_empty_file(final_ip):
-        #     return
 
-        cmd = '$PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -t A -o S -w $WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt $WORKSPACE/subdomain/final-$OUTPUT.txt'
+        if self.is_direct:
+            cmd = '$PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -t A -o S -w $WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt $INPUT'
+        else:
+            final_ip = utils.replace_argument(
+                self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
+            
+            if utils.not_empty_file(final_ip):
+                return
+
+            cmd = '$PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -t A -o S -w $WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt $WORKSPACE/subdomain/final-$OUTPUT.txt'
 
         cmd = utils.replace_argument(self.options, cmd)
         output_path = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt')
-        execute.send_cmd(self.options, cmd, '', '', self.module_name)
+        if utils.is_force(self.options, output_path):
+            execute.send_cmd(self.options, cmd, '', '', self.module_name)
 
         utils.just_waiting(self.options, self.module_name, seconds=5)
 
@@ -80,25 +93,31 @@ class PortScan(object):
         utils.print_good('Starting masscan')
         time.sleep(1)
 
-        main_json = utils.reading_json(utils.replace_argument(
-            self.options, '$WORKSPACE/$COMPANY.json'))
-        main_json['Modules'][self.module_name] = []
+        if self.is_direct:
+            ip_file = utils.replace_argument(
+                self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
+            # print(ip_file)
+            # print(utils.just_read(ip_file))
+            ip_list = utils.just_read(ip_file).splitlines()
+            ip_list = list(set([ip for ip in ip_list if ip != 'N/A']))
+        else:
+            main_json = utils.reading_json(utils.replace_argument(
+                self.options, '$WORKSPACE/$COMPANY.json'))
+            main_json['Modules'][self.module_name] = []
 
-        if self.options['SPEED'] == 'slow':
-            ip_list = [x.get("IP")
-                       for x in main_json['Subdomains'] if x.get("IP") is not None] + main_json['IP Space']
+            if self.options['SPEED'] == 'slow':
+                ip_list = [x.get("IP")
+                        for x in main_json['Subdomains'] if x.get("IP") is not None] + main_json['IP Space']
 
-        elif self.options['SPEED'] == 'quick':
-            ip_list = [x.get("IP")
-                       for x in main_json['Subdomains'] if x.get("IP") is not None]
+            elif self.options['SPEED'] == 'quick':
+                ip_list = [x.get("IP")
+                        for x in main_json['Subdomains'] if x.get("IP") is not None]
 
-        ip_list = set([ip for ip in ip_list if ip != 'N/A'])
+            ip_list = set([ip for ip in ip_list if ip != 'N/A'])
 
         if self.options['DEBUG'] == "True":
             utils.print_info("just testing 5 first host")
             ip_list = list(ip_list)[:5]
-
-        # print(ip_list)
 
         utils.just_write(utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/IP-$TARGET.txt'), "\n".join(ip_list))
@@ -106,7 +125,6 @@ class PortScan(object):
         # print(ip_list)
         time.sleep(1)
 
-        # cmd = "sudo masscan --rate 10000 -p0-65535 -iL $WORKSPACE/subdomain/IP-$TARGET.txt -oJ $WORKSPACE/portscan/$OUTPUT-masscan.json --wait 0"
         cmd = "sudo masscan --rate 1000 -p0-65535 -iL $WORKSPACE/subdomain/IP-$TARGET.txt -oX $WORKSPACE/portscan/$OUTPUT-masscan.xml --wait 0"
 
         cmd = utils.replace_argument(self.options, cmd)

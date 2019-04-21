@@ -16,7 +16,10 @@ class Recon(object):
         utils.make_directory(options['WORKSPACE'] + '/recon')
         self.module_name = self.__class__.__name__
         self.options = options
-
+        if utils.resume(self.options, self.module_name):
+            utils.print_info(
+                "Detect is already done. use '-f' options to force rerun the module")
+            return
         slack.slack_noti('status', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Scanning Subdomain for {0}'.format(self.options['TARGET'])

@@ -75,46 +75,41 @@ def normal(options):
 def specific(options, module):
     module = module.lower()
 
+    initials.Initials(options)
+
     if 'subdomain' in module:
         subdomain.SubdomainScanning(options)
         takeover.TakeOverScanning(options)
         screenshot.ScreenShot(options)
         cors.CorsScan(options)
+        recon.Recon(options)
 
-    elif 'screenshot' in module:
-        screenshot.ScreenShot(options)
-
-    elif 'portscan' in module:
-        # scanning port, service and vuln with masscan and nmap
-        portscan.PortScan(options)
-
-    elif 'vuln' in module:
-        # scanning vulnerable service based on version
-        vulnscan.VulnScan(options)
-
-    elif 'git' in module:
-        gitscan.GitScan(options)
-
-    elif 'burp' in module:
-        burpstate.BurpState(options)
-
-    elif 'brute' in module or 'force' in module:
-        # running brute force things based on scanning result
-        brutethings.BruteThings(options)
-
-    elif 'ip' in module:
+    if 'ip' in module:
         #Discovery IP space
         ipspace.IPSpace(options)
 
+    if 'portscan' in module:
+        # scanning port, service and vuln with masscan and nmap
+        portscan.PortScan(options)
 
-    elif 'headers' in module:
-        #Headers Scan
-        headers.HeadersScan(options)
+    if 'vuln' in module:
+        # scanning vulnerable service based on version
+        vulnscan.VulnScan(options)
 
-
-    elif 'dir' in module:
+    if 'dir' in module:
         # run blind directory brute force directly
         dirbrute.DirBrute(options)
+
+    if 'brute' in module or 'force' in module:
+        # running brute force things based on scanning result
+        brutethings.BruteThings(options)
+
+    if 'git' in module:
+        gitscan.GitScan(options)
+
+    # if 'burp' in module:
+    #     burpstate.BurpState(options)
+
     
     conclusion.Conclusion(options)
 

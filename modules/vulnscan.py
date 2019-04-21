@@ -10,6 +10,13 @@ class VulnScan(object):
         utils.make_directory(options['WORKSPACE'] + '/vulnscan')
         self.module_name = self.__class__.__name__
         self.options = options
+
+        if utils.resume(self.options, self.module_name):
+            utils.print_info(
+                "Detect is already done. use '-f' options to force rerun the module")
+            return
+        self.is_direct = utils.is_direct_mode(options, require_input=True)
+
         slack.slack_noti('status', self.options, mess={
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done Vulnerable Scanning for {0}'.format(self.options['TARGET'])
@@ -27,26 +34,31 @@ class VulnScan(object):
 
     def nmap_vuln(self):
         utils.print_good('Starting Nmap VulnScan')
-        main_json = utils.reading_json(utils.replace_argument(
-            self.options, '$WORKSPACE/$COMPANY.json'))
-        main_json['Modules'][self.module_name] = []
 
-        if self.options['SPEED'] == 'slow':
-            ip_list = [x.get("IP")
-                       for x in main_json['Subdomains'] if x.get("IP") is not None] + main_json['IP Space']
+        if self.is_direct:
+            ip_list = utils.just_read(self.is_direct).splitlines()
+            ip_list = list(set([ip for ip in ip_list if ip != 'N/A']))
+        else:
+            main_json = utils.reading_json(utils.replace_argument(
+                self.options, '$WORKSPACE/$COMPANY.json'))
+            main_json['Modules'][self.module_name] = []
 
-        elif self.options['SPEED'] == 'quick':
-            ip_list = [x.get("IP")
-                       for x in main_json['Subdomains'] if x.get("IP") is not None]
-        ip_list = set([ip for ip in ip_list if ip != 'N/A'])
+            if self.options['SPEED'] == 'slow':
+                ip_list = [x.get("IP")
+                        for x in main_json['Subdomains'] if x.get("IP") is not None] + main_json['IP Space']
 
-        if self.options['DEBUG'] == 'True':
-            ip_list = list(ip_list)[:5]
+            elif self.options['SPEED'] == 'quick':
+                ip_list = [x.get("IP")
+                        for x in main_json['Subdomains'] if x.get("IP") is not None]
+            ip_list = set([ip for ip in ip_list if ip != 'N/A'])
+
+            if self.options['DEBUG'] == 'True':
+                ip_list = list(ip_list)[:5]
 
         # Scan every 5 IP at time Increse if you want
         for part in list(utils.chunks(ip_list, 2)):
             for ip in part:
-                cmd = 'sudo nmap -T4 -Pn -n -sSV -p- {0} --script $PLUGINS_PATH/vulners --oA $WORKSPACE/vulnscan/{0}-nmap'.format(
+                cmd = 'sudo nmap -T4 -Pn -n -sSV -p- {0} --script $PLUGINS_PATH/vulners.nse --oA $WORKSPACE/vulnscan/{0}-nmap'.format(
                     ip.strip())
 
                 cmd = utils.replace_argument(self.options, cmd)
@@ -57,7 +69,7 @@ class VulnScan(object):
                 execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
 
             # check if previous task done or not every 30 second
-            while not utils.checking_done(module=self.module_name):
+            while not utils.checking_done(self.options, module=self.module_name):
                 time.sleep(60)
 
 

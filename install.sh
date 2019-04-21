@@ -36,7 +36,7 @@ mkdir -p $PLUGINS_PATH/wordlists/
 
 install_banner "vulners nse"
 # Install vulners nse script
-[[ -f /usr/share/nmap/scripts/vulners.nse ]] ||  wget -q -O /usr/share/nmap/scripts/vulners.nse https://raw.githubusercontent.com/vulnersCom/nmap-vulners/master/vulners.nse
+[[ -f /usr/share/nmap/scripts/vulners.nse ]] ||  wget -q -O $PLUGINS_PATH/vulners.nse https://raw.githubusercontent.com/vulnersCom/nmap-vulners/master/vulners.nse
 
 
 install_banner "nmap bootstrap"
