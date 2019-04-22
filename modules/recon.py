@@ -27,7 +27,6 @@ class Recon(object):
 
         self.initial()
 
-        utils.just_waiting(self.options, self.module_name, seconds=10)
         self.conclude()
 
         #this gonna run after module is done to update the main json
@@ -54,8 +53,7 @@ class Recon(object):
                 'output_path'), item.get('std_path'), self.module_name)
             time.sleep(1)
 
-        utils.just_waiting(self.options, self.module_name,
-                           seconds=10, times=10)
+        utils.just_waiting(self.options, self.module_name, seconds=10, times=5)
 
         main_json = utils.reading_json(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'))
@@ -163,10 +161,9 @@ class Recon(object):
         with open(final_ip, 'w+') as fip:
             fip.write("\n".join(str(ip) for ip in ips))
 
+        #update the main json file
         utils.just_write(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
-
-    #update the main json file
 
     def conclude(self):
         utils.print_banner("Conclusion for {0}".format(self.module_name))
