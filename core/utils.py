@@ -164,7 +164,9 @@ def is_direct_mode(options, require_input=False):
 
     return False
 
-#return True if the module was done and False if this modile not done 
+#return True if the module was done and False if this modile not done
+
+
 def resume(options, module):
     headers['Authorization'] = options['JWT']
 
@@ -174,30 +176,33 @@ def resume(options, module):
 
     try:
         #checking final report for the module
-        url = options['REMOTE_API'] + "/api/module/{0}".format(options['OUTPUT']) 
+        url = options['REMOTE_API'] + \
+            "/api/module/{0}".format(options['OUTPUT'])
         r = requests.get(url, headers=headers)
         if r.status_code == 200:
             reports = json.loads(r.text).get('reports')
             for item in reports:
                 if item.get('module') == module:
                     return not_empty_file(options['WORKSPACES'] + "/" + item.get('report'))
-            
+
         #checking for each command of module
         url = options['REMOTE_API'] + "/api/routines?module=" + module
         r = requests.get(url, headers=headers)
         if r.status_code == 200:
             routines = json.loads(r.text).get('routines')
 
-        is_all_command_done = False
+        is_all_command_done = 0
         for item in routines:
             if not_empty_file(item.get('output_path')):
-                is_all_command_done = True
-            else:
-                is_all_command_done = False
+                is_all_command_done += 1
 
-        return is_all_command_done
+        if is_all_command_done == len(routines):
+            return True
+        else:
+            return False
     except:
         return False
+
 
 def is_force(options, filename):
     if options['FORCE'] != "False":
@@ -210,6 +215,8 @@ def is_force(options, filename):
     return False
 
 # checking if command was done or not? and return a json result
+
+
 def checking_done(options, cmd=None, module=None, get_json=False):
     headers['Authorization'] = options['JWT']
     url = options['REMOTE_API'] + "/api/activities"

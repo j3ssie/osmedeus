@@ -54,7 +54,8 @@ class Recon(object):
                 'output_path'), item.get('std_path'), self.module_name)
             time.sleep(1)
 
-        utils.just_waiting(self.options, self.module_name, seconds=30)
+        utils.just_waiting(self.options, self.module_name,
+                           seconds=10, times=10)
 
         main_json = utils.reading_json(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'))
