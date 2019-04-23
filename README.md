@@ -11,6 +11,9 @@
 
 
 # What is Osmedeus?
+
+![Architecture](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/Osmedeus-architecture.png)
+
 Osmedeus allows you automated run the collection of awesome tools to reconnaissance and vulnerability scanning against the target.
 
 # How to use
@@ -18,7 +21,6 @@ If you have no idea what are you doing just type the command below or check out 
 ```
 ./osmedeus.py -t example.com
 ```
-
 
 # Installation
 ```
