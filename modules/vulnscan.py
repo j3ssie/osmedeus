@@ -72,6 +72,9 @@ class VulnScan(object):
             while not utils.checking_done(self.options, module=self.module_name):
                 time.sleep(60)
 
+        #just save commands
+        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
+        utils.save_all_cmd(self.options, logfile)
 
     # def conclude(self):
     #     #### Create beautiful HTML report for masscan

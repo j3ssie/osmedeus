@@ -49,7 +49,7 @@ class Activities(Resource):
         cmd = data['cmd']
 
         module = request.args.get('module')
-        #if module avalible just ignore cmd stuff
+        # if module avalible just ignore cmd stuff
         if module:
             if cmd:
                 commands = [x for x in self.activities[module]
@@ -85,3 +85,25 @@ class Activities(Resource):
 
         utils.just_write(current_path + '/storages/activities.json', activities, is_json=True)
         return activities
+
+    #force to update activities to prevent infinity wait.
+    @jwt_required
+    def put(self):
+        module = request.args.get('module')
+
+        raw_activities = self.activities
+        for k,v in self.activities.items():
+            if k == module:
+                raw_activities[k] = []
+
+                for item in v:
+                    cmd_item = item
+                    cmd_item['status'] = "Done"
+                    raw_activities[k].append(cmd_item)
+        
+        #rewrite the activities again
+        utils.just_write(current_path + '/storages/activities.json', raw_activities, is_json=True)
+
+        commands = [x for x in raw_activities[module]]
+        return {'commands': commands}
+

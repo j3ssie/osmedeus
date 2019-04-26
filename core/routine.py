@@ -92,6 +92,9 @@ def specific(options, module):
         # scanning port, service and vuln with masscan and nmap
         portscan.PortScan(options)
 
+    if 'headers' in module:
+        headers.HeadersScan(options)
+
     if 'vuln' in module:
         # scanning vulnerable service based on version
         vulnscan.VulnScan(options)
@@ -120,7 +123,7 @@ def debug(options):
     utils.print_good("Running with {0} speed".format(options['SPEED']))
     # Create skeleton json
     pprint(options)
-    # initials.Initials(options)
+    initials.Initials(options)
 
     recon.Recon(options)
 

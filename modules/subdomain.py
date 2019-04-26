@@ -49,7 +49,9 @@ class SubdomainScanning(object):
             time.sleep(1)
 
         utils.just_waiting(self.options, self.module_name, seconds=5)
-        # utils.just_waiting(self.options, self.module_name, seconds=30)
+        #just save commands
+        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
+        utils.save_all_cmd(self.options, logfile)
 
     #just clean up some output
     def unique_result(self):

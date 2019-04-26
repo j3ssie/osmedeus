@@ -60,8 +60,8 @@ class PortScan(object):
         cmd = utils.replace_argument(self.options, cmd)
         output_path = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt')
-        if utils.is_force(self.options, output_path):
-            execute.send_cmd(self.options, cmd, '', '', self.module_name)
+            
+        execute.send_cmd(self.options, cmd, '', '', self.module_name)
 
         utils.just_waiting(self.options, self.module_name, seconds=5)
 
@@ -133,6 +133,7 @@ class PortScan(object):
         std_path = utils.replace_argument(
             self.options, '$WORKSPACE/portscan/std-$OUTPUT-masscan.std')
         execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
+
     
     #Create beautiful HTML report for masscan
     def create_html_report(self):
@@ -172,6 +173,9 @@ class PortScan(object):
             if ip != "N/A" and ip in masscan_json.keys():
                 main_json['Subdomains'][i]['Ports'] = masscan_json.get(ip)
 
+        #just save commands
+        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
+        utils.save_all_cmd(self.options, logfile)
 
         utils.just_write(utils.replace_argument(
                     self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)

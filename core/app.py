@@ -4,7 +4,9 @@ import sys
 import subprocess
 import time
 import logging
+import argparse
 from pprint import pprint
+
 
 import execute
 import slack
@@ -30,18 +32,13 @@ from rest.activities import Activities
 from rest.logs import Logs
 from rest.modules import Modules
 from rest.routines import Routines
+from rest.bash_render import BashRender
 
 current_path = os.path.dirname(os.path.realpath(__file__))
 ############
-## Flask config 
-##
-## turn off the http log
-# log = logging.getLogger('werkzeug')
-# log.setLevel(logging.ERROR)
-# ##
+## Flask config stuff
 
 app = Flask('Osmedeus')
-
 app = Flask(__name__, template_folder='ui/', static_folder='ui/static/')
 #just for testing whitelist your domain if you wanna run this server remotely
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
@@ -50,8 +47,6 @@ api = Api(app)
 # setup jwt secret, make sure you change this!
 app.config['JWT_SECRET_KEY'] = '-----BEGIN RSA PRIVATE KEY-----' # go ahead, spider
 jwt = JWTManager(app)
-
-
 
 ############
 
@@ -79,7 +74,7 @@ api.add_resource(Workspace, '/api/workspace/<string:workspace>')
 api.add_resource(Logs, '/api/logs/<string:workspace>')
 api.add_resource(Modules, '/api/module/<string:workspace>')
 api.add_resource(Routines, '/api/routines')
-
+api.add_resource(BashRender, '/stdout/<path:filename>')
 
 
 #### serve HTML and image content
@@ -101,6 +96,19 @@ def serve(path):
 ####
 
 if __name__ == '__main__':
-    app.run(debug=True)  # important to mention debug=True
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-b", "--bind", action="store", dest='bind', default="127.0.0.1")
+    parser.add_argument("-p", "--port", action="store", dest='port', default="5000")
+    parser.add_argument("--debug", action="store_true", help='just for debug purpose')
+    args = parser.parse_args()
 
-    # app.run(debug=False)  # important to mention debug=True
+    host = str(args.bind)
+    port = int(args.port)
+    debug = args.debug
+
+    if not args.debug:
+        print(" * Logging: off")
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.ERROR)
+
+    app.run(host=host, port=port, debug=debug)

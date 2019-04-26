@@ -16,6 +16,9 @@ class HeadersScan(object):
         if utils.resume(self.options, self.module_name):
             utils.print_info("Detect is already done. use '-f' options to force rerun the module")
             return
+        
+        self.is_direct = utils.is_direct_mode(options, require_input=True)
+
         slack.slack_noti('status', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Headers Scanning for {0}'.format(self.options['TARGET'])
@@ -38,12 +41,16 @@ class HeadersScan(object):
     def observatory(self):
         utils.print_good('Starting observatory')
 
-        if self.options['SPEED'] == 'quick':
-            utils.print_good('Skipping {0} in quick mode'.format(self.module_name))
-            return None
-    
-        domain_file = utils.replace_argument(
-            self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
+        if self.is_direct:
+            domain_file = self.is_direct
+        else:
+            if self.options['SPEED'] == 'quick':
+                utils.print_good('Skipping {0} in quick mode'.format(self.module_name))
+                return None
+        
+            domain_file = utils.replace_argument(
+                self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
+
         with open(domain_file, 'r') as d:
             domains = d.read().splitlines()
 
@@ -51,15 +58,16 @@ class HeadersScan(object):
             utils.print_info("Only get 30 target debug mode")
             domains = domains[:10]
 
-        for part in list(utils.chunks(domains, 10)):
+        for part in list(utils.chunks(domains, 1)):
             for domain in part:
-                cmd = 'observatory -q {0} --format=json -z --attempts 10 | tee $WORKSPACE/headers/details/{0}-observatory.json'.format(
+                cmd = 'observatory --rescan -q {0} --format=json -z --attempts 50 | tee $WORKSPACE/headers/details/{0}-observatory.json'.format(
                     domain.strip())
                 cmd = utils.replace_argument(self.options, cmd)
-                execute.send_cmd(self.options, cmd, '', '', self.module_name)
+                execute.send_cmd(self.options, cmd, '', '', self.module_name, nolog=True)
 
-            while not utils.checking_done(module=self.module_name):
-                time.sleep(15)
+            time.sleep(10)
+            utils.just_waiting(self.options, self.module_name, seconds=10, times=2)
+
         return True
     #update the main json file
     def conclude(self):

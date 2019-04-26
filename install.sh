@@ -27,10 +27,24 @@ install_banner "git, nmap, masscan, chromium, npm, golang"
 install_banner "wordlists"
 mkdir -p $PLUGINS_PATH/wordlists/
 [[ -f $PLUGINS_PATH/wordlists/all.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/all.txt https://gist.githubusercontent.com/jhaddix/86a06c5dc309d08580a018c66354a056/raw/96f4e51d96b2203f19f6381c8c545b278eaa0837/all.txt
+
+#domain discovery
 [[ -f $PLUGINS_PATH/wordlists/shorts.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/shorts.txt https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1mil-20000.txt
 
 [[ -f $PLUGINS_PATH/wordlists/dir-all.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/dir-all.txt https://gist.githubusercontent.com/jhaddix/b80ea67d85c13206125806f0828f4d10/raw/c81a34fe84731430741e0463eb6076129c20c4c0/content_discovery_all.txt
 
+##content discovery
+[[ -f $PLUGINS_PATH/wordlists/raft-large-directories.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/raft-large-directories.txt	https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/raft-large-directories.txt
+
+
+[[ -f $PLUGINS_PATH/wordlists/dirseach-dicc.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/dirseach-dicc.txt 	https://raw.githubusercontent.com/maurosoria/dirsearch/master/db/dicc.txt 
+
+[[ -f $PLUGINS_PATH/wordlists/top10000.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/top10000.txt 	https://raw.githubusercontent.com/danielmiessler/RobotsDisallowed/master/top10000.txt
+
+cat $PLUGINS_PATH/wordlists/dirseach-dicc.txt $PLUGINS_PATH/wordlists/top10000.txt > $PLUGINS_PATH/wordlists/quick-content-discovery.txt
+
+
+## technology signature
 [[ -f $PLUGINS_PATH/apps.json ]] || wget -q -O $PLUGINS_PATH/apps.json https://raw.githubusercontent.com/AliasIO/Wappalyzer/master/src/apps.json
 
 
@@ -89,6 +103,7 @@ cp $GO_DIR/* "$PLUGINS_PATH/go/"
 #Install flask stuff
 install_banner "Flask API stuff"
 pip3 install flask flask_restful flask_jwt flask_cors flask_jwt_extended
+pip3 install ansi2html
 
 install_banner "observatory"
 npm install -g observatory-cli
@@ -152,9 +167,10 @@ git clone https://github.com/RhinoSecurityLabs/SleuthQL
 pip install bs4
 cd $CWD
 
-cd $PLUGINS_PATH
-install_banner "dirsearch"
-git clone https://github.com/maurosoria/dirsearch
+# cd $PLUGINS_PATH
+# install_banner "dirsearch"
+# git clone https://github.com/maurosoria/dirsearch
+pip install wfuzz
 
 install_banner "dirhunt"
 git clone https://github.com/Nekmo/dirhunt

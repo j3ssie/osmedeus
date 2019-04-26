@@ -18,7 +18,7 @@ C = '\033[1;36m'  # cyan
 GR = '\033[1;37m'  # gray
 
 __author__ = '@j3ssiejjj'
-__version__ = '1.2'
+__version__ = '1.3'
 
 def banner():
     print(r"""{1}
@@ -162,7 +162,6 @@ def parsing_config(config_path, args):
     config.set('Target', 'ip', str(ip))
     config.set('Enviroments', 'workspace', str(workspace))
 
-
     #create workspace folder for the target
     utils.make_directory(workspace)
 
@@ -172,11 +171,9 @@ def parsing_config(config_path, args):
                            for i in range(6)).upper()
         config.set('Server', 'password', new_pass)
 
-
     #save the config
     with open(config_path, 'w') as configfile:
         config.write(configfile)
-
 
     config = ConfigParser(interpolation=ExtendedInterpolation())
     config.read(config_path)
@@ -184,7 +181,6 @@ def parsing_config(config_path, args):
 
     for sec in sections:
         for key in config[sec]:
-            # if key = 
             options[key.upper()] = config.get(sec, key)
 
     ######

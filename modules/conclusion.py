@@ -1,6 +1,3 @@
-import os, glob
-from pprint import pprint
-from core import execute
 from core import utils
 
 
@@ -11,7 +8,6 @@ class Conclusion(object):
         # self.module_name = self.__class__.__name__
         self.options = options
         self.initial()
-
 
     def initial(self):
         self.save_log()

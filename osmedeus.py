@@ -29,7 +29,7 @@ colors = [G,R,B,P,C,O,GR]
 #############
 
 __author__ = '@j3ssiejjj'
-__version__ = '1.2'
+__version__ = '1.3'
 
 
 ### Global stuff
@@ -103,6 +103,7 @@ portscan    - Screenshot and Scanning service for list of domain
 brute       - Do brute force on service of target
 vuln        - Scanning version of services and checking vulnerable service
 git         - Scanning for git repo
+burp        - Scanning for burp state
 dirb        - Do directory search on the target
 ip          - IP discovery on the target
 
@@ -116,23 +117,25 @@ def update():
 def main():
     config.banner()
     parser = argparse.ArgumentParser(description="Collection tool for automatic pentesting")
-    parser.add_argument('-c','--config' , action='store', dest='config', help='config file', default='core/config.conf')
-    parser.add_argument('-m','--module' , action='store', dest='module', help='specific module to action')
-    parser.add_argument('-i','--input' , action='store', dest='input', help='input for specific module')
-    parser.add_argument('-t','--target' , action='store', dest='target', help='target')
+    parser.add_argument('-c', '--config', action='store', dest='config', help='config file', default='core/config.conf')
+    parser.add_argument('-m', '--module', action='store', dest='module', help='specific module to action')
+    parser.add_argument('-i', '--input', action='store', dest='input', help='input for specific module')
+    parser.add_argument('-t', '--target', action='store', dest='target', help='target')
     parser.add_argument('--company', action='store', dest='company', help='Company name')
-    parser.add_argument('-b','--burp' , action='store', dest='burp', help='burp http file')
-    parser.add_argument('-g','--git' , action='store', dest='git', help='git repo to scan')
-    parser.add_argument('-T','--target_list' , action='store', dest='targetlist', help='list of target')
-    parser.add_argument('-o','--output' , action='store', dest='output', help='output')
-    parser.add_argument('-w','--workspace' , action='store', dest='workspace', help='Domain')
-    parser.add_argument('--more' , action='store', dest='more', help='append more command for some tools')
+    parser.add_argument('-b', '--burp', action='store', dest='burp', help='burp http file')
+    parser.add_argument('-g', '--git', action='store', dest='git', help='git repo to scan')
+    parser.add_argument('-T', '--target_list', action='store', dest='targetlist', help='list of target')
+    parser.add_argument('-o', '--output', action='store', dest='output', help='output')
+    parser.add_argument('-w', '--workspace', action='store', dest='workspace', help='Domain')
+    parser.add_argument('--more', action='store', dest='more', help='append more command for some tools')
 
     parser.add_argument('-M', '--list_module', action='store_true', help='List all module')
     parser.add_argument('-v', '--verbose', action='store_true', help='show verbose output')
     parser.add_argument('-f', '--force', action='store_true', help='force to run the module again if output exists')
+
     parser.add_argument('-q', '--quick', action='store_true', help='run this tool with quick routine', default=True)
     parser.add_argument('-s', '--slow', action='store_true', help='run this tool with slow routine', default=False)
+    
     parser.add_argument('--mode', action='store_true', help='Choose mode to run normal routine(quick or slow)', default='quick')
     parser.add_argument('--update', action='store_true', help='update lastest from git')
     parser.add_argument('--client', action='store_true', help='just run client stuff in case you ran the flask server before')

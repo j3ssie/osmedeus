@@ -4,7 +4,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import utils
 
-headers = {"User-Agent": "Osmedeus/v1.2", "Accept": "*/*",
+headers = {"User-Agent": "Osmedeus/v1.3", "Accept": "*/*",
            "Content-type": "application/json", "Connection": "close"}
 
 def run1(command):

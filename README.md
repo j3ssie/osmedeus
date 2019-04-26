@@ -45,7 +45,7 @@ This install only focus on Kali linux, check more install on [Wiki page](https:/
 - [x] Vulnerable Scan.
 - [x] Seperate workspaces to store all scan output and details logging.
 - [x] REST API.
-- [x] React Web UI.
+- [x] React [Web UI](https://github.com/j3ssie/Osmedeus/wiki/Web-UI).
 - [x] Support Continuous Scan.
 - [x] Slack notifications.
 
@@ -65,7 +65,7 @@ This install only focus on Kali linux, check more install on [Wiki page](https:/
 
 # Disclaimer
 Most of this tool done by the authors of the tool that list in [CREDITS.md](https://github.com/j3ssie/Osmedeus/blob/master/CREDITS.md).
-I'm just put all the pieces together, plus some extra boring stuff that we don't wanna do everyday.
+I'm just put all the pieces together, plus some extra magic.
 
 This tool is for educational purposes only. You are responsible for your own actions. If you mess something up or break any laws while using this software, it's your fault, and your fault only.
 

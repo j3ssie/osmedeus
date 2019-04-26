@@ -43,8 +43,7 @@ class Recon(object):
     def run(self):
         commands = execute.get_commands(
             self.options, self.module_name).get('routines')
-        if self.options['DEBUG'] == "True":
-            commands = commands[1:]
+
 
         for item in commands:
             utils.print_good('Starting {0}'.format(item.get('banner')))
@@ -87,9 +86,10 @@ class Recon(object):
         cmd = utils.replace_argument(self.options, cmd)
         output_path = utils.replace_argument(
             self.options, '$WORKSPACE/recon/$OUTPUT-technology.json')
-        execute.send_cmd(self.options, cmd, '', '', self.module_name)
+        execute.send_cmd(self.options, cmd, output_path,
+                         '', self.module_name)
 
-        utils.just_waiting(self.options, self.module_name, seconds=10)
+        utils.just_waiting(self.options, self.module_name, seconds=10, times=20)
 
         with open(output_path, encoding='utf-8') as o:
             data = o.read().splitlines()
@@ -121,14 +121,13 @@ class Recon(object):
         utils.just_write(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
 
-    # just for the masscan
 
     def resolve_ip(self):
         utils.print_good('Create IP for list of domain result')
         final_ip = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
 
-        if utils.not_empty_file(final_ip):
+        if not utils.not_empty_file(final_ip):
             return
 
         cmd = '$PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -t A -o S -w $WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt $WORKSPACE/subdomain/final-$OUTPUT.txt'
@@ -138,11 +137,12 @@ class Recon(object):
             self.options, '$WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt')
         execute.send_cmd(self.options, cmd, '', '', self.module_name)
 
-        utils.just_waiting(self.options, self.module_name, seconds=5)
+        utils.just_waiting(self.options, self.module_name, seconds=5, times=5)
 
         # matching IP with subdomain
         main_json = utils.reading_json(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'))
+
         with open(output_path, 'r') as i:
             data = i.read().splitlines()
         ips = []
@@ -165,5 +165,9 @@ class Recon(object):
         utils.just_write(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
 
+
     def conclude(self):
+        #just save commands
+        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
+        utils.save_all_cmd(self.options, logfile)
         utils.print_banner("Conclusion for {0}".format(self.module_name))

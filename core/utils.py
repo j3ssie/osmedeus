@@ -25,7 +25,7 @@ ques = '{0}[?]{1} '.format(C, W)
 bad = '{0}[-]{1} '.format(R, W)
 good = '{0}[+]{1} '.format(G, W)
 
-headers = {"User-Agent": "Osmedeus/v1.2", "Accept": "*/*",
+headers = {"User-Agent": "Osmedeus/v1.3", "Accept": "*/*",
            "Content-type": "application/json", "Connection": "close"}
 
 #send request through Burp proxy for debug purpose
@@ -143,6 +143,7 @@ def just_waiting(options, module_name, seconds=30, times=False):
             if count == int(times):
                 print_bad(
                     "Something bad with {0} module but force to continue".format(module_name))
+                force_done(options, module_name)
                 break
             count += 1
             time.sleep(seconds)
@@ -164,9 +165,7 @@ def is_direct_mode(options, require_input=False):
 
     return False
 
-#return True if the module was done and False if this modile not done
-
-
+#return True if the module was done and False if this modile not done 
 def resume(options, module):
     headers['Authorization'] = options['JWT']
 
@@ -176,15 +175,14 @@ def resume(options, module):
 
     try:
         #checking final report for the module
-        url = options['REMOTE_API'] + \
-            "/api/module/{0}".format(options['OUTPUT'])
+        url = options['REMOTE_API'] + "/api/module/{0}".format(options['OUTPUT']) 
         r = requests.get(url, headers=headers)
         if r.status_code == 200:
             reports = json.loads(r.text).get('reports')
             for item in reports:
                 if item.get('module') == module:
                     return not_empty_file(options['WORKSPACES'] + "/" + item.get('report'))
-
+            
         #checking for each command of module
         url = options['REMOTE_API'] + "/api/routines?module=" + module
         r = requests.get(url, headers=headers)
@@ -195,14 +193,13 @@ def resume(options, module):
         for item in routines:
             if not_empty_file(item.get('output_path')):
                 is_all_command_done += 1
-
+            
         if is_all_command_done == len(routines):
             return True
         else:
             return False
     except:
         return False
-
 
 def is_force(options, filename):
     if options['FORCE'] != "False":
@@ -215,8 +212,6 @@ def is_force(options, filename):
     return False
 
 # checking if command was done or not? and return a json result
-
-
 def checking_done(options, cmd=None, module=None, get_json=False):
     headers['Authorization'] = options['JWT']
     url = options['REMOTE_API'] + "/api/activities"
@@ -241,6 +236,12 @@ def checking_done(options, cmd=None, module=None, get_json=False):
 
     return True if not get_json else commands
 
+#force to update activities to all Done
+def force_done(options, module):
+    headers['Authorization'] = options['JWT']
+    url = options['REMOTE_API'] + "/api/activities?module=" + module
+    r = requests.put(url, headers=headers)
+    
 
 def looping(options, cmd=None, module=None, times=5):
     headers['Authorization'] = options['JWT']

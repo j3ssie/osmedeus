@@ -33,6 +33,18 @@
         ],
         "slow": [
             {
+                "banner": "Amass",
+                "cmd": "$GO_PATH/amass -active -max-dns-queries 50000 -dir $WORKSPACE/subdomain/amass-$OUTPUT -d $TARGET -o $WORKSPACE/subdomain/$OUTPUT-amass.txt",
+                "output_path": "$WORKSPACE/subdomain/$OUTPUT-amass.txt",
+                "std_path": "$WORKSPACE/subdomain/std-$TARGET-amass.std"
+            },
+            {
+                "banner": "Subfinder",
+                "cmd": "$GO_PATH/subfinder -d $TARGET -t 100 -o $WORKSPACE/subdomain/$OUTPUT-subfinder.txt -nW",
+                "output_path": "$WORKSPACE/subdomain/$OUTPUT-subfinder.txt",
+                "std_path": "$WORKSPACE/subdomain/std-$OUTPUT-subfinder.std"
+            },
+            {
                 "banner": "gobuster",
                 "cmd": "$PLUGINS_PATH/massdns/scripts/subbrute.py $DOMAIN_FULL $TARGET | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o Sm -w $WORKSPACE/subdomain/raw-massdns.txt",
                 "output_path": "$WORKSPACE/subdomain/raw-massdns.txt",

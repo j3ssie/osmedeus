@@ -8,6 +8,8 @@ class DirBrute(object):
     def __init__(self, options):
         utils.print_banner("Scanning Directory")
         utils.make_directory(options['WORKSPACE'] + '/directory')
+        utils.make_directory(options['WORKSPACE'] + '/directory/quick')
+        utils.make_directory(options['WORKSPACE'] + '/directory/full')
         self.module_name = self.__class__.__name__
         self.options = options
         if utils.resume(self.options, self.module_name):
@@ -28,11 +30,15 @@ class DirBrute(object):
         })
 
     def initial(self):
-        self.dirsearch()
+        self.wfuzz()
         self.gobuster()
 
-    def dirsearch(self):
-        utils.print_good('Starting dirsearch')
+        # cmd = "$GO_PATH/gobuster -k -q -e -fw -w $PLUGINS_PATH/wordlists/quick-content-discovery.txt -o $WORKSPACE/directory/quick/{0}-gobuster.txt -t 100  -u '{0}'".format(
+        # domain.strip())
+
+
+    def wfuzz(self):
+        utils.print_good('Starting wfuzz')
         if self.is_direct:
             domains = utils.just_read(self.is_direct).splitlines()
         else:
@@ -47,14 +53,23 @@ class DirBrute(object):
 
         for part in list(utils.chunks(domains, 3)):
             for domain in part:
-                cmd = "python3 $PLUGINS_PATH/dirsearch/dirsearch.py --json-report=$WORKSPACE/directory/{0}-dirsearch.json  -u '{0}' -e php,jsp,aspx,js,html -t 20 -b".format(domain.strip())
+                # cmd = "python3 $PLUGINS_PATH/dirsearch/dirsearch.py --json-report=$WORKSPACE/directory/{0}-dirsearch.json  -u '{0}' -e php,jsp,aspx,js,html -t 20 -b".format(domain.strip())
+                #just strip everything to save local, it won't affect the result
+                strip_domain = domain.replace(
+                    'http://', '').replace('https://', '').replace('/', '-')
+
+                cmd = "wfuzz -f $WORKSPACE/directory/quick/{1}-wfuzz.txt,raw -c -w $PLUGINS_PATH/wordlists/quick-content-discovery.txt -t 100 --sc 200,307 -u '{0}/FUZZ' | tee $WORKSPACE/directory/quick/std-{1}-wfuzz.std".format(
+                    domain.strip(), strip_domain)
 
                 cmd = utils.replace_argument(self.options, cmd)
-                output_path = utils.replace_argument(self.options, '$WORKSPACE/directory/{0}-dirsearch.json'.format(domain.strip()))
-                std_path = utils.replace_argument(self.options, '$WORKSPACE/directory/std-{0}-dirsearch.std'.format(domain.strip()))
 
-                if utils.is_force(self.options, output_path):
-                    execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
+                output_path = utils.replace_argument(
+                    self.options, '$WORKSPACE/directory/quick/{0}-wfuzz.txt'.format(strip_domain))
+
+                std_path = utils.replace_argument(
+                    self.options, '$WORKSPACE/directory/quick/std-{0}-wfuzz.std'.format(strip_domain))
+
+                execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
                 # execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name, True)
                 
                 # time.sleep(0.5)
@@ -67,6 +82,9 @@ class DirBrute(object):
         #submit a log
         utils.print_info('Update activities log')
         utils.update_activities(self.options, str(custom_logs))
+        #just save commands
+        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
+        utils.save_all_cmd(self.options, logfile)
 
 
     def gobuster(self):
