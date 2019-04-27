@@ -50,13 +50,13 @@ class VulnScan(object):
             elif self.options['SPEED'] == 'quick':
                 ip_list = [x.get("IP")
                         for x in main_json['Subdomains'] if x.get("IP") is not None]
-            ip_list = set([ip for ip in ip_list if ip != 'N/A'])
+            ip_list = list(set([ip for ip in ip_list if ip != 'N/A']))
 
             if self.options['DEBUG'] == 'True':
                 ip_list = list(ip_list)[:5]
 
         # Scan every 5 IP at time Increse if you want
-        for part in list(utils.chunks(ip_list, 2)):
+        for part in utils.chunks(ip_list, 2):
             for ip in part:
                 cmd = 'sudo nmap -T4 -Pn -n -sSV -p- {0} --script $PLUGINS_PATH/vulners.nse --oA $WORKSPACE/vulnscan/{0}-nmap'.format(
                     ip.strip())

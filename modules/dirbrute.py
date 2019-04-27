@@ -33,9 +33,6 @@ class DirBrute(object):
         self.wfuzz()
         self.gobuster()
 
-        # cmd = "$GO_PATH/gobuster -k -q -e -fw -w $PLUGINS_PATH/wordlists/quick-content-discovery.txt -o $WORKSPACE/directory/quick/{0}-gobuster.txt -t 100  -u '{0}'".format(
-        # domain.strip())
-
 
     def wfuzz(self):
         utils.print_good('Starting wfuzz')
@@ -51,9 +48,8 @@ class DirBrute(object):
 
         custom_logs = {"module": self.module_name, "content": []}
 
-        for part in list(utils.chunks(domains, 3)):
+        for part in utils.chunks(domains, 3):
             for domain in part:
-                # cmd = "python3 $PLUGINS_PATH/dirsearch/dirsearch.py --json-report=$WORKSPACE/directory/{0}-dirsearch.json  -u '{0}' -e php,jsp,aspx,js,html -t 20 -b".format(domain.strip())
                 #just strip everything to save local, it won't affect the result
                 strip_domain = domain.replace(
                     'http://', '').replace('https://', '').replace('/', '-')
@@ -70,8 +66,7 @@ class DirBrute(object):
                     self.options, '$WORKSPACE/directory/quick/std-{0}-wfuzz.std'.format(strip_domain))
 
                 execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
-                # execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name, True)
-                
+
                 # time.sleep(0.5)
                 #set status to done because this gonna will be submit when all command was done
                 custom_logs['content'].append({"cmd": cmd, "std_path": std_path, "output_path": output_path, "status": "Done"})
