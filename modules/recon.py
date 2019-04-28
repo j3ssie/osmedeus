@@ -18,7 +18,7 @@ class Recon(object):
         self.options = options
         if utils.resume(self.options, self.module_name):
             utils.print_info(
-                "Detect is already done. use '-f' options to force rerun the module")
+                "It's already done. use '-f' options to force rerun the module")
             return
         slack.slack_noti('status', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
@@ -97,16 +97,18 @@ class Recon(object):
         #parsing output to get technology
         techs = {}
         for line in data:
-            jsonl = json.loads(line)
-            if jsonl.get('matches'):
-                subdomain = jsonl.get('hostname').replace('https://', '')
-                if techs.get(subdomain):
-                    techs[subdomain] += [x.get('app_name')
-                                         for x in jsonl.get('matches')]
-                else:
-                    techs[subdomain] = [x.get('app_name')
-                                        for x in jsonl.get('matches')]
-
+            try:
+                jsonl = json.loads(line)
+                if jsonl.get('matches'):
+                    subdomain = jsonl.get('hostname').replace('https://', '')
+                    if techs.get(subdomain):
+                        techs[subdomain] += [x.get('app_name')
+                                            for x in jsonl.get('matches')]
+                    else:
+                        techs[subdomain] = [x.get('app_name')
+                                            for x in jsonl.get('matches')]
+            except:
+                pass
         # print(techs)
 
         #update the main json and rewrite that

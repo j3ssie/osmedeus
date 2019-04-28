@@ -34,14 +34,14 @@ def normal(options):
     ##waiting for previous module
     utils.just_waiting(options, 'SubdomainScanning')
 
-    ##Recon
-    recon.Recon(options)
-
     # ##Scanning for subdomain take over
     takeover.TakeOverScanning(options)
 
     ##Screen shot the target on common service
     screenshot.ScreenShot(options)
+
+    ##Recon
+    recon.Recon(options)
 
     ##Scanning for CorsScan
     cors.CorsScan(options)

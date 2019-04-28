@@ -9,7 +9,7 @@ class BruteThings(object):
         self.options = options
         
         if utils.resume(self.options, self.module_name):
-            utils.print_info("Detect is already done. use '-f' options to force rerun the module")
+            utils.print_info("It's already done. use '-f' options to force rerun the module")
             return
 
         if self.options['SPEED'] == 'slow':

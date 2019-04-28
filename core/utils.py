@@ -25,7 +25,7 @@ ques = '{0}[?]{1} '.format(C, W)
 bad = '{0}[-]{1} '.format(R, W)
 good = '{0}[+]{1} '.format(G, W)
 
-headers = {"User-Agent": "Osmedeus/v1.3", "Accept": "*/*",
+headers = {"User-Agent": "Osmedeus/v1.2", "Accept": "*/*",
            "Content-type": "application/json", "Connection": "close"}
 
 #send request through Burp proxy for debug purpose

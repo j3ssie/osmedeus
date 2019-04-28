@@ -20,7 +20,7 @@ class PortScan(object):
 
         if utils.resume(self.options, self.module_name):
             utils.print_info(
-                "Detect is already done. use '-f' options to force rerun the module")
+                "It's already done. use '-f' options to force rerun the module")
             return
         self.is_direct = utils.is_direct_mode(options, require_input=True)
 

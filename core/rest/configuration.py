@@ -19,8 +19,12 @@ class Configurations(Resource):
                         )
 
     def get(self):
-        # print(current_path)
+        # prevent reading secret from config file
+        secret_things = ['USERNAME','PASSWORD', 'BOT_TOKEN', 'GITHUB_API_KEY']
         options = utils.reading_json(current_path + '/storages/options.json')
+        for item in secret_things:
+            del options[item]
+
         return options
 
     @local_only
@@ -29,10 +33,24 @@ class Configurations(Resource):
         # global options
         data = Configurations.parser.parse_args()
         options = data['options']
-        
-        utils.just_write(current_path + '/storages/options.json', options, is_json=True)
-        utils.print_info("Cleasning activities log")
 
+        utils.just_write(current_path + '/storages/options.json', options, is_json=True)
+
+        if options.get('FORCE') == "False":
+            old_log = options['WORKSPACE'] + '/log.json'
+            if utils.not_empty_file(old_log) and utils.reading_json(old_log):
+                utils.print_info(
+                    "It's already done. use '-f' options to force rerun the module")
+
+                raw_activities = utils.reading_json(
+                    options['WORKSPACE'] + '/log.json')
+                utils.just_write(current_path + '/storages/activities.json',
+                                 raw_activities, is_json=True)
+
+                return options
+
+        
+        utils.print_info("Cleasning activities log")
         #Create skeleton activities
         commands = utils.reading_json(current_path + '/storages/commands.json')
         raw_activities = {}
