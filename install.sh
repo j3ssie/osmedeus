@@ -50,7 +50,7 @@ cat $PLUGINS_PATH/wordlists/dirseach-dicc.txt $PLUGINS_PATH/wordlists/top10000.t
 
 install_banner "vulners nse"
 # Install vulners nse script
-[[ -f /usr/share/nmap/scripts/vulners.nse ]] ||  wget -q -O $PLUGINS_PATH/vulners.nse https://raw.githubusercontent.com/vulnersCom/nmap-vulners/master/vulners.nse
+[[ -f $PLUGINS_PATH/vulners.nse ]] ||  wget -q -O $PLUGINS_PATH/vulners.nse https://raw.githubusercontent.com/vulnersCom/nmap-vulners/master/vulners.nse
 
 
 install_banner "nmap bootstrap"
@@ -172,11 +172,11 @@ cd $CWD
 # git clone https://github.com/maurosoria/dirsearch
 pip install wfuzz
 
-install_banner "dirhunt"
-git clone https://github.com/Nekmo/dirhunt
-cd dirhunt
-python3 setup.py install
-cd $CWD
+# install_banner "dirhunt"
+# git clone https://github.com/Nekmo/dirhunt
+# cd dirhunt
+# python3 setup.py install
+# cd $CWD
 
 install_banner "CORStest"
 cd $PLUGINS_PATH
