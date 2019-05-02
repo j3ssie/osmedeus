@@ -31,7 +31,7 @@ class Authentication(Resource):
                         help="This field cannot be left blank!"
                         )
 
-    @local_only
+    #@local_only
     def post(self):
         # global options
         data = Authentication.parser.parse_args()

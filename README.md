@@ -30,6 +30,8 @@ cd Osmedeus
 ```
 This install only focus on Kali linux, check more install on [Wiki page](https://github.com/j3ssie/Osmedeus/wiki)
 
+# Using Docker 
+Check out [docker-osmedeus](https://github.com/mablanco/docker-osmedeus) by [mabnavarrete](https://twitter.com/mabnavarrete) for docker installation and this [wiki](https://github.com/j3ssie/Osmedeus/wiki/REST-API) for remote access
 
 # Features
 - [x] Subdomain Scan.

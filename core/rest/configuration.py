@@ -1,7 +1,7 @@
 import os
 import json
 from flask_restful import Api, Resource, reqparse
-
+from flask_jwt_extended import jwt_required
 from .decorators import local_only
 import utils
 '''
@@ -18,6 +18,7 @@ class Configurations(Resource):
                         help="This field cannot be left blank!"
                         )
 
+    @jwt_required
     def get(self):
         # prevent reading secret from config file
         secret_things = ['USERNAME','PASSWORD', 'BOT_TOKEN', 'GITHUB_API_KEY']
