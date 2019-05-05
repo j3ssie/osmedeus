@@ -3,7 +3,8 @@ import subprocess, requests
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import utils
-
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 headers = {"User-Agent": "Osmedeus/v1.3", "Accept": "*/*",
            "Content-type": "application/json", "Connection": "close"}
 
@@ -57,7 +58,7 @@ def get_commands(options, module):
     headers['Authorization'] = options['JWT']
     url = options['REMOTE_API'] + "/api/routines?module=" + module
 
-    r = requests.get(url, headers=headers)
+    r = requests.get(url, verify=False, headers=headers)
     if r.status_code == 200:
         return json.loads(r.text)
 
@@ -70,9 +71,11 @@ def send_cmd(options, cmd, output_path='', std_path='', module='', nolog=False):
         return
 
     headers['Authorization'] = options['JWT']
-    # url = options['REMOTE_API'] + "/api/activities"
     json_cmd = {}
-    json_cmd['cmd'] = cmd
+    if options['PROXY'] != "None" or options['PROXY_FILE'] != "None":
+        json_cmd['cmd'] = options['PROXY_CMD'].strip() + " " + cmd
+    else: 
+        json_cmd['cmd'] = cmd
     json_cmd['output_path'] = output_path
     json_cmd['std_path'] = std_path
     json_cmd['module'] = module
@@ -88,7 +91,8 @@ def send_JSON(options, json_body, token=''):
     url = options['REMOTE_API'] + "/api/cmd"
     #ignore the timeout
     try:
-        r = requests.post(url, headers=headers, json=json_body, timeout=0.1)
+        r = requests.post(url, verify=False, headers=headers,
+                          json=json_body, timeout=0.1)
     except:
         pass
 

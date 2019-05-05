@@ -22,6 +22,7 @@ install_banner "git, nmap, masscan, chromium, npm, golang"
 [ -x "$(command -v chromium)" ] || sudo $PACKGE_MANAGER install chromium -y
 [ -x "$(command -v npm)" ] || sudo $PACKGE_MANAGER install npm -y
 [ -x "$(command -v go)" ] || sudo $PACKGE_MANAGER install golang -y
+[ -x "$(command -v proxychains)" ] || sudo $PACKGE_MANAGER install proxychains -y
 
 #### Download stuff directly
 install_banner "wordlists"
@@ -63,6 +64,8 @@ install_banner "providers-data for subdomain takeover"
 
 ##
 chmod +x osmedeus.py
+pip3 install -r requirements.txt
+
 ### adding gopath if GOPATH not in default shellrc
 if ! grep -Fxq "GOPATH" "$DEFAULT_SHELL"
 then

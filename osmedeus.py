@@ -56,7 +56,9 @@ def parsing_argument(args):
         utils.set_config(options)
         options['JWT'] = utils.get_jwt(options)
     except:
-        utils.print_bad("Fail to set config, Please check Flask API !!!")
+        utils.print_bad("Fail to set config, Something went from with Flask API !!!")
+        utils.print_bad(
+            "Visit this page for common issue: https://github.com/j3ssie/Osmedeus/wiki/Common-Issues")
         sys.exit(-1)
 
     if options['TARGET_LIST'] != "None":
@@ -94,62 +96,63 @@ def single_target(options):
         else:
             routine.normal(options)
 
-def list_module():
-    print(''' 
-List module
-===========
-subdomain   - Scanning subdomain and subdomain takerover
-portscan    - Screenshot and Scanning service for list of domain
-brute       - Do brute force on service of target
-vuln        - Scanning version of services and checking vulnerable service
-git         - Scanning for git repo
-burp        - Scanning for burp state
-dirb        - Do directory search on the target
-ip          - IP discovery on the target
 
-        ''')
-    sys.exit(0)
-
-def update():
-    execute.run1('git fetch --all && git reset --hard origin/master && ./install.sh')
-    sys.exit(0)
 
 def main():
     config.banner()
-    parser = argparse.ArgumentParser(description="Collection tool for automatic pentesting")
+    parser = argparse.ArgumentParser(description="Collection tool for automatic pentesting", add_help=False)
     parser.add_argument('-c', '--config', action='store', dest='config', help='config file', default='core/config.conf')
     parser.add_argument('-m', '--module', action='store', dest='module', help='specific module to action')
+
     parser.add_argument('-i', '--input', action='store', dest='input', help='input for specific module')
+    parser.add_argument('-I', '--input_file', action='store', dest='inputfile', help='input for specific module')
     parser.add_argument('-t', '--target', action='store', dest='target', help='target')
+    parser.add_argument('-T', '--target_list', action='store',
+                        dest='targetlist', help='list of target')
+
     parser.add_argument('--company', action='store', dest='company', help='Company name')
     parser.add_argument('-b', '--burp', action='store', dest='burp', help='burp http file')
     parser.add_argument('-g', '--git', action='store', dest='git', help='git repo to scan')
-    parser.add_argument('-T', '--target_list', action='store', dest='targetlist', help='list of target')
     parser.add_argument('-o', '--output', action='store', dest='output', help='output')
     parser.add_argument('-w', '--workspace', action='store', dest='workspace', help='Domain')
-    parser.add_argument('--more', action='store', dest='more', help='append more command for some tools')
 
     parser.add_argument('-M', '--list_module', action='store_true', help='List all module')
     parser.add_argument('-v', '--verbose', action='store_true', help='show verbose output')
-    parser.add_argument('-f', '--force', action='store_true', help='force to run the module again if output exists')
 
+    parser.add_argument('-f', '--force', action='store_true', help='force to run the module again if output exists')
     parser.add_argument('-q', '--quick', action='store_true', help='run this tool with quick routine', default=True)
     parser.add_argument('-s', '--slow', action='store_true', help='run this tool with slow routine', default=False)
     
     parser.add_argument('--mode', action='store_true', help='Choose mode to run normal routine(quick or slow)', default='quick')
     parser.add_argument('--update', action='store_true', help='update lastest from git')
+
+
+    parser.add_argument('--remote', action='store', dest='remote', default="https://127.0.0.1:5000", 
+                    help='remote address for API')
+
+    parser.add_argument('--auth', action='store', dest='auth', help='Specify auth tication e.g: --auth="username:password" ')
+
+    parser.add_argument('--proxy', action='store', dest='proxy', help='Specify proxy --proxy="type://host:port" e.g: --proxy="socks4://127.0.0.1:9050" ')
+
+    parser.add_argument('--proxy_file', action='store', dest='proxy_file',
+                        help='Specify proxychains config file --proxy_file=proxychains.conf')
+
     parser.add_argument('--client', action='store_true', help='just run client stuff in case you ran the flask server before')
     parser.add_argument('--debug', action='store_true', help='just for debug purpose')
+    parser.add_argument('-h', '--help', dest='help', action='store_true', help='Display help messaage')
 
     args = parser.parse_args()
     if len(sys.argv) == 1:
-        list_module()
+        config.custom_help()
         sys.exit(0)
 
+    if args.help:
+        config.custom_help()
+
     if args.list_module:
-        list_module()
+        config.list_module()
     if args.update:
-        update()
+        config.update()
 
     parsing_argument(args)
 

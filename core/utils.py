@@ -5,7 +5,8 @@ import requests
 import time
 from pprint import pprint
 from urllib.parse import quote, unquote
-
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 #################
 
 # Console colors
@@ -56,7 +57,8 @@ def print_bad(text):
 
 
 def check_output(output):
-	print('{1}--==[ Check the output: {2}{0}{1}'.format(output, G, P))
+    if str(output) != '' and str(output) != "None":
+        print('{1}--==[ Check the output: {2}{0}{1}'.format(output, G, P))
 
 #################
 
@@ -176,7 +178,7 @@ def resume(options, module):
     try:
         #checking final report for the module
         url = options['REMOTE_API'] + "/api/module/{0}".format(options['OUTPUT']) 
-        r = requests.get(url, headers=headers)
+        r = requests.get(url, verify=False, headers=headers)
         if r.status_code == 200:
             reports = json.loads(r.text).get('reports')
             for item in reports:
@@ -185,7 +187,7 @@ def resume(options, module):
             
         #checking for each command of module
         url = options['REMOTE_API'] + "/api/routines?module=" + module
-        r = requests.get(url, headers=headers)
+        r = requests.get(url, verify=False, headers=headers)
         if r.status_code == 200:
             routines = json.loads(r.text).get('routines')
 
@@ -217,13 +219,13 @@ def checking_done(options, cmd=None, module=None, get_json=False):
     url = options['REMOTE_API'] + "/api/activities"
 
     if cmd:
-        r = requests.post(url, headers=headers, json={'cmd': cmd})
+        r = requests.post(url, verify=False, headers=headers, json={'cmd': cmd})
     if module:
-        r = requests.post(url + "?module=" + module, headers=headers, json={})
+        r = requests.post(url + "?module=" + module, verify=False, headers=headers, json={})
 
     if r.status_code == 401:
         if cmd:
-            r = requests.post(url, headers=headers, json={'cmd': cmd})
+            r = requests.post(url, verify=False, headers=headers, json={'cmd': cmd})
         if module:
             r = requests.post(url + "?module=" + module,
                               headers=headers, json={})
@@ -240,7 +242,7 @@ def checking_done(options, cmd=None, module=None, get_json=False):
 def force_done(options, module):
     headers['Authorization'] = options['JWT']
     url = options['REMOTE_API'] + "/api/activities?module=" + module
-    r = requests.put(url, headers=headers)
+    r = requests.put(url, verify=False, headers=headers)
     
 
 def looping(options, cmd=None, module=None, times=5):
@@ -256,13 +258,16 @@ def looping(options, cmd=None, module=None, times=5):
 def update_activities(options, data):
     headers['Authorization'] = options['JWT']
     url = options['REMOTE_API'] + "/api/activities"
-    data = quote(str(data))
-    # r = requests.patch(url, headers={"User-Agent": "Osmedeus/v1.0"}, data={'data': data}, proxies=PROXY)
-    r = requests.patch(url, headers=headers, data={'data': data})
+    non_json_headers = headers
+    non_json_headers['Content-Type'] = "text/html; charset=utf-8"
+    # data = quote(str(data))
+    r = requests.patch(url, proxies=PROXY, verify=False,
+                       headers=non_json_headers, data={'data': data})
+    r = requests.patch(
+    	url, verify=False, headers=non_json_headers, data={'data': data})
+
 
 #just for conclusion
-
-
 def save_all_cmd(options, logfile, module=None):
     headers['Authorization'] = options['JWT']
     url = options['REMOTE_API'] + "/api/activities"
@@ -270,7 +275,7 @@ def save_all_cmd(options, logfile, module=None):
     if module:
         url += '?module=' + module
 
-    r = requests.get(url, headers=headers)
+    r = requests.get(url, verify=False, headers=headers)
     with open(logfile, 'w+') as l:
         l.write(r.text)
     # commands = json.loads(r.text)['commands']
@@ -282,7 +287,7 @@ def get_jwt(options):
     password = options['PASSWORD']
     #set workspaces
     data = {'username': username, 'password': password}
-    r = requests.post(url, headers=headers, json=data)
+    r = requests.post(url, verify=False, headers=headers, json=data)
 
     if r.status_code == 200:
         if json.loads(r.text).get('access_token'):
@@ -296,7 +301,7 @@ def set_config(options):
     url = options['REMOTE_API'] + "/api/config"
     #set workspaces
     data = {'options': options}
-    r = requests.post(url, headers=headers, json=data)
+    r = requests.post(url, verify=False, headers=headers, json=data)
     return r
 
 

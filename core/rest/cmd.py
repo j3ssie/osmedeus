@@ -33,7 +33,7 @@ class Cmd(Resource):
 
     parser.add_argument('module',
                         type=str,
-                        required=True
+                        required=False
                         )
 
     parser.add_argument('nolog',

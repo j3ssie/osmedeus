@@ -32,7 +32,6 @@ class GitScan(object):
 
     def initial(self):
         self.run()
-        self.gitrob()
 
     def run(self):
         commands = execute.get_commands(self.options, self.module_name).get('routines')
@@ -46,14 +45,4 @@ class GitScan(object):
         #just save commands
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(self.options, logfile)
-
-    def gitrob(self):
-        utils.print_good('Starting gitrob')
-        really_target = utils.replace_argument(self.options, '$TARGET').split('/')[3] # only get organization name
-
-        cmd = '$GO_PATH/gitrob -save $WORKSPACE/gitscan/$TARGET-gitrob -threads 10 -github-access-token $GITHUB_API_KEY {0}'.format(really_target)
-        cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/gitscan/$TARGET-gitrob')
-        std_path = utils.replace_argument(self.options, '$WORKSPACE/gitscan/std-$TARGET-gitrob.std')
-        execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
 

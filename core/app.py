@@ -100,15 +100,30 @@ if __name__ == '__main__':
     parser.add_argument("-b", "--bind", action="store", dest='bind', default="127.0.0.1")
     parser.add_argument("-p", "--port", action="store", dest='port', default="5000")
     parser.add_argument("--debug", action="store_true", help='just for debug purpose')
+    parser.add_argument("--nossl", action="store_true", help='Use plaintext')
+    # turn on this you really want to run remote but I'm not recommend
+    parser.add_argument("--remote", action="store_true", help='Allow bypass local protection decorators')
     args = parser.parse_args()
 
     host = str(args.bind)
     port = int(args.port)
     debug = args.debug
 
+    if args.remote:
+        print(" * Warning: You're allow to bypass local protection")
+        app.config['REMOTE'] = True
+    else:
+        app.config['REMOTE'] = False
+
     if not args.debug:
         print(" * Logging: off")
         log = logging.getLogger('werkzeug')
         log.setLevel(logging.ERROR)
 
-    app.run(host=host, port=port, debug=debug)
+    #choose to use SSL or not
+    if args.nossl:
+        app.run(host=host, port=port, debug=debug)
+    else:
+        cert_path = current_path + '/certs/cert.pem'
+        key_path = current_path + '/certs/key.pem'
+        app.run(host=host, port=port, debug=debug, ssl_context=(cert_path, key_path))

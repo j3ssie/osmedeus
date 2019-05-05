@@ -37,8 +37,10 @@ class Modules(Resource):
             if "report" in self.commands[k].keys():
                 report = utils.replace_argument(
                     self.options, self.commands[k].get("report"))
-                report_item = {"module": k, "report": report.replace(
-                    self.options['WORKSPACE'], ws_name)}
-                reports.append(report_item)
+
+                report_item = {"module": k, "report": report}
+                if utils.not_empty_file(report_item['report']):
+                    report_item['report'] = report.replace(self.options['WORKSPACE'], ws_name)
+                    reports.append(report_item)
 
         return {'reports': reports}

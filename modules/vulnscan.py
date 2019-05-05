@@ -58,7 +58,7 @@ class VulnScan(object):
         # Scan every 5 IP at time Increse if you want
         for part in utils.chunks(ip_list, 2):
             for ip in part:
-                cmd = 'sudo nmap -T4 -Pn -n -sSV -p- {0} --script $PLUGINS_PATH/vulners.nse --oA $WORKSPACE/vulnscan/{0}-nmap'.format(
+                cmd = 'sudo nmap --open -T4 -Pn -n -sSV -p- {0} --script $PLUGINS_PATH/vulners.nse --oA $WORKSPACE/vulnscan/{0}-nmap'.format(
                     ip.strip())
 
                 cmd = utils.replace_argument(self.options, cmd)

@@ -31,8 +31,8 @@ class DirBrute(object):
 
     def initial(self):
         self.wfuzz()
+        self.quick_gobuster()
         self.gobuster()
-
 
     def wfuzz(self):
         utils.print_good('Starting wfuzz')
@@ -40,7 +40,8 @@ class DirBrute(object):
             domains = utils.just_read(self.is_direct).splitlines()
         else:
             #matching IP with subdomain
-            main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
+            main_json = utils.reading_json(utils.replace_argument(
+                self.options, '$WORKSPACE/$COMPANY.json'))
             domains = [x.get('Domain') for x in main_json['Subdomains']]
 
         if self.options['DEBUG'] == 'True':
@@ -64,6 +65,57 @@ class DirBrute(object):
 
                 std_path = utils.replace_argument(
                     self.options, '$WORKSPACE/directory/quick/std-{0}-wfuzz.std'.format(strip_domain))
+
+                execute.send_cmd(self.options, cmd, output_path,
+                                 std_path, self.module_name)
+
+                # time.sleep(0.5)
+                #set status to done because this gonna will be submit when all command was done
+                custom_logs['content'].append(
+                    {"cmd": cmd, "std_path": std_path, "output_path": output_path, "status": "Done"})
+
+            #just wait couple seconds and continue but not completely stop the routine
+            time.sleep(20)
+
+        #submit a log
+        utils.print_info('Update activities log')
+        utils.update_activities(self.options, str(custom_logs))
+        #just save commands
+        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
+        utils.save_all_cmd(self.options, logfile)
+
+    def quick_gobuster(self):
+        utils.print_good('Starting gobuster for short wordlist')
+        if self.is_direct:
+            domains = utils.just_read(self.is_direct).splitlines()
+        else:
+            #matching IP with subdomain
+            main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
+            domains = [x.get('Domain') for x in main_json['Subdomains']]
+
+        if self.options['DEBUG'] == 'True':
+            domains = domains[:5]
+
+        custom_logs = {"module": self.module_name, "content": []}
+
+        for part in utils.chunks(domains, 3):
+            for domain in part:
+
+                #just strip everything to save local, it won't affect the result
+                strip_domain = domain.replace(
+                    'http://', '').replace('https://', '').replace('/', '-')
+
+                cmd = '$GO_PATH/gobuster -k -q -e -x php,jsp,aspx,html,json -w $PLUGINS_PATH/wordlists/quick-content-discovery.txt -t 100 -o $WORKSPACE/directory/{1}-gobuster.txt -s 200,301,307  -u "{0}" '.format(
+                    domain.strip(), strip_domain)
+
+
+                cmd = utils.replace_argument(self.options, cmd)
+
+                output_path = utils.replace_argument(
+                    self.options, '$WORKSPACE/directory/quick/{0}-gobuster.txt'.format(strip_domain))
+
+                std_path = utils.replace_argument(
+                    self.options, '$WORKSPACE/directory/quick/std-{0}-gobuster.std'.format(strip_domain))
 
                 execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
 
@@ -92,7 +144,7 @@ class DirBrute(object):
         domains = [x.get('Domain') for x in main_json['Subdomains']]
 
         for domain in domains:
-            cmd = '$GO_PATH/gobuster -k -q -e -fw -x php,jsp,aspx,html,json -w $PLUGINS_PATH/wordlists/dir-all.txt -t 100 -o $WORKSPACE/directory/$TARGET-gobuster.txt  -u "$TARGET" '
+            cmd = '$GO_PATH/gobuster -k -q -e -fw -x php,jsp,aspx,html,json -w $PLUGINS_PATH/wordlists/dir-all.txt -t 100 -o $WORKSPACE/directory/$TARGET-gobuster.txt -s 200,301,307 -u "$TARGET" '
 
             cmd = utils.replace_argument(self.options, cmd)
             output_path = utils.replace_argument(
