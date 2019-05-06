@@ -261,8 +261,8 @@ def update_activities(options, data):
     non_json_headers = headers
     non_json_headers['Content-Type'] = "text/html; charset=utf-8"
     # data = quote(str(data))
-    r = requests.patch(url, proxies=PROXY, verify=False,
-                       headers=non_json_headers, data={'data': data})
+    # r = requests.patch(url, proxies=PROXY, verify=False,
+    #                    headers=non_json_headers, data={'data': data})
     r = requests.patch(
     	url, verify=False, headers=non_json_headers, data={'data': data})
 
