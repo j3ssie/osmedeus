@@ -1,4 +1,4 @@
-#### WARNING: You're need to create your own cert by this command.
+#### WARNING: You're need to create your own cert.
 
 Delete cert.pem and key.pem in this folder and create your own cert by this command below.
 

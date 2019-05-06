@@ -46,7 +46,7 @@
 
 #### Directory search
   * [dirhunt](https://github.com/Nekmo/dirhunt)
-  * [dirsearch](https://github.com/maurosoria/dirsearch)
+  * [wfuzz](https://github.com/xmendez/wfuzz)
 
 #### Bruteforce services
   * [brutespray](https://github.com/x90skysn3k/brutespray)

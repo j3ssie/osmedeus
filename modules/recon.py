@@ -129,7 +129,7 @@ class Recon(object):
         final_ip = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
 
-        if not utils.not_empty_file(final_ip):
+        if utils.not_empty_file(final_ip):
             return
 
         cmd = '$PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -t A -o S -w $WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt $WORKSPACE/subdomain/final-$OUTPUT.txt'

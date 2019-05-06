@@ -276,17 +276,20 @@ def parsing_config(config_path, args):
         else:
             ip = None
 
-    #getting proxy from args
-    proxy = args.proxy if args.proxy else None
-    proxy_file = args.proxy_file if args.proxy_file else None
+    try:
+        #getting proxy from args
+        proxy = args.proxy if args.proxy else None
+        proxy_file = args.proxy_file if args.proxy_file else None
 
-    config.set('Proxy', 'proxy', str(proxy))
-    config.set('Proxy', 'proxy_file', str(proxy_file))
+        config.set('Proxy', 'proxy', str(proxy))
+        config.set('Proxy', 'proxy_file', str(proxy_file))
 
-    if config['Proxy']['proxy_cmd'] == 'None':
-        #only works for Kali proxychains, change it if you on other OS
-        proxy_cmd = "proxychains -f {0}".format(proxy_file)
-        config.set('Proxy', 'proxy_cmd', str(proxy_cmd))
+        if config['Proxy']['proxy_cmd'] == 'None':
+            #only works for Kali proxychains, change it if you on other OS
+            proxy_cmd = "proxychains -f {0}".format(proxy_file)
+            config.set('Proxy', 'proxy_cmd', str(proxy_cmd))
+    except:
+        utils.print_info("Your config file seem to be outdated, Backup it and delete it to regenerate the new one")
 
 
     config.set('Target', 'input', str(direct_input))
@@ -339,7 +342,12 @@ def parsing_config(config_path, args):
 
     ######
     #parsing proxy stuff
-    proxy_parsing(options)
+    if options.get('PROXY') or options.get('PROXY_FILE'):
+        proxy_parsing(options)
+    else:
+        #just for the old config
+        options['PROXY'] = "None"
+        options['PROXY_FILE'] = "None"
 
     return options
 
