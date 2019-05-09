@@ -30,12 +30,12 @@ class DirBrute(object):
         })
 
     def initial(self):
-        self.wfuzz()
+        self.dirsearch()
         self.quick_gobuster()
         self.gobuster()
 
-    def wfuzz(self):
-        utils.print_good('Starting wfuzz')
+    def dirsearch(self):
+        utils.print_good('Starting dirsearch')
         if self.is_direct:
             domains = utils.just_read(self.is_direct).splitlines()
         else:
@@ -55,16 +55,17 @@ class DirBrute(object):
                 strip_domain = domain.replace(
                     'http://', '').replace('https://', '').replace('/', '-')
 
-                cmd = "wfuzz -f $WORKSPACE/directory/quick/{1}-wfuzz.txt,raw -c -w $PLUGINS_PATH/wordlists/quick-content-discovery.txt -t 100 --sc 200,307 -u '{0}/FUZZ' | tee $WORKSPACE/directory/quick/std-{1}-wfuzz.std".format(
-                    domain.strip(), strip_domain)
+                cmd = "python3 $PLUGINS_PATH/dirsearch/dirsearch.py -b -e php,zip,aspx,js --wordlist=$PLUGINS_PATH/wordlists/really-quick.txt --simple-report=$WORKSPACE/directory/quick/{1}-dirsearch.txt -t 50 -u {0}".format(
+                    domain, strip_domain)
 
+ 
                 cmd = utils.replace_argument(self.options, cmd)
 
                 output_path = utils.replace_argument(
-                    self.options, '$WORKSPACE/directory/quick/{0}-wfuzz.txt'.format(strip_domain))
+                    self.options, '$WORKSPACE/directory/quick/{0}-dirsearch.txt'.format(strip_domain))
 
                 std_path = utils.replace_argument(
-                    self.options, '$WORKSPACE/directory/quick/std-{0}-wfuzz.std'.format(strip_domain))
+                    self.options, '$WORKSPACE/directory/quick/std-{0}-dirsearch.std'.format(strip_domain))
 
                 execute.send_cmd(self.options, cmd, output_path,
                                  std_path, self.module_name)
@@ -79,7 +80,8 @@ class DirBrute(object):
 
         #submit a log
         utils.print_info('Update activities log')
-        utils.update_activities(self.options, str(custom_logs))
+        # utils.update_activities(self.options, str(custom_logs))
+        utils.force_done(self.options, self.module_name)
         #just save commands
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(self.options, logfile)
@@ -128,7 +130,8 @@ class DirBrute(object):
         
         #submit a log
         utils.print_info('Update activities log')
-        utils.update_activities(self.options, str(custom_logs))
+        utils.force_done(self.options, self.module_name)
+        # utils.update_activities(self.options, str(custom_logs))
         #just save commands
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(self.options, logfile)

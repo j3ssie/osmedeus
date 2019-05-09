@@ -33,6 +33,7 @@ from rest.logs import Logs
 from rest.modules import Modules
 from rest.routines import Routines
 from rest.bash_render import BashRender
+from rest.save import Save
 
 current_path = os.path.dirname(os.path.realpath(__file__))
 ############
@@ -74,6 +75,7 @@ api.add_resource(Workspace, '/api/workspace/<string:workspace>')
 api.add_resource(Logs, '/api/logs/<string:workspace>')
 api.add_resource(Modules, '/api/module/<string:workspace>')
 api.add_resource(Routines, '/api/routines')
+api.add_resource(Save, '/api/save')
 api.add_resource(BashRender, '/stdout/<path:filename>')
 
 

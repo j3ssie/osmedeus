@@ -160,7 +160,7 @@ def is_direct_mode(options, require_input=False):
             if not_empty_file(options['INPUT']):
                 return options['INPUT']
             else:
-                print_bad("You you want to specific -i options")
+                print_bad("You you want to specific -i options or file not found.")
                 sys.exit(-1)
         else:
             return True
@@ -263,8 +263,7 @@ def update_activities(options, data):
     # data = quote(str(data))
     # r = requests.patch(url, proxies=PROXY, verify=False,
     #                    headers=non_json_headers, data={'data': data})
-    r = requests.patch(
-    	url, verify=False, headers=non_json_headers, data={'data': data})
+    r = requests.patch(url, verify=False, headers=non_json_headers, data={'data': data})
 
 
 #just for conclusion

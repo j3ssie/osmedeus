@@ -38,11 +38,11 @@ mkdir -p $PLUGINS_PATH/wordlists/
 [[ -f $PLUGINS_PATH/wordlists/raft-large-directories.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/raft-large-directories.txt	https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/raft-large-directories.txt
 
 
-[[ -f $PLUGINS_PATH/wordlists/dirseach-dicc.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/dirseach-dicc.txt 	https://raw.githubusercontent.com/maurosoria/dirsearch/master/db/dicc.txt 
+[[ -f $PLUGINS_PATH/wordlists/really-quick.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/really-quick.txt 	https://raw.githubusercontent.com/maurosoria/dirsearch/master/db/dicc.txt 
 
 [[ -f $PLUGINS_PATH/wordlists/top10000.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/top10000.txt 	https://raw.githubusercontent.com/danielmiessler/RobotsDisallowed/master/top10000.txt
 
-cat $PLUGINS_PATH/wordlists/dirseach-dicc.txt $PLUGINS_PATH/wordlists/top10000.txt > $PLUGINS_PATH/wordlists/quick-content-discovery.txt
+cat $PLUGINS_PATH/wordlists/really-quick.txt $PLUGINS_PATH/wordlists/top10000.txt > $PLUGINS_PATH/wordlists/quick-content-discovery.txt
 
 
 ## technology signature
@@ -170,10 +170,10 @@ git clone https://github.com/RhinoSecurityLabs/SleuthQL
 pip install bs4
 cd $CWD
 
-# cd $PLUGINS_PATH
-# install_banner "dirsearch"
-# git clone https://github.com/maurosoria/dirsearch
-pip install wfuzz
+cd $PLUGINS_PATH
+install_banner "dirsearch"
+git clone https://github.com/maurosoria/dirsearch
+cd $CWD
 
 # install_banner "dirhunt"
 # git clone https://github.com/Nekmo/dirhunt
