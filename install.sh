@@ -198,8 +198,6 @@ cd JSParser/
 python setup.py install
 
 
-# run Osmedeus healthcheck
-./osmedeus.py -m healthcheck
 
 
 

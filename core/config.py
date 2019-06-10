@@ -58,19 +58,26 @@ def update():
 
 def list_module():
     print(''' 
-List module
+{2}List module{1}
 ===========
 subdomain   - Scanning subdomain and subdomain takerover
 portscan    - Screenshot and Scanning service for list of domain
-brute       - Do brute force on service of target
 vuln        - Scanning version of services and checking vulnerable service
-git         - Scanning for git repo
-burp        - Scanning for burp state
 dirb        - Do directory search on the target
-ip          - IP discovery on the target
+git         - Scanning for git repo
 
-        ''')
+{2}[*] Usage{1}
+===========
+python3 osmedeus.py [-t <result_folder>] -m <module_name> -i <your_target>
+
+{2}[*] Example command{1}
+===========
+python3 osmedeus.py -m portscan -i "1.2.3.4/24"
+python3 osmedeus.py -t sample -m vuln -i "1.2.3.4/24"
+python3 osmedeus.py -t sample2 -m dirb -I /tmp/list_of_hosts.txt
+        '''.format(G, GR, B))
     sys.exit(0)
+
 
 # Custom help message
 def custom_help():
@@ -84,14 +91,16 @@ python3 osmedeus.py -T <list_of_targets>
 {2}Advanced Usage{1}
 ==============
 {0}[*] List all module{1}
-python3 osmedeus.py -M 
+python3 osmedeus.py -M
 
 {0}[*] Running with specific module{1}
-python3 osmedeus.py -t <result_folder> -m <module_name> -i <your_target>
+python3 osmedeus.py [-t <result_folder>] -m <module_name> -i <your_target>
+python3 osmedeus.py [-t <result_folder>] -m <module_name> -I <tagets_list_file>
 
 {0}[*] Example command{1}
-python3 osmedeus.py -t sample2 -m vuln -i hosts.txt
-python3 osmedeus.py -t sample2 -m dirb -i /tmp/list_of_hosts.txt
+python3 osmedeus.py -m portscan -i "1.2.3.4/24"
+python3 osmedeus.py -t sample -m vuln -i "1.2.3.4/24"
+python3 osmedeus.py -t sample2 -m dirb -I /tmp/list_of_hosts.txt
 
 {2}Remote Options{1}
 ==============
@@ -105,10 +114,10 @@ python3 osmedeus.py -t sample2 -m dirb -i /tmp/list_of_hosts.txt
 ==============
 --update              Update lastest from git
 
--c CONFIG, --config CONFIG    
+-c CONFIG, --config CONFIG
                       Specify config file (default: {2}core/config.conf{1})
 
--w WORKSPACE, --workspace WORKSPACE 
+-w WORKSPACE, --workspace WORKSPACE
                       Custom workspace folder
 
 -f, --force           force to run the module again if output exists
@@ -135,7 +144,6 @@ def proxy_parsing(options):
         proxy_parsed = urllib.parse.urlsplit(options['PROXY'])
 
         scheme = proxy_parsed.scheme
-        host = proxy_parsed.netloc.split(':')[0]
         port = proxy_parsed.netloc.split(':')[1]
 
         proxy_element = "\n" + scheme + " " + host + " " + port

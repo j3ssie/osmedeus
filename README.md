@@ -4,8 +4,8 @@
     <a href="https://github.com/j3ssie/Osmedeus"><img alt="python" src="https://img.shields.io/badge/python-3.6%2B-blue.svg"></a>
     <a href=""><img alt="Software License" src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square"></a>
     <a href=""><img alt="tested" src="https://img.shields.io/badge/tested-Kali%20Linux-green.svg"></a>
-    <a href="https://github.com/j3ssie/Osmedeus"><img alt="Release" src="https://img.shields.io/badge/version-1.3-red.svg"></a>
-    <a href="https://youtu.be/8L5BAyyrNc0"><img alt="Demo" src="https://img.shields.io/badge/demo-youtube-blue.svg"></a>
+    <a href="https://github.com/j3ssie/Osmedeus"><img alt="Release" src="https://img.shields.io/badge/version-1.4-red.svg"></a>
+    <a href="https://youtu.be/qWb78SYWLn4"><img alt="Demo" src="https://img.shields.io/badge/demo-youtube-blue.svg"></a>
   </p>
 </p>
 
@@ -50,6 +50,55 @@ Check out [docker-osmedeus](https://github.com/mablanco/docker-osmedeus) by [mab
 - [x] React [Web UI](https://github.com/j3ssie/Osmedeus/wiki/Web-UI).
 - [x] Support Continuous Scan.
 - [x] Slack notifications.
+
+# More options
+
+```
+Basic Usage
+===========
+python3 osmedeus.py -t <your_target>
+python3 osmedeus.py -T <list_of_targets>
+
+Advanced Usage
+==============
+[*] List all module
+python3 osmedeus.py -M
+
+[*] Running with specific module
+python3 osmedeus.py -t <result_folder> -m <module_name> -i <your_target>
+python3 osmedeus.py [-t <result_folder>] -m <module_name> -I <tagets_list_file>
+
+[*] Example command
+python3 osmedeus.py -m portscan -i "1.2.3.4/24"
+python3 osmedeus.py -t sample2 -m vuln -i "1.2.3.4/24"
+python3 osmedeus.py -t sample2 -m dirb -I /tmp/list_of_hosts.txt
+
+Remote Options
+==============
+--remote REMOTE       Remote address for API, (default: https://127.0.0.1:5000)
+--auth AUTH           Specify auth tication e.g: --auth="username:password"
+                      See your config file for more detail (default: core/config.conf)
+
+--client              just run client stuff in case you ran the flask server before
+
+More options
+==============
+--update              Update lastest from git
+
+-c CONFIG, --config CONFIG
+                      Specify config file (default: core/config.conf)
+
+-w WORKSPACE, --workspace WORKSPACE
+                      Custom workspace folder
+
+-f, --force           force to run the module again if output exists
+-v, --verbose         show verbose output
+-q, --quick           run this tool with quick routine
+-s, --slow            run this tool with slow routine
+
+--debug               Just for debug purpose
+
+```
 
 # Demo
 [![asciicast](https://asciinema.org/a/230164.svg)](https://asciinema.org/a/230164)

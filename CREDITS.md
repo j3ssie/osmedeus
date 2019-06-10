@@ -16,6 +16,7 @@
 
 #### Screenshot the target
   * [aquaton](https://github.com/michenriksen/aquatone)
+  * [gowitness](https://github.com/sensepost/gowitness)
 
 #### IP Discovery
   * [IPOsint](https://github.com/j3ssie/IPOsint) by me :)
@@ -33,6 +34,7 @@
 #### Vulnerable Scan and beautify html report
   * [nmap-vulners](https://github.com/vulnersCom/nmap-vulners)
   * [nmap-bootstrap-xsl](https://github.com/honze-net/nmap-bootstrap-xsl/)
+  * [nmap-parsing](https://github.com/laconicwolf/Nmap-Scan-to-CSV/blob/master/nmap_xml_parser.py)
 
 #### Git repo scanning
   * [gitleaks](https://github.com/zricethezav/gitleaks)
@@ -45,7 +47,7 @@
   * [LinkFinder](https://github.com/GerbenJavado/LinkFinder)
 
 #### Directory search
-  * [dirhunt](https://github.com/Nekmo/dirhunt)
+  * [dirsearch](https://github.com/maurosoria/dirsearch)
   * [wfuzz](https://github.com/xmendez/wfuzz)
 
 #### Bruteforce services
