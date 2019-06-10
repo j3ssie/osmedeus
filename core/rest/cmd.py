@@ -5,12 +5,12 @@ from flask_restful import Api, Resource, reqparse
 from flask_jwt_extended import jwt_required
 from .decorators import local_only
 import utils, slack, execute
-current_path = os.path.dirname(os.path.realpath(__file__))
 
 '''
 Executing abritary command so it's a feature not an RCE bug :D
 '''
 
+current_path = os.path.dirname(os.path.realpath(__file__))
 
 class Cmd(Resource):
     parser = reqparse.RequestParser()
@@ -42,13 +42,19 @@ class Cmd(Resource):
                         default="False"
                         )
 
-    # just return list of workspaces
-    def __init__(self, **kwargs):
-        self.options = utils.reading_json(current_path + '/storages/options.json')
+    # # just return list of workspaces
+    # def __init__(self, **kwargs):
+    #     self.options = utils.reading_json(current_path + '/storages/options.json')
 
     @jwt_required
     @local_only
-    def post(self):
+    def post(self, workspace):
+        ws_name = utils.get_workspace(workspace=workspace)
+        options_path = current_path + \
+            '/storages/{0}/options.json'.format(ws_name)
+
+        self.options = utils.reading_json(options_path)
+
         data = Cmd.parser.parse_args()
         cmd = data['cmd']
         std_path = data['std_path']
@@ -64,14 +70,19 @@ class Cmd(Resource):
         }
 
         if nolog == 'False':
-            activities = utils.reading_json(current_path + '/storages/activities.json')
+            activities_path = current_path + '/storages/{0}/activities.json'.format(ws_name)
+
+            # activities = utils.reading_json(activities_path)
+            activities = utils.reading_json(activities_path)
             if activities.get(module):
                 activities[module].append(activity)
             else:
                 activities[module] = [activity]
-            
-            utils.just_write(current_path + '/storages/activities.json',
+
+            utils.just_write(activities_path,
                             activities, is_json=True)
+
+
             slack.slack_noti('log', self.options, mess={
                 'title':  "{0} | {1} | Execute".format(self.options['TARGET'], module),
                 'content': '```{0}```'.format(cmd),
@@ -81,13 +92,13 @@ class Cmd(Resource):
 
 
         stdout = execute.run(cmd)
+        utils.check_output(output_path)
         # just ignore for testing purpose
         # stdout = "<< stdoutput >> << {0} >>".format(cmd)
-        utils.check_output(output_path)
 
         if nolog == 'False':
             # change status of log
-            activities = utils.reading_json(current_path + '/storages/activities.json')
+            activities = utils.reading_json(activities_path)
             for item in activities[module]:
                 if item['cmd'] == cmd:
                     if stdout is None:
@@ -109,6 +120,6 @@ class Cmd(Resource):
                         except:
                             pass
 
-            utils.just_write(current_path + '/storages/activities.json', activities, is_json=True)
+            utils.just_write(activities_path, activities, is_json=True)
 
         return jsonify(status="200", output_path=output_path)

@@ -26,10 +26,9 @@ class Recon(object):
         })
 
         self.initial()
-
         self.conclude()
 
-        #this gonna run after module is done to update the main json
+        # this gonna run after module is done to update the main json
         slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done Scanning Subdomain for {0}'.format(self.options['TARGET'])
@@ -80,7 +79,7 @@ class Recon(object):
         utils.just_write(scheme_path, "\n".join(
             domains + [("https://" + x.strip()) for x in domains]))
 
-        #really execute command
+        # really execute command
         cmd = '$GO_PATH/webanalyze -apps $PLUGINS_PATH/apps.json -hosts $WORKSPACE/recon/all-scheme-$OUTPUT.txt -output json -worker 20 | tee $WORKSPACE/recon/$OUTPUT-technology.json'
 
         cmd = utils.replace_argument(self.options, cmd)
@@ -94,7 +93,7 @@ class Recon(object):
         with open(output_path, encoding='utf-8') as o:
             data = o.read().splitlines()
 
-        #parsing output to get technology
+        # parsing output to get technology
         techs = {}
         for line in data:
             try:
@@ -109,9 +108,8 @@ class Recon(object):
                                             for x in jsonl.get('matches')]
             except:
                 pass
-        # print(techs)
 
-        #update the main json and rewrite that
+        #  update the main json and rewrite that
         main_json = utils.reading_json(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'))
 
@@ -123,7 +121,7 @@ class Recon(object):
         utils.just_write(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
 
-
+    # Resole the IP
     def resolve_ip(self):
         utils.print_good('Create IP for list of domain result')
         final_ip = utils.replace_argument(
@@ -141,35 +139,36 @@ class Recon(object):
 
         utils.just_waiting(self.options, self.module_name, seconds=5, times=5)
 
-        # matching IP with subdomain
+        # load main json
         main_json = utils.reading_json(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'))
 
-        with open(output_path, 'r') as i:
-            data = i.read().splitlines()
-        ips = []
-        for line in data:
-            if " A " in line:
-                subdomain = line.split('. A ')[0]
-                ip = line.split('. A ')[1]
-                ips.append(ip)
-                for i in range(len(main_json['Subdomains'])):
-                    if subdomain == main_json['Subdomains'][i]['Domain']:
-                        main_json['Subdomains'][i]['IP'] = ip
+        data = utils.just_read(output_path)
 
-        final_ip = utils.replace_argument(
-            self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
+        if data:
+            ips = []
+            for line in data.splitlines():
+                if " A " in line:
+                    subdomain = line.split('. A ')[0]
+                    ip = line.split('. A ')[1]
+                    ips.append(ip)
+                    for i in range(len(main_json['Subdomains'])):
+                        if subdomain == main_json['Subdomains'][i]['Domain']:
+                            main_json['Subdomains'][i]['IP'] = ip
 
-        with open(final_ip, 'w+') as fip:
-            fip.write("\n".join(str(ip) for ip in ips))
+            final_ip = utils.replace_argument(
+                self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
 
-        #update the main json file
-        utils.just_write(utils.replace_argument(
-            self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
+            with open(final_ip, 'w+') as fip:
+                fip.write("\n".join(str(ip) for ip in ips))
+
+            # update the main json file
+            utils.just_write(utils.replace_argument(
+                self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
 
 
     def conclude(self):
-        #just save commands
+        # just save commands
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(self.options, logfile)
         utils.print_banner("Conclusion for {0}".format(self.module_name))

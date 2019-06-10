@@ -22,11 +22,17 @@ install_banner "git, nmap, masscan, chromium, npm, golang"
 [ -x "$(command -v chromium)" ] || sudo $PACKGE_MANAGER install chromium -y
 [ -x "$(command -v npm)" ] || sudo $PACKGE_MANAGER install npm -y
 [ -x "$(command -v go)" ] || sudo $PACKGE_MANAGER install golang -y
+[ -x "$(command -v csvlook)" ] || sudo $PACKGE_MANAGER install csvkit -y
 [ -x "$(command -v proxychains)" ] || sudo $PACKGE_MANAGER install proxychains -y
 
 #### Download stuff directly
 install_banner "wordlists"
-mkdir -p $PLUGINS_PATH/wordlists/
+mkdir -p $PLUGINS_PATH 2> /dev/null
+mkdir -p $PLUGINS_PATH/wordlists/ 2> /dev/null
+mkdir -p $PLUGINS_PATH/nmap-stuff/ 2> /dev/null
+mkdir -p "$GO_DIR" 2> /dev/null
+mkdir -p "$PLUGINS_PATH/go/" 2> /dev/null
+
 [[ -f $PLUGINS_PATH/wordlists/all.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/all.txt https://gist.githubusercontent.com/jhaddix/86a06c5dc309d08580a018c66354a056/raw/96f4e51d96b2203f19f6381c8c545b278eaa0837/all.txt
 
 #domain discovery
@@ -48,15 +54,19 @@ cat $PLUGINS_PATH/wordlists/really-quick.txt $PLUGINS_PATH/wordlists/top10000.tx
 ## technology signature
 [[ -f $PLUGINS_PATH/apps.json ]] || wget -q -O $PLUGINS_PATH/apps.json https://raw.githubusercontent.com/AliasIO/Wappalyzer/master/src/apps.json
 
-
-install_banner "vulners nse"
+### Nmap stuff
+install_banner "nmap vulners nse"
 # Install vulners nse script
-[[ -f $PLUGINS_PATH/vulners.nse ]] ||  wget -q -O $PLUGINS_PATH/vulners.nse https://raw.githubusercontent.com/vulnersCom/nmap-vulners/master/vulners.nse
-
+[[ -f $PLUGINS_PATH/nmap-stuff/vulners.nse ]] ||  wget -q -O $PLUGINS_PATH/nmap-stuff/vulners.nse https://raw.githubusercontent.com/vulnersCom/nmap-vulners/master/vulners.nse
 
 install_banner "nmap bootstrap"
 # Install nmap bootstrap
-[[ -f $PLUGINS_PATH/nmap-bootstrap.xsl ]] ||  wget -q -O $PLUGINS_PATH/nmap-bootstrap.xsl https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl
+[[ -f $PLUGINS_PATH/nmap-stuff/nmap-bootstrap.xsl ]] ||  wget -q -O $PLUGINS_PATH/nmap-stuff/nmap-bootstrap.xsl https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl
+
+install_banner "nmap parser"
+[[ -f $PLUGINS_PATH/nmap-stuff/nmap_xml_parser.py ]] ||  wget -q -O $PLUGINS_PATH/nmap-stuff/nmap_xml_parser.py https://raw.githubusercontent.com/laconicwolf/Nmap-Scan-to-CSV/master/nmap_xml_parser.py
+
+[[ -f $PLUGINS_PATH/nmap-stuff/masscan_xml_parser.py ]] ||  wget -q -O $PLUGINS_PATH/nmap-stuff/masscan_xml_parser.py https://raw.githubusercontent.com/laconicwolf/Masscan-to-CSV/master/masscan_xml_parser.py
 
 install_banner "providers-data for subdomain takeover"
 [[ -f $PLUGINS_PATH/providers-data.csv ]] ||  wget -q -O $PLUGINS_PATH/providers-data.csv https://raw.githubusercontent.com/anshumanbh/tko-subs/master/providers-data.csv
@@ -64,6 +74,7 @@ install_banner "providers-data for subdomain takeover"
 
 ##
 chmod +x osmedeus.py
+install_banner "Osmedeus dependencies"
 pip3 install -r requirements.txt
 
 ### adding gopath if GOPATH not in default shellrc
@@ -79,8 +90,6 @@ source $DEFAULT_SHELL
 ##
 # Install go stuff
 ##
-mkdir -p "$GO_DIR"
-mkdir -p "$PLUGINS_PATH/go/"
 install_banner "amass"
 go get -u github.com/OWASP/Amass/...
 install_banner "subfinder"
@@ -97,16 +106,12 @@ install_banner "tko-subs"
 go get -u github.com/anshumanbh/tko-subs
 install_banner "gitleaks"
 go get -u github.com/zricethezav/gitleaks
+install_banner "gowitness"
+go get -u github.com/sensepost/gowitness
 install_banner "webanalyze"
 go get -u github.com/rverton/webanalyze/...
 
 cp $GO_DIR/* "$PLUGINS_PATH/go/"
-
-
-#Install flask stuff
-install_banner "Flask API stuff"
-pip3 install flask flask_restful flask_jwt flask_cors flask_jwt_extended
-pip3 install ansi2html
 
 install_banner "observatory"
 npm install -g observatory-cli
@@ -164,17 +169,18 @@ cd sherlock
 pip3 install -r requirements.txt
 cd $CWD
 
-cd $PLUGINS_PATH
-install_banner "SleuthQL"
-git clone https://github.com/RhinoSecurityLabs/SleuthQL
-pip install bs4
-cd $CWD
+# cd $PLUGINS_PATH
+# install_banner "SleuthQL"
+# git clone https://github.com/RhinoSecurityLabs/SleuthQL
+# pip install bs4
+# cd $CWD
 
 cd $PLUGINS_PATH
 install_banner "dirsearch"
 git clone https://github.com/maurosoria/dirsearch
 cd $CWD
 
+pip3 install wfuzz
 # install_banner "dirhunt"
 # git clone https://github.com/Nekmo/dirhunt
 # cd dirhunt
@@ -192,9 +198,8 @@ cd JSParser/
 python setup.py install
 
 
-
-
-
+# run Osmedeus healthcheck
+./osmedeus.py -m healthcheck
 
 
 

@@ -1,4 +1,5 @@
-import os, time
+import os
+import time
 from core import execute
 from core import slack
 from core import utils
@@ -30,138 +31,128 @@ class DirBrute(object):
         })
 
     def initial(self):
-        self.dirsearch()
-        self.quick_gobuster()
-        self.gobuster()
+        domains = self.prepare_input()
+        self.dirb_all(domains)
+        self.parsing_ouput()
+        self.screenshots()
 
-    def dirsearch(self):
-        utils.print_good('Starting dirsearch')
+    def prepare_input(self):
         if self.is_direct:
-            domains = utils.just_read(self.is_direct).splitlines()
+            # if direct input was file just read it
+            if utils.not_empty_file(self.is_direct):
+                domains = utils.just_read(self.is_direct).splitlines()
+            # get input string
+            else:
+                domains = [self.is_direct.strip()]
         else:
-            #matching IP with subdomain
+            # matching IP with subdomain
             main_json = utils.reading_json(utils.replace_argument(
                 self.options, '$WORKSPACE/$COMPANY.json'))
             domains = [x.get('Domain') for x in main_json['Subdomains']]
-
-        if self.options['DEBUG'] == 'True':
-            domains = domains[:5]
-
-        custom_logs = {"module": self.module_name, "content": []}
-
-        for part in utils.chunks(domains, 3):
-            for domain in part:
-                #just strip everything to save local, it won't affect the result
-                strip_domain = domain.replace(
-                    'http://', '').replace('https://', '').replace('/', '-')
-
-                cmd = "python3 $PLUGINS_PATH/dirsearch/dirsearch.py -b -e php,zip,aspx,js --wordlist=$PLUGINS_PATH/wordlists/really-quick.txt --simple-report=$WORKSPACE/directory/quick/{1}-dirsearch.txt -t 50 -u {0}".format(
-                    domain, strip_domain)
-
- 
-                cmd = utils.replace_argument(self.options, cmd)
-
-                output_path = utils.replace_argument(
-                    self.options, '$WORKSPACE/directory/quick/{0}-dirsearch.txt'.format(strip_domain))
-
-                std_path = utils.replace_argument(
-                    self.options, '$WORKSPACE/directory/quick/std-{0}-dirsearch.std'.format(strip_domain))
-
-                execute.send_cmd(self.options, cmd, output_path,
-                                 std_path, self.module_name)
-
-                # time.sleep(0.5)
-                #set status to done because this gonna will be submit when all command was done
-                custom_logs['content'].append(
-                    {"cmd": cmd, "std_path": std_path, "output_path": output_path, "status": "Done"})
-
-            #just wait couple seconds and continue but not completely stop the routine
-            time.sleep(20)
-
-        #submit a log
-        utils.print_info('Update activities log')
-        # utils.update_activities(self.options, str(custom_logs))
-        utils.force_done(self.options, self.module_name)
-        #just save commands
-        logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
-        utils.save_all_cmd(self.options, logfile)
-
-    def quick_gobuster(self):
-        utils.print_good('Starting gobuster for short wordlist')
-        if self.is_direct:
-            domains = utils.just_read(self.is_direct).splitlines()
-        else:
-            #matching IP with subdomain
-            main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
-            domains = [x.get('Domain') for x in main_json['Subdomains']]
-
-        if self.options['DEBUG'] == 'True':
-            domains = domains[:5]
-
-        custom_logs = {"module": self.module_name, "content": []}
-
-        for part in utils.chunks(domains, 3):
-            for domain in part:
-
-                #just strip everything to save local, it won't affect the result
-                strip_domain = domain.replace(
-                    'http://', '').replace('https://', '').replace('/', '-')
-
-                cmd = '$GO_PATH/gobuster -k -q -e -x php,jsp,aspx,html,json -w $PLUGINS_PATH/wordlists/quick-content-discovery.txt -t 100 -o $WORKSPACE/directory/{1}-gobuster.txt -s 200,301,307  -u "{0}" '.format(
-                    domain.strip(), strip_domain)
-
-
-                cmd = utils.replace_argument(self.options, cmd)
-
-                output_path = utils.replace_argument(
-                    self.options, '$WORKSPACE/directory/quick/{0}-gobuster.txt'.format(strip_domain))
-
-                std_path = utils.replace_argument(
-                    self.options, '$WORKSPACE/directory/quick/std-{0}-gobuster.std'.format(strip_domain))
-
-                execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
-
-                # time.sleep(0.5)
-                #set status to done because this gonna will be submit when all command was done
-                custom_logs['content'].append({"cmd": cmd, "std_path": std_path, "output_path": output_path, "status": "Done"})
-            
-            #just wait couple seconds and continue but not completely stop the routine
-            time.sleep(20)
         
-        #submit a log
-        utils.print_info('Update activities log')
+        return domains
+
+    def dirb_all(self, domains):
+        for domain in domains:
+            # passing domain to content directory tools
+            self.dirsearch(domain.strip())
+            self.wfuzz(domain.strip())
+            self.gobuster(domain.strip())
+
+            # just wait couple seconds and continue but not completely stop the routine
+            time.sleep(60)
+            
+        # brute with 3 tools
         utils.force_done(self.options, self.module_name)
-        # utils.update_activities(self.options, str(custom_logs))
-        #just save commands
+        # just save commands
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(self.options, logfile)
 
 
-    def gobuster(self):
-        utils.print_good('Starting gobuster')
-        if self.options['SPEED'] != 'slow':
-            utils.print_good("Skipping in quick mode")
-            return
+    # checking if it's done and get all found path
+    def parsing_ouput(self):
+        utils.print_good('Parsing result found to a file')
+        final_result = utils.replace_argument(
+            self.options, '$WORKSPACE/directory/$OUTPUT-summary.txt')
 
-        main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
-        domains = [x.get('Domain') for x in main_json['Subdomains']]
+        # dirsearch part
+        dirsearch_files = utils.list_files(self.options['WORKSPACE'] +'/directory/quick', pattern='*-dirsearch.txt')
+        for file in dirsearch_files:
+            data = utils.just_read(file)
+            if data:
+                utils.just_append(final_result, data)
 
-        for domain in domains:
-            cmd = '$GO_PATH/gobuster -k -q -e -fw -x php,jsp,aspx,html,json -w $PLUGINS_PATH/wordlists/dir-all.txt -t 100 -o $WORKSPACE/directory/$TARGET-gobuster.txt -s 200,301,307 -u "$TARGET" '
+        # wfuzz part
+        wfuzz_files =  utils.list_files(
+            self.options['WORKSPACE'] + '/directory/quick', pattern='*-wfuzz.json')
+        for file in wfuzz_files:
+            data_json = utils.reading_json(file)
+            if data_json:
+                data = "\n".join([x.get("url") for x in data_json])
+                utils.just_append(final_result, data)
+
+        # final_result
+        utils.clean_up(final_result)
+        utils.check_output(final_result)
+
+    # screenshots all result found
+    def screenshots(self):
+        utils.print_good('Starting Screenshot from found result')
+        final_result = utils.replace_argument(self.options, '$WORKSPACE/directory/$OUTPUT-summary.txt')
+        if utils.not_empty_file(final_result):
+            # screenshot found path at the end
+            cmd = "cat {0} | $GO_PATH/aquatone -threads 20 -out $WORKSPACE/directory/$OUTPUT-screenshots".format(
+                final_result)
 
             cmd = utils.replace_argument(self.options, cmd)
-            output_path = utils.replace_argument(
-                self.options, '$WORKSPACE/directory/{0}-gobuster.json'.format(domain))
-            std_path = utils.replace_argument(
-                self.options, '$WORKSPACE/directory/std-{0}-gobuster.std'.format(domain))
-            execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name, True)
+            std_path = utils.replace_argument(self.options, '$WORKSPACE/directory/$OUTPUT-screenshots/std-aquatone_report.std')
+            output_path = utils.replace_argument(self.options, '$WORKSPACE/directory/$OUTPUT-screenshots/aquatone_report.html')
+            execute.send_cmd(self.options, cmd, std_path, output_path, self.module_name)
 
-    def dirhunt(self):
-        utils.print_good('Starting dirhunt')
-        cmd = 'dirhunt $TARGET $MORE --progress-disabled --threads 20 | tee $WORKSPACE/directory/$STRIP_TARGET-dirhunt.txt'
+            if utils.not_empty_file(output_path):
+                utils.check_output(output_path)
+
+    # Just boring replicate similar command for content directory tools
+    def dirsearch(self, domain):
+        strip_domain = utils.get_domain(domain)
+
+        utils.print_good('Starting dirsearch')
+        cmd = "python3 $PLUGINS_PATH/dirsearch/dirsearch.py -b -e php,zip,aspx,js --wordlist=$PLUGINS_PATH/wordlists/really-quick.txt -x '302,404' --simple-report=$WORKSPACE/directory/quick/{1}-dirsearch.txt -t 50 -u {0}".format(domain, strip_domain)
+
         cmd = utils.replace_argument(self.options, cmd)
-        utils.print_info("Execute: {0} ".format(cmd))
-        execute.run(cmd)
+        output_path = utils.replace_argument(
+            self.options, '$WORKSPACE/directory/quick/{0}-dirsearch.txt'.format(strip_domain))
+        std_path = utils.replace_argument(
+            self.options, '$WORKSPACE/directory/quick/std-{0}-dirsearch.std'.format(strip_domain))
+        execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
 
-        
+    def wfuzz(self, domain):
+        strip_domain = utils.get_domain(domain)
+
+        utils.print_good('Starting wfuzz')
+        cmd = "wfuzz -f $WORKSPACE/directory/quick/{1}-wfuzz.json,json -c -w $PLUGINS_PATH/wordlists/quick-content-discovery.txt -t 100 --sc 200,307 -u '{0}/FUZZ' | tee $WORKSPACE/directory/quick/std-{1}-wfuzz.std".format(domain, strip_domain)
+
+        cmd = utils.replace_argument(self.options, cmd)
+        output_path = utils.replace_argument(
+            self.options, '$WORKSPACE/directory/quick/{0}-wfuzz.json'.format(strip_domain))
+        std_path = utils.replace_argument(
+            self.options, '$WORKSPACE/directory/quick/std-{0}-wfuzz.std'.format(strip_domain))
+        execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
+
+    def gobuster(self, domain):
+        utils.print_good('Starting gobuster')
+        if self.options['SPEED'] != 'slow':
+            utils.print_good("Skipping gobuster in quick mode")
+            return
+
+        strip_domain = utils.get_domain(domain)
+        cmd = '$GO_PATH/gobuster -k -q -e -fw -x php,jsp,aspx,html,json -w $PLUGINS_PATH/wordlists/dir-all.txt -t 100 -o $WORKSPACE/directory/{1}-gobuster.txt -s 200,301,307 -u "{0}" '.format(
+            domain, strip_domain)
+
+        cmd = utils.replace_argument(self.options, cmd)
+        output_path = utils.replace_argument(
+            self.options, '$WORKSPACE/directory/full/{0}-gobuster.json'.format(domain))
+        std_path = utils.replace_argument(
+            self.options, '$WORKSPACE/directory/full/std-{0}-gobuster.std'.format(domain))
+        execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name, nolog=True)
 

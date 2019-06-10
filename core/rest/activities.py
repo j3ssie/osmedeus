@@ -7,11 +7,11 @@ from urllib.parse import quote, unquote
 from ast import literal_eval
 import utils
 
-current_path = os.path.dirname(os.path.realpath(__file__))
 '''
-# logging command
+ Logging command
 '''
 
+current_path = os.path.dirname(os.path.realpath(__file__))
 
 class Activities(Resource):
     parser = reqparse.RequestParser()
@@ -28,13 +28,21 @@ class Activities(Resource):
                         default=None
                         )
 
-
-    def __init__(self, **kwargs):
-        self.activities = utils.reading_json(current_path + '/storages/activities.json')
+    def get_activities(self, workspace):
+        ws_name = utils.get_workspace(workspace=workspace)
+        activities_path = current_path + \
+            '/storages/{0}/activities.json'.format(ws_name)
+        self.activities = utils.reading_json(activities_path)
+        if not self.activities:
+            return False
+        return True
 
     # get all activity log or by module
     @jwt_required
-    def get(self):
+    def get(self, workspace):
+        if not self.get_activities(workspace=workspace):
+            return {"error": "activities doesn't exist for {0} workspace".format(workspace)}
+
         # get specific module
         module = request.args.get('module')
         if module:
@@ -44,7 +52,11 @@ class Activities(Resource):
             return self.activities
 
     @jwt_required
-    def post(self):
+    def post(self, workspace):
+        if not self.get_activities(workspace=workspace):
+            return {"error": "activities doesn't exist for {0} workspace".format(
+                workspace)}
+
         data = Activities.parser.parse_args()
         cmd = data['cmd']
 
@@ -66,29 +78,15 @@ class Activities(Resource):
 
             return {'commands': commands}
 
+    # force to update activities to prevent infinity wait.
     @jwt_required
-    def patch(self):
-        data = Activities.parser.parse_args()
-        raw_data = data['data']
-        raw_data = unquote(data['data'])
-
-        # print(raw_data)
-        #because parser can't parse nested dict and use literal_eval to make sure we have a dict
-        real_data = literal_eval(raw_data)
-        module = real_data.get('module')
-        content = real_data.get('content')
-
-        activities = self.activities
-
-        if activities.get(module) is not None:
-            activities[module] += content
-
-        utils.just_write(current_path + '/storages/activities.json', activities, is_json=True)
-        return activities
-
-    #force to update activities to prevent infinity wait.
-    @jwt_required
-    def put(self):
+    def put(self, workspace):
+        ws_name = utils.get_workspace(workspace=workspace)
+        activities_path = current_path + \
+            '/storages/{0}/activities.json'.format(ws_name)
+        if not self.get_activities(workspace=workspace):
+            return {"error": "activities doesn't exist for {0} workspace".format(
+                workspace)}
         module = request.args.get('module')
 
         raw_activities = self.activities
@@ -101,8 +99,8 @@ class Activities(Resource):
                     cmd_item['status'] = "Done"
                     raw_activities[k].append(cmd_item)
         
-        #rewrite the activities again
-        utils.just_write(current_path + '/storages/activities.json', raw_activities, is_json=True)
+        # rewrite the activities again
+        utils.just_write(activities_path, raw_activities, is_json=True)
 
         commands = [x for x in raw_activities[module]]
         return {'commands': commands}

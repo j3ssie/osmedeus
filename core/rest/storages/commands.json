@@ -14,7 +14,7 @@
         "quick": [
             {
                 "banner": "Amass",
-                "cmd": "$GO_PATH/amass -active -max-dns-queries 30000 -dir $WORKSPACE/subdomain/amass-$OUTPUT -d $TARGET -o $WORKSPACE/subdomain/$OUTPUT-amass.txt",
+                "cmd": "$GO_PATH/amass enum -active -max-dns-queries 30000 -dir $WORKSPACE/subdomain/amass-$OUTPUT -d $TARGET -o $WORKSPACE/subdomain/$OUTPUT-amass.txt",
                 "output_path": "$WORKSPACE/subdomain/$OUTPUT-amass.txt",
                 "std_path": "$WORKSPACE/subdomain/std-$TARGET-amass.std"
             },
@@ -34,7 +34,7 @@
         "slow": [
             {
                 "banner": "Amass",
-                "cmd": "$GO_PATH/amass -active -max-dns-queries 50000 -dir $WORKSPACE/subdomain/amass-$OUTPUT -d $TARGET -o $WORKSPACE/subdomain/$OUTPUT-amass.txt",
+                "cmd": "$GO_PATH/amass enum -active -max-dns-queries 50000 -dir $WORKSPACE/subdomain/amass-$OUTPUT -d $TARGET -o $WORKSPACE/subdomain/$OUTPUT-amass.txt",
                 "output_path": "$WORKSPACE/subdomain/$OUTPUT-amass.txt",
                 "std_path": "$WORKSPACE/subdomain/std-$TARGET-amass.std"
             },
@@ -149,24 +149,47 @@
         ]
     },
     "PortScan": {
-        "report": "$WORKSPACE/portscan/final-$OUTPUT.html",
+        "report": [
+            {
+                "path" : "$WORKSPACE/portscan/final-$OUTPUT.html",
+                "type" : "html"
+            },
+            {
+                "path" : "$WORKSPACE/portscan/$OUTPUT-masscan-screenshots.html",
+                "type" : "html"
+            },
+            {
+                "path" : "$WORKSPACE/portscan/$OUTPUT-masscan-summary.txt",
+                "type" : "bash"
+            }
+        ],
         "quick": [
             {
-                "banner": "Custom"
+                "banner": "PortScan"
             }
         ]
     },
     "DirBrute": {
+        "report": [
+            {
+                "path": "$WORKSPACE/directory/$OUTPUT-summary.txt",
+                "type": "bash"
+            },
+            {
+                "path": "$WORKSPACE/directory/$OUTPUT-screenshots/aquatone_report.html",
+                "type": "html"
+            }
+        ],
         "quick": [
             {
-                "banner": "Custom"
+                "banner": "DirBrute"
             }
         ]
     },
     "VulnScan": {
         "quick": [
             {
-                "banner": "Custom"
+                "banner": "VulnScan"
             }
         ]
     },

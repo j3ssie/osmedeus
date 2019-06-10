@@ -11,32 +11,48 @@ current_path = os.path.dirname(os.path.realpath(__file__))
 Getting commands of module that have been pre-define 
 '''
 
+current_path = os.path.dirname(os.path.realpath(__file__))
 
 class Routines(Resource):
-    # just return list of workspaces
-    def __init__(self, **kwargs):
-        self.options = utils.reading_json(current_path + '/storages/options.json')
-        self.commands = utils.reading_json(current_path + '/storages/commands.json')
-    
+
     @jwt_required
-    def get(self):
+    def get(self, workspace):
         profile = request.args.get('profile')
         module = request.args.get('module')
 
-        #set default profile 
+        ws_name = utils.get_workspace(workspace=workspace)
+        
+        # set default profile 
         if profile is None:
             profile = 'quick'
 
-        routines = self.get_routine(profile)
+        routines = self.get_routine(ws_name, profile)
+        if not routines:
+            return {"error": "options doesn't exist for {0} workspace".format(
+                workspace)}
 
         if module is not None:
             routines = routines.get(module)
 
         return {'routines': routines}
     
-    #get list of commands by profile
+    # get list of commands by profile
     @jwt_required
-    def get_routine(self, profile):
+    def get_routine(self, workspace, profile):
+
+        # get options depend on workspace
+        options_path = current_path + \
+            '/storages/{0}/options.json'.format(workspace)
+
+        commands_path = current_path + '/storages/commands.json'
+        self.options = utils.reading_json(options_path)
+        
+        if not self.options:
+            return None
+
+        self.commands = utils.reading_json(commands_path)
+
+
         raw_routine = {}
         for key, value in self.commands.items():
             raw_routine[key] = self.commands[key].get(profile)

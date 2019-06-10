@@ -1,13 +1,13 @@
 import os, sys, socket, time
-import shutil, string, random
+import shutil
+import random
+import hashlib
 import urllib.parse
-
+from configparser import ConfigParser, ExtendedInterpolation
 
 from core import execute
 from core import utils
 from pprint import pprint
-from configparser import ConfigParser, ExtendedInterpolation
-import string
 
 # Console colors
 W = '\033[1;0m'   # white
@@ -20,10 +20,8 @@ P = '\033[1;35m'  # purple
 C = '\033[1;36m'  # cyan
 GR = '\033[1;37m'  # gray
 
-__author__ = '@j3ssiejjj'
-__version__ = '1.3'
-
-def banner():
+# Just a banner
+def banner(__version__, __author__):
     print(r"""{1}
 
                        `@@`
@@ -74,8 +72,7 @@ ip          - IP discovery on the target
         ''')
     sys.exit(0)
 
-
-
+# Custom help message
 def custom_help():
     utils.print_info("Visit this page for complete usage: https://github.com/j3ssie/Osmedeus/wiki")
     print('''{1}
@@ -123,6 +120,7 @@ python3 osmedeus.py -t sample2 -m dirb -i /tmp/list_of_hosts.txt
             '''.format(G, GR, B))
     sys.exit(0)
 
+# parsing proxy if it exist
 def proxy_parsing(options):
     # return if proxy config file found
     if options['PROXY_FILE'] != "None":
@@ -132,7 +130,6 @@ def proxy_parsing(options):
     elif options['PROXY'] != "None":
         proxy_file = options['CWD'] + '/core/proxychains.conf'
         utils.print_info("Detected proxychains file: {0}".format(proxy_file))
-
 
     if options['PROXY'] != "None":
         proxy_parsed = urllib.parse.urlsplit(options['PROXY'])
@@ -173,20 +170,34 @@ def proxy_parsing(options):
                 sys.exit(0)
 
 
+# clean some options that cause side effect
+def clean_up(options):
+    if options['INPUT'] == "None":
+        del options['INPUT']
+    
+    if options['INPUT_LIST'] == "None":
+        del options['INPUT_LIST']
+
+    return options
+
 def parsing_config(config_path, args):
     options = {}
 
-    ##some default path
+    # some default path
     github_api_key = str(os.getenv("GITROB_ACCESS_TOKEN"))
     cwd = str(os.getcwd())
 
-    #just hardcode if gopath not loaded
+    # just hardcode if gopath not loaded
     go_path = cwd + "/plugins/go"
     # go_path = str(os.getenv("GOPATH")) + "/bin"
     # if "None" in go_path:
     #     go_path = cwd + "/plugins/go"
 
-    bot_token = str(os.getenv("SLACK_BOT_TOKEN"))
+    if args.slack:
+        bot_token = str(os.getenv("SLACK_BOT_TOKEN"))
+    else:
+        bot_token = None
+
     log_channel = str(os.getenv("LOG_CHANNEL"))
     status_channel = str(os.getenv("STATUS_CHANNEL"))
     report_channel = str(os.getenv("REPORT_CHANNEL"))
@@ -196,7 +207,7 @@ def parsing_config(config_path, args):
 
     if os.path.isfile(config_path):
         utils.print_info('Config file detected: {0}'.format(config_path))
-        #config to logging some output
+        # config to logging some output
         config = ConfigParser(interpolation=ExtendedInterpolation())
         config.read(config_path)
     else:
@@ -206,11 +217,15 @@ def parsing_config(config_path, args):
         config = ConfigParser(interpolation=ExtendedInterpolation())
         config.read(config_path)
 
-    workspace = cwd + "/workspaces/"
+    if args.workspace:
+        workspaces = os.path.abspath(args.workspace)
+    else:
+        workspaces = cwd + "/workspaces/"
+
     config.set('Enviroments', 'cwd', cwd)
     config.set('Enviroments', 'go_path', go_path)
     config.set('Enviroments', 'github_api_key', github_api_key)
-    config.set('Enviroments', 'workspaces', str(workspace))
+    config.set('Enviroments', 'workspaces', str(workspaces))
 
     if args.debug:
         config.set('Slack', 'bot_token', 'bot_token')
@@ -220,14 +235,14 @@ def parsing_config(config_path, args):
         config.set('Slack', 'stds_channel', 'stds_channel')
         config.set('Slack', 'verbose_report_channel', 'verbose_report_channel')
     else:
-        config.set('Slack', 'bot_token', bot_token)
+        config.set('Slack', 'bot_token', str(bot_token))
         config.set('Slack', 'log_channel', log_channel)
         config.set('Slack', 'status_channel', status_channel)
         config.set('Slack', 'report_channel', report_channel)
         config.set('Slack', 'stds_channel', stds_channel)
         config.set('Slack', 'verbose_report_channel', verbose_report_channel)
 
-    ##config of the tool
+    # Mode config of the tool
     if args.slow:
         speed = "slow"
     else:
@@ -242,42 +257,66 @@ def parsing_config(config_path, args):
     config.set('Mode', 'debug', debug)
     config.set('Mode', 'force', force)
 
-    ##target stuff
-    #parsing agument
+    # Target stuff
+    # parsing agument
     git_target = args.git if args.git else None
     burpstate_target = args.burp if args.burp else None
     target_list = args.targetlist if args.targetlist else None
     company = args.company if args.company else None
+    output = args.output if args.output else None
+    target = args.target if args.target else None
+    strip_target = target if target else None
+    ip = target if target else None
+    workspace = target if target else None
+    # get direct input as single or a file
     direct_input = args.input if args.input else None
+    direct_input_list = args.inputlist if args.inputlist else None
 
+    # target config
     if args.target:
         target = args.target
-        output = args.output if args.output else args.target
-        company = args.company if args.company else args.target
+    
+    # set target is direct input if not specific
+    elif direct_input or direct_input_list:
+        if direct_input:
+            # direct_target = utils.url_encode(direct_input)
+            direct_target = direct_input
+        if direct_input_list:
+            direct_target = os.path.basename(direct_input_list)
 
-        strip_target = target.replace('https://', '').replace('http://', '')
+        target = direct_target
+        output = args.output if args.output else utils.strip_slash(os.path.splitext(target)[0])
+        company = args.company if args.company else utils.strip_slash(os.path.splitext(target)[0])
+    else:
+        target = None
+    
+    # parsing some stuff related to target
+    if target:
+        # get the main domain of the target
+        strip_target = utils.get_domain(target)
         if '/' in strip_target:
-            strip_target = strip_target.split('/')[0]
+            strip_target = utils.strip_slash(strip_target)
 
-        if args.workspace:
-            if args.workspace[-1] == '/':
-                workspace = args.workspace + options['env']['STRIP_TARGET']
-            else:
-                workspace = args.workspace + '/' + options['env']['STRIP_TARGET']
-        else:
-            workspace += strip_target
+        output = args.output if args.output else strip_target
+        company = args.company if args.company else strip_target
 
-        if not direct_input:
+        # url encode to make sure it can be send through API
+        workspace = workspaces + strip_target
+        workspace = utils.url_encode(workspace)
+
+        # check connection to target
+        if not direct_input and not direct_input_list:
             try:
                 ip = socket.gethostbyname(strip_target)
             except:
-                ip = "None"
-                utils.print_bad("Something wrong to connect to {0}".format(target))
+                ip = None
+                utils.print_bad(
+                    "Something wrong to connect to {0}".format(target))
         else:
             ip = None
 
     try:
-        #getting proxy from args
+        # getting proxy from args
         proxy = args.proxy if args.proxy else None
         proxy_file = args.proxy_file if args.proxy_file else None
 
@@ -285,14 +324,14 @@ def parsing_config(config_path, args):
         config.set('Proxy', 'proxy_file', str(proxy_file))
 
         if config['Proxy']['proxy_cmd'] == 'None':
-            #only works for Kali proxychains, change it if you on other OS
+            # only works for Kali proxychains, change it if you on other OS
             proxy_cmd = "proxychains -f {0}".format(proxy_file)
             config.set('Proxy', 'proxy_cmd', str(proxy_cmd))
     except:
         utils.print_info("Your config file seem to be outdated, Backup it and delete it to regenerate the new one")
 
-
     config.set('Target', 'input', str(direct_input))
+    config.set('Target', 'input_list', str(direct_input_list))
     config.set('Target', 'git_target', str(git_target))
     config.set('Target', 'burpstate_target', str(burpstate_target))
     config.set('Target', 'target_list', str(target_list))
@@ -304,17 +343,17 @@ def parsing_config(config_path, args):
 
     config.set('Enviroments', 'workspace', str(workspace))
 
-    #create workspace folder for the target
+    # create workspace folder for the target
     utils.make_directory(workspace)
 
-    #set the remote API
+    # set the remote API
     if args.remote:
         remote_api = args.remote
         config.set('Server', 'remote_api', remote_api)
-    
-    #set credentials as you define from agurments
+
+    # set credentials as you define from agurments
     if args.auth:
-        #user:pass
+        # user:pass
         creds = args.auth.strip().split(":")
         username = creds[0]
         password = creds[1]
@@ -322,32 +361,34 @@ def parsing_config(config_path, args):
         config.set('Server', 'username', username)
         config.set('Server', 'password', password)
     else:
-        #set random password if default password detect
+        # set random password if default password detect
         if config['Server']['password'] == 'super_secret':
-            new_pass = ''.join(random.choice(string.ascii_lowercase)
-                            for i in range(6)).upper()
+            new_pass = hashlib.md5(str(int(time.time())).encode()).hexdigest()[:6]
             config.set('Server', 'password', new_pass)
 
-    #save the config
+    # save the config
     with open(config_path, 'w') as configfile:
         config.write(configfile)
 
     config = ConfigParser(interpolation=ExtendedInterpolation())
     config.read(config_path)
     sections = config.sections()
+    options['CONFIG_PATH'] = os.path.abspath(config_path)
 
     for sec in sections:
         for key in config[sec]:
             options[key.upper()] = config.get(sec, key)
 
     ######
-    #parsing proxy stuff
+    # parsing proxy stuff
     if options.get('PROXY') or options.get('PROXY_FILE'):
         proxy_parsing(options)
     else:
-        #just for the old config
+        # just for the old config
         options['PROXY'] = "None"
         options['PROXY_FILE'] = "None"
+
+    options = clean_up(options)
 
     return options
 

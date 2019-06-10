@@ -33,6 +33,7 @@ from rest.logs import Logs
 from rest.modules import Modules
 from rest.routines import Routines
 from rest.bash_render import BashRender
+from rest.wscdn import Wscdn
 from rest.save import Save
 
 current_path = os.path.dirname(os.path.realpath(__file__))
@@ -41,12 +42,12 @@ current_path = os.path.dirname(os.path.realpath(__file__))
 
 app = Flask('Osmedeus')
 app = Flask(__name__, template_folder='ui/', static_folder='ui/static/')
-#just for testing whitelist your domain if you wanna run this server remotely
+# just for testing whitelist your domain if you wanna run this server remotely
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 api = Api(app)
 
 # setup jwt secret, make sure you change this!
-app.config['JWT_SECRET_KEY'] = '-----BEGIN RSA PRIVATE KEY-----' # go ahead, spider
+app.config['JWT_SECRET_KEY'] = '-----BEGIN RSA PRIVATE KEY-----'  # go ahead, spider
 jwt = JWTManager(app)
 
 ############
@@ -59,6 +60,7 @@ def shutdown_server():
         raise RuntimeError('Not running with the Werkzeug Server')
     func()
 
+
 @local_only
 @app.route('/api/shutdown', methods=['POST'])
 def shutdown():
@@ -66,28 +68,24 @@ def shutdown():
     return 'Server shutting down...'
 
 
+# API for the Osmedeus client
 api.add_resource(Configurations, '/api/config')
-api.add_resource(Authentication, '/api/auth')
-api.add_resource(Cmd, '/api/cmd')
-api.add_resource(Activities, '/api/activities')
-api.add_resource(Workspaces, '/api/workspace')
-api.add_resource(Workspace, '/api/workspace/<string:workspace>')
-api.add_resource(Logs, '/api/logs/<string:workspace>')
+api.add_resource(Authentication, '/api/auth', '/api/<string:workspace>/auth')
+api.add_resource(Cmd, '/api/<string:workspace>/cmd')
+api.add_resource(Activities, '/api/<string:workspace>/activities')
+api.add_resource(Routines, '/api/<string:workspace>/routines')
+
+# API for the web UI
 api.add_resource(Modules, '/api/module/<string:workspace>')
-api.add_resource(Routines, '/api/routines')
-api.add_resource(Save, '/api/save')
+api.add_resource(Workspaces, '/api/workspace')
+api.add_resource(Logs, '/api/logs/<string:workspace>')
+api.add_resource(Workspace, '/api/workspace/<string:workspace>')
 api.add_resource(BashRender, '/stdout/<path:filename>')
+api.add_resource(Save, '/api/save')
+api.add_resource(Wscdn, '/wscdn/<path:filename>')
 
 
-#### serve HTML and image content
-@app.route('/wscdn/<path:filename>')
-def custom_static(filename):
-    options = utils.reading_json(current_path + '/rest/storages/options.json')
-    return send_from_directory(options['WORKSPACES'], filename)
-#####
-
-
-##### serve react build
+# serve react build
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
@@ -95,7 +93,8 @@ def serve(path):
         return send_from_directory(current_path + '/ui/', path)
     else:
         return send_from_directory(current_path + '/ui/', 'index.html')
-####
+#
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -122,7 +121,7 @@ if __name__ == '__main__':
         log = logging.getLogger('werkzeug')
         log.setLevel(logging.ERROR)
 
-    #choose to use SSL or not
+    # choose to use SSL or not
     if args.nossl:
         app.run(host=host, port=port, debug=debug)
     else:

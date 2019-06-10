@@ -44,19 +44,12 @@ def run(command):
 def not_empty_file(fpath):
 	return os.path.isfile(fpath) and os.path.getsize(fpath) > 0
 
-def is_force(options, filename):
-    if options['FORCE'] != "False":
-        return True
 
-    if not_empty_file(filename):
-        print_info(
-            "Command is already done. use '-f' options to force rerun the command")
-        return False
-    return True
-#get all commaands by module
+# get all commaands by module
 def get_commands(options, module):
     headers['Authorization'] = options['JWT']
-    url = options['REMOTE_API'] + "/api/routines?module=" + module
+    workspace = utils.get_workspace(options=options)
+    url = options['REMOTE_API'] + "/api/{0}/routines?module=".format(workspace) + module
 
     r = requests.get(url, verify=False, headers=headers)
     if r.status_code == 200:
@@ -64,8 +57,9 @@ def get_commands(options, module):
 
     return None
 
+
 def send_cmd(options, cmd, output_path='', std_path='', module='', nolog=False):
-    #check if commandd was run or not
+    # check if commandd was ran or not
     if utils.is_force(options, output_path):
         utils.print_info("Already done: {0}".format(cmd))
         return
@@ -74,22 +68,24 @@ def send_cmd(options, cmd, output_path='', std_path='', module='', nolog=False):
     json_cmd = {}
     if options['PROXY'] != "None" or options['PROXY_FILE'] != "None":
         json_cmd['cmd'] = options['PROXY_CMD'].strip() + " " + cmd
-    else: 
+    else:
         json_cmd['cmd'] = cmd
     json_cmd['output_path'] = output_path
     json_cmd['std_path'] = std_path
     json_cmd['module'] = module
-    #don't push this to activities log
+    # don't push this to activities log
     json_cmd['nolog'] = str(nolog)
-    
+
     send_JSON(options, json_cmd)
 
 
-#leave token blank for now
+# leave token blank for now
 def send_JSON(options, json_body, token=''):
     headers['Authorization'] = options['JWT']
-    url = options['REMOTE_API'] + "/api/cmd"
-    #ignore the timeout
+    workspace = utils.get_workspace(options=options)
+
+    url = options['REMOTE_API'] + "/api/{0}/cmd".format(workspace)
+    # ignore the timeout
     try:
         r = requests.post(url, verify=False, headers=headers,
                           json=json_body, timeout=0.1)

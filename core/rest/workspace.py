@@ -1,30 +1,35 @@
-import os, json
+import os, json, glob
 from flask_restful import Api, Resource, reqparse
 from flask_jwt_extended import jwt_required
 import utils
+
+'''
+Workspace listing and detail
+'''
+
 current_path = os.path.dirname(os.path.realpath(__file__))
 
-'''
-workspace listing and detail
-'''
 
 class Workspaces(Resource):
-    # just return list of workspaces
-    def __init__(self, **kwargs):
-        self.options = utils.reading_json(current_path + '/storages/options.json')
-
     @jwt_required
     def get(self):
-        # just remove hidden file
-        ws = [ws for ws in os.listdir(self.options['WORKSPACES']) if ws[0] != '.']
-        return {'workspaces': ws}
+        # get all options file availiable
+        option_files = glob.glob(current_path + '/storages/**/options.json', recursive=True)
+        if not option_files:
+            return {'error': 'No worksapce avaliable'}
+
+        ws = []
+        for options in option_files:
+            json_options = utils.reading_json(options)
+            ws.extend([ws for ws in os.listdir(
+                json_options['WORKSPACES']) if ws[0] != '.'])
+
+        return {'workspaces': list(set(ws))}
 
 
 
-#get main json by workspace name
+# get main json by workspace name
 class Workspace(Resource):
-    def __init__(self, **kwargs):
-        self.options = utils.reading_json(current_path + '/storages/options.json')
 
     @jwt_required
     def get(self, workspace):
@@ -32,7 +37,10 @@ class Workspace(Resource):
         # @TODO potential LFI here
         #
         ws_name = os.path.basename(os.path.normpath(workspace))
-        
+        options_path = current_path + \
+            '/storages/{0}/options.json'.format(ws_name)
+        self.options = utils.reading_json(options_path)
+
         if ws_name in os.listdir(self.options['WORKSPACES']):
             ws_json = self.options['WORKSPACES'] + "/{0}/{0}.json".format(ws_name)
             if os.path.isfile(ws_json):

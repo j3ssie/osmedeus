@@ -1,14 +1,14 @@
-'''
-Sending message to Slack
-'''
 import os
 import requests
 import json
 import time
 import random
 
+'''
+Sending message to Slack
+'''
 
-###Slack printing
+# Slack printing
 def slack_seperate(options):
     if options['BOT_TOKEN'] == "None":
         return
@@ -41,7 +41,7 @@ def slack_noti(mode, options, text='', title='Execute', mess=None):
             'title': title,
             'content': text,
         }
-    
+
     if mode == 'status':
         sm.send_info(mess)
     elif mode == 'good':

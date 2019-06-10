@@ -11,21 +11,22 @@ get local logs command by workspace
 '''
 
 class Logs(Resource):
-    def __init__(self, **kwargs):
-        self.options = utils.reading_json(
-            current_path + '/storages/options.json')
+    # def __init__(self, **kwargs):
+    #     self.options = utils.reading_json(
+    #         current_path + '/storages/options.json')
 
     @jwt_required
     def get(self, workspace):
-        #
-        # @TODO potential LFI here
-        #
-        # get specific module
+        # get options depend on workspace
+        ws_name = utils.get_workspace(workspace=workspace)
+        options_path = current_path + \
+            '/storages/{0}/options.json'.format(ws_name)
+        self.options = utils.reading_json(options_path)
+
         module = request.args.get('module')
         ws_name = os.path.basename(os.path.normpath(workspace))
 
         if ws_name in os.listdir(self.options['WORKSPACES']):
-
             ws_json = self.options['WORKSPACES'] + \
                 "/{0}/log.json".format(ws_name)
             if os.path.isfile(ws_json):
@@ -48,15 +49,32 @@ class Logs(Resource):
 
         return 'Custom 404 here', 404
 
-    #return all commands in flat
+    # return all commands in flat
     @jwt_required
     def post(self, workspace):
+        ws_name = utils.get_workspace(workspace=workspace)
+        options_path = current_path + \
+            '/storages/{0}/options.json'.format(ws_name)
+        self.options = utils.reading_json(options_path)
+        
         module = request.args.get('module')
+
         ws_name = os.path.basename(os.path.normpath(workspace))
+        ws_name_encode = utils.url_encode(ws_name)
+
+        utils.print_debug(ws_name)
+
+
         if ws_name in os.listdir(self.options['WORKSPACES']):
-            ws_json = self.options['WORKSPACES'] + \
-                "/{0}/log.json".format(ws_name)
+            ws_json = self.options['WORKSPACES'] + "/{0}/log.json".format(ws_name)
             raw_logs = utils.reading_json(ws_json)
+
+        elif ws_name_encode in os.listdir(self.options['WORKSPACES']):
+            ws_json = self.options['WORKSPACES'] + "/{0}/log.json".format(utils.url_encode(ws_name))
+            # utils.print_debug(ws_json_encode)
+            raw_logs = utils.reading_json(ws_json)
+
+        if raw_logs:
             all_commands = []
 
             for k in raw_logs.keys():
@@ -70,4 +88,6 @@ class Logs(Resource):
                     cmd_item["module"] = k
                     all_commands.append(cmd_item)
 
-        return {"commands": all_commands}
+            return {"commands": all_commands}
+        else:
+            return {"error": "Not found logs file for {0} workspace".format(ws_name)}

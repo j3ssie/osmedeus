@@ -1,4 +1,4 @@
-import time
+import sys, time
 from core import utils
 from pprint import pprint
 
@@ -19,8 +19,9 @@ from modules import ipspace
 from modules import sslscan
 from modules import headers
 from modules import conclusion
+from modules import healcheck
 
-#runnning normal routine if none of module specific
+# runnning normal routine if none of module specific
 def normal(options):
 
     utils.print_good("Running with {0} speed".format(options['SPEED']))
@@ -28,43 +29,45 @@ def normal(options):
     # Create skeleton json
     initials.Initials(options)
 
-    ##Finding subdomain
+    # Finding subdomain
     subdomain.SubdomainScanning(options)
 
-    ##waiting for previous module
+    # waiting for previous module
     utils.just_waiting(options, 'SubdomainScanning')
 
-    # ##Scanning for subdomain take over
+    # Scanning for subdomain take over
     takeover.TakeOverScanning(options)
 
-    ##Screen shot the target on common service
+    # Screen shot the target on common service
     screenshot.ScreenShot(options)
 
-    ##Recon
+    # Recon
     recon.Recon(options)
 
-    ##Scanning for CorsScan
+    # Scanning for CorsScan
     cors.CorsScan(options)
 
-    # ##Discovery IP space
+    # Discovery IP space
     ipspace.IPSpace(options)
 
-    # ##SSL Scan
+    # SSL Scan
     sslscan.SSLScan(options)
 
-    # ##Headers Scan
+    # Headers Scan
     headers.HeadersScan(options)
 
-    # ##### Note: From here the module gonna take really long time for scanning service and stuff like that
+    # Note: From here the module gonna take really long time 
+    # for scanning service and stuff like that
     utils.print_info('This gonna take a while')
 
-    # #Scanning all port using result from subdomain scanning and also checking vulnerable service based on version
+    # Scanning all port using result from subdomain scanning
+    # and also checking vulnerable service based on version
     portscan.PortScan(options)
 
-    #Directory scan
+    # Directory scan
     dirbrute.DirBrute(options)
 
-    # #Starting vulnerable scan
+    # Starting vulnerable scan
     vulnscan.VulnScan(options)
 
     # brutethings.BruteThings(options)
@@ -74,6 +77,16 @@ def normal(options):
 
 def specific(options, module):
     module = module.lower()
+
+    # checking the tool is installed right or not and exit
+    if 'health' in module:
+        health = healcheck.Healcheck(options)
+        if health.checking():
+            utils.print_good("All things look fine")
+        else:
+            utils.print_bad("Installing Osmedeus not correctly done")
+        utils.just_shutdown_flask(options)
+        sys.exit(0)
 
     initials.Initials(options)
 
@@ -85,7 +98,7 @@ def specific(options, module):
         recon.Recon(options)
 
     if 'ip' in module:
-        #Discovery IP space
+        # Discovery IP space
         ipspace.IPSpace(options)
 
     if 'portscan' in module:
@@ -113,28 +126,27 @@ def specific(options, module):
     # if 'burp' in module:
     #     burpstate.BurpState(options)
 
-    
     conclusion.Conclusion(options)
 
 
-#just for debug purpose
+# just for debug purpose
 def debug(options):
     utils.print_good("Debug routine")
     utils.print_good("Running with {0} speed".format(options['SPEED']))
     # Create skeleton json
     pprint(options)
+
     initials.Initials(options)
 
-    recon.Recon(options)
-
     # ##Finding subdomain
-    # subdomain.SubdomainScanning(options)
+    subdomain.SubdomainScanning(options)
 
     # ####waiting for previous module
     # utils.just_waiting(options, 'SubdomainScanning')
+    # recon.Recon(options)
 
     # ###Screen shot the target on common service
-    # screenshot.ScreenShot(options)
+    screenshot.ScreenShot(options)
 
 
     # ###Scanning for subdomain take over

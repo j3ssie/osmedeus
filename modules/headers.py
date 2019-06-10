@@ -69,7 +69,7 @@ class HeadersScan(object):
             utils.just_waiting(self.options, self.module_name, seconds=10, times=2)
 
         return True
-    #update the main json file
+    # update the main json file
     def conclude(self):
         result_path = utils.replace_argument(
             self.options, '$WORKSPACE/headers/details')

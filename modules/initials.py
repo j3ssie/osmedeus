@@ -16,7 +16,6 @@ class Initials(object):
         # #this gonna run after module is done to update the main json
         # self.conclude()
 
-
     def initial(self):
         self.create_skeleton_json()
 

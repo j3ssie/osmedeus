@@ -9,7 +9,7 @@ from .decorators import local_only
 import utils
 
 '''
-#helper to store data into a file for quickly running from web UI
+helper to store data into a file for quickly running from web UI
 '''
 
 current_path = os.path.dirname(os.path.realpath(__file__))

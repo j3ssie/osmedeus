@@ -1,5 +1,6 @@
-import os, glob, json, time
-from pprint import pprint
+import os
+import glob
+import time
 from core import execute
 from core import slack
 from core import utils
@@ -22,10 +23,10 @@ class SubdomainScanning(object):
 
         self.initial()
 
-        utils.just_waiting(self.options, self.module_name, seconds=10)
+        utils.just_waiting(self.options, self.module_name, seconds=60)
         self.conclude()
 
-        #this gonna run after module is done to update the main json
+        # this gonna run after module is done to update the main json
         slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done Scanning Subdomain for {0}'.format(self.options['TARGET'])
@@ -35,38 +36,39 @@ class SubdomainScanning(object):
     def initial(self):
         self.run()
 
-
+    # grab command from commands.json
     def run(self):
         commands = execute.get_commands(self.options, self.module_name).get('routines')
+
         if self.options['DEBUG'] == "True":
             commands = [commands[1]]
 
         for item in commands:
             utils.print_good('Starting {0}'.format(item.get('banner')))
-            #really execute it
+            # really execute it
             execute.send_cmd(self.options, item.get('cmd'), item.get(
                 'output_path'), item.get('std_path'), self.module_name)
             time.sleep(1)
 
         utils.just_waiting(self.options, self.module_name, seconds=5)
-        #just save commands
+        # just save commands
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(self.options, logfile)
 
-    #just clean up some output
+    # just clean up some output
     def unique_result(self):
-        #gobuster clean up
+        # gobuster clean up
         utils.print_good('Unique result')
 
         go_raw = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt')
         if utils.not_empty_file(go_raw):
-            go_clean = [ x.split(' ')[1] for x in utils.just_read(go_raw).splitlines()]
+            go_clean = [x.split(' ')[1] for x in utils.just_read(go_raw).splitlines()]
             go_output = utils.replace_argument(
                 self.options, '$WORKSPACE/subdomain/$OUTPUT-gobuster.txt')
             utils.just_write(go_output, "\n".join(go_clean))
 
-        #massdns clean up
+        # massdns clean up
         massdns_raw = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/raw-massdns.txt')
         if utils.not_empty_file(massdns_raw):
@@ -83,7 +85,7 @@ class SubdomainScanning(object):
                 utils.check_output(utils.replace_argument(
                     self.options, '$WORKSPACE/subdomain/$OUTPUT-massdns.txt'))
 
-        #joining the output
+        # joining the output
         all_output = glob.glob(utils.replace_argument(self.options,
             '$WORKSPACE/subdomain/$OUTPUT-*.txt'))
         domains = []
@@ -102,15 +104,15 @@ class SubdomainScanning(object):
 
 
 
-    #update the main json file
+    # update the main json file
     def conclude(self):
         self.unique_result()
         utils.print_banner("Conclusion for {0}".format(self.module_name))
         main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
 
         all_subdomain = utils.replace_argument(self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
-        with open(all_subdomain, 'r+') as s:
-            subdomains = s.read().splitlines()
+
+        subdomains = utils.just_read(all_subdomain).splitlines()
 
         for subdomain in subdomains:
             main_json['Subdomains'].append({
