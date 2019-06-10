@@ -126,8 +126,12 @@ class Recon(object):
         utils.print_good('Create IP for list of domain result')
         final_ip = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
+        
+        all_subdomain_path = utils.replace_argument(
+            self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
 
-        if utils.not_empty_file(final_ip):
+        # we this have done or not found anything just return
+        if utils.not_empty_file(final_ip) or not utils.not_empty_file(all_subdomain_path):
             return
 
         cmd = '$PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -t A -o S -w $WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt $WORKSPACE/subdomain/final-$OUTPUT.txt'
