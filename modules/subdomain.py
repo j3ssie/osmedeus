@@ -32,7 +32,6 @@ class SubdomainScanning(object):
             'content': 'Done Scanning Subdomain for {0}'.format(self.options['TARGET'])
         })
 
-
     def initial(self):
         self.run()
         self.massdns()
@@ -60,6 +59,7 @@ class SubdomainScanning(object):
         utils.print_good('Starting massdns')
         if self.options['SPEED'] == 'quick':
             utils.print_info('Skip massdns for quick mode')
+            return 
         elif self.options['SPEED'] == 'slow':
             cmd = '$PLUGINS_PATH/massdns/scripts/subbrute.py $DOMAIN_FULL $TARGET | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o Sm -w $WORKSPACE/subdomain/raw-massdns.txt'
 

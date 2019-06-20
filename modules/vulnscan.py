@@ -24,9 +24,8 @@ class VulnScan(object):
             'content': 'Done Vulnerable Scanning for {0}'.format(self.options['TARGET'])
         })
         self.initial()
-        utils.just_waiting(self.options, self.module_name, seconds=120)
 
-        self.conclude()
+        # self.conclude()
         slack.slack_noti('good', self.options, mess={
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done Vulnerable Scanning for {0}'.format(self.options['TARGET'])
@@ -36,6 +35,8 @@ class VulnScan(object):
         ip_list = self.prepare_input()
         if type(ip_list) == list:
             self.nmap_vuln_list(ip_list)
+            utils.just_waiting(self.options, self.module_name, seconds=120)
+            self.parsing_to_csv()
         else:
             self.nmap_single(ip_list)
 
@@ -95,13 +96,14 @@ class VulnScan(object):
 
                 cmd = utils.replace_argument(self.options, cmd)
                 output_path = utils.replace_argument(
-                    self.options, '$WORKSPACE/vulnscan/details/{0}-nmap.nmap'.format(ip.strip()))
+                    self.options, '$WORKSPACE/vulnscan/details/{0}-nmap.nmap'.format(encode_input))
                 std_path = utils.replace_argument(
-                    self.options, '$WORKSPACE/vulnscan/details/std-{0}-nmap.std'.format(ip.strip()))
+                    self.options, '$WORKSPACE/vulnscan/details/std-{0}-nmap.std'.format(encode_input))
                 execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
 
             # check if previous task done or not every 30 second
             utils.just_waiting(self.options, self.module_name, seconds=120)
+            self.parsing_to_csv()
 
         # just save commands
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
@@ -117,10 +119,13 @@ class VulnScan(object):
             cmd = "python3 $PLUGINS_PATH/nmap-stuff/nmap_xml_parser.py -f {0} -csv $WORKSPACE/vulnscan/details/$OUTPUT-nmap.csv".format(file)
 
             cmd = utils.replace_argument(self.options, cmd)
-            csv_output = utils.replace_argument(
-                self.options, '$WORKSPACE/vulnscan/details/$OUTPUT-nmap.csv')
-            execute.send_cmd(self.options, cmd, csv_output,
-                            '', self.module_name)
+            csv_output = utils.replace_argument(self.options, '$WORKSPACE/vulnscan/details/$OUTPUT-nmap.csv')
+
+            # just return if this was done without checking anything
+            if utils.not_empty_file(csv_output):
+                return
+
+            execute.send_cmd(self.options, cmd, csv_output, '', self.module_name)
 
         time.sleep(5)
         # looping through all csv file
@@ -137,7 +142,8 @@ class VulnScan(object):
         cmd = "csvcut -c 1-7 $WORKSPACE/vulnscan/summary-$OUTPUT.csv | csvlook  --no-inference | tee $WORKSPACE/vulnscan/std-$OUTPUT-summary.std"
         
         cmd = utils.replace_argument(self.options, cmd)
-        output_path = utils.replace_argument(self.options, '$WORKSPACE/portscan/std-$OUTPUT-summary.std')
+        output_path = utils.replace_argument(
+            self.options, '$WORKSPACE/vulnscan/std-$OUTPUT-summary.std')
         execute.send_cmd(self.options, cmd, output_path, '', self.module_name)
 
         self.screenshots(all_csv)
@@ -180,6 +186,6 @@ class VulnScan(object):
                 self.options, cmd), html_path, '', self.module_name)
 
 
-    def conclude(self):
-        self.parsing_to_csv()
+    # def conclude(self):
+    #     self.parsing_to_csv()
 

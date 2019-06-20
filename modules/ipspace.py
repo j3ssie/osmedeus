@@ -49,15 +49,15 @@ class IPSpace(object):
         jsonl = utils.just_read(amass_output).splitlines()
         for line in jsonl:
             json_data = json.loads(line)
-            ip = json_data.get('addresses').get('ip')
-            cidr = json_data.get('addresses').get('cidr')
-            asn = json_data.get('addresses').get('asn')
-            utils.print_info("Found ASN for {0} on CIDR {1}".format(asn, cidr))
-
-            data.extend([ip, cidr])
-            
+            for item in json_data.get('addresses'):
+                ip = item.get('ip')
+                cidr = item.get('cidr')
+                asn = item.get('asn')
+                utils.print_info("Found ASN for {0} on CIDR {1}".format(asn, cidr))
+                data.extend([ip, cidr])
 
         utils.just_write(ips_file, data)
+        utils.clean_up(ips_file)
 
     def run(self):
         commands = execute.get_commands(self.options, self.module_name).get('routines')
