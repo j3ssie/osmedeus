@@ -32,8 +32,8 @@ class IPSpace(object):
         })
 
     def initial(self):
-        self.get_ipsace()
         self.run()
+        self.get_ipsace()
 
     # reading ASN and IP space from amass result
     def get_ipsace(self):
@@ -42,8 +42,7 @@ class IPSpace(object):
         if not utils.not_empty_file(amass_output):
             return
 
-        ips_file = utils.replace_argument(
-            self.options, '$WORKSPACE/ipspace/$OUTPUT-ipspace.txt')
+        ips_file = utils.replace_argument(self.options, '$WORKSPACE/ipspace/$OUTPUT-ipspace.txt')
 
         data = []
         jsonl = utils.just_read(amass_output).splitlines()
@@ -56,7 +55,7 @@ class IPSpace(object):
                 utils.print_info("Found ASN for {0} on CIDR {1}".format(asn, cidr))
                 data.extend([ip, cidr])
 
-        utils.just_write(ips_file, data)
+        utils.just_append(ips_file, data)
         utils.clean_up(ips_file)
 
     def run(self):
@@ -72,7 +71,7 @@ class IPSpace(object):
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(self.options, logfile)
 
-    #update the main json file
+    # update the main json file
     def conclude(self):
         utils.print_banner("Conclusion for {0}".format(self.module_name))
         main_json = utils.reading_json(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'))
@@ -82,7 +81,7 @@ class IPSpace(object):
             ips = s.read().splitlines()
         main_json['IP Space'] = ips
 
-        #write that json again
+        # write that json again
         utils.just_write(utils.replace_argument(self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
         
         utils.print_banner("{0} Done".format(self.module_name))
