@@ -35,6 +35,7 @@ class SubdomainScanning(object):
 
     def initial(self):
         self.run()
+        self.massdns()
 
     # grab command from commands.json
     def run(self):
@@ -54,6 +55,20 @@ class SubdomainScanning(object):
         # just save commands
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(self.options, logfile)
+
+    def massdns(self):
+        utils.print_good('Starting massdns')
+        if self.options['SPEED'] == 'quick':
+            utils.print_info('Skip massdns for quick mode')
+        elif self.options['SPEED'] == 'slow':
+            cmd = '$PLUGINS_PATH/massdns/scripts/subbrute.py $DOMAIN_FULL $TARGET | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o Sm -w $WORKSPACE/subdomain/raw-massdns.txt'
+
+        cmd = utils.replace_argument(self.options, cmd)
+        output_path = utils.replace_argument(
+            self.options, '$WORKSPACE/subdomain/raw-massdns.txt')
+        std_path = utils.replace_argument(
+            self.options, '$WORKSPACE/subdomain/std-raw-massdns.txt')
+        execute.send_cmd(cmd, output_path, std_path, self.module_name)
 
     # just clean up some output
     def unique_result(self):

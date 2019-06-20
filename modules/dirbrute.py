@@ -4,6 +4,7 @@ from core import execute
 from core import slack
 from core import utils
 
+
 class DirBrute(object):
     """docstring for DirbBrute"""
     def __init__(self, options):
@@ -146,7 +147,7 @@ class DirBrute(object):
             return
 
         strip_domain = utils.get_domain(domain)
-        cmd = '$GO_PATH/gobuster -k -q -e -fw -x php,jsp,aspx,html,json -w $PLUGINS_PATH/wordlists/dir-all.txt -t 100 -o $WORKSPACE/directory/{1}-gobuster.txt -s 200,301,307 -u "{0}" '.format(
+        cmd = '$GO_PATH/gobuster dir -k -q -e -fw -x php,jsp,aspx,html,json -w $PLUGINS_PATH/wordlists/dir-all.txt -t 100 -o $WORKSPACE/directory/{1}-gobuster.txt -s 200,301,307 -u "{0}" '.format(
             domain, strip_domain)
 
         cmd = utils.replace_argument(self.options, cmd)

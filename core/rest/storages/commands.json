@@ -26,29 +26,9 @@
             },
             {
                 "banner": "gobuster",
-                "cmd": "$GO_PATH/gobuster -m dns -np -t 100 -w $PLUGINS_PATH/wordlists/shorts.txt -u $TARGET -o $WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt",
+                "cmd": "$GO_PATH/gobuster dns -q -t 100 -w $PLUGINS_PATH/wordlists/shorts.txt -d $TARGET -o $WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt",
                 "output_path": "$WORKSPACE/subdomain/raw-$OUTPUT-gobuster.txt",
                 "std_path": "$WORKSPACE/subdomain/std-raw-$OUTPUT-gobuster.std"
-            }
-        ],
-        "slow": [
-            {
-                "banner": "Amass",
-                "cmd": "$GO_PATH/amass enum -active -max-dns-queries 50000 -dir $WORKSPACE/subdomain/amass-$OUTPUT -d $TARGET -o $WORKSPACE/subdomain/$OUTPUT-amass.txt",
-                "output_path": "$WORKSPACE/subdomain/$OUTPUT-amass.txt",
-                "std_path": "$WORKSPACE/subdomain/std-$TARGET-amass.std"
-            },
-            {
-                "banner": "Subfinder",
-                "cmd": "$GO_PATH/subfinder -d $TARGET -t 100 -o $WORKSPACE/subdomain/$OUTPUT-subfinder.txt -nW",
-                "output_path": "$WORKSPACE/subdomain/$OUTPUT-subfinder.txt",
-                "std_path": "$WORKSPACE/subdomain/std-$OUTPUT-subfinder.std"
-            },
-            {
-                "banner": "gobuster",
-                "cmd": "$PLUGINS_PATH/massdns/scripts/subbrute.py $DOMAIN_FULL $TARGET | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o Sm -w $WORKSPACE/subdomain/raw-massdns.txt",
-                "output_path": "$WORKSPACE/subdomain/raw-massdns.txt",
-                "std_path": "$WORKSPACE/subdomain/std-raw-massdns.txt"
             }
         ]
     },

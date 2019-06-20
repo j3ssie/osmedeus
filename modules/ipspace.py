@@ -1,4 +1,4 @@
-import os, time
+import os, time, json
 from core import execute
 from core import slack
 from core import utils
@@ -32,7 +32,32 @@ class IPSpace(object):
         })
 
     def initial(self):
+        self.get_ipsace()
         self.run()
+
+    # reading ASN and IP space from amass result
+    def get_ipsace(self):
+        amass_output = utils.replace_argument(self.options, '$WORKSPACE/subdomain/amass-$OUTPUT/amass.json')
+
+        if not utils.not_empty_file(amass_output):
+            return
+
+        ips_file = utils.replace_argument(
+            self.options, '$WORKSPACE/ipspace/$OUTPUT-ipspace.txt')
+
+        data = []
+        jsonl = utils.just_read(amass_output).splitlines()
+        for line in jsonl:
+            json_data = json.loads(line)
+            ip = json_data.get('addresses').get('ip')
+            cidr = json_data.get('addresses').get('cidr')
+            asn = json_data.get('addresses').get('asn')
+            utils.print_info("Found ASN for {0} on CIDR {1}".format(asn, cidr))
+
+            data.extend([ip, cidr])
+            
+
+        utils.just_write(ips_file, data)
 
     def run(self):
         commands = execute.get_commands(self.options, self.module_name).get('routines')

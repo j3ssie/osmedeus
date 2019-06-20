@@ -43,10 +43,9 @@ class Recon(object):
         commands = execute.get_commands(
             self.options, self.module_name).get('routines')
 
-
         for item in commands:
             utils.print_good('Starting {0}'.format(item.get('banner')))
-            #really execute it
+            # really execute it
             execute.send_cmd(self.options, item.get('cmd'), item.get(
                 'output_path'), item.get('std_path'), self.module_name)
             time.sleep(1)
@@ -56,12 +55,13 @@ class Recon(object):
         main_json = utils.reading_json(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'))
 
+        # Parsing info to main_json
         for item in commands:
             if "Whois" in item.get('cmd'):
                 main_json["Info"]["Whois"] = {"path": item.get('output_path')}
             if "Dig" in item.get('cmd'):
                 main_json["Info"]["Dig"] = {"path": item.get('output_path')}
-
+    
         utils.just_write(utils.replace_argument(
             self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
 
@@ -126,7 +126,7 @@ class Recon(object):
         utils.print_good('Create IP for list of domain result')
         final_ip = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/final-IP-$OUTPUT.txt')
-        
+
         all_subdomain_path = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/final-$OUTPUT.txt')
 
@@ -169,7 +169,6 @@ class Recon(object):
             # update the main json file
             utils.just_write(utils.replace_argument(
                 self.options, '$WORKSPACE/$COMPANY.json'), main_json, is_json=True)
-
 
     def conclude(self):
         # just save commands
