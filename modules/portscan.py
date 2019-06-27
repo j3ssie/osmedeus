@@ -162,9 +162,7 @@ class PortScan(object):
         cmd = utils.replace_argument(self.options, cmd)
         output_path = utils.replace_argument(
             self.options, '$WORKSPACE/portscan/final-$OUTPUT.html')
-        std_path = utils.replace_argument(
-            self.options, '')
-        execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
+        execute.send_cmd(self.options, cmd, output_path, '', self.module_name)
 
     def parsing_to_csv(self):
         masscan_xml = utils.replace_argument(
@@ -190,12 +188,12 @@ class PortScan(object):
         output_path = utils.replace_argument(
             self.options, '$WORKSPACE/portscan/$OUTPUT-masscan-summary.txt')
         execute.send_cmd(self.options, utils.replace_argument(self.options, cmd), output_path,'', self.module_name)
-        
+
         time.sleep(2)
         # re-screeenshot the result with open port
         csv_data = utils.just_read(csv_output)
         self.screenshots(csv_data)
-    
+
     def screenshots(self, csv_data):
         # add http:// and https:// prefix to domain
         if csv_data:

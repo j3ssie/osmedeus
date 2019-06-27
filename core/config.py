@@ -62,6 +62,7 @@ List module
 ===========
 subdomain   - Scanning subdomain and subdomain takerover
 portscan    - Screenshot and Scanning service for list of domain
+scrrenshot  - Screenshot list of hosts
 asset       - Asset finding like URL, Wayback machine
 brute       - Do brute force on service of target
 vuln        - Scanning version of services and checking vulnerable service

@@ -136,7 +136,7 @@ def custom_speed(options):
                 return 'quick'
     else:
         return 'slow'
-    
+
 
 # check if command run success or not
 def cmd_exists(cmd):
@@ -238,13 +238,13 @@ def reading_json(filename):
 
     return None
 
-
+# just clean blank line and unique stuff
 def clean_up(filename):
     filename = os.path.normpath(filename)
     if os.path.isfile(filename):
         with open(filename, 'r') as f:
             data = f.read().splitlines()
-        
+
         final = []
         for item in data:
             if item != '':
@@ -291,6 +291,7 @@ def extract_ip(filename):
         if valid_ip(line):
             ips.append(line)
     return ips
+
 
 # check if string is IP or not
 def valid_ip(string_in):

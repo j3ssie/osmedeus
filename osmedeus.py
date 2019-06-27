@@ -59,7 +59,7 @@ def single_target(options):
         options['JWT'] = utils.get_jwt(options)
     except:
         utils.print_bad("Fail to set config, Something went wrong with Flask API !")
-        utils.print_bad("Visit this page for common issue: https://github.com/j3ssie/Osmedeus/wiki/Common-Issues")
+        utils.print_info("Visit this page for common issue: https://github.com/j3ssie/Osmedeus/wiki/Common-Issues")
         sys.exit(-1)
 
     if not (options['JWT'] and options['JWT'] != "None"):
@@ -86,7 +86,8 @@ def single_target(options):
 
 def main():
     config.banner(__version__, __author__)
-    parser = argparse.ArgumentParser(description="Collection tool for automatic pentesting", add_help=False)
+    parser = argparse.ArgumentParser(
+        description="One line to rude them all", add_help=False)
     parser.add_argument('-c', '--config', action='store', dest='config', help='config file', default='core/config.conf')
     parser.add_argument('-m', '--module', action='store', dest='module', help='specific module to action')
 

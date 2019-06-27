@@ -61,7 +61,7 @@
             {
                 "banner": "aquatone",
                 "cmd": "cat $WORKSPACE/subdomain/final-$TARGET.txt | $GO_PATH/aquatone -threads 20 -out $WORKSPACE/screenshot/$OUTPUT-aquatone",
-                "output_path": "/Users/j3ssie/myGit/private-osmedeus/Osmedeus/workspaces/zalo.me/screenshot/zalo.me-aquatone/aquatone_report.html",
+                "output_path": "$WORKSPACE/screenshot/$OUTPUT-aquatone/aquatone_report.html",
                 "std_path": "$WORKSPACE/screenshot/std-$OUTPUT-aquatone.std"
             }
         ]

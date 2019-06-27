@@ -106,6 +106,10 @@ def specific(options, module):
         # Discovery IP space
         ipspace.IPSpace(options)
 
+    if 'screen' in module:
+        # Discovery IP space
+        screenshot.ScreenShot(options)
+
     if 'portscan' in module:
         # scanning port, service and vuln with masscan and nmap
         portscan.PortScan(options)
