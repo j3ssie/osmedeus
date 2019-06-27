@@ -4,8 +4,8 @@
     <a href="https://github.com/j3ssie/Osmedeus"><img alt="python" src="https://img.shields.io/badge/python-3.6%2B-blue.svg"></a>
     <a href=""><img alt="Software License" src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square"></a>
     <a href=""><img alt="tested" src="https://img.shields.io/badge/tested-Kali%20Linux-green.svg"></a>
-    <a href="https://github.com/j3ssie/Osmedeus"><img alt="Release" src="https://img.shields.io/badge/version-1.4-red.svg"></a>
-    <a href="https://youtu.be/qWb78SYWLn4"><img alt="Demo" src="https://img.shields.io/badge/demo-youtube-blue.svg"></a>
+    <a href="https://github.com/j3ssie/Osmedeus"><img alt="Release" src="https://img.shields.io/badge/version-1.3-red.svg"></a>
+    <a href="https://youtu.be/8L5BAyyrNc0"><img alt="Demo" src="https://img.shields.io/badge/demo-youtube-blue.svg"></a>
   </p>
 </p>
 
@@ -16,12 +16,6 @@
 
 Osmedeus allows you automated run the collection of awesome tools to reconnaissance and vulnerability scanning against the target.
 
-# How to use
-If you have no idea what are you doing just type the command below or check out the [Advanced Usage](https://github.com/j3ssie/Osmedeus/wiki/Advanced-Usage)
-```
-./osmedeus.py -t example.com
-```
-
 # Installation
 ```
 git clone https://github.com/j3ssie/Osmedeus
@@ -29,6 +23,12 @@ cd Osmedeus
 ./install.sh
 ```
 This install only focus on Kali linux, check more install on [Wiki page](https://github.com/j3ssie/Osmedeus/wiki)
+
+# How to use
+If you have no idea what are you doing just type the command below or check out the [Advanced Usage](https://github.com/j3ssie/Osmedeus/wiki/Advanced-Usage)
+```
+./osmedeus.py -t example.com
+```
 
 # Using Docker 
 Check out [docker-osmedeus](https://github.com/mablanco/docker-osmedeus) by [mabnavarrete](https://twitter.com/mabnavarrete) for docker installation and this [wiki](https://github.com/j3ssie/Osmedeus/wiki/Using-Docker) for more detail.
@@ -42,6 +42,8 @@ Check out [docker-osmedeus](https://github.com/mablanco/docker-osmedeus) by [mab
 - [x] IP Discovery.
 - [x] CORS Scan.
 - [x] SSL Scan.
+- [x] Wayback Machine Discovery.
+- [x] URL Discovery.
 - [x] Headers Scan.
 - [x] Port Scan.
 - [x] Vulnerable Scan.
@@ -51,6 +53,20 @@ Check out [docker-osmedeus](https://github.com/mablanco/docker-osmedeus) by [mab
 - [x] Support Continuous Scan.
 - [x] Slack notifications.
 
+# Demo
+[![asciicast](https://asciinema.org/a/230164.svg)](https://asciinema.org/a/230164)
+
+![Slack Noti](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_noti.png)
+
+![Slack Report](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_report.png)
+
+![Web UI 1](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-1.png)
+
+![Web UI 2](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-2.png)
+
+![Web UI 3](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-3.png)
+
+
 # More options
 
 ```
@@ -58,6 +74,7 @@ Basic Usage
 ===========
 python3 osmedeus.py -t <your_target>
 python3 osmedeus.py -T <list_of_targets>
+python3 osmedeus.py -m <module> [-i <input>|-I <input_file>] [-t workspace_name]
 
 Advanced Usage
 ==============
@@ -66,12 +83,12 @@ python3 osmedeus.py -M
 
 [*] Running with specific module
 python3 osmedeus.py -t <result_folder> -m <module_name> -i <your_target>
-python3 osmedeus.py [-t <result_folder>] -m <module_name> -I <tagets_list_file>
 
 [*] Example command
-python3 osmedeus.py -m portscan -i "1.2.3.4/24"
-python3 osmedeus.py -t sample2 -m vuln -i "1.2.3.4/24"
-python3 osmedeus.py -t sample2 -m dirb -I /tmp/list_of_hosts.txt
+python3 osmedeus.py -m subdomain -t example.com
+python3 osmedeus.py -t example.com --slow "subdomain"
+python3 osmedeus.py -t sample2 -m vuln -i hosts.txt
+python3 osmedeus.py -t sample2 -m dirb -i /tmp/list_of_hosts.txt
 
 Remote Options
 ==============
@@ -92,26 +109,14 @@ More options
                       Custom workspace folder
 
 -f, --force           force to run the module again if output exists
--v, --verbose         show verbose output
--q, --quick           run this tool with quick routine
--s, --slow            run this tool with slow routine
+-s, --slow  "all"
+                      All module running as slow mode
+-s, --slow  "subdomain"
+                      Only running slow mode in subdomain module
 
 --debug               Just for debug purpose
 
 ```
-
-# Demo
-[![asciicast](https://asciinema.org/a/230164.svg)](https://asciinema.org/a/230164)
-
-![Slack Noti](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_noti.png)
-
-![Slack Report](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_report.png)
-
-![Web UI 1](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-1.png)
-
-![Web UI 2](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-2.png)
-
-![Web UI 3](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-3.png)
 
 
 # Disclaimer

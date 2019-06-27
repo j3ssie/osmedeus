@@ -4,6 +4,7 @@ import glob
 import json
 import requests
 import time
+import re
 import ipaddress
 import socket
 import shutil
@@ -68,9 +69,13 @@ def print_bad(text):
 
 
 def print_debug(text):
-    print(G + "#"* 20 + GR)
+    print(G + "#" * 20 + GR)
     print(text)
-    print("#"* 20)
+    print("#" * 20)
+
+
+def print_line():
+    print(GR + '-' * 50)
 
 
 def check_output(output):
@@ -104,6 +109,34 @@ def make_directory(directory):
         print_good('Make new directory: {0}'.format(directory))
         os.makedirs(directory)
 
+
+# checking speed
+def custom_speed(options):
+    custom_speed = options.get('SLOW')
+    if not custom_speed:
+        return 'quick'
+
+    if custom_speed != "None":
+        # split at upper case
+        raw_current_module = re.findall(r'[A-Z][^A-Z]*', options.get('CURRENT_MODULE'))
+        current_module = [x.lower() for x in raw_current_module]
+
+        if ',' in custom_speed:
+            affected_modules = custom_speed.split(',')
+            if any(elem in current_module for elem in affected_modules):
+                print_good('Change speed of {0} module to slow'.format(
+                    options.get('CURRENT_MODULE')))
+                return 'slow'
+        else:
+            if custom_speed in current_module:
+                print_good('Change speed of {0} module to slow'.format(
+                    options.get('CURRENT_MODULE')))
+                return 'slow'
+            else:
+                return 'quick'
+    else:
+        return 'slow'
+    
 
 # check if command run success or not
 def cmd_exists(cmd):
@@ -268,8 +301,6 @@ def valid_ip(string_in):
         return False
 ############
 
-
-###
 '''
 Options utils
 '''
@@ -302,7 +333,7 @@ def is_direct_mode(options, require_input=False):
 
 
 def is_force(options, filename):
-    if options['FORCE'] != "False":
+    if options.get('FORCE') != "False":
         return False
 
     if not_empty_file(filename):
@@ -333,12 +364,16 @@ def get_workspace(options=None, workspace=None):
 
 # adding times to waiting default is infinity times
 def just_waiting(options, module_name, seconds=30, times=False):
+    elapsed_time = 0
     if times:
         count = 0
 
+    print_info('Waiting for {0} module'.format(module_name))
     while not checking_done(options, module=module_name):
         if not times:
-            print_info('Waiting for {0} module'.format(module_name))
+            # just don't print this too much
+            if ((elapsed_time / seconds) % 10) == 0:
+                print_info('Waiting for {0} module'.format(module_name))
             time.sleep(seconds)
 
         if times:
@@ -351,6 +386,8 @@ def just_waiting(options, module_name, seconds=30, times=False):
                 break
             count += 1
             time.sleep(seconds)
+
+        elapsed_time += seconds
 
 
 # return True if the module was done and False if this modile not done
@@ -366,7 +403,7 @@ def resume(options, module):
         url = options['REMOTE_API'] + \
             "/api/module/{0}".format(options['OUTPUT'])
         r = requests.get(url, verify=False, headers=headers)
-        
+
         if r.status_code == 200:
             reports = json.loads(r.text).get('reports')
             for item in reports:

@@ -6,6 +6,7 @@ from pprint import pprint
 from modules import initials
 from modules import subdomain
 from modules import recon
+from modules import assetfinding
 from modules import takeover
 from modules import screenshot
 from modules import portscan
@@ -43,6 +44,9 @@ def normal(options):
 
     # Recon
     recon.Recon(options)
+
+    # Recon
+    assetfinding.AssetFinding(options)
 
     # Scanning for CorsScan
     cors.CorsScan(options)
@@ -90,12 +94,13 @@ def specific(options, module):
 
     initials.Initials(options)
 
-    if 'subdomain' in module:
+    if 'sub' in module or 'subdomain' in module:
         subdomain.SubdomainScanning(options)
         takeover.TakeOverScanning(options)
         screenshot.ScreenShot(options)
         cors.CorsScan(options)
         recon.Recon(options)
+        assetfinding.AssetFinding(options)
 
     if 'ip' in module:
         # Discovery IP space
@@ -107,6 +112,9 @@ def specific(options, module):
 
     if 'headers' in module:
         headers.HeadersScan(options)
+
+    if 'asset' in module:
+        assetfinding.AssetFinding(options)
 
     if 'vuln' in module:
         # scanning vulnerable service based on version

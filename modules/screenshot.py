@@ -10,6 +10,8 @@ class ScreenShot(object):
         utils.make_directory(options['WORKSPACE'] + '/screenshot')
         self.module_name = self.__class__.__name__
         self.options = options
+        self.options['CURRENT_MODULE'] = self.module_name
+        self.options['SPEED'] = utils.custom_speed(self.options)
         if utils.resume(self.options, self.module_name):
             utils.print_info("It's already done. use '-f' options to force rerun the module")
             return
@@ -22,6 +24,7 @@ class ScreenShot(object):
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done ScreenShot for {0}'.format(self.options['TARGET'])
         })
+        utils.print_line()
 
 
     def initial(self):

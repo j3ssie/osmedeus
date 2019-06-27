@@ -8,6 +8,7 @@ from core import utils
 class Initials(object):
     """Just create skeleton and get some basic information"""
     def __init__(self, options):
+        utils.print_line()
         utils.print_banner("Create Skeleton JSON file")
         utils.make_directory(options['WORKSPACE'] + '/info')
         self.module_name = self.__class__.__name__
@@ -15,6 +16,7 @@ class Initials(object):
         self.initial()
         # #this gonna run after module is done to update the main json
         # self.conclude()
+        utils.print_line()
 
     def initial(self):
         self.create_skeleton_json()

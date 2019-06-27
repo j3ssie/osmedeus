@@ -58,24 +58,19 @@ def update():
 
 def list_module():
     print(''' 
-{2}List module{1}
+List module
 ===========
 subdomain   - Scanning subdomain and subdomain takerover
 portscan    - Screenshot and Scanning service for list of domain
+asset       - Asset finding like URL, Wayback machine
+brute       - Do brute force on service of target
 vuln        - Scanning version of services and checking vulnerable service
-dirb        - Do directory search on the target
 git         - Scanning for git repo
+burp        - Scanning for burp state
+dirb        - Do directory search on the target
+ip          - IP discovery on the target
 
-{2}[*] Usage{1}
-===========
-python3 osmedeus.py [-t <result_folder>] -m <module_name> -i <your_target>
-
-{2}[*] Example command{1}
-===========
-python3 osmedeus.py -m portscan -i "1.2.3.4/24"
-python3 osmedeus.py -t sample -m vuln -i "1.2.3.4/24"
-python3 osmedeus.py -t sample2 -m dirb -I /tmp/list_of_hosts.txt
-        '''.format(G, GR, B))
+        ''')
     sys.exit(0)
 
 
@@ -87,6 +82,7 @@ def custom_help():
 ===========
 python3 osmedeus.py -t <your_target>
 python3 osmedeus.py -T <list_of_targets>
+python3 osmedeus.py -m <module> [-i <input>|-I <input_file>] [-t workspace_name]
 
 {2}Advanced Usage{1}
 ==============
@@ -94,13 +90,13 @@ python3 osmedeus.py -T <list_of_targets>
 python3 osmedeus.py -M
 
 {0}[*] Running with specific module{1}
-python3 osmedeus.py [-t <result_folder>] -m <module_name> -i <your_target>
-python3 osmedeus.py [-t <result_folder>] -m <module_name> -I <tagets_list_file>
+python3 osmedeus.py -t <result_folder> -m <module_name> -i <your_target>
 
 {0}[*] Example command{1}
-python3 osmedeus.py -m portscan -i "1.2.3.4/24"
-python3 osmedeus.py -t sample -m vuln -i "1.2.3.4/24"
-python3 osmedeus.py -t sample2 -m dirb -I /tmp/list_of_hosts.txt
+python3 osmedeus.py -m subdomain -t example.com
+python3 osmedeus.py -t example.com --slow "subdomain"
+python3 osmedeus.py -t sample2 -m vuln -i hosts.txt
+python3 osmedeus.py -t sample2 -m dirb -i /tmp/list_of_hosts.txt
 
 {2}Remote Options{1}
 ==============
@@ -114,20 +110,22 @@ python3 osmedeus.py -t sample2 -m dirb -I /tmp/list_of_hosts.txt
 ==============
 --update              Update lastest from git
 
--c CONFIG, --config CONFIG
+-c CONFIG, --config CONFIG    
                       Specify config file (default: {2}core/config.conf{1})
 
--w WORKSPACE, --workspace WORKSPACE
+-w WORKSPACE, --workspace WORKSPACE 
                       Custom workspace folder
 
 -f, --force           force to run the module again if output exists
--v, --verbose         show verbose output
--q, --quick           run this tool with quick routine
--s, --slow            run this tool with slow routine
+-s, --slow  "all"
+                      All module running as slow mode         
+-s, --slow  "subdomain"
+                      Only running slow mode in subdomain module      
 
 --debug               Just for debug purpose
             '''.format(G, GR, B))
     sys.exit(0)
+
 
 # parsing proxy if it exist
 def proxy_parsing(options):
@@ -144,6 +142,7 @@ def proxy_parsing(options):
         proxy_parsed = urllib.parse.urlsplit(options['PROXY'])
 
         scheme = proxy_parsed.scheme
+        host = proxy_parsed.netloc.split(':')[0]
         port = proxy_parsed.netloc.split(':')[1]
 
         proxy_element = "\n" + scheme + " " + host + " " + port
@@ -182,7 +181,7 @@ def proxy_parsing(options):
 def clean_up(options):
     if options['INPUT'] == "None":
         del options['INPUT']
-    
+
     if options['INPUT_LIST'] == "None":
         del options['INPUT_LIST']
 
@@ -251,7 +250,7 @@ def parsing_config(config_path, args):
         config.set('Slack', 'verbose_report_channel', verbose_report_channel)
 
     # Mode config of the tool
-    if args.slow:
+    if args.slow and args.slow == 'all':
         speed = "slow"
     else:
         speed = "quick"
@@ -387,7 +386,10 @@ def parsing_config(config_path, args):
         for key in config[sec]:
             options[key.upper()] = config.get(sec, key)
 
-    ######
+    #
+    if args.slow and args.slow != 'all':
+        options['SLOW'] = args.slow
+
     # parsing proxy stuff
     if options.get('PROXY') or options.get('PROXY_FILE'):
         proxy_parsing(options)

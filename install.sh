@@ -16,14 +16,14 @@ install_banner()
 }
 
 install_banner "git, nmap, masscan, chromium, npm, golang"
-[ -x "$(command -v git)" ] || sudo $PACKGE_MANAGER install git -y
-[ -x "$(command -v nmap)" ] || sudo $PACKGE_MANAGER install nmap -y
-[ -x "$(command -v masscan)" ] || sudo $PACKGE_MANAGER install masscan -y
-[ -x "$(command -v chromium)" ] || sudo $PACKGE_MANAGER install chromium -y
-[ -x "$(command -v npm)" ] || sudo $PACKGE_MANAGER install npm -y
-[ -x "$(command -v go)" ] || sudo $PACKGE_MANAGER install golang -y
-[ -x "$(command -v csvlook)" ] || sudo $PACKGE_MANAGER install csvkit -y
-[ -x "$(command -v proxychains)" ] || sudo $PACKGE_MANAGER install proxychains -y
+[ -x "$(command -v git)" ] || sudo $PACKGE_MANAGER install git -y 2> /dev/null
+[ -x "$(command -v nmap)" ] || sudo $PACKGE_MANAGER install nmap -y 2> /dev/null
+[ -x "$(command -v masscan)" ] || sudo $PACKGE_MANAGER install masscan -y 2> /dev/null
+[ -x "$(command -v chromium)" ] || sudo $PACKGE_MANAGER install chromium -y 2> /dev/null
+[ -x "$(command -v npm)" ] || sudo $PACKGE_MANAGER install npm -y 2> /dev/null
+[ -x "$(command -v go)" ] || sudo $PACKGE_MANAGER install golang -y 2> /dev/null
+[ -x "$(command -v csvlook)" ] || sudo $PACKGE_MANAGER install csvkit -y 2> /dev/null
+[ -x "$(command -v proxychains)" ] || sudo $PACKGE_MANAGER install proxychains -y 2> /dev/null
 
 #### Download stuff directly
 install_banner "wordlists"
@@ -35,18 +35,24 @@ mkdir -p "$PLUGINS_PATH/go/" 2> /dev/null
 
 [[ -f $PLUGINS_PATH/wordlists/all.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/all.txt https://gist.githubusercontent.com/jhaddix/86a06c5dc309d08580a018c66354a056/raw/96f4e51d96b2203f19f6381c8c545b278eaa0837/all.txt
 
-#domain discovery
+# domain discovery
 [[ -f $PLUGINS_PATH/wordlists/shorts.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/shorts.txt https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1mil-20000.txt
 
 [[ -f $PLUGINS_PATH/wordlists/dir-all.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/dir-all.txt https://gist.githubusercontent.com/jhaddix/b80ea67d85c13206125806f0828f4d10/raw/c81a34fe84731430741e0463eb6076129c20c4c0/content_discovery_all.txt
 
-##content discovery
+# permutation domain
+[[ -f $PLUGINS_PATH/wordlists/short-permutation.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/short-permutation.txt https://raw.githubusercontent.com/subfinder/goaltdns/master/words.txt
+
+[[ -f $PLUGINS_PATH/wordlists/all-permutation.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/all-permutation.txt https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/bitquark-subdomains-top100K.txt
+
+# content discovery
 [[ -f $PLUGINS_PATH/wordlists/raft-large-directories.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/raft-large-directories.txt	https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/raft-large-directories.txt
 
 
 [[ -f $PLUGINS_PATH/wordlists/really-quick.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/really-quick.txt 	https://raw.githubusercontent.com/maurosoria/dirsearch/master/db/dicc.txt 
 
 [[ -f $PLUGINS_PATH/wordlists/top10000.txt ]] || wget -q -O $PLUGINS_PATH/wordlists/top10000.txt 	https://raw.githubusercontent.com/danielmiessler/RobotsDisallowed/master/top10000.txt
+
 
 cat $PLUGINS_PATH/wordlists/really-quick.txt $PLUGINS_PATH/wordlists/top10000.txt > $PLUGINS_PATH/wordlists/quick-content-discovery.txt
 
@@ -104,25 +110,30 @@ install_banner "subjack"
 go get -u github.com/haccer/subjack
 install_banner "tko-subs"
 go get -u github.com/anshumanbh/tko-subs
+install_banner "goaltdns"
+go get -u github.com/subfinder/goaltdns
 install_banner "gitleaks"
 go get -u github.com/zricethezav/gitleaks
 install_banner "gowitness"
 go get -u github.com/sensepost/gowitness
 install_banner "webanalyze"
 go get -u github.com/rverton/webanalyze/...
+install_banner "waybackurls"
+go get -u github.com/tomnomnom/waybackurls
+install_banner "meg"
+go get -u github.com/tomnomnom/meg
+install_banner "httprobe"
+go get -u github.com/tomnomnom/httprobe
+
+install_banner "gf"
+go get -u github.com/tomnomnom/gf
 
 cp $GO_DIR/* "$PLUGINS_PATH/go/"
 
 install_banner "observatory"
 npm install -g observatory-cli
 
-install_banner "IPOsint"
-cd $PLUGINS_PATH
-git clone https://github.com/j3ssie/IPOsint
-pip3 install -r IPOsint/requirements.txt
-cd $CWD
-
-#install massdns
+# install massdns
 install_banner "massdns"
 cd $PLUGINS_PATH
 git clone https://github.com/blechschmidt/massdns
@@ -137,67 +148,49 @@ cd $CWD
 ##
 # Install python stuff
 ##
-install_banner "brutespray"
-cd $PLUGINS_PATH
-git clone https://github.com/x90skysn3k/brutespray
-cd brutespray
-pip install -r requirements.txt
-cd $CWD
 
-install_banner "truffleHog"
+install_banner "truffleHog, wfuzz"
 pip install truffleHog
+pip3 install wfuzz
+
+cd $PLUGINS_PATH
+install_banner "gf singature"
+git clone https://github.com/tomnomnom/gf 2> /dev/null
 
 install_banner "testssl.sh"
-cd $PLUGINS_PATH
-git clone https://github.com/drwetter/testssl.sh
-cd $CWD
+git clone https://github.com/drwetter/testssl.sh 2> /dev/null
+
+install_banner "IPOsint"
+git clone https://github.com/j3ssie/IPOsint 2> /dev/null
+pip3 install -r IPOsint/requirements.txt
+
+install_banner "sqlmap"
+git clone https://github.com/sqlmapproject/sqlmap 2> /dev/null
+
+install_banner "dirsearch"
+git clone https://github.com/maurosoria/dirsearch 2> /dev/null
 
 install_banner "LinkFinder"
-cd $PLUGINS_PATH
-git clone https://github.com/GerbenJavado/LinkFinder.git
-cd LinkFinder
-python setup.py install
+git clone https://github.com/GerbenJavado/LinkFinder.git 2> /dev/null
+python2.7 LinkFinder/setup.py install
 
-cd $PLUGINS_PATH
-install_banner "sqlmap"
-git clone https://github.com/sqlmapproject/sqlmap
-
-cd $PLUGINS_PATH
 install_banner "sherlock"
-git clone https://github.com/sherlock-project/sherlock.git
-cd sherlock
-pip3 install -r requirements.txt
-cd $CWD
+git clone https://github.com/sherlock-project/sherlock.git 2> /dev/null
+pip3 install -r sherlock/requirements.txt
 
-# cd $PLUGINS_PATH
-# install_banner "SleuthQL"
-# git clone https://github.com/RhinoSecurityLabs/SleuthQL
-# pip install bs4
-# cd $CWD
-
-cd $PLUGINS_PATH
-install_banner "dirsearch"
-git clone https://github.com/maurosoria/dirsearch
-cd $CWD
-
-pip3 install wfuzz
-# install_banner "dirhunt"
-# git clone https://github.com/Nekmo/dirhunt
-# cd dirhunt
-# python3 setup.py install
-# cd $CWD
+install_banner "CORScanner"
+git clone https://github.com/chenjj/CORScanner 2> /dev/null
+pip2.7 install -r CORScanner/requirements.txt
 
 install_banner "CORStest"
-cd $PLUGINS_PATH
-git clone https://github.com/RUB-NDS/CORStest
+git clone https://github.com/RUB-NDS/CORStest 2> /dev/null
 
-install_banner "JSParser"
-cd $PLUGINS_PATH
-git clone https://github.com/nahamsec/JSParser
-cd JSParser/
-python setup.py install
+install_banner "brutespray"
+git clone https://github.com/x90skysn3k/brutespray 2> /dev/null
+pip install -r brutespray/requirements.txt
 
-
+cd $CWD
+echo -e "\033[1;32m[+] Installing done... \033[1;37m"
 
 
 

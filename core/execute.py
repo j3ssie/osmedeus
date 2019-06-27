@@ -1,16 +1,21 @@
-import sys, os, json
-import subprocess, requests
+import sys
+import os
+import json
+import subprocess
+import requests
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import utils
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-headers = {"User-Agent": "Osmedeus/v1.3", "Accept": "*/*",
+headers = {"User-Agent": "Osmedeus/v1.4", "Accept": "*/*",
            "Content-type": "application/json", "Connection": "close"}
 
+# just run command directly for simple purpose like update
 def run1(command):
     os.system(command)
 
+# run command in subprocess
 def run(command):
     stdout = ''
     try:
@@ -32,18 +37,21 @@ def run(command):
         if (exitCode == 0):
             return stdout
         else:
+            utils.print_line()
             print('Something went wrong with the command below: ')
             print(command)
+            utils.print_line()
             return None
     except:
+        utils.print_line()
         print('Something went wrong with the command below: ')
         print(command)
+        utils.print_line()
         return None
 
 
 def not_empty_file(fpath):
-	return os.path.isfile(fpath) and os.path.getsize(fpath) > 0
-
+    return os.path.isfile(fpath) and os.path.getsize(fpath) > 0
 
 # get all commaands by module
 def get_commands(options, module):
@@ -57,12 +65,12 @@ def get_commands(options, module):
 
     return None
 
-
+# parsing command 
 def send_cmd(options, cmd, output_path='', std_path='', module='', nolog=False):
     # check if commandd was ran or not
     if utils.is_force(options, output_path):
         utils.print_info("Already done: {0}".format(cmd))
-        return
+        return None
 
     headers['Authorization'] = options['JWT']
     json_cmd = {}
@@ -79,7 +87,7 @@ def send_cmd(options, cmd, output_path='', std_path='', module='', nolog=False):
     send_JSON(options, json_cmd)
 
 
-# leave token blank for now
+# send execute request to API server
 def send_JSON(options, json_body, token=''):
     headers['Authorization'] = options['JWT']
     workspace = utils.get_workspace(options=options)
@@ -91,5 +99,4 @@ def send_JSON(options, json_body, token=''):
                           json=json_body, timeout=0.1)
     except:
         pass
-
 

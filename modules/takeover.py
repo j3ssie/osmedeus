@@ -10,6 +10,8 @@ class TakeOverScanning(object):
         utils.print_banner("Scanning for Subdomain TakeOver")
         self.module_name = self.__class__.__name__
         self.options = options
+        self.options['CURRENT_MODULE'] = self.module_name
+        self.options['SPEED'] = utils.custom_speed(self.options)
         if utils.resume(self.options, self.module_name):
             utils.print_info("It's already done. use '-f' options to force rerun the module")
             return
@@ -29,8 +31,8 @@ class TakeOverScanning(object):
 
     def initial(self):
         self.run()
-        if self.options['SPEED'] == 'slow':
-            self.dig_info()
+        # if self.options['SPEED'] == 'slow':
+        #     self.dig_info()
 
     def run(self):
         commands = execute.get_commands(self.options, self.module_name).get('routines')
@@ -75,6 +77,7 @@ class TakeOverScanning(object):
         #submit a log
         utils.print_info('Update activities log')
         utils.update_activities(self.options, str(custom_logs))
+        utils.print_line()
             
 
 

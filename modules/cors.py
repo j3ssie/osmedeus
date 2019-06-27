@@ -23,11 +23,12 @@ class CorsScan(object):
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done Scanning CORS for {0}'.format(self.options['TARGET'])
         })
+        utils.print_line()
 
 
     def initial(self):
         self.run()
-    
+
     def run(self):
         commands = execute.get_commands(self.options, self.module_name).get('routines')
         for item in commands:
@@ -37,7 +38,7 @@ class CorsScan(object):
                 'output_path'), item.get('std_path'), self.module_name)
 
         utils.just_waiting(self.options, self.module_name, seconds=10)
-        #just save commands
+        # just save commands
         logfile = utils.replace_argument(self.options, '$WORKSPACE/log.json')
         utils.save_all_cmd(self.options, logfile)
 

@@ -12,7 +12,8 @@ class VulnScan(object):
         utils.make_directory(options['WORKSPACE'] + '/vulnscan/details')
         self.module_name = self.__class__.__name__
         self.options = options
-
+        self.options['CURRENT_MODULE'] = self.module_name
+        self.options['SPEED'] = utils.custom_speed(self.options)
         if utils.resume(self.options, self.module_name):
             utils.print_info(
                 "It's already done. use '-f' options to force rerun the module")

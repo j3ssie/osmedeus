@@ -16,12 +16,12 @@ class PortScan(object):
         utils.make_directory(options['WORKSPACE'] + '/subdomain')
         self.module_name = self.__class__.__name__
         self.options = options
-
+        self.options['SPEED'] = utils.custom_speed(self.options)
         if utils.resume(self.options, self.module_name):
             utils.print_info(
                 "It's already done. use '-f' options to force rerun the module")
             return
-        
+
         self.is_direct = utils.is_direct_mode(options, require_input=True)
 
         slack.slack_noti('status', self.options, mess={

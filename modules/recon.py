@@ -16,6 +16,8 @@ class Recon(object):
         utils.make_directory(options['WORKSPACE'] + '/recon')
         self.module_name = self.__class__.__name__
         self.options = options
+        self.options['CURRENT_MODULE'] = self.module_name
+        self.options['SPEED'] = utils.custom_speed(self.options)
         if utils.resume(self.options, self.module_name):
             utils.print_info(
                 "It's already done. use '-f' options to force rerun the module")
@@ -33,6 +35,7 @@ class Recon(object):
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done Scanning Subdomain for {0}'.format(self.options['TARGET'])
         })
+        utils.print_line()
 
     def initial(self):
         self.run()
@@ -134,12 +137,12 @@ class Recon(object):
         if utils.not_empty_file(final_ip) or not utils.not_empty_file(all_subdomain_path):
             return
 
-        cmd = '$PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -t A -o S -w $WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt $WORKSPACE/subdomain/final-$OUTPUT.txt'
+        cmd = '$PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt --sticky -t A --verify-ip -q -o S -w $WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt $WORKSPACE/subdomain/final-$OUTPUT.txt'
 
         cmd = utils.replace_argument(self.options, cmd)
         output_path = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/massdns-IP-$OUTPUT.txt')
-        execute.send_cmd(self.options, cmd, '', '', self.module_name)
+        execute.send_cmd(self.options, cmd, output_path, '', self.module_name)
 
         utils.just_waiting(self.options, self.module_name, seconds=5, times=5)
 

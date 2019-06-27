@@ -106,9 +106,10 @@ def main():
     parser.add_argument('-M', '--list_module', action='store_true', help='List all module')
     parser.add_argument('-v', '--verbose', action='store_true', help='show verbose output')
 
+    parser.add_argument('-s', '--slow', action='store',
+                        help='run this tool with slow routine', default=None)
+
     parser.add_argument('-f', '--force', action='store_true', help='force to run the module again if output exists')
-    parser.add_argument('-q', '--quick', action='store_true', help='run this tool with quick routine', default=True)
-    parser.add_argument('-s', '--slow', action='store_true', help='run this tool with slow routine', default=False)
     
     parser.add_argument('--mode', action='store_true', help='Choose mode to run normal routine(quick or slow)', default='quick')
     parser.add_argument('--update', action='store_true', help='update lastest from git')
