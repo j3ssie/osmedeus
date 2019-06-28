@@ -218,15 +218,15 @@
         "quick": [
             {
                 "banner": "gitleaks",
-                "cmd": "$GO_PATH/gitleaks -v --repo=$INPUT --report=$WORKSPACE/gitscan/$TARGET-gitleaks.json",
-                "output_path": "$WORKSPACE/gitscan/$TARGET-gitleaks.json",
-                "std_path": "$WORKSPACE/gitscan/std-$TARGET-gitleaks.std"
+                "cmd": "$GO_PATH/gitleaks -v --repo=$INPUT --report=$WORKSPACE/gitscan/$OUTPUT-gitleaks.json",
+                "output_path": "$WORKSPACE/gitscan/$OUTPUT-gitleaks.json",
+                "std_path": "$WORKSPACE/gitscan/std-$OUTPUT-gitleaks.std"
             },
             {
                 "banner": "trufflehog",
-                "cmd": "trufflehog --regex --entropy=True $INPUT | tee $WORKSPACE/gitscan/$TARGET-trufflehog.txt",
-                "output_path": "$WORKSPACE/gitscan/$TARGET-trufflehog.txt",
-                "std_path": "$WORKSPACE/gitscan/std-$TARGET-trufflehog.std"
+                "cmd": "trufflehog --regex --entropy=True $INPUT | tee $WORKSPACE/gitscan/$OUTPUT-trufflehog.txt",
+                "output_path": "$WORKSPACE/gitscan/$OUTPUT-trufflehog.txt",
+                "std_path": "$WORKSPACE/gitscan/std-$OUTPUT-trufflehog.std"
             },
             {
                 "banner": "gitrob",
