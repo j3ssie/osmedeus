@@ -38,6 +38,7 @@ class PortScan(object):
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start Port Scanning for {0}'.format(self.options['TARGET'])
         })
+        utils.print_line()
 
     def initial(self):
         self.create_ip_result()
@@ -154,7 +155,6 @@ class PortScan(object):
             self.options, '$WORKSPACE/portscan/std-$OUTPUT-masscan.std')
         execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
 
-
     # Create beautiful HTML report for masscan
     def create_html_report(self):
         cmd = "xsltproc -o $WORKSPACE/portscan/final-$OUTPUT.html $PLUGINS_PATH/nmap-stuff/nmap-bootstrap.xsl $WORKSPACE/portscan/$OUTPUT-masscan.xml"
@@ -163,6 +163,7 @@ class PortScan(object):
         output_path = utils.replace_argument(
             self.options, '$WORKSPACE/portscan/final-$OUTPUT.html')
         execute.send_cmd(self.options, cmd, output_path, '', self.module_name)
+        utils.print_line()
 
     def parsing_to_csv(self):
         masscan_xml = utils.replace_argument(
@@ -184,6 +185,7 @@ class PortScan(object):
         if not utils.not_empty_file(csv_output):
             return 
 
+        utils.print_line()
         cmd = "cat $WORKSPACE/portscan/$OUTPUT-masscan.csv | csvlook --no-inference | tee $WORKSPACE/portscan/$OUTPUT-masscan-summary.txt"
         output_path = utils.replace_argument(
             self.options, '$WORKSPACE/portscan/$OUTPUT-masscan-summary.txt')

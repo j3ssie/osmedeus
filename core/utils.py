@@ -368,8 +368,8 @@ def just_waiting(options, module_name, seconds=30, times=False):
     elapsed_time = 0
     if times:
         count = 0
-
     print_info('Waiting for {0} module'.format(module_name))
+    time.sleep(seconds)
     while not checking_done(options, module=module_name):
         if not times:
             # just don't print this too much

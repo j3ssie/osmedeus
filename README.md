@@ -53,6 +53,8 @@ Check out [docker-osmedeus](https://github.com/mablanco/docker-osmedeus) by [mab
 - [x] Support Continuous Scan.
 - [x] Slack notifications.
 
+Check this [Wiki page](https://github.com/j3ssie/Osmedeus/wiki/Module-In-Depth) for more detail about each module.
+
 # Demo
 [![asciicast](https://asciinema.org/a/230164.svg)](https://asciinema.org/a/230164)
 
@@ -66,6 +68,26 @@ Check out [docker-osmedeus](https://github.com/mablanco/docker-osmedeus) by [mab
 
 ![Web UI 3](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-3.png)
 
+
+# Example Commands
+```
+# normal routine
+./osmedeus.py -t example.com
+
+# normal routine but slow speed on subdomain module
+./osmedeus.py -t example.com --slow 'subdomain'
+
+# direct mode examples
+./osmedeus.py -m portscan -i "1.2.3.4/24"
+
+./osmedeus.py -m portscan -I list_of_targets.txt -t result_folder
+
+./osmedeus.py -m "portscan,vulnscan" -i "1.2.3.4/24" -t result_folder
+
+./osmedeus.py -m "assets" -i "example.com"
+./osmedeus.py -m "assets,dirb" -i "example.com"
+
+```
 
 # More options
 

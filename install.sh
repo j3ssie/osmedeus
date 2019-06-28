@@ -93,40 +93,47 @@ fi
 PS="$ "
 source $DEFAULT_SHELL
 
+# update golang version
+install_banner "Update Golang version"
+wget -qO- https://raw.githubusercontent.com/udhos/update-golang/master/update-golang.sh | bash
+
+GO_BIN=$(which go)
+[[ -f /usr/local/go/bin/go ]] && GO_BIN=/usr/local/go/bin/go
+
 ##
 # Install go stuff
 ##
 install_banner "amass"
-go get -u github.com/OWASP/Amass/...
+$GO_BIN get -u github.com/OWASP/Amass/...
 install_banner "subfinder"
-go get -u github.com/subfinder/subfinder
+$GO_BIN get -u github.com/subfinder/subfinder
 install_banner "gobuster"
-go get -u github.com/OJ/gobuster
+$GO_BIN get -u github.com/OJ/gobuster
 install_banner "aquatone"
-go get -u github.com/michenriksen/aquatone
+$GO_BIN get -u github.com/michenriksen/aquatone
 install_banner "gitrob"
-go get -u github.com/michenriksen/gitrob
+$GO_BIN get -u github.com/michenriksen/gitrob
 install_banner "subjack"
-go get -u github.com/haccer/subjack
+$GO_BIN get -u github.com/haccer/subjack
 install_banner "tko-subs"
-go get -u github.com/anshumanbh/tko-subs
+$GO_BIN get -u github.com/anshumanbh/tko-subs
 install_banner "goaltdns"
-go get -u github.com/subfinder/goaltdns
+$GO_BIN get -u github.com/subfinder/goaltdns
 install_banner "gitleaks"
-go get -u github.com/zricethezav/gitleaks
+$GO_BIN get -u github.com/zricethezav/gitleaks
 install_banner "gowitness"
-go get -u github.com/sensepost/gowitness
+$GO_BIN get -u github.com/sensepost/gowitness
 install_banner "webanalyze"
-go get -u github.com/rverton/webanalyze/...
+$GO_BIN get -u github.com/rverton/webanalyze/...
 install_banner "waybackurls"
-go get -u github.com/tomnomnom/waybackurls
+$GO_BIN get -u github.com/tomnomnom/waybackurls
 install_banner "meg"
-go get -u github.com/tomnomnom/meg
+$GO_BIN get -u github.com/tomnomnom/meg
 install_banner "httprobe"
-go get -u github.com/tomnomnom/httprobe
+$GO_BIN get -u github.com/tomnomnom/httprobe
 
 install_banner "gf"
-go get -u github.com/tomnomnom/gf
+$GO_BIN get -u github.com/tomnomnom/gf
 
 cp $GO_DIR/* "$PLUGINS_PATH/go/"
 

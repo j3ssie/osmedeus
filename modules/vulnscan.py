@@ -31,6 +31,7 @@ class VulnScan(object):
             'title':  "{0} | {1} ".format(self.options['TARGET'], self.module_name),
             'content': 'Done Vulnerable Scanning for {0}'.format(self.options['TARGET'])
         })
+        utils.print_line()
 
     def initial(self):
         ip_list = self.prepare_input()
@@ -138,7 +139,7 @@ class VulnScan(object):
         csv_summary_path = utils.replace_argument(
             self.options, '$WORKSPACE/vulnscan/summary-$OUTPUT.csv')
         utils.just_write(csv_summary_path, all_csv)
-
+        utils.print_line()
         # beautiful csv look
         cmd = "csvcut -c 1-7 $WORKSPACE/vulnscan/summary-$OUTPUT.csv | csvlook  --no-inference | tee $WORKSPACE/vulnscan/std-$OUTPUT-summary.std"
         
