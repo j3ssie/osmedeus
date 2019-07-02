@@ -88,7 +88,8 @@ class AssetFinding(object):
             self.options, '$WORKSPACE/assets/wayback-$OUTPUT.txt')
         std_path = utils.replace_argument(
             self.options, '$WORKSPACE/assets/std-wayback-$OUTPUT.std')
-        execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
+        execute.send_cmd(self.options, cmd, output_path,
+                         std_path, self.module_name)
         utils.print_line()
 
     # request for the root path to get response
@@ -116,7 +117,8 @@ class AssetFinding(object):
     # finding link in http domain
     def linkfinder(self):
         utils.print_good('Starting linkfinder')
-
+        utils.make_directory(
+            self.options['WORKSPACE'] + '/assets/linkfinder')
         if self.is_direct:
             if utils.not_empty_file(self.is_direct):
                 http_domains = utils.just_read(self.is_direct)
@@ -136,6 +138,22 @@ class AssetFinding(object):
                     self.options, '$WORKSPACE/assets/linkfinder/{0}-linkfinder.std'.format(strip_domain))
                 execute.send_cmd(self.options, cmd, output_path,
                                  std_path, self.module_name)
+
+                # if http not accept just try  https
+                if not utils.not_empty_file(output_path):
+                    strip_domain = utils.get_domain(domain)
+                    domain = 'https://' + domain
+                    cmd = 'python3 $PLUGINS_PATH/LinkFinder/linkfinder.py -i {0} -d -o cli | tee $WORKSPACE/assets/linkfinder/{1}-linkfinder.txt'.format(
+                        domain, strip_domain)
+
+                    cmd = utils.replace_argument(self.options, cmd)
+                    output_path = utils.replace_argument(
+                        self.options, '$WORKSPACE/assets/linkfinder/{0}-linkfinder.txt'.format(strip_domain))
+                    std_path = utils.replace_argument(
+                        self.options, '$WORKSPACE/assets/linkfinder/{0}-linkfinder.std'.format(strip_domain))
+                    execute.send_cmd(self.options, cmd,
+                                     output_path, std_path, self.module_name)
+
                 return None
         else:
             if self.options['SPEED'] != 'slow':
@@ -145,8 +163,6 @@ class AssetFinding(object):
             http_domains = utils.replace_argument(
                 self.options, '$WORKSPACE/assets/http-$OUTPUT.txt')
 
-        utils.make_directory(
-            self.options['WORKSPACE'] + '/assets/linkfinder')
         if utils.not_empty_file(http_domains):
             domains = utils.just_read(http_domains)
             for domain in domains.splitlines():
@@ -159,5 +175,5 @@ class AssetFinding(object):
                     self.options, '$WORKSPACE/assets/linkfinder/{0}-linkfinder.txt'.format(strip_domain))
                 std_path = utils.replace_argument(
                     self.options, '$WORKSPACE/assets/linkfinder/{0}-linkfinder.std'.format(strip_domain))
-                execute.send_cmd(self.options, cmd, output_path, std_path, self.module_name)
-
+                execute.send_cmd(self.options, cmd, output_path,
+                                 std_path, self.module_name)
