@@ -102,7 +102,7 @@ python3 osmedeus.py -t sample2 -m dirb -i /tmp/list_of_hosts.txt
 {2}Remote Options{1}
 ==============
 --remote REMOTE       Remote address for API, (default: https://127.0.0.1:5000)
---auth AUTH           Specify auth tication e.g: --auth="username:password"
+--auth AUTH           Specify authentication e.g: --auth="username:password"
                       See your config file for more detail (default: {2}core/config.conf{1})
 
 --client              just run client stuff in case you ran the flask server before
