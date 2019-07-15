@@ -118,7 +118,7 @@ def main():
     parser.add_argument('--remote', action='store', dest='remote', default="https://127.0.0.1:5000", 
                     help='remote address for API')
 
-    parser.add_argument('--auth', action='store', dest='auth', help='Specify auth tication e.g: --auth="username:password" ')
+    parser.add_argument('--auth', action='store', dest='auth', help='Specify authentication e.g: --auth="username:password" ')
 
     parser.add_argument('--proxy', action='store', dest='proxy', help='Specify proxy --proxy="type://host:port" e.g: --proxy="socks4://127.0.0.1:9050" ')
 
