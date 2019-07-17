@@ -1,0 +1,11 @@
+[Unit]
+Description=Osmedeus Service
+After=network.target
+
+[Service]
+Type=simple
+Restart=Always
+ExecStart=/usr/bin/python3 /opt/Osmedeus/core/app.py -b 0.0.0.0 -p 5000
+
+[Install]
+WantedBy=multi-user.target
