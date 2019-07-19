@@ -16,11 +16,12 @@ class ScreenShot(object):
         if utils.resume(self.options, self.module_name):
             utils.print_info("It's already done. use '-f' options to force rerun the module")
             return
+        self.is_direct = utils.is_direct_mode(options, require_input=True)
+
         slack.slack_noti('status', self.options, mess={
             'title':  "{0} | {1}".format(self.options['TARGET'], self.module_name),
             'content': 'Start ScreenShot for {0}'.format(self.options['TARGET'])
         })
-
 
         self.initial()
         
@@ -47,8 +48,6 @@ class ScreenShot(object):
         else:
             self.run()
         utils.just_waiting(self.options, self.module_name, seconds=10)
-        # this gonna run after module is done to update the main json
-        # self.conclude()
 
     def run(self):
         commands = execute.get_commands(self.options, self.module_name).get('routines')

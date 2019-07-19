@@ -188,6 +188,7 @@ def clean_up(options):
 
     return options
 
+# parsing args 
 def parsing_config(config_path, args):
     options = {}
 
@@ -212,7 +213,7 @@ def parsing_config(config_path, args):
     stds_channel = str(os.getenv("STDS_CHANNEL"))
     verbose_report_channel = str(os.getenv("VERBOSE_REPORT_CHANNEL"))
 
-
+    # checking for config path
     if os.path.isfile(config_path):
         utils.print_info('Config file detected: {0}'.format(config_path))
         # config to logging some output
@@ -251,7 +252,7 @@ def parsing_config(config_path, args):
         config.set('Slack', 'verbose_report_channel', verbose_report_channel)
 
     # Mode config of the tool
-    if args.slow and args.slow == 'all':
+    if args.slow and args.slow.lower() == 'all':
         speed = "slow"
     else:
         speed = "quick"
@@ -283,7 +284,7 @@ def parsing_config(config_path, args):
     # target config
     if args.target:
         target = args.target
-    
+
     # set target is direct input if not specific
     elif direct_input or direct_input_list:
         if direct_input:
@@ -365,7 +366,7 @@ def parsing_config(config_path, args):
         creds = args.auth.strip().split(":")
         username = creds[0]
         password = creds[1]
-        
+
         config.set('Server', 'username', username)
         config.set('Server', 'password', password)
     else:
@@ -390,6 +391,9 @@ def parsing_config(config_path, args):
     #
     if args.slow and args.slow != 'all':
         options['SLOW'] = args.slow
+    else:
+        options['SLOW'] = "None"
+
 
     # parsing proxy stuff
     if options.get('PROXY') or options.get('PROXY_FILE'):

@@ -119,14 +119,17 @@ def custom_speed(options):
     if custom_speed != "None":
         # split at upper case
         raw_current_module = re.findall(r'[A-Z][^A-Z]*', options.get('CURRENT_MODULE'))
-        current_module = [x.lower() for x in raw_current_module]
+        current_module = [options.get('CURRENT_MODULE'), options.get(
+            'CURRENT_MODULE').lower()] + [x.lower() for x in raw_current_module]
 
         if ',' in custom_speed:
             affected_modules = custom_speed.split(',')
-            if any(elem in current_module for elem in affected_modules):
+            if any(elem.strip() in current_module for elem in affected_modules):
                 print_good('Change speed of {0} module to slow'.format(
                     options.get('CURRENT_MODULE')))
                 return 'slow'
+            else:
+                return 'quick'
         else:
             if custom_speed in current_module:
                 print_good('Change speed of {0} module to slow'.format(
