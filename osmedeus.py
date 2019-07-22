@@ -33,7 +33,7 @@ def parsing_argument(args):
             p = Process(target=flask_run)
             p.start()
             # wait for flask API start
-            time.sleep(2)
+            time.sleep(3)
         else:
             utils.print_info("Look like Flask API already ran")
 
