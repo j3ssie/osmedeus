@@ -187,7 +187,7 @@ pip3 install -r sherlock/requirements.txt
 
 install_banner "CORScanner"
 git clone https://github.com/chenjj/CORScanner 2> /dev/null
-pip2.7 install -r CORScanner/requirements.txt
+pip install -r CORScanner/requirements.txt
 
 install_banner "CORStest"
 git clone https://github.com/RUB-NDS/CORStest 2> /dev/null
