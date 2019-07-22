@@ -1,19 +1,18 @@
 import os
 import glob
 import json
-from pathlib import Path
-from flask_restful import Api, Resource, reqparse
+from flask_restful import Resource, reqparse
 from flask_jwt_extended import jwt_required
-from flask import Flask, request, escape, make_response, send_from_directory
+from flask import send_from_directory
 import utils
+from pathlib import Path
+BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 
 # incase you can't install ansi2html it's won't break the api
 try:
     from ansi2html import Ansi2HTMLConverter
 except:
     pass
-
-current_path = os.path.dirname(os.path.realpath(__file__))
 
 '''
 render stdout content 
@@ -24,7 +23,7 @@ class Wscdn(Resource):
 
     def verify_file(self, filename):
         option_files = glob.glob(
-            current_path + '/storages/**/options.json', recursive=True)
+            str(BASE_DIR) + '/storages/**/options.json', recursive=True)
 
         # loop though all options avalible
         for option in option_files:
@@ -51,5 +50,4 @@ class Wscdn(Resource):
 
         if not stdout_path:
             return 'Custom 404 here', 404
-        
         return send_from_directory(ws_path, stdout_path)

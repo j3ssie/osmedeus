@@ -3,7 +3,7 @@ import json
 import time
 import hashlib
 import urllib.parse
-from flask_restful import Api, Resource, reqparse
+from flask_restful import Resource, reqparse
 from flask_jwt_extended import jwt_required
 from .decorators import local_only
 import utils
@@ -11,8 +11,6 @@ import utils
 '''
 helper to store data into a file for quickly running from web UI
 '''
-
-current_path = os.path.dirname(os.path.realpath(__file__))
 
 
 class Save(Resource):
@@ -33,8 +31,5 @@ class Save(Resource):
         filepath = '/tmp/osmedeus-tmp/' + \
             hashlib.md5(ts.encode()).hexdigest()[:5]
 
-
         utils.just_write(filepath, content)
-
-
         return {"filepath": filepath}

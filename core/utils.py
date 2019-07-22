@@ -4,18 +4,19 @@ import glob
 import json
 import requests
 import time
+from pathlib import Path
 import re
 import ipaddress
 import socket
 import shutil
 import subprocess
+from configparser import ConfigParser, ExtendedInterpolation
 
 from pprint import pprint
 from urllib.parse import quote, unquote
 import urllib.parse
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-#################
 
 # Console colors
 W = '\033[1;0m'   # white
@@ -82,7 +83,6 @@ def check_output(output):
     if str(output) != '' and str(output) != "None":
         print('{1}--==[ Check the output: {2}{0}{1}'.format(output, G, P))
 
-#################
 
 
 def url_encode(string_in):
@@ -164,11 +164,14 @@ def not_empty_file(filepath):
 
 # checking connection on port
 def connection_check(target, port):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    result = sock.connect_ex((target, int(port)))
-    if result == 0:
-        return True
-    else:
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex((target, int(port)))
+        if result == 0:
+            return True
+        else:
+            return False
+    except Exception:
         return False
 
 
@@ -177,12 +180,32 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         yield l[i:i + n]
 
-############
-
 
 '''
 File Utils
 '''
+
+
+# reading config
+def just_read_config(config_path=None, get_options=True):
+    if not config_path:
+        config_path = str(Path.home().joinpath(
+            '.osmedeus/config.conf'))
+
+    config = ConfigParser(interpolation=ExtendedInterpolation())
+    config.read(config_path)
+
+    if get_options:
+        sections = config.sections()
+        options = { 'CONFIG_PATH': config_path }
+
+        for sec in sections:
+            for key in config[sec]:
+                options[key.upper()] = config.get(sec, key)
+        return options
+    else:
+        return config
+    
 
 
 def list_files(folder, ext='xml', pattern=None):
@@ -303,7 +326,7 @@ def valid_ip(string_in):
         return True
     except:
         return False
-############
+
 
 '''
 Options utils
@@ -345,8 +368,6 @@ def is_force(options, filename):
             "Command is already done. use '-f' options to force rerun the command")
         return True
     return False
-
-##################
 
 
 '''
@@ -465,6 +486,7 @@ def force_done(options, module):
     workspace = get_workspace(options=options)
     url = options['REMOTE_API'] + "/api/{0}/activities?module=".format(workspace) + module
     r = requests.put(url, verify=False, headers=headers)
+    return None
 
 
 def looping(options, cmd=None, module=None, times=5):
@@ -500,7 +522,11 @@ def get_jwt(options):
     workspace = get_workspace(options=options)
 
     # set workspaces
-    url = options['REMOTE_API'] + "/api/{0}/auth".format(workspace)
+    if not workspace or workspace == 'None':
+        url = options['REMOTE_API'] + "/api/auth"
+    else:
+        url = options['REMOTE_API'] + "/api/{0}/auth".format(workspace)
+
     data = {'username': username, 'password': password}
     r = requests.post(url, verify=False, headers=headers, json=data)
 

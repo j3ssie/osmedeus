@@ -39,7 +39,7 @@ class Healcheck(object):
                 utils.print_good("Good -- " + filepath)
 
     def program_check(self):
-         # check program
+        # check program
         programs = [
             "$GO_PATH/amass",
             "$GO_PATH/subfinder",

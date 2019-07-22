@@ -155,16 +155,16 @@
     "PortScan": {
         "report": [
             {
-                "path" : "$WORKSPACE/portscan/final-$OUTPUT.html",
-                "type" : "html"
+                "path": "$WORKSPACE/portscan/final-$OUTPUT.html",
+                "type": "html"
             },
             {
-                "path" : "$WORKSPACE/portscan/$OUTPUT-masscan-screenshots.html",
-                "type" : "html"
+                "path": "$WORKSPACE/portscan/$OUTPUT-masscan-screenshots.html",
+                "type": "html"
             },
             {
-                "path" : "$WORKSPACE/portscan/$OUTPUT-masscan-summary.txt",
-                "type" : "bash"
+                "path": "$WORKSPACE/portscan/$OUTPUT-masscan-summary.txt",
+                "type": "bash"
             }
         ],
         "quick": [

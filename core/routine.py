@@ -1,4 +1,5 @@
-import sys, time
+import sys
+import time
 from core import utils
 from pprint import pprint
 
@@ -20,7 +21,7 @@ from modules import ipspace
 from modules import sslscan
 from modules import headers
 from modules import conclusion
-from modules import healcheck
+
 
 # runnning normal routine if none of module specific
 def normal(options):
@@ -81,16 +82,6 @@ def normal(options):
 
 def specific(options, module):
     module = module.lower()
-
-    # checking the tool is installed right or not and exit
-    if 'health' in module:
-        health = healcheck.Healcheck(options)
-        if health.checking():
-            utils.print_good("All things look fine")
-        else:
-            utils.print_bad("Installing Osmedeus not correctly done")
-        utils.just_shutdown_flask(options)
-        sys.exit(0)
 
     initials.Initials(options)
 

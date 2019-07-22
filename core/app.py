@@ -1,29 +1,21 @@
 import os
 import json
-import sys
-import subprocess
-import time
 import logging
 import argparse
+from pathlib import Path
 from pprint import pprint
-
-
 import execute
-import slack
 import utils
 
-from flask import abort
+from flask import Flask, request, send_from_directory
 from flask_cors import CORS
-
-from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_jwt_extended import (
     JWTManager, jwt_required, create_access_token,
     get_jwt_identity
 )
 from flask_restful import Api, Resource, reqparse
-
+# really stuff
 from rest.decorators import local_only
-
 from rest.cmd import Cmd
 from rest.authentication import Authentication
 from rest.configuration import Configurations
@@ -36,22 +28,25 @@ from rest.bash_render import BashRender
 from rest.wscdn import Wscdn
 from rest.save import Save
 
-current_path = os.path.dirname(os.path.realpath(__file__))
-############
-## Flask config stuff
+BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
+
+# Flask config stuff
 
 app = Flask('Osmedeus')
 app = Flask(__name__, template_folder='ui/', static_folder='ui/static/')
+
 # just for testing whitelist your domain if you wanna run this server remotely
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 api = Api(app)
 
-# setup jwt secret, make sure you change this!
+# setup jwt secret
+# SECURITY WARNING: change this if you running on remote
 app.config['JWT_SECRET_KEY'] = '-----BEGIN RSA PRIVATE KEY-----'  # go ahead, spider
 jwt = JWTManager(app)
 
-############
-
+'''
+End of Flask config
+'''
 
 # just turn off the server
 def shutdown_server():
@@ -89,13 +84,13 @@ api.add_resource(Wscdn, '/wscdn/<path:filename>')
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
-    if path != "" and os.path.exists(current_path + "/ui/" + path):
-        return send_from_directory(current_path + '/ui/', path)
+    if path != "" and os.path.exists(str(BASE_DIR.joinpath("ui/" + path))):
+        return send_from_directory(str(BASE_DIR.joinpath('ui/')), path)
     else:
-        return send_from_directory(current_path + '/ui/', 'index.html')
-#
+        return send_from_directory(str(BASE_DIR.joinpath('ui/')), 'index.html')
 
 
+# parsing some command from cli
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-b", "--bind", action="store", dest='bind', default="127.0.0.1")
@@ -109,6 +104,9 @@ if __name__ == '__main__':
     host = str(args.bind)
     port = int(args.port)
     debug = args.debug
+    # make sure storages is created
+    utils.make_directory(str(BASE_DIR.joinpath('rest/storages')))
+
 
     if args.remote:
         print(" * Warning: You're allow to bypass local protection")
@@ -120,11 +118,11 @@ if __name__ == '__main__':
         print(" * Logging: off")
         log = logging.getLogger('werkzeug')
         log.setLevel(logging.ERROR)
-
+    
     # choose to use SSL or not
     if args.nossl:
         app.run(host=host, port=port, debug=debug)
     else:
-        cert_path = current_path + '/certs/cert.pem'
-        key_path = current_path + '/certs/key.pem'
+        cert_path = BASE_DIR.joinpath('certs/cert.pem')
+        key_path = BASE_DIR.joinpath('certs/key.pem')
         app.run(host=host, port=port, debug=debug, ssl_context=(cert_path, key_path))

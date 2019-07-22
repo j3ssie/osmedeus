@@ -1,17 +1,16 @@
 import os
-import json
-import shutil
-from flask_restful import Api, Resource, reqparse
+from flask_restful import Resource, reqparse
 from flask_jwt_extended import jwt_required
 from configparser import ConfigParser, ExtendedInterpolation
-from .decorators import local_only
 import utils
+from pathlib import Path
+from .decorators import local_only
+BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 
 '''
 Set some config
 '''
 
-current_path = os.path.dirname(os.path.realpath(__file__))
 
 class Configurations(Resource):
     parser = reqparse.RequestParser()
@@ -31,18 +30,20 @@ class Configurations(Resource):
             config_username = config['Server']['username']
             config_password = config['Server']['password']
 
-            if config_username.lower() == options.get('USERNAME').lower() and config_password.lower() == options.get('PASSWORD').lower():
+            if config_username.lower() == options.get('USERNAME').lower() \
+                    and config_password.lower() == options.get('PASSWORD').lower():
                 return True
 
         return False
 
     @jwt_required
     def get(self, workspace):
-        # prevent reading secret from config file though API
         ws_name = utils.get_workspace(workspace=workspace)
-        options_path = current_path + \
-            '/storages/{0}/options.json'.format(ws_name)
-        secret_things = ['USERNAME','PASSWORD', 'BOT_TOKEN', 'GITHUB_API_KEY']
+        options_path = str(BASE_DIR.joinpath(
+            'storages/{0}/options.json'.format(ws_name)))
+        
+        # prevent reading secret from config file though API
+        secret_things = ['USERNAME', 'PASSWORD', 'BOT_TOKEN', 'GITHUB_API_KEY']
         options = utils.reading_json(options_path)
         for item in secret_things:
             del options[item]
@@ -63,13 +64,15 @@ class Configurations(Resource):
 
         # write each workspace seprated folder
         ws_name = utils.get_workspace(options)
-        utils.make_directory(current_path + '/storages/{0}/'.format(ws_name))
-        if not os.path.isdir(current_path + '/storages/{0}/'.format(ws_name)):
+        utils.make_directory(str(BASE_DIR) + '/storages/{0}/'.format(ws_name))
+        if not os.path.isdir(str(BASE_DIR) + '/storages/{0}/'.format(ws_name)):
             return {"error": "Can not create workspace directory with name {0} ".format(
                 ws_name)}
 
-        activities_path = current_path + '/storages/{0}/activities.json'.format(ws_name)
-        options_path = current_path + '/storages/{0}/options.json'.format(ws_name)
+        activities_path = str(BASE_DIR.joinpath(
+            'storages/{0}/activities.json'.format(ws_name)))
+        options_path = str(BASE_DIR.joinpath(
+            'storages/{0}/options.json'.format(ws_name)))
 
         # consider this is settings db
         utils.just_write(options_path, options, is_json=True)
@@ -85,14 +88,14 @@ class Configurations(Resource):
 
                 utils.just_write(activities_path,
                                  raw_activities, is_json=True)
-
                 return options
 
         utils.print_info("Cleaning activities log")
 
-        # Create skeleton activities based on commands.json
-        commands = utils.reading_json(current_path + '/storages/commands.json')
+        commands_path = str(BASE_DIR.joinpath('commands.json'))
+        commands = utils.reading_json(commands_path)
 
+        # Create skeleton activities based on commands.json
         raw_activities = {}
         for k, v in commands.items():
             raw_activities[k] = []

@@ -1,27 +1,24 @@
 import os
-import json
-from flask_restful import Api, Resource, reqparse
-from flask_jwt_extended import jwt_required
-from flask import Flask, jsonify, render_template, request
 import utils
-current_path = os.path.dirname(os.path.realpath(__file__))
+from pathlib import Path
+from flask_restful import Resource, reqparse
+from flask_jwt_extended import jwt_required
+from flask import request
+BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 
 
 '''
-Getting commands of module that have been pre-define 
+Getting commands of module that have been pre-define
 '''
 
-current_path = os.path.dirname(os.path.realpath(__file__))
 
 class Routines(Resource):
-
     @jwt_required
     def get(self, workspace):
         profile = request.args.get('profile')
         module = request.args.get('module')
-
         ws_name = utils.get_workspace(workspace=workspace)
-        
+
         # set default profile 
         if profile is None:
             profile = 'quick'
@@ -35,23 +32,20 @@ class Routines(Resource):
             routines = routines.get(module)
 
         return {'routines': routines}
-    
+
     # get list of commands by profile
     @jwt_required
     def get_routine(self, workspace, profile):
-
         # get options depend on workspace
-        options_path = current_path + \
-            '/storages/{0}/options.json'.format(workspace)
+        options_path = str(BASE_DIR.joinpath('storages/{0}/options.json'.format(workspace)))
+        commands_path = str(BASE_DIR.joinpath('commands.json'))
 
-        commands_path = current_path + '/storages/commands.json'
         self.options = utils.reading_json(options_path)
-        
+
         if not self.options:
             return None
 
         self.commands = utils.reading_json(commands_path)
-
 
         raw_routine = {}
         for key, value in self.commands.items():

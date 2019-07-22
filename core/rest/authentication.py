@@ -33,6 +33,21 @@ class Authentication(Resource):
                         help="This field cannot be left blank!"
                         )
 
+    # add another authen level when settings things from remote
+    def verify(self, options):
+        config_path = options.get('CONFIG_PATH')
+        if config_path:
+            # get cred from config file
+            config = ConfigParser(interpolation=ExtendedInterpolation())
+            config.read(config_path)
+            config_username = config['Server']['username']
+            config_password = config['Server']['password']
+
+            if config_username.lower() == options.get('USERNAME').lower() and config_password.lower() == options.get('PASSWORD').lower():
+                return True
+
+        return False
+
     # just look for right cred on any workspace
     def get_options(self, username, password):
         option_files = glob.glob(
@@ -62,6 +77,8 @@ class Authentication(Resource):
                 return {'access_token': token}
             else:
                 return {'error': "Credentials Incorrect"}
+        elif workspace == 'None':
+            pass
 
         current_path = os.path.dirname(os.path.realpath(__file__))
 

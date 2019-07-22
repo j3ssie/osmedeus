@@ -1,7 +1,11 @@
-import os, sys, socket, time
+import os
+import sys
+import socket
+import time
 import shutil
 import random
 import hashlib
+from pathlib import Path
 import urllib.parse
 from configparser import ConfigParser, ExtendedInterpolation
 
@@ -21,6 +25,8 @@ C = '\033[1;36m'  # cyan
 GR = '\033[1;37m'  # gray
 
 # Just a banner
+
+
 def banner(__version__, __author__):
     print(r"""{1}
 
@@ -77,18 +83,23 @@ ip          - IP discovery on the target
 
 # Custom help message
 def custom_help():
-    utils.print_info("Visit this page for complete usage: https://github.com/j3ssie/Osmedeus/wiki")
+    utils.print_info(
+        "Visit this page for complete usage: https://github.com/j3ssie/Osmedeus/wiki")
     print('''{1}
 {2}Basic Usage{1}
 ===========
 python3 osmedeus.py -t <your_target>
 python3 osmedeus.py -T <list_of_targets>
 python3 osmedeus.py -m <module> [-i <input>|-I <input_file>] [-t workspace_name]
+python3 osmedeus.py --report <mode> -t <workspace> [-m <module>]
 
 {2}Advanced Usage{1}
 ==============
 {0}[*] List all module{1}
 python3 osmedeus.py -M
+
+{0}[*] List all report mode{1}
+python3 osmedeus.py --report help
 
 {0}[*] Running with specific module{1}
 python3 osmedeus.py -t <result_folder> -m <module_name> -i <your_target>
@@ -134,7 +145,7 @@ def proxy_parsing(options):
     if options['PROXY_FILE'] != "None":
         proxy_file = options['PROXY_FILE']
         utils.print_info("Detected proxychains file: {0}".format(proxy_file))
-        return 
+        return
     elif options['PROXY'] != "None":
         proxy_file = options['CWD'] + '/core/proxychains.conf'
         utils.print_info("Detected proxychains file: {0}".format(proxy_file))
@@ -155,23 +166,23 @@ def proxy_parsing(options):
                 proxy_part = raw_data[i:]
 
         # check if this proxy is exist or not
-        check_duplicate = False 
+        check_duplicate = False
         for item in proxy_part:
             if proxy_element.strip() in item.strip():
                 check_duplicate = True
-        
-        if not check_duplicate: 
+
+        if not check_duplicate:
             proxy_part.append(proxy_element)
-        
+
         real_proxy_data = "\n".join(init_part + proxy_part)
         utils.just_write(proxy_file, real_proxy_data)
-    
+
     if options['PROXY'] != "None" or options['PROXY_FILE'] != "None":
         if not shutil.which(options['PROXY_CMD'].split(' ')[0]):
             utils.print_bad("Look like proxy mode doesn't support your OS")
             sys.exit(0)
         else:
-            #simple check for proxy is good
+            # simple check for proxy is good
             utils.print_info("Testing proxy with simple curl command")
             if execute.run(options['PROXY_CMD'] + " curl -s ipinfo.io/ip") == execute.run("curl -s ipinfo.io/ip"):
                 utils.print_bad("Look like your proxy not work properly")
@@ -188,7 +199,8 @@ def clean_up(options):
 
     return options
 
-# parsing args 
+
+# parsing args
 def parsing_config(config_path, args):
     options = {}
 
@@ -196,17 +208,24 @@ def parsing_config(config_path, args):
     github_api_key = str(os.getenv("GITROB_ACCESS_TOKEN"))
     cwd = str(os.getcwd())
 
-    # just hardcode if gopath not loaded
-    go_path = cwd + "/plugins/go"
-    # go_path = str(os.getenv("GOPATH")) + "/bin"
-    # if "None" in go_path:
-    #     go_path = cwd + "/plugins/go"
+    # create default osmedeus path
+    osmedeus_home = str(Path.home().joinpath('.osmedeus'))
+    utils.make_directory(osmedeus_home)
 
+    if config_path:
+        config_path = os.path.normpath(config_path)
+    else:
+        config_path = str(Path.home().joinpath('.osmedeus/config.conf'))
+
+    # just hardcode if gopath not loaded
+    plugins_path = cwd + "/plugins"
+    go_path = cwd + "/plugins/go"
+
+    # check slack setting
     if args.slack:
         bot_token = str(os.getenv("SLACK_BOT_TOKEN"))
     else:
         bot_token = None
-
     log_channel = str(os.getenv("LOG_CHANNEL"))
     status_channel = str(os.getenv("STATUS_CHANNEL"))
     report_channel = str(os.getenv("REPORT_CHANNEL"))
@@ -215,7 +234,7 @@ def parsing_config(config_path, args):
 
     # checking for config path
     if os.path.isfile(config_path):
-        utils.print_info('Config file detected: {0}'.format(config_path))
+        utils.print_info('Loading config file from: {0}'.format(config_path))
         # config to logging some output
         config = ConfigParser(interpolation=ExtendedInterpolation())
         config.read(config_path)
@@ -226,15 +245,28 @@ def parsing_config(config_path, args):
         config = ConfigParser(interpolation=ExtendedInterpolation())
         config.read(config_path)
 
+    # parsing workspaces
     if args.workspace:
         workspaces = os.path.abspath(args.workspace)
     else:
-        workspaces = cwd + "/workspaces/"
+        workspaces = str(Path.home().joinpath('.osmedeus/workspaces'))
+        utils.make_directory(workspaces)
 
+    # put config to config.conf file
     config.set('Enviroments', 'cwd', cwd)
     config.set('Enviroments', 'go_path', go_path)
+    config.set('Enviroments', 'plugins_path', plugins_path)
     config.set('Enviroments', 'github_api_key', github_api_key)
     config.set('Enviroments', 'workspaces', str(workspaces))
+
+    # wordlist stuff
+    directory_full = plugins_path + '/wordlists/dir-all.txt'
+    domain_full = plugins_path + '/wordlists/all.txt'
+    domain_short = plugins_path + '/wordlists/shorts.txt'
+
+    config.set('Resources', 'directory_full', directory_full)
+    config.set('Resources', 'domain_full', domain_full)
+    config.set('Resources', 'domain_short', domain_short)
 
     if args.debug:
         config.set('Slack', 'bot_token', 'bot_token')
@@ -251,7 +283,7 @@ def parsing_config(config_path, args):
         config.set('Slack', 'stds_channel', stds_channel)
         config.set('Slack', 'verbose_report_channel', verbose_report_channel)
 
-    # Mode config of the tool
+    # parsing speed config
     if args.slow and args.slow.lower() == 'all':
         speed = "slow"
     else:
@@ -294,11 +326,13 @@ def parsing_config(config_path, args):
             direct_target = os.path.basename(direct_input_list)
 
         target = direct_target
-        output = args.output if args.output else utils.strip_slash(os.path.splitext(target)[0])
-        company = args.company if args.company else utils.strip_slash(os.path.splitext(target)[0])
+        output = args.output if args.output else utils.strip_slash(
+            os.path.splitext(target)[0])
+        company = args.company if args.company else utils.strip_slash(
+            os.path.splitext(target)[0])
     else:
         target = None
-    
+
     # parsing some stuff related to target
     if target:
         # get the main domain of the target
@@ -310,7 +344,7 @@ def parsing_config(config_path, args):
         company = args.company if args.company else strip_target
 
         # url encode to make sure it can be send through API
-        workspace = workspaces + strip_target
+        workspace = workspaces + os.sep + strip_target
         workspace = utils.url_encode(workspace)
 
         # check connection to target
@@ -337,7 +371,8 @@ def parsing_config(config_path, args):
             proxy_cmd = "proxychains -f {0}".format(proxy_file)
             config.set('Proxy', 'proxy_cmd', str(proxy_cmd))
     except:
-        utils.print_info("Your config file seem to be outdated, Backup it and delete it to regenerate the new one")
+        utils.print_info(
+            "Your config file seem to be outdated, Backup it and delete it to regenerate the new one")
 
     config.set('Target', 'input', str(direct_input))
     config.set('Target', 'input_list', str(direct_input_list))
@@ -351,7 +386,6 @@ def parsing_config(config_path, args):
     config.set('Target', 'ip', str(ip))
 
     config.set('Enviroments', 'workspace', str(workspace))
-
     # create workspace folder for the target
     utils.make_directory(workspace)
 
@@ -372,7 +406,8 @@ def parsing_config(config_path, args):
     else:
         # set random password if default password detect
         if config['Server']['password'] == 'super_secret':
-            new_pass = hashlib.md5(str(int(time.time())).encode()).hexdigest()[:6]
+            new_pass = hashlib.md5(
+                str(int(time.time())).encode()).hexdigest()[:6]
             config.set('Server', 'password', new_pass)
 
     # save the config
@@ -388,12 +423,17 @@ def parsing_config(config_path, args):
         for key in config[sec]:
             options[key.upper()] = config.get(sec, key)
 
-    #
+    # parsing speed
     if args.slow and args.slow != 'all':
         options['SLOW'] = args.slow
     else:
         options['SLOW'] = "None"
 
+    # parsing report stuff
+    if args.report:
+        options['REPORT'] = args.report
+    else:
+        options['REPORT'] = "None"
 
     # parsing proxy stuff
     if options.get('PROXY') or options.get('PROXY_FILE'):
@@ -406,4 +446,3 @@ def parsing_config(config_path, args):
     options = clean_up(options)
 
     return options
-

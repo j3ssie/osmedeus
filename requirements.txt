@@ -6,3 +6,4 @@ Flask-JWT-Extended==3.18.1
 Flask-RESTful==0.3.6
 requests==2.22.0
 ansi2html==1.5.2
+tabulate==0.8.2

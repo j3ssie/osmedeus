@@ -4,21 +4,23 @@
 plugins
 workspaces
 amass
-
+paused.conf
 
 #testing
 config.conf
 core/config.conf
 modules/testing.py
 local-install.sh
-core/rest/storages/options.json
-core/rest/storages/activities.json
+core/rest/storages/
+tests/
+**.pytest_cache/
 
 # Byte-compiled / optimized / DLL files
 core/__pycache__/
 core/rest/__pycache__/
 modules/__pycache__/
 __pycache__/
+**__pycache__/
 *.py[cod]
 *$py.class
 
