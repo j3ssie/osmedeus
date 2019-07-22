@@ -56,7 +56,7 @@ Check out [docker-osmedeus](https://github.com/mablanco/docker-osmedeus) by [mab
 - [x] React [Web UI](https://github.com/j3ssie/Osmedeus/wiki/Web-UI).
 - [x] Support Continuous Scan.
 - [x] Slack notifications.
-- [x] Easily view [report](https://github.com/j3ssie/Osmedeus/wiki/report) from commnad line.
+- [x] Easily view [report](https://github.com/j3ssie/Osmedeus/wiki/Report-mode) from commnad line.
 
 Check this [Wiki page](https://github.com/j3ssie/Osmedeus/wiki/Module-In-Depth) for more detail about each module.
 
