@@ -112,7 +112,7 @@ def make_directory(directory):
 # checking speed
 def custom_speed(options):
     custom_speed = options.get('SLOW')
-    if not custom_speed:
+    if not custom_speed or custom_speed == 'None':
         return 'quick'
 
     if custom_speed != "None":
