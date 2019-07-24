@@ -135,8 +135,7 @@ $GO_BIN get -u github.com/tomnomnom/httprobe
 install_banner "gf"
 $GO_BIN get -u github.com/tomnomnom/gf
 
-cp $GO_DIR/* "$PLUGINS_PATH/go/"
-
+cp $GO_DIR/* "$PLUGINS_PATH/go/" 2> /dev/null
 install_banner "observatory"
 npm install -g observatory-cli
 
@@ -151,6 +150,15 @@ else
 	make
 fi
 cd $CWD
+
+# install dirble
+mkdir -p $PLUGINS_PATH/dirble/ 2> /dev/null
+if [ "$(uname)" == "Darwin" ]; then
+    curl -s https://api.github.com/repos/nccgroup/dirble/releases/latest | grep "x86_64-apple-darwin.zip" | cut -d '"' -f 4 | wget -O $PLUGINS_PATH/dirble/dirble-release.zip -qi -
+else
+	curl -s https://api.github.com/repos/nccgroup/dirble/releases/latest | grep "x86_64-linux.zip" | cut -d '"' -f 4 | wget -O $PLUGINS_PATH/dirble/dirble-release.zip -qi -
+fi
+unzip $PLUGINS_PATH/dirble/dirble-release.zip 2> /dev/null
 
 ##
 # Install python stuff
@@ -171,9 +179,6 @@ install_banner "IPOsint"
 git clone https://github.com/j3ssie/IPOsint 2> /dev/null
 pip3 install -r IPOsint/requirements.txt
 
-install_banner "sqlmap"
-git clone https://github.com/sqlmapproject/sqlmap 2> /dev/null
-
 install_banner "dirsearch"
 git clone https://github.com/maurosoria/dirsearch 2> /dev/null
 
@@ -187,7 +192,7 @@ pip3 install -r sherlock/requirements.txt
 
 install_banner "CORScanner"
 git clone https://github.com/chenjj/CORScanner 2> /dev/null
-pip2.7 install -r CORScanner/requirements.txt
+pip install -r CORScanner/requirements.txt
 
 install_banner "CORStest"
 git clone https://github.com/RUB-NDS/CORStest 2> /dev/null

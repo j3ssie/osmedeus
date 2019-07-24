@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import utils
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-headers = {"User-Agent": "Osmedeus/v1.4", "Accept": "*/*",
+headers = {"User-Agent": "Osmedeus/v1.5", "Accept": "*/*",
            "Content-type": "application/json", "Connection": "close"}
 
 # just run command directly for simple purpose like update

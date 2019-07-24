@@ -191,6 +191,16 @@
         ]
     },
     "VulnScan": {
+        "report": [
+            {
+                "path": "$$WORKSPACE/vulnscan/$OUTPUT-nmap-screenshots.html",
+                "type": "html"
+            },
+            {
+                "path": "$WORKSPACE/vulnscan/std-$OUTPUT-summary.std",
+                "type": "bash"
+            }
+        ],
         "quick": [
             {
                 "banner": "VulnScan"

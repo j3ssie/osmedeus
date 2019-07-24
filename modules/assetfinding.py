@@ -1,4 +1,4 @@
-import os
+import time
 from core import execute
 from core import slack
 from core import utils
@@ -44,14 +44,14 @@ class AssetFinding(object):
         utils.print_good('Starting httprobe')
         if self.is_direct:
             if utils.not_empty_file(self.is_direct):
-                cmd = 'cat {0} | $GO_PATH/httprobe -c 100 -t 20000 -v | tee $WORKSPACE/assets/http-$OUTPUT.txt'.format(
+                cmd = 'cat {0} | $GO_PATH/httprobe -c 100 -t 20000 | tee $WORKSPACE/assets/http-$OUTPUT.txt'.format(
                     self.is_direct)
             # just return if direct input is just a string
             else:
                 utils.print_bad("httprobe required input as a file.")
                 return None
         else:
-            cmd = 'cat $WORKSPACE/subdomain/final-$OUTPUT.txt | $GO_PATH/httprobe -c 100 -t 20000 -v | tee $WORKSPACE/assets/http-$OUTPUT.txt'
+            cmd = 'cat $WORKSPACE/subdomain/final-$OUTPUT.txt | $GO_PATH/httprobe -c 100 -t 20000 | tee $WORKSPACE/assets/http-$OUTPUT.txt'
 
         cmd = utils.replace_argument(self.options, cmd)
         output_path = utils.replace_argument(
@@ -177,3 +177,5 @@ class AssetFinding(object):
                     self.options, '$WORKSPACE/assets/linkfinder/{0}-linkfinder.std'.format(strip_domain))
                 execute.send_cmd(self.options, cmd, output_path,
                                  std_path, self.module_name)
+                time.sleep(5)
+                

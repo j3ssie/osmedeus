@@ -35,7 +35,7 @@ ques = '{0}[?]{1} '.format(C, W)
 bad = '{0}[-]{1} '.format(R, W)
 good = '{0}[+]{1} '.format(G, W)
 
-headers = {"User-Agent": "Osmedeus/v1.4", "Accept": "*/*",
+headers = {"User-Agent": "Osmedeus/v1.5", "Accept": "*/*",
            "Content-type": "application/json", "Connection": "close"}
 
 # send request through Burp proxy for debug purpose
@@ -82,7 +82,6 @@ def print_line():
 def check_output(output):
     if str(output) != '' and str(output) != "None":
         print('{1}--==[ Check the output: {2}{0}{1}'.format(output, G, P))
-
 
 
 def url_encode(string_in):
@@ -205,7 +204,6 @@ def just_read_config(config_path=None, get_options=True):
         return options
     else:
         return config
-    
 
 
 def list_files(folder, ext='xml', pattern=None):

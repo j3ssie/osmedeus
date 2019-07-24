@@ -18,7 +18,7 @@ from core import report
 #############
 
 __author__ = '@j3ssiejjj'
-__version__ = '1.4'
+__version__ = '1.5'
 
 
 # run Flask API as another process
@@ -33,7 +33,7 @@ def parsing_argument(args):
             p = Process(target=flask_run)
             p.start()
             # wait for flask API start
-            time.sleep(3)
+            time.sleep(2)
         else:
             utils.print_info("Look like Flask API already ran")
 

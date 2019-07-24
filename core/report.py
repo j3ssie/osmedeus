@@ -23,7 +23,7 @@ GR = '\033[1;37m'  # gray
 BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 
 # Global stuff
-headers = {"User-Agent": "Osmedeus/v1.4", "Accept": "*/*",
+headers = {"User-Agent": "Osmedeus/v1.5", "Accept": "*/*",
            "Content-type": "application/json", "Connection": "close"}
 
 
@@ -156,7 +156,7 @@ def path_report(options, raw_reports):
     for item in raw_reports:
         for report in item.get('reports'):
             report_path = os.path.join(options.get(
-                'WORKSPACES') + report.get('path'))
+                'WORKSPACES'), report.get('path'))
             contents.append([item.get('module'), report_path])
 
     print(tabulate(contents, head, tablefmt="grid"))
@@ -274,7 +274,9 @@ def parsing_report(options):
     global headers
     mode = options.get('REPORT').lower()
     modes = ['full', 'raw', 'short', 'raw_html',
-             'list', 'path', 'summary', 'sum']
+             'list', 'ls', 'path',
+             'summary', 'sum'
+             ]
 
     if mode not in modes:
         report_help()
@@ -287,17 +289,17 @@ def parsing_report(options):
         headers['Authorization'] = options['JWT']
 
     # mapping mode
-    if mode == 'list':
+    if 'list' in mode or 'ls' in mode:
         workspace_list(options)
-    elif mode == 'path':
+    elif 'path' in mode:
         short_report(options)
-    elif mode == 'short':
+    elif 'short' in mode:
         short_report(options)
-    elif mode == 'full':
+    elif 'full' in mode:
         full_report(options)
-    elif mode == 'raw':
+    elif 'raw' in mode:
         full_report(options)
-    elif mode == 'sum':
+    elif 'sum' in mode:
         summary_report(options)
 
 

@@ -35,13 +35,14 @@ class VulnScan(object):
 
     def initial(self):
         ip_list = self.prepare_input()
-        if type(ip_list) == list:
+        if not ip_list:
+            return
+        elif type(ip_list) == list:
             self.nmap_vuln_list(ip_list)
             utils.just_waiting(self.options, self.module_name, seconds=120)
             self.parsing_to_csv()
         else:
             self.nmap_single(ip_list)
-
 
     def prepare_input(self):
         if self.is_direct:
@@ -62,8 +63,8 @@ class VulnScan(object):
                            for x in main_json['Subdomains'] if x.get("IP") is not None] + main_json['IP Space']
 
             elif self.options['SPEED'] == 'quick':
-                ip_list = [x.get("IP")
-                           for x in main_json['Subdomains'] if x.get("IP") is not None]
+                utils.print_info('Skip vulnscan in quick speed')
+                return None
             ip_list = list(set([ip for ip in ip_list if ip != 'N/A']))
 
             if self.options['DEBUG'] == 'True':
@@ -71,7 +72,6 @@ class VulnScan(object):
 
         # utils.print_debug(ip_list)
         return ip_list
-
 
     def nmap_single(self, input_target):
         encode_input = utils.strip_slash(input_target)
@@ -142,14 +142,13 @@ class VulnScan(object):
         utils.print_line()
         # beautiful csv look
         cmd = "csvcut -c 1-7 $WORKSPACE/vulnscan/summary-$OUTPUT.csv | csvlook  --no-inference | tee $WORKSPACE/vulnscan/std-$OUTPUT-summary.std"
-        
+
         cmd = utils.replace_argument(self.options, cmd)
         output_path = utils.replace_argument(
             self.options, '$WORKSPACE/vulnscan/std-$OUTPUT-summary.std')
         execute.send_cmd(self.options, cmd, output_path, '', self.module_name)
 
         self.screenshots(all_csv)
-
 
     def screenshots(self, csv_data):
         utils.print_info("Screenshot again with new port found")
@@ -186,8 +185,4 @@ class VulnScan(object):
                 self.options, "$WORKSPACE/vulnscan/$OUTPUT-nmap-screenshots.html")
             execute.send_cmd(self.options, utils.replace_argument(
                 self.options, cmd), html_path, '', self.module_name)
-
-
-    # def conclude(self):
-    #     self.parsing_to_csv()
 

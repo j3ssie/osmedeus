@@ -3,7 +3,6 @@ import sys
 import socket
 import time
 import shutil
-import random
 import hashlib
 from pathlib import Path
 import urllib.parse
@@ -11,7 +10,6 @@ from configparser import ConfigParser, ExtendedInterpolation
 
 from core import execute
 from core import utils
-from pprint import pprint
 
 # Console colors
 W = '\033[1;0m'   # white
@@ -77,6 +75,7 @@ burp        - Scanning for burp state
 dirb        - Do directory search on the target
 ip          - IP discovery on the target
 
+python3 osmedeus.py -m <module> [-i <input>|-I <input_file>] [-t workspace_name]
         ''')
     sys.exit(0)
 

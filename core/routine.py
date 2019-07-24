@@ -34,9 +34,6 @@ def normal(options):
     # Finding subdomain
     subdomain.SubdomainScanning(options)
 
-    # waiting for previous module
-    utils.just_waiting(options, 'SubdomainScanning')
-
     # Scanning for subdomain take over
     takeover.TakeOverScanning(options)
 
