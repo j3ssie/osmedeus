@@ -170,8 +170,11 @@ def short_report(options):
         url = options['REMOTE_API'] + "/api/module/{0}".format(workspace)
         r = sender(url, headers=headers, data={}, method='GET')
         if r:
-            raw_reports = r.json().get('reports')
+            raw_reports = r.json().get('reports', None)
     except Exception:
+        raw_reports = None
+
+    if not raw_reports:
         raw_reports = local_get_report(options).get('reports')
         if not raw_reports:
             utils.print_bad(
@@ -185,7 +188,7 @@ def short_report(options):
 
     for item in raw_reports:
         for report in item.get('reports'):
-            report_path = os.path.join(options.get('WORKSPACES') + report.get('path'))
+            report_path = os.path.join(options.get('WORKSPACES'), report.get('path'))
             utils.print_info(item.get('module') + ": " + report_path)
 
             # checking if get specific module or not

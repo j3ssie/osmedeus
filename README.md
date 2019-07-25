@@ -9,13 +9,13 @@
   </p>
 </p>
 
-# What is Osmedeus?
+## What is Osmedeus?
 
 ![Architecture](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/Osmedeus-architecture.png)
 
 Osmedeus allows you automated run the collection of awesome tools to reconnaissance and vulnerability scanning against the target.
 
-# Installation
+## Installation
 
 ```
 git clone https://github.com/j3ssie/Osmedeus
@@ -25,18 +25,18 @@ cd Osmedeus
 
 This install only focus on Kali linux, check more install on [Wiki page](https://github.com/j3ssie/Osmedeus/wiki)
 
-# How to use
+## How to use
 
 If you have no idea what are you doing just type the command below or check out the [Advanced Usage](https://github.com/j3ssie/Osmedeus/wiki/Advanced-Usage)
 ```
 ./osmedeus.py -t example.com
 ```
 
-# Using Docker
+## Using Docker
 
 Check out [docker-osmedeus](https://github.com/mablanco/docker-osmedeus) by [mabnavarrete](https://twitter.com/mabnavarrete) for docker installation and this [wiki](https://github.com/j3ssie/Osmedeus/wiki/Using-Docker) for more detail.
 
-# Features
+## Features
 
 - [x] Subdomain Scan.
 - [x] Subdomain TakeOver Scan.
@@ -60,7 +60,12 @@ Check out [docker-osmedeus](https://github.com/mablanco/docker-osmedeus) by [mab
 
 Check this [Wiki page](https://github.com/j3ssie/Osmedeus/wiki/Module-In-Depth) for more detail about each module.
 
-# Demo
+## love Osmedeus? Back it!
+
+[![Backers](https://opencollective.com/osmedeus/backers.svg?width=890)](https://opencollective.com/osmedeus#backers)
+
+
+## Demo
 [![asciicast](https://asciinema.org/a/230164.svg)](https://asciinema.org/a/230164)
 
 ![Slack Noti](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_noti.png)
@@ -76,7 +81,7 @@ Check this [Wiki page](https://github.com/j3ssie/Osmedeus/wiki/Module-In-Depth) 
 ![Reports](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-report.png)
 
 
-# Example Commands
+## Example Commands
 
 ```
 # normal routine
@@ -105,7 +110,7 @@ Check this [Wiki page](https://github.com/j3ssie/Osmedeus/wiki/Module-In-Depth) 
 
 ```
 
-# More options
+## More options
 
 ```
 Basic Usage
@@ -161,24 +166,24 @@ More options
 
 ```
 
-# Disclaimer
+## Disclaimer
 
 Most of this tool done by the authors of the tool that list in [CREDITS.md](https://github.com/j3ssie/Osmedeus/blob/master/CREDITS.md).
 I'm just put all the pieces together, plus some extra magic.
 
 This tool is for educational purposes only. You are responsible for your own actions. If you mess something up or break any laws while using this software, it's your fault, and your fault only.
 
-# Contribute
+## Contribute
 
 Please take a look at [CONTRIBUTING.md](https://github.com/j3ssie/Osmedeus/blob/master/CONTRIBUTING.md)
 
-# Changelog
+## Changelog
 
 Please take a look at [CHANGELOG.md](https://github.com/j3ssie/Osmedeus/blob/master/CHANGELOG.md)
 
-# CREDITS
+## CREDITS
 
 Please take a look at [CREDITS.md](https://github.com/j3ssie/Osmedeus/blob/master/CREDITS.md)
 
-# Contact
+## Contact
 [@j3ssiejjj](https://twitter.com/j3ssiejjj)

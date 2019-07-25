@@ -117,12 +117,6 @@
                 "cmd": "python2.7 $PLUGINS_PATH/CORStest/corstest.py $WORKSPACE/subdomain/final-$OUTPUT.txt | tee $WORKSPACE/cors/$TARGET-corstest.txt",
                 "output_path": "$WORKSPACE/cors/$TARGET-corstest.txt",
                 "std_path": "$WORKSPACE/cors/std-$TARGET-corstest.std"
-            },
-            {
-                "banner": "CORScanner",
-                "cmd": "python2.7 $PLUGINS_PATH/CORScanner/cors_scan.py -t 100 -i $WORKSPACE/subdomain/final-$OUTPUT.txt -o $WORKSPACE/cors/$TARGET-corscanner.txt",
-                "output_path": "$WORKSPACE/cors/$TARGET-corscanner.txt",
-                "std_path": "$WORKSPACE/cors/std-$TARGET-corscanner.std"
             }
         ]
     },
