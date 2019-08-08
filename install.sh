@@ -199,6 +199,7 @@ pip install -r brutespray/requirements.txt
 
 cd $CWD
 echo -e "\033[1;32m[+] Installing done... \033[1;37m"
+python3 osmedeus.py --reset
 
 
 

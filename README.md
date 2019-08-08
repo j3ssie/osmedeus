@@ -4,7 +4,7 @@
     <a href="https://github.com/j3ssie/Osmedeus"><img alt="python" src="https://img.shields.io/badge/python-3.6%2B-blue.svg"></a>
     <a href=""><img alt="Software License" src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square"></a>
     <a href=""><img alt="tested" src="https://img.shields.io/badge/tested-Kali%20Linux-green.svg"></a>
-    <a href="https://github.com/j3ssie/Osmedeus"><img alt="Release" src="https://img.shields.io/badge/version-1.4-red.svg"></a>
+    <a href="https://github.com/j3ssie/Osmedeus"><img alt="Release" src="https://img.shields.io/badge/version-1.5-red.svg"></a>
     <a href="https://www.youtube.com/watch?v=kZ-uMC7c5OY&list=PLqpLl_iGMLnA6vbi1ZM-HmWLuedIP2PJl"><img alt="Demo" src="https://img.shields.io/badge/demo-youtube-blue.svg"></a>
   </p>
 </p>
@@ -60,7 +60,7 @@ Check out [docker-osmedeus](https://github.com/mablanco/docker-osmedeus) by [mab
 
 Check this [Wiki page](https://github.com/j3ssie/Osmedeus/wiki/Module-In-Depth) for more detail about each module.
 
-## love Osmedeus? Back it!
+## Love Osmedeus? Back it!
 
 [![Backers](https://opencollective.com/osmedeus/backers.svg?width=890)](https://opencollective.com/osmedeus#backers)
 
@@ -72,13 +72,13 @@ Check this [Wiki page](https://github.com/j3ssie/Osmedeus/wiki/Module-In-Depth) 
 
 ![Slack Report](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/slack_report.png)
 
-![Web UI 1](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-1.png)
-
-![Web UI 2](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-2.png)
-
-![Web UI 3](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-3.png)
-
 ![Reports](https://raw.githubusercontent.com/j3ssie/Osmedeus/master/imgs/osmedeus-report.png)
+
+![Web UI 1](imgs/osmedeus-1.png)
+
+![Web UI 3](imgs/osmedeus-3.png)
+
+![Web UI 2](imgs/osmedeus-2.png)
 
 
 ## Example Commands

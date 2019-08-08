@@ -25,7 +25,9 @@ from modules import conclusion
 
 # runnning normal routine if none of module specific
 def normal(options):
-
+    if options.get('RESET') == 'True':
+        utils.print_good("Initials configurations")
+        return
     utils.print_good("Running with {0} speed".format(options['SPEED']))
 
     # Create skeleton json
@@ -58,7 +60,7 @@ def normal(options):
     # Headers Scan
     headers.HeadersScan(options)
 
-    # Note: From here the module gonna take really long time 
+    # Note: From here the module gonna take really long time
     # for scanning service and stuff like that
     utils.print_info('This gonna take a while')
 

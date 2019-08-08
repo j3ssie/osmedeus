@@ -48,9 +48,17 @@ class Workspace(Resource):
         options_path = str(BASE_DIR.joinpath('storages/{0}/options.json'.format(ws_name)))
         self.options = utils.reading_json(options_path)
 
+        # looking for log file if options file not found
+        if not self.options:
+            ws_json = str(str(Path.home().joinpath(
+                '.osmedeus/workspaces/{0}/{0}.json'.format(ws_name))))
+            return utils.reading_json(ws_json)
+
+        if not self.options:
+            return {'error': 'Log file not found'}
+
         if ws_name in os.listdir(self.options['WORKSPACES']):
             ws_json = self.options['WORKSPACES'] + "/{0}/{0}.json".format(ws_name)
             if os.path.isfile(ws_json):
-                utils.reading_json(ws_json)
                 return utils.reading_json(ws_json)
         return 'Custom 404 here', 404

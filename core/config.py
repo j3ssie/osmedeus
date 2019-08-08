@@ -434,6 +434,9 @@ def parsing_config(config_path, args):
     else:
         options['REPORT'] = "None"
 
+    # reset flag
+    options['RESET'] = str(args.reset) if args.reset else None
+
     # parsing proxy stuff
     if options.get('PROXY') or options.get('PROXY_FILE'):
         proxy_parsing(options)

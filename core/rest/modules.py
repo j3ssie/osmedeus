@@ -18,6 +18,12 @@ class Modules(Resource):
         options_path = str(BASE_DIR.joinpath('storages/{0}/options.json'.format(ws_name)))
         self.options = utils.reading_json(options_path)
 
+        # looking for log file if options file not found
+        if not self.options:
+            ws_json = str(str(Path.home().joinpath(
+                '.osmedeus/workspaces/{0}/{0}.json'.format(ws_name))))
+            return utils.reading_json(ws_json)
+
         if not self.options:
             return {"error": "Workspace {0} not found".format(ws_name)}
 
@@ -26,11 +32,11 @@ class Modules(Resource):
         self.commands = utils.reading_json(commands_path)
 
         # change to current workspace instead of get from running target
-        self.options['WORKSPACE'] = self.options['WORKSPACES'] + ws_name
+        # self.options['WORKSPACE'] = self.options['WORKSPACES'] + ws_name
         self.options['OUTPUT'] = ws_name
+        print(self.options['WORKSPACE'])
 
         final_reports = []
-
         # reports = {}
         for key in self.commands.keys():
             final_reports.append({
@@ -41,7 +47,6 @@ class Modules(Resource):
         for k in self.commands.keys():
             if "report" in self.commands[k].keys():
                 report = utils.replace_argument(self.options, self.commands[k].get("report"))
-                # print(report)
                 if type(report) == str:
                     if utils.not_empty_file(report):
                         report_path = report.replace(

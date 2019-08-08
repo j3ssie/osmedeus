@@ -92,6 +92,13 @@ def url_decode(string_in):
     return urllib.parse.unquote(string_in)
 
 
+def get_json(string_in):
+    try:
+        return(json.dumps(string_in))
+    except:
+        return str(string_in)
+
+
 def strip_slash(string_in):
     return string_in.replace('/', '_')
 

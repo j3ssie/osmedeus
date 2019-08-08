@@ -33,7 +33,7 @@ def parsing_argument(args):
             p = Process(target=flask_run)
             p.start()
             # wait for flask API start
-            time.sleep(2)
+            time.sleep(3)
         else:
             utils.print_info("Look like Flask API already ran")
 
@@ -68,7 +68,7 @@ def single_target(options):
         utils.print_bad(
             "Fail to set config, Something went wrong with Flask API !")
         utils.print_info(
-            "Visit this page for common issue: https://github.com/j3ssie/Osmedeus/wiki/Common-Issues")
+            "Visit this page for common issue: https://j3ssie.github.io/Osmedeus/")
         sys.exit(-1)
 
     if not (options['JWT'] and options['JWT'] != "None"):
@@ -159,6 +159,9 @@ def main():
 
     parser.add_argument('--slack', action='store_true',
                         help='Turn on slack notification')
+
+    parser.add_argument('--reset', action='store_true',
+                        help='Initial configurations')
     parser.add_argument('-h', '--help', dest='help',
                         action='store_true', help='Display help messaage')
 

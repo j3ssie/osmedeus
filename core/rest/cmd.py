@@ -90,7 +90,6 @@ class Cmd(Resource):
 
         utils.print_info("Execute: {0} ".format(cmd))
 
-
         stdout = execute.run(cmd)
         utils.check_output(output_path)
         # just ignore for testing purpose
