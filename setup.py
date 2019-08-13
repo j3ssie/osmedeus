@@ -1,21 +1,24 @@
+from shutil import copyfile
 from setuptools import setup, find_packages
 
-
+copyfile('osmedeus.py', 'osmedeus')
+copyfile('osmedeus-server.py', 'osmedeus-server')
 with open("README.md", "r") as f:
     long_description = f.read()
 
 setup(
     name="Osmedeus",
-    version="1.4",
+    version="1.5",
     description="Fully automated offensive security framework for reconnaissance and vulnerability scanning",
     long_description=long_description,
     author="j3ssie",
     author_email="j3ssiejjj@gmail.com",
+    license='MIT',
     url="https://www.twitter.com/j3ssiejjj",
     download_url="https://github.com/j3ssie/Osmedeus",
     packages=find_packages(),
     include_package_data=True,
-    scripts=('osmedeus.py',),
+    scripts=('osmedeus','osmedeus-server'),
     entry_points={},
     install_requires=[
         "Flask",

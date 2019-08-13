@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
 import os
 import sys
 import time
 import argparse
+from shutil import which
 from multiprocessing import Process
 
-from core import routine
-from core import config
-from core import slack
-from core import utils
-from core import report
+from Osmedeus.core import routine
+from Osmedeus.core import config
+from Osmedeus.core import slack
+from Osmedeus.core import utils
+from Osmedeus.core import report
 
 
 #############
@@ -20,12 +22,16 @@ from core import report
 __author__ = '@j3ssiejjj'
 __version__ = '1.5'
 
-
 # run Flask API as another process
 def flask_run():
     utils.print_banner("Starting Flask API")
-    os.system('python3 core/app.py')
-
+    if os.path.exists('osmedeus-server.py'):
+        os.system('python3 osmedeus-server.py')
+    elif which("osmedeus-server") is not None:
+        os.system('osmedeus-server')
+    else:
+        utils.print_bad("Failing to start Flask API: osmedeus-server.py — is not found")
+        sys.exit(-1)
 
 def parsing_argument(args):
     if not args.client and not args.report:
