@@ -182,11 +182,11 @@ pip3 install -r IPOsint/requirements.txt
 install_banner "dirsearch"
 git clone https://github.com/maurosoria/dirsearch 2> /dev/null
 
-cd $PLUGINS_PATH/LinkFinder/
+cd LinkFinder/
 install_banner "LinkFinder"
 git clone https://github.com/GerbenJavado/LinkFinder.git 2> /dev/null
 python2.7 setup.py install
-cd $CWD
+cd $PLUGINS_PATH
 
 install_banner "sherlock"
 git clone https://github.com/sherlock-project/sherlock.git 2> /dev/null
