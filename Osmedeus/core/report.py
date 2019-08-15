@@ -8,8 +8,8 @@ import urllib3
 from Osmedeus.core import utils
 from Osmedeus.resources import *
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Console colors
 W = '\033[1;0m'   # white

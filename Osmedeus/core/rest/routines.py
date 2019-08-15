@@ -58,7 +58,12 @@ class Routines(Resource):
                 for item in cmds:
                     real_item = {}
                     for k, v in item.items():
+                        if k == "program":
+                            for p in v:
+                                if utils.is_installed(utils.replace_argument(self.options, p)):
+                                    self.options['PROGRAM'] = p
                         real_item[k] = utils.replace_argument(self.options, v)
+
                     routines[module].append(real_item)
 
         return routines

@@ -8,8 +8,8 @@ import urllib3
 from Osmedeus.core import utils
 
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 headers = {"User-Agent": "Osmedeus/v1.5", "Accept": "*/*",
            "Content-type": "application/json", "Connection": "close"}
 

@@ -11,11 +11,13 @@ import socket
 import shutil
 import subprocess
 from configparser import ConfigParser, ExtendedInterpolation
-
 from pprint import pprint
 from urllib.parse import quote, unquote
 import urllib.parse
 import urllib3
+
+from Osmedeus.core import config
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Console colors
@@ -195,8 +197,7 @@ File Utils
 # reading config
 def just_read_config(config_path=None, get_options=True):
     if not config_path:
-        config_path = str(Path.home().joinpath(
-            '.osmedeus/config.conf'))
+        config_path = config.OSMEDEUS_HOME + '/config.conf'
 
     config = ConfigParser(interpolation=ExtendedInterpolation())
     config.read(config_path)
