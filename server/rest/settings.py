@@ -140,7 +140,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     ## @NOTE enable this when go live
-    'EXCEPTION_HANDLER': 'rest.exception.custom_exception_handler',
+    # 'EXCEPTION_HANDLER': 'rest.exception.custom_exception_handler',
 
 }
 
