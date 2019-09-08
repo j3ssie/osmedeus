@@ -15,7 +15,7 @@ import sys
 from datetime import timedelta
 
 from pathlib import Path
-# turn this on when go live
+## turn this on when go live
 import logging
 logging.disable(logging.INFO)
 
@@ -32,7 +32,8 @@ SECRET_KEY = '%#0q1v(m-gbls-4nf*hywb_c%yms&00j4yh(=pnn4qy^s@u@zv'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = []
+# set this to your IP if you running on remote host
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -139,7 +140,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     ## @NOTE enable this when go live
-    # 'EXCEPTION_HANDLER': 'rest.exception.custom_exception_handler',
+    'EXCEPTION_HANDLER': 'rest.exception.custom_exception_handler',
 
 }
 
