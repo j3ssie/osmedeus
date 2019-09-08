@@ -3,7 +3,6 @@
 # plugins dir
 data
 plugins
-workspaces
 amass
 paused.conf
 
