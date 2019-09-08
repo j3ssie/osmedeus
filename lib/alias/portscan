@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+import os
+import sys
+import time
+import argparse
+import urllib.parse
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
+from core import utils
+
+
+# portscan -i /tmp/target.txt -o '$WORKSPACE/portscan/$OUTPUT' -p '$PLUGINS_PATH'
+def routine(args):
+    parsed = urllib.parse.urlparse(args.input)
+    target = parsed.netloc if parsed.netloc else parsed.path
+    output = args.output
+    strip_target = utils.strip_slash(target)
+    plugin = args.plugin
+    summary = args.summary
+
+    # cmd = f'sudo nmap --open -T4 -Pn -n -sSV -p- {target} --script {plugin}/nmap-stuff/vulners.nse --oA {output}'
+    if utils.not_empty_file(f'{target}'):
+        cmd = f'sudo masscan --rate 10000 -p0-65535 -iL {target} -oX {output}.xml --wait 0'
+    else:
+        cmd = f'sudo masscan --rate 10000 -p0-65535 {target} -oX {output}.xml --wait 0'
+    
+    os.system(cmd)
+    utils.print_info(f"Execute: {cmd}")
+
+    if not utils.not_empty_file(f'{output}.xml'):
+        utils.print_bad("No open port found")
+        sys.exit(-1)
+
+    os.system(
+        f'xsltproc -o {output}.html {plugin}/nmap-stuff/nmap-bootstrap.xsl {output}.xml')
+    os.system(
+        f'python3 {plugin}/nmap-stuff/masscan_xml_parser.py -f {output}.xml -csv {output}.csv')
+
+    time.sleep(0.5)
+    # os.system(
+    #     f'csvcut -c 1-7 {output}.csv | csvlook --no-inference | tee {summary}')
+    # append_result(f'{output}.csv', summary)
+
+
+parser = argparse.ArgumentParser(description="Portscan alias")
+parser.add_argument('-i', '--input', action='store', dest='input', help='input')
+parser.add_argument('-o', '--output', action='store', dest='output', help='output')
+parser.add_argument('-p', '--plugin', action='store', dest='plugin', help='plugin')
+parser.add_argument('-s', '--summary', action='store',
+                    dest='summary', help='summary')
+args = parser.parse_args()
+routine(args)

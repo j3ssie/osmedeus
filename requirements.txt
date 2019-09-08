@@ -1,0 +1,12 @@
+bs4==0.0.1
+Django==2.2.5
+django-cors-headers==3.0.2
+django-filter==2.1.0
+djangorestframework==3.10.3
+djangorestframework-jsonp==1.0.2
+djangorestframework-simplejwt==4.3.0
+lxml==4.3.4
+requests==2.22.0
+Markdown==3.1.1
+ansi2html==1.5.2
+tabulate==0.8.2

@@ -1,0 +1,39 @@
+.DS_STORE
+
+# plugins dir
+data
+plugins
+workspaces
+amass
+paused.conf
+
+# rest things
+dump.rdb
+.pytest_cache
+server/.coverage
+server/dump.rdb
+server/db.sqlite3
+server/.pytest_cache
+server/api/migrations/
+server/paused.conf
+
+
+#testing
+config.conf
+core/config.conf
+modules/testing.py
+local-install.sh
+core/rest/storages/
+tests/
+**.pytest_cache/
+
+# Byte-compiled / optimized / DLL files
+core/__pycache__/
+core/rest/__pycache__/
+modules/__pycache__/
+__pycache__/
+**__pycache__/
+**.DS_STORE/
+*.py[cod]
+*$py.class
+

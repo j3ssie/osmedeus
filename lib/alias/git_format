@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+import os
+import sys
+import time
+import argparse
+import urllib.parse
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
+from core import utils
+
+
+# git_check -i /tmp/target.txt -o '$WORKSPACE/gitscan/$OUTPUT'
+# git_check - repo:sda
+
+def parse_input(data, out):
+    repo = f'{out}-repo.txt'
+    user = f'{out}-user.txt'
+    if ':' not in data:
+        utils.just_append(repo, data.strip())
+    else:
+        key = data.split(':')[0]
+        real_data = data.split(':')[1]
+        if 'user' in key or 'org' in key:
+            utils.just_append(user, real_data.strip())
+        else:
+            utils.just_append(repo, real_data.strip())
+    utils.clean_up(repo)
+    utils.clean_up(user)
+
+
+def routine(args):
+    target = args.input
+    output = args.output
+    if utils.not_empty_file(f'{target}'):
+        contents = utils.just_read(target, get_list=True)
+    else:
+        contents = [target]
+
+    for line in contents:
+        if ',' in line:
+            datas = line.split(',')
+        else:
+            datas = [line]
+        for data in datas:
+            parse_input(data, output)
+    # time.sleep(0.3)
+
+
+parser = argparse.ArgumentParser(description="Git Format alias")
+parser.add_argument('-i', '--input', action='store', dest='input', help='input')
+parser.add_argument('-o', '--output', action='store', dest='output', help='output')
+
+args = parser.parse_args()
+routine(args)

@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+import os
+import sys
+import time
+import argparse
+import urllib.parse
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
+from core import utils
+
+
+# git_check -r /tmp/target.txt -o '$WORKSPACE/gitscan/$OUTPUT' -k 'GITHUB_API_KEY'
+# git_check -u /tmp/target.txt -o '$WORKSPACE/gitscan/$OUTPUT' -k 'GITHUB_API_KEY' -p ''
+
+def routine(args):
+    repo = args.repo if args.repo else None
+    user = args.user if args.user else None
+    mode = 'user' if user else 'repo'
+    target = repo if repo else user
+    key = args.key
+    plugin = args.plugin
+    output = args.output
+
+    if not target:
+        utils.print_bad("Input not found")
+        sys.exit(-1)
+
+    if utils.not_empty_file(f'{target}'):
+        datas = utils.just_read(target, get_list=True)
+    else:
+        datas = [target]
+
+    if mode == 'user':
+        for target in datas:
+            cmd = f'{plugin}/go/gitrob -save {output} -threads 10 -github-access-token {key} {target}'
+            os.system(cmd)
+    else:
+        for target in datas:
+            cmd = f'trufflehog --regex --entropy=True {target} | tee {output}-trufflehog.txt'
+            os.system(cmd)
+
+
+parser = argparse.ArgumentParser(description="GitScan alias")
+parser.add_argument('-r', '--repo', action='store', dest='repo', help='repo')
+parser.add_argument('-u', '--user', action='store', dest='user', help='user')
+parser.add_argument('-k', '--key', action='store', dest='key', help='key')
+parser.add_argument('-o', '--output', action='store', dest='output', help='output')
+parser.add_argument('-p', '--plugin', action='store',
+                    dest='plugin', help='plugin')
+
+args = parser.parse_args()
+routine(args)
