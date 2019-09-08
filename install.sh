@@ -221,10 +221,10 @@ cd $PLUGINS_PATH/LinkFinder/
 python2 setup.py install
 
 cd $CWD
-mkdir -p ~/.osmedeus >> 2> /dev/null
 install_banner "Initial config for Osmedeus"
 python3 server/manage.py makemigrations
 python3 server/manage.py migrate
+mkdir -p ~/.osmedeus 2> /dev/null
 python3 scripts/init.py
 echo -e "\033[1;32m[+] Installing done... \033[1;37m"
 
