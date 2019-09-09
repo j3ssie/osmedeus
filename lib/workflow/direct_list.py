@@ -121,7 +121,7 @@ class PortScan:
                 "cmd": "$ALIAS_PATH/portscan -i $WORKSPACE/formatted/ip-$OUTPUT.txt -o '$WORKSPACE/portscan/$OUTPUT' -s '$WORKSPACE/portscan/summary.txt' -p '$PLUGINS_PATH'",
                 "output_path": "$WORKSPACE/portscan/$OUTPUT.xml",
                 "std_path": "",
-                # "waiting": "",
+                "waiting": "first",
             },
             {
                 "requirement": "$WORKSPACE/portscan/$OUTPUT.csv",
