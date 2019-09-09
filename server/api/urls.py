@@ -13,6 +13,7 @@ from api.v1.options.views import OptionsView
 from api.v1.activities.views import ActivitiesView
 from api.v1.logs.views import LogsView
 from api.v1.reports.views import ReportsSkeletonView, ReportsView
+from api.v1.exports.views import ExportSumView
 from api.v1.summaries.views import (
     SummariesView, 
     SummariesListView, 
@@ -64,6 +65,10 @@ urlpatterns = [
 
     # Get report skeleton
     url(r'^api/reports/raw/$', ReportsSkeletonView.as_view(),
+        name='get_commands'),
+
+    # Get report skeleton
+    url(r'^api/exports/csv/$', ExportSumView.as_view(),
         name='get_commands'),
 
     # Get real report

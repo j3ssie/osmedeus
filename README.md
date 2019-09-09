@@ -96,6 +96,7 @@ If you love my tool and would like to support my work. [Become a backer](https:/
 
 # report mode
 ./osemdeus.py -t example.com --report list
+./osemdeus.py -t example.com --report export
 ./osemdeus.py -t example.com --report sum
 ./osemdeus.py -t example.com --report short
 ./osemdeus.py -t example.com --report full

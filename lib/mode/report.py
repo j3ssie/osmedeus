@@ -10,6 +10,7 @@ from lib.sender import initial
 from lib.reporter import summaries
 from lib.reporter import listws
 from lib.reporter import paths
+from lib.reporter import exports
 
 
 def parse_options(options):
@@ -43,12 +44,15 @@ def handle(options):
     report_type = options.get('REPORT')
     # print(options)
 
-    if utils.any_in(report_type,  ['sum', 'summary']):
+    if utils.any_in(report_type, ['sum', 'summary']):
         summaries.show(options)
 
-    if utils.any_in(report_type,  ['path', 'pa']):
+    if utils.any_in(report_type, ['ex', 'export', 'exp']):
+        exports.show(options)
+
+    if utils.any_in(report_type, ['path', 'pa']):
         paths.show(options)
 
-    if utils.any_in(report_type,  ['full', 'f']):
+    if utils.any_in(report_type, ['full', 'f']):
         paths.show(options, get_content=True)
 
