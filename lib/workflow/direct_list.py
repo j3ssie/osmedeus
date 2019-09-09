@@ -23,7 +23,7 @@ class Formatting:
             },
             {
                 "banner": "massdns resolve IP",
-                "requirement": "$WORKSPACE/formatted/$OUTPUT-domains.txt",
+                "requirement": "$TARGET",
                 "cmd": "cat $WORKSPACE/formatted/$OUTPUT-domains.txt | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o S -w $WORKSPACE/formatted/raw-massdns-$OUTPUT.txt",
                 "output_path": "$WORKSPACE/formatted/raw-massdns-$OUTPUT.txt",
                 "std_path": "",
