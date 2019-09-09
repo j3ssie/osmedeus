@@ -31,12 +31,14 @@ def routine(args):
         datas = [target]
 
     if mode == 'user':
-        for target in datas:
-            cmd = f'{plugin}/go/gitrob -save {output} -threads 10 -github-access-token {key} {target}'
+        for data in datas:
+            cmd = f'{plugin}/go/gitrob -save {output} -threads 10 -github-access-token {key} {data}'
+            utils.print_info(f"Execute: {cmd}")
             os.system(cmd)
     else:
-        for target in datas:
-            cmd = f'trufflehog --regex --entropy=True {target} | tee {output}-trufflehog.txt'
+        for data in datas:
+            cmd = f'trufflehog --regex --entropy=True {data} | tee {output}-trufflehog.txt'
+            utils.print_info(f"Execute: {cmd}")
             os.system(cmd)
 
 

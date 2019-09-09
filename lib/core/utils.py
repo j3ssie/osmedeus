@@ -587,7 +587,12 @@ def just_write(filename, data, is_json=False, uniq=False):
 def clean_up(filename):
     if not filename:
         return False
-    data = just_read(filename, get_list=True)
+
+    filename = os.path.normpath(filename)
+    if os.path.isfile(filename):
+        with open(filename, 'r') as f:
+            data = f.readlines()
+
     real_data = list(set(data))
     just_write(filename, "\n".join(real_data))
     return True

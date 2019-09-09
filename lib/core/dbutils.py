@@ -107,7 +107,7 @@ def gen_default_config(config_path):
     configs.set('Enviroments', 'go_path', go_path)
 
     # set some tokens
-    github_api_key = utils.get_enviroment("GITROB_ACCESS_TOKEN")
+    github_api_key = utils.get_enviroment("GITHUB_API_KEY")
     slack_bot_token = utils.get_enviroment("SLACK_BOT_TOKEN")
     log_channel = utils.get_enviroment("LOG_CHANNEL")
     status_channel = utils.get_enviroment("STATUS_CHANNEL")
@@ -148,7 +148,9 @@ def load_default_config(config_file=None):
             'alias': key,
             'desc': key,
         }
-        Configurations.objects.create(**item)
+        instance, created = Configurations.objects.get_or_create(
+            name=key)
+        Configurations.objects.filter(name=key).update(**item)
     return options
 
 

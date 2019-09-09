@@ -9,7 +9,7 @@ from core import utils
 
 # store some configuration
 class Configurations(models.Model):
-    name = models.TextField(blank=False, default='')
+    name = models.TextField(unique=True, blank=False, default='')
     value = models.TextField(blank=False, default='')
     alias = models.TextField(default='')
     desc = models.TextField(default='')

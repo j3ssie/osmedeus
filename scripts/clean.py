@@ -50,7 +50,7 @@ def load_default_config():
     # load command from default workflow
     dbutils.internal_parse_commands()
     # create server config file
-    dbutils.load_default_config(confif_file='~/.osmedeus/server.conf')
+    dbutils.load_default_config(config_file='~/.osmedeus/server.conf')
     # Configurations.objects.create(**record)
     utils.print_good("Load config success")
 

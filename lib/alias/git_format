@@ -9,8 +9,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from core import utils
 
 
-# git_check -i /tmp/target.txt -o '$WORKSPACE/gitscan/$OUTPUT'
-# git_check - repo:sda
+# git_format -i /tmp/target.txt -o '$WORKSPACE/gitscan/$OUTPUT'
+# git_format -i 'repo:sda' -o '$WORKSPACE/gitscan/$OUTPUT'
 
 def parse_input(data, out):
     repo = f'{out}-repo.txt'
@@ -19,13 +19,17 @@ def parse_input(data, out):
         utils.just_append(repo, data.strip())
     else:
         key = data.split(':')[0]
-        real_data = data.split(':')[1]
+        real_data = ''.join(data.split(':')[1:])
         if 'user' in key or 'org' in key:
-            utils.just_append(user, real_data.strip())
+            utils.just_append(user, real_data + "\n")
         else:
-            utils.just_append(repo, real_data.strip())
-    utils.clean_up(repo)
-    utils.clean_up(user)
+            utils.just_append(repo, real_data + "\n")
+        # print(real_data)
+    try:
+        utils.clean_up(repo)
+        utils.clean_up(user)
+    except:
+        pass
 
 
 def routine(args):

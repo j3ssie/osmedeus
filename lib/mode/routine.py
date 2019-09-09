@@ -10,7 +10,6 @@ from lib.mode import report
 
 
 def routine_handle(options):
-    # print(options)
     if options.get('mode') == "report":
         utils.print_load("Running with report mode")
         report.handle(options)

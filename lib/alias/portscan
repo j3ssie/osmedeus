@@ -23,7 +23,7 @@ def routine(args):
         cmd = f'sudo masscan --rate 10000 -p0-65535 -iL {target} -oX {output}.xml --wait 0'
     else:
         cmd = f'sudo masscan --rate 10000 -p0-65535 {target} -oX {output}.xml --wait 0'
-    
+
     os.system(cmd)
     utils.print_info(f"Execute: {cmd}")
 

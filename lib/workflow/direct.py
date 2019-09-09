@@ -342,7 +342,7 @@ class IPSpace:
 class GitScan:
     reports = [
         {
-            "path": "$WORKSPACE/gitscan/$OUTPUT-repo.txt",
+            "path": "$WORKSPACE/gitscan/$OUTPUT-user.txt",
             "type": "bash",
         },
         {
@@ -355,22 +355,22 @@ class GitScan:
         'general': [
             {
                 "banner": "parse input",
-                "cmd": "$ALIAS_PATH/format_input -i '$TARGET' -o '$WORKSPACE/gitscan/$OUTPUT'",
-                "output_path": "$WORKSPACE/gitscan/$OUTPUT-repo.txt",
+                "cmd": "$ALIAS_PATH/git_format -i '$RAW_TARGET' -o '$WORKSPACE/gitscan/$OUTPUT'",
+                "output_path": "$WORKSPACE/gitscan/$OUTPUT-user.txt",
                 "std_path": "",
                 "waiting": "first",
             },
             {
                 "requirement": "$WORKSPACE/gitscan/$OUTPUT-repo.txt",
                 "banner": "Git recon repo",
-                "cmd": "$ALIAS_PATH/gitrecon -r $WORKSPACE/gitscan/$OUTPUT-repo.txt -o '$WORKSPACE/gitscan/$OUTPUT' -k '$GITHUB_API_KEY' -p '$PLUGIN_PATH' ",
+                "cmd": "$ALIAS_PATH/gitrecon -r $WORKSPACE/gitscan/$OUTPUT-repo.txt -o '$WORKSPACE/gitscan/$OUTPUT' -k '$GITHUB_API_KEY' -p '$PLUGINS_PATH' ",
                 "output_path": "$WORKSPACE/gitscan/$TARGET-gitrob.txt",
                 "std_path": "$WORKSPACE/gitscan/std-$TARGET-gitrob.std"
             },
             {
                 "requirement": "$WORKSPACE/gitscan/$OUTPUT-user.txt",
                 "banner": "Git recon user",
-                "cmd": "$ALIAS_PATH/gitrecon -u $WORKSPACE/gitscan/$OUTPUT-repo.txt -o '$WORKSPACE/gitscan/$OUTPUT' -k '$GITHUB_API_KEY' -p '$PLUGIN_PATH' ",
+                "cmd": "$ALIAS_PATH/gitrecon -u $WORKSPACE/gitscan/$OUTPUT-user.txt -o '$WORKSPACE/gitscan/$OUTPUT' -k '$GITHUB_API_KEY' -p '$PLUGINS_PATH' ",
                 "output_path": "$WORKSPACE/gitscan/$TARGET-gitrob.txt",
                 "std_path": "$WORKSPACE/gitscan/std-$TARGET-gitrob.std"
             }
