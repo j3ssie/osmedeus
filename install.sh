@@ -87,11 +87,11 @@ install_banner "providers-data for subdomain takeover"
 ### Nmap stuff
 install_banner "nmap vulners nse"
 # Install vulners nse script
-[[ -f $DATA_PATH/nmap-stuff/vulners.nse ]] ||  wget -q -O $DATA_PATH/nmap-stuff/vulners.nse https://raw.githubusercontent.com/vulnersCom/nmap-vulners/master/vulners.nse
+[[ -f $PLUGINS_PATH/nmap-stuff/vulners.nse ]] ||  wget -q -O $PLUGINS_PATH/nmap-stuff/vulners.nse https://raw.githubusercontent.com/vulnersCom/nmap-vulners/master/vulners.nse
 
 install_banner "nmap bootstrap"
 # Install nmap bootstrap
-[[ -f $DATA_PATH/nmap-stuff/nmap-bootstrap.xsl ]] ||  wget -q -O $DATA_PATH/nmap-stuff/nmap-bootstrap.xsl https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl
+[[ -f $PLUGINS_PATH/nmap-stuff/nmap-bootstrap.xsl ]] ||  wget -q -O $PLUGINS_PATH/nmap-stuff/nmap-bootstrap.xsl https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl
 
 install_banner "nmap parser"
 [[ -f $PLUGINS_PATH/nmap-stuff/nmap_xml_parser.py ]] ||  wget -q -O $PLUGINS_PATH/nmap-stuff/nmap_xml_parser.py https://raw.githubusercontent.com/laconicwolf/Nmap-Scan-to-CSV/master/nmap_xml_parser.py
