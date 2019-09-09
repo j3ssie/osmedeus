@@ -91,6 +91,8 @@ If you love my tool and would like to support my work. [Become a backer](https:/
 ./osmedeus.py -m portscan -I list_of_targets.txt -t result_folder
 
 ./osmedeus.py -m "portscan,vulnscan" -i "1.2.3.4/24" -t result_folder
+./osmedeus.py -m "git" -i 'repo:https://github.com/foo/bar'
+./osmedeus.py -m "git" -i 'user:sample'
 
 # report mode
 ./osemdeus.py -t example.com --report list

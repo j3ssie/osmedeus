@@ -94,7 +94,7 @@ install_banner "nmap bootstrap"
 [[ -f $DATA_PATH/nmap-stuff/nmap-bootstrap.xsl ]] ||  wget -q -O $DATA_PATH/nmap-stuff/nmap-bootstrap.xsl https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl
 
 install_banner "nmap parser"
-[[ -f $DATA_PATH/nmap-stuff/nmap_xml_parser.py ]] ||  wget -q -O $DATA_PATH/nmap-stuff/nmap_xml_parser.py https://raw.githubusercontent.com/laconicwolf/Nmap-Scan-to-CSV/master/nmap_xml_parser.py
+[[ -f $PLUGINS_PATH/nmap-stuff/nmap_xml_parser.py ]] ||  wget -q -O $PLUGINS_PATH/nmap-stuff/nmap_xml_parser.py https://raw.githubusercontent.com/laconicwolf/Nmap-Scan-to-CSV/master/nmap_xml_parser.py
 
 [[ -f $PLUGINS_PATH/nmap-stuff/masscan_xml_parser.py ]] ||  wget -q -O $PLUGINS_PATH/nmap-stuff/masscan_xml_parser.py https://raw.githubusercontent.com/laconicwolf/Masscan-to-CSV/master/masscan_xml_parser.py
 
