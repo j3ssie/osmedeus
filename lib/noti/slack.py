@@ -27,7 +27,7 @@ def slack_notification(status, options, output=None):
 
 # Slack printing
 def slack_seperate(options):
-    if options['BOT_TOKEN'] == "None":
+    if options['SLACK_BOT_TOKEN'] == "None":
         return
     mess = {
         'title': "Just Seperated stuff",
@@ -48,7 +48,7 @@ def slack_seperate(options):
 
 
 def slack_noti(mode, options, text='', title='Execute', mess=None):
-    if options['BOT_TOKEN'] == "None":
+    if options['SLACK_BOT_TOKEN'] == "None":
         return
 
     sm = Messages(options)
@@ -68,7 +68,7 @@ def slack_noti(mode, options, text='', title='Execute', mess=None):
 
 
 def slack_file(mode, options, filename='', title='Done', mess=None):
-    if options['BOT_TOKEN'] == "None":
+    if options['SLACK_BOT_TOKEN'] == "None":
         return
     try:
         sm = Messages(options)
@@ -146,7 +146,7 @@ class Messages():
     def send_attachment(self, mess):
         url = 'https://slack.com/api/chat.postMessage'
         #config stuff
-        token = self.slack_options['BOT_TOKEN']
+        token = self.slack_options['SLACK_BOT_TOKEN']
         name = self.slack_options['LOCAL_NAME']
 
         #message stuff
@@ -182,7 +182,7 @@ class Messages():
         r = send_JSON(url, token, json_body)
 
     def send_snippet(self, mess):
-        token = self.slack_options['BOT_TOKEN']
+        token = self.slack_options['SLACK_BOT_TOKEN']
         #message stuff
         channel = get_value(
             mess, 'channel', self.slack_options['REPORT_CHANNEL'])

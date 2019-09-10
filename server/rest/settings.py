@@ -15,7 +15,7 @@ import sys
 from datetime import timedelta
 
 from pathlib import Path
-## turn this on when go live
+# turn this on when go live
 import logging
 logging.disable(logging.INFO)
 
@@ -32,8 +32,7 @@ SECRET_KEY = '%#0q1v(m-gbls-4nf*hywb_c%yms&00j4yh(=pnn4qy^s@u@zv'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-# set this to your IP if you running on remote host
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -75,7 +74,10 @@ ROOT_URLCONF = 'rest.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['ui'],
+        'DIRS': [
+            'ui',
+            os.path.join(BASE_DIR, "ui"),
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -185,7 +187,6 @@ STATIC_URL = '/static/'
 WORKSPACES_PATH = str(Path.home().joinpath('.osmedeus/workspaces'))
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, "ui", "static"),
-    os.path.join(BASE_DIR, "ui"),
     WORKSPACES_PATH,
 )
 

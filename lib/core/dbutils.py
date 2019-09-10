@@ -131,13 +131,15 @@ def gen_default_config(config_path):
     return options
 
 
-def load_default_config(config_file=None):
+def load_default_config(config_file=None, forced_reload=False):
     if not config_file:
         config_file = '~/.osmedeus/server.conf'
     options = utils.just_read_config(config_file)
 
     # no config found generate one from default config
     if not options:
+        options = gen_default_config(config_file)
+    if forced_reload:
         options = gen_default_config(config_file)
 
     # looping and adding field to db

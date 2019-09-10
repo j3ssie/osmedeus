@@ -384,15 +384,13 @@ class IPSpace:
     commands = {
         'general': [
             {
-                "banner": "ASN lookup",
-                "cmd": "curl -s -o $WORKSPACE/ipspace/asn-$OUTPUT.json http://asnlookup.com/api/lookup?org=$COMPANY",
-                "output_path": "$WORKSPACE/ipspace/asn-$OUTPUT.json",
+                "banner": "Metabigor IP Lookup",
+                "cmd": "PLUGINS_PATH/Metabigor/metabigor.py -m ip  -t $TARGET -o $WORKSPACE/ipspace/range-$OUTPUT.txt",
+                "output_path": "$WORKSPACE/ipspace/range-$OUTPUT.txt",
                 "std_path": "",
-                "pre_run": "parse_target",
                 "post_run": "get_amass",
                 "cleaned_output": "$WORKSPACE/ipspace/summary-$OUTPUT.txt",
             },
-            # @TODO put my Metabigor here
         ],
     }
 

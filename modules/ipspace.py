@@ -14,20 +14,14 @@ class IPSpace(skeleton.Skeleton):
         utils.print_banner("Starting IPSpace")
         utils.make_directory(self.options['WORKSPACE'] + '/ipspace')
 
-    def parse_target(self, command):
-        company = utils.get_tld(self.options.get('TARGET'))
-        self.options['COMPANY'] = company
-        # re-generate commands as we add something to options
-        self.gen_commands()
-
     # reading ASN and IP space from amass result
     def get_amass(self, command):
         ips, ip_range, asns = [], [], []
         output_path = command.get('output_path')
-        content = utils.just_read(output_path)
-        if utils.not_empty_file(output_path) and content.strip() != 'null':
-            if utils.is_json(content):
-                ip_range.extend(utils.get_json(content))
+        content = utils.just_read(output_path, get_list=True)
+
+        if content:
+            ip_range.extend(content)
 
         amass_output = utils.replace_argument(
             self.options, '$WORKSPACE/subdomain/amass-$OUTPUT/amass.json')
