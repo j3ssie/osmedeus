@@ -28,7 +28,7 @@ def reload_routine():
     # load command from default workflow
     dbutils.internal_parse_commands()
     # create server config file
-    dbutils.load_default_config(config_file='~/.osmedeus/server.conf')
+    dbutils.load_default_config(config_file='~/.osmedeus/server.conf', forced_reload=True)
 
 
 def main(args):
