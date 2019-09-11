@@ -79,6 +79,6 @@ class SubdomainScanning(skeleton.Skeleton):
                 result.append(domain)
 
         cleaned_output = utils.just_write(command.get(
-            'cleaned_output'), "\n".join(domain))
+            'cleaned_output'), "\n".join(result))
         if cleaned_output:
             utils.check_output(command.get('cleaned_output'))

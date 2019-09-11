@@ -18,7 +18,7 @@ class LinkFinding(skeleton.Skeleton):
     def clean_waybackurls(self, command):
         raw_output = command.get('output_path')
         final_output = command.get('cleaned_output')
-        utils.strip_blank_line(raw_output, final_output)
+        utils.strip_blank_line(final_output, raw_output)
 
     def clean_linkfinder(self, command):
         final_output = command.get('cleaned_output')

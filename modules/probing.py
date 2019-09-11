@@ -49,7 +49,7 @@ class Probing(skeleton.Skeleton):
         only_A_record, summaries, resolved = [], [], []
         for line in output:
             if '. A ' in line:
-                only_A_record.append(line.split('. A ')[0])
+                only_A_record.append(line.split('. A ')[1].strip())
                 resolved.append(line.split('. A ')[0])
                 summary = "domain|{0};;ip_address|{1}".format(
                     line.split('. A ')[0], line.split('. A ')[1])

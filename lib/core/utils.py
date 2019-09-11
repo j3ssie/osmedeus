@@ -566,7 +566,7 @@ def list_all(folder, ext='xml'):
 
 
 def just_write(filename, data, is_json=False, uniq=False):
-    if not filename:
+    if not filename or not data:
         return False
     filename = os.path.normpath(filename)
     try:
