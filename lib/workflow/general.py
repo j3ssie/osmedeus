@@ -165,12 +165,12 @@ class Probing:
             {
                 "banner": "httprobe",
                 "requirement": "$WORKSPACE/probing/raw-all-$OUTPUT.txt",
-                "cmd": "cat $WORKSPACE/probing/really-final-$OUTPUT.txt | $GO_PATH/httprobe -c 100 -t 20000 | tee $WORKSPACE/probing/http-$OUTPUT.txt",
+                "cmd": "cat $WORKSPACE/probing/raw-all-$OUTPUT.txt | $GO_PATH/httprobe -c 100 -t 20000 | tee $WORKSPACE/probing/http-$OUTPUT.txt",
                 "output_path": "$WORKSPACE/probing/http-$OUTPUT.txt",
                 "std_path": "$WORKSPACE/probing/std-http-$OUTPUT.std",
                 # "waiting": "last",
                 "post_run": "get_domain",
-                "cleaned_output": "$WORKSPACE/probing/domain-$OUTPUT.txt",
+                "cleaned_output": "$WORKSPACE/probing/domains-$OUTPUT.txt",
             },
         ],
     }
@@ -192,9 +192,9 @@ class Formatting:
     commands = {
         'general': [
             {
-                "requirement": "$WORKSPACE/formatted/$OUTPUT-domains.txt",
+                "requirement": "$WORKSPACE/probing/domains-$OUTPUT.txt",
                 "banner": "Formatting Input",
-                "cmd": "$ALIAS_PATH/format_input -i $WORKSPACE/formatted/$OUTPUT-domains.txt -o '$WORKSPACE/formatted/$OUTPUT'",
+                "cmd": "$ALIAS_PATH/format_input -i $WORKSPACE/probing/domains-$OUTPUT.txt -o '$WORKSPACE/formatted/$OUTPUT'",
                 "output_path": "$WORKSPACE/formatted/$OUTPUT-domains.txt",
                 "std_path": "",
                 "waiting": "first",
@@ -216,7 +216,7 @@ class Fingerprint:
         'general': [
             {
                 "banner": "webanalyze",
-                "cmd": "$GO_PATH/webanalyze -apps $DATA_PATH/apps.json -hosts $WORKSPACE/probing/really-final-$OUTPUT.txt -output json -worker 20 | tee $WORKSPACE/fingerprint/$OUTPUT-technology.json",
+                "cmd": "$GO_PATH/webanalyze -apps $DATA_PATH/apps.json -hosts $WORKSPACE/probing/resolved-$OUTPUT.txt -output json -worker 20 | tee $WORKSPACE/fingerprint/$OUTPUT-technology.json",
                 "output_path": "$WORKSPACE/fingerprint/$OUTPUT-technology.json",
                 "std_path": "$WORKSPACE/fingerprint/std-$OUTPUT-technology.std",
                 "post_run": "update_tech",
@@ -224,7 +224,7 @@ class Fingerprint:
             },
             {
                 "banner": "meg /",
-                "cmd": "$GO_PATH/meg / $WORKSPACE/probing/really-final-$OUTPUT.txt $WORKSPACE/fingerprint/responses/ -v -c 100",
+                "cmd": "$GO_PATH/meg / $WORKSPACE/probing/resolved-$OUTPUT.txt $WORKSPACE/fingerprint/responses/ -v -c 100",
                 "output_path": "$WORKSPACE/fingerprint/responses/index",
                 "std_path": "",
             },
@@ -343,7 +343,7 @@ class LinkFinding:
                 "cleaned_output": "$WORKSPACE/links/waybackurls-$OUTPUT.txt",
             },
             {
-                "requirement": "$WORKSPACE/probing/domain-$OUTPUT.txt",
+                "requirement": "$WORKSPACE/probing/http-$OUTPUT.txt",
                 "pre_run": "get_domains",
                 "banner": "linkfinder",
                 "cmd": "python3 $PLUGINS_PATH/LinkFinder/linkfinder.py -i [[0]] -d -o cli | tee $WORKSPACE/links/raw/[[1]]-$OUTPUT.txt",
@@ -385,38 +385,9 @@ class IPSpace:
         'general': [
             {
                 "banner": "Metabigor IP Lookup",
-                "cmd": "PLUGINS_PATH/Metabigor/metabigor.py -m ip  -t $TARGET -o $WORKSPACE/ipspace/range-$OUTPUT.txt",
+                "cmd": "PLUGINS_PATH/Metabigor/metabigor.py -m ip -t $TARGET -o $WORKSPACE/ipspace/range-$OUTPUT.txt",
                 "output_path": "$WORKSPACE/ipspace/range-$OUTPUT.txt",
                 "std_path": "",
-                "post_run": "get_amass",
-                "cleaned_output": "$WORKSPACE/ipspace/summary-$OUTPUT.txt",
-            },
-        ],
-    }
-
-
-class Osint:
-    reports = [
-        {
-            "path": "$WORKSPACE/osint/summary-$OUTPUT.txt",
-            "type": "bash",
-            "note": "final",
-        },
-        {
-            "path": "$WORKSPACE/osint/range-$OUTPUT.txt",
-            "type": "bash",
-            "note": "final",
-        },
-    ]
-    logs = []
-    commands = {
-        'general': [
-            {
-                "banner": "Finding Github user & org",
-                "cmd": "",
-                "output_path": "$WORKSPACE/ipspace/asn-$OUTPUT.json",
-                "std_path": "",
-                "pre_run": "parse_target",
                 "post_run": "get_amass",
                 "cleaned_output": "$WORKSPACE/ipspace/summary-$OUTPUT.txt",
             },
