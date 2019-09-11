@@ -83,23 +83,23 @@ def parse_resources(resources):
     else:
         raw_lists = [resources]
 
-    lists = []
+    _lists = []
     for item in raw_lists:
         if not item or item == '':
             continue
         if '|' in item:
             filename = ''.join(item.split('|')[1:])
             content = utils.just_read(filename, get_list=True)
-            lists.append({
+            _lists.append({
                 'filename': filename,
                 'content': content,
                 })
 
     # currently only support 2 list
-    if len(lists) == 1:
-        final_lists = list(zip(lists[0].get('content'), itertools.cycle([''])))
-    if len(lists) == 2:
-        final_lists = list(zip(lists[0].get('content'), itertools.cycle(lists[1].get('content'),)))
+    if len(_lists) == 1:
+        final_lists = list(zip(_lists[0].get('content'), itertools.cycle([''])))
+    if len(_lists) == 2:
+        final_lists = list(zip(_lists[0].get('content'), itertools.cycle(_lists[1].get('content'),)))
 
     return final_lists
 

@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+import os
+import sys
+import time
+import argparse
+import urllib.parse
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
+from core import utils
+
+
+# $ALIAS_PATH/linkfinding -i '[[0]]' -o '$WORKSPACE/links/raw/' -s '$WORKSPACE/links/summary-linkfinder.txt' -p '$PLUGINS_PATH'
+def routine(args):
+    target = args.input
+    output = args.output
+    strip_target = utils.strip_slash(target)
+    plugin = args.plugin
+    summary = args.summary
+
+    cmd = f'{plugin}/LinkFinder/linkfinder.py -i {target} -d -o cli | tee {output}/{strip_target}.txt'
+    # utils.print_info(f"Execute: {cmd}")
+    os.system(cmd)
+    # append to summary
+    if utils.not_empty_file(f'{output}/{strip_target}.txt'):
+        content = utils.just_read(f'{output}/{strip_target}.txt')
+        utils.just_append(summary, content + "\n")
+
+
+parser = argparse.ArgumentParser(description="LinkFinder alias")
+parser.add_argument('-i', '--input', action='store', dest='input', help='input')
+parser.add_argument('-o', '--output', action='store', dest='output', help='output')
+parser.add_argument('-p', '--plugin', action='store', dest='plugin', help='plugin')
+parser.add_argument('-s', '--summary', action='store',
+                    dest='summary', help='summary')
+args = parser.parse_args()
+routine(args)
+

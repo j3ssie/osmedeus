@@ -133,11 +133,6 @@ class Probing:
             "note": "final",
         },
         {
-            "path": "$WORKSPACE/probing/really-final-$OUTPUT.txt",
-            "type": "bash",
-            "note": "final",
-        },
-        {
             "path": "$WORKSPACE/probing/resolved-$OUTPUT.txt",
             "type": "bash",
             "note": "final",
@@ -145,7 +140,7 @@ class Probing:
         {
             "path": "$WORKSPACE/probing/http-$OUTPUT.txt",
             "type": "bash",
-            "note": "final",
+            "note": "",
         },
     ]
     logs = []
@@ -179,13 +174,9 @@ class Probing:
 class Formatting:
     reports = [
         {
-            "path": "$WORKSPACE/formatted/ip-$OUTPUT.txt",
+            "path": "$WORKSPACE/formatted/$OUTPUT-domains.txt",
             "type": "bash",
             "note": "final"
-        },
-        {
-            "path": "$WORKSPACE/formatted/$OUTPUT-scheme.txt",
-            "type": "bash"
         },
     ]
     logs = []
@@ -346,12 +337,12 @@ class LinkFinding:
                 "requirement": "$WORKSPACE/probing/http-$OUTPUT.txt",
                 "pre_run": "get_domains",
                 "banner": "linkfinder",
-                "cmd": "python3 $PLUGINS_PATH/LinkFinder/linkfinder.py -i [[0]] -d -o cli | tee $WORKSPACE/links/raw/[[1]]-$OUTPUT.txt",
-                "output_path": "tee $WORKSPACE/links/raw/[[1]]-$OUTPUT.txt",
+                "cmd": "$ALIAS_PATH/linkfinding -i '[[0]]' -o '$WORKSPACE/links/raw/' -s '$WORKSPACE/links/summary-$OUTPUT.txt' -p '$PLUGINS_PATH'",
+                "output_path": "tee $WORKSPACE/links/raw/[[0]]-$OUTPUT.txt",
                 "std_path": "",
                 "chunk": 5,
                 "cmd_type": "list",
-                "resources": "l0|$WORKSPACE/probing/http-$OUTPUT.txt;;l1|$WORKSPACE/probing/domain-$OUTPUT.txt",
+                "resources": "l0|$WORKSPACE/probing/http-$OUTPUT.txt",
                 "post_run": "clean_linkfinder",
                 "cleaned_output": "$WORKSPACE/links/summary-$OUTPUT.txt",
             },
@@ -385,7 +376,7 @@ class IPSpace:
         'general': [
             {
                 "banner": "Metabigor IP Lookup",
-                "cmd": "PLUGINS_PATH/Metabigor/metabigor.py -m ip -t $TARGET -o $WORKSPACE/ipspace/range-$OUTPUT.txt",
+                "cmd": "$PLUGINS_PATH/Metabigor/metabigor.py -m ip -t $TARGET -o $WORKSPACE/ipspace/range-$OUTPUT.txt",
                 "output_path": "$WORKSPACE/ipspace/range-$OUTPUT.txt",
                 "std_path": "",
                 "post_run": "get_amass",

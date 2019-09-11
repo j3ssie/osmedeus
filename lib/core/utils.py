@@ -62,9 +62,9 @@ PROXY = {
 
 
 def print_load(text):
-    print(f'{GR}' + '-'*60)
+    print(f'{GR}' + '-'*70)
     print(f'{GR}{" ":10}{GR}^{B}O{GR}^ {G}{text} {GR}^{B}O{GR}^')
-    print(f'{GR}' + '-'*60)
+    print(f'{GR}' + '-'*70)
 
 
 def print_block(text, tag='LOAD'):
@@ -98,7 +98,7 @@ def print_bad(text):
 
 
 def print_line():
-    print(GR + '-' * 60)
+    print(GR + '-' * 70)
 
 
 def get_perf_time():
@@ -565,17 +565,37 @@ def list_all(folder, ext='xml'):
     return None
 
 
-def just_write(filename, data, is_json=False, uniq=False):
+def just_write(filename, data, is_json=False, uniq=False, verbose=False):
     if not filename or not data:
         return False
     filename = os.path.normpath(filename)
     try:
-        print_good("Writing {0}".format(filename))
+        if verbose:
+            print_good("Writing {0}".format(filename))
         if is_json:
             with open(filename, 'w+') as f:
                 json.dump(data, f)
         else:
             with open(filename, 'w+') as f:
+                f.write(data)
+        return filename
+    except:
+        print_bad("Writing fail: {0}".format(filename))
+        return False
+
+
+def just_append(filename, data, is_json=False, uniq=False, verbose=False):
+    if not filename or not data:
+        return False
+    filename = os.path.normpath(filename)
+    try:
+        if verbose:
+            print_good("Writing {0}".format(filename))
+        if is_json:
+            with open(filename, 'a+') as f:
+                json.dump(data, f)
+        else:
+            with open(filename, 'a+') as f:
                 f.write(data)
         return filename
     except:
