@@ -24,7 +24,8 @@ install_banner "git, nmap, masscan, chromium, npm, golang"
 [ -x "$(command -v go)" ] || sudo $PACKGE_MANAGER install golang -y 2> /dev/null
 [ -x "$(command -v csvlook)" ] || sudo $PACKGE_MANAGER install csvkit -y 2> /dev/null
 [ -x "$(command -v ripgrep)" ] || sudo $PACKGE_MANAGER install ripgrep -y 2> /dev/null
-[ -x "$(command -v proxychains)" ] || sudo $PACKGE_MANAGER install proxychains -y 2> /dev/null
+[ -x "$(command -v unzip)" ] || sudo $PACKGE_MANAGER install unzip -y 2> /dev/null
+
 
 #### Download stuff directly
 install_banner "wordlists"
@@ -93,10 +94,10 @@ install_banner "nmap bootstrap"
 # Install nmap bootstrap
 [[ -f $PLUGINS_PATH/nmap-stuff/nmap-bootstrap.xsl ]] ||  wget -q -O $PLUGINS_PATH/nmap-stuff/nmap-bootstrap.xsl https://raw.githubusercontent.com/honze-net/nmap-bootstrap-xsl/master/nmap-bootstrap.xsl
 
-install_banner "nmap parser"
-[[ -f $PLUGINS_PATH/nmap-stuff/nmap_xml_parser.py ]] ||  wget -q -O $PLUGINS_PATH/nmap-stuff/nmap_xml_parser.py https://raw.githubusercontent.com/laconicwolf/Nmap-Scan-to-CSV/master/nmap_xml_parser.py
-
+install_banner "nmap & masscan parser"
 [[ -f $PLUGINS_PATH/nmap-stuff/masscan_xml_parser.py ]] ||  wget -q -O $PLUGINS_PATH/nmap-stuff/masscan_xml_parser.py https://raw.githubusercontent.com/laconicwolf/Masscan-to-CSV/master/masscan_xml_parser.py
+
+[[ -f $PLUGINS_PATH/nmap-stuff/nmaptocsv.py ]] ||  wget -q -O $PLUGINS_PATH/nmap-stuff/nmaptocsv.py https://raw.githubusercontent.com/maaaaz/nmaptocsv/master/nmaptocsv.py
 
 
 
@@ -221,12 +222,10 @@ cd $PLUGINS_PATH/LinkFinder/
 python2 setup.py install
 
 cd $CWD
+mkdir -p ~/.osmedeus >> 2> /dev/null
 install_banner "Initial config for Osmedeus"
 python3 server/manage.py makemigrations
 python3 server/manage.py migrate
-python3 server/manage.py makemigrations api
-python3 server/manage.py migrate api
-mkdir -p ~/.osmedeus 2> /dev/null
 python3 scripts/init.py
 echo -e "\033[1;32m[+] Installing done... \033[1;37m"
 

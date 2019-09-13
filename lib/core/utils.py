@@ -520,6 +520,11 @@ def check_required(command):
     if not not_empty_file(command.get('requirement')):
         print_bad("Requirement not found: {0}".format(command.get('requirement')))
         return False
+
+    if not_empty_file(command.get('cleaned_output')):
+        print_info("Post routine already done")
+        return False
+
     return True
 
 

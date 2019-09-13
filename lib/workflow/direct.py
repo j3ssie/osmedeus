@@ -159,6 +159,28 @@ class Probing:
     }
 
 
+class CORSScan:
+    reports = [
+        {
+            "path": "$WORKSPACE/cors/$OUTPUT-corstest.txt",
+            "type": "bash",
+            "note": "final",
+        },
+    ]
+    logs = []
+    commands = {
+        'general': [
+            {
+                "requirement": "$WORKSPACE/probing/http-$OUTPUT.txt",
+                "banner": "CORS Scan",
+                "cmd": "python2 $PLUGINS_PATH/CORStest/corstest.py -p 50 $WORKSPACE/probing/http-$OUTPUT.txt | tee $WORKSPACE/cors/$OUTPUT-corstest.txt",
+                "output_path": "$WORKSPACE/cors/$TARGET-corstest.txt",
+                "std_path": "$WORKSPACE/cors/std-$TARGET-corstest.std",
+            }
+        ],
+    }
+
+
 class LinkFinding:
     reports = [
         {
@@ -280,7 +302,7 @@ class VulnScan:
             {
                 # "requirement": "$TARGET",
                 "banner": "Nmap all port",
-                "cmd": "$ALIAS_PATH/vulnscan -i $TARGET -o '$WORKSPACE/vulnscan/details/$OUTPUT' -s '$WORKSPACE/vulnscan/summary.csv' -p '$PLUGINS_PATH'",
+                "cmd": "$ALIAS_PATH/vulnscan -i $TARGET -o '$WORKSPACE/vulnscan/details/$OUTPUT' -s '$WORKSPACE/vulnscan/summary-$OUTPUT.csv' -p '$PLUGINS_PATH'",
                 "output_path": "$WORKSPACE/vulnscan/details/$OUTPUT.gnmap",
                 "std_path": "$WORKSPACE/vulnscan/details/std-$OUTPUT.std",
                 "chunk": 3,
@@ -288,7 +310,14 @@ class VulnScan:
                 "waiting": "first",
             },
             {
-                "requirement": "$WORKSPACE/vulnscan/summary.csv",
+                "requirement": "$WORKSPACE/vulnscan/summary-$OUTPUT.csv",
+                "banner": "CSV beautify",
+                "cmd": "cat $WORKSPACE/vulnscan/summary-$OUTPUT.csv | csvlook --no-inference | tee $WORKSPACE/vulnscan/beautify-summary-$OUTPUT.txt",
+                "output_path": "$WORKSPACE/vulnscan/beautify-summary-$OUTPUT.txt",
+                "std_path": "",
+            },
+            {
+                "requirement": "$WORKSPACE/vulnscan/summary-$OUTPUT.csv",
                 "banner": "Screenshot on ports found",
                 "cmd": "$GO_PATH/gowitness file -s $WORKSPACE/vulnscan/scheme-$OUTPUT.txt -t 30 --log-level fatal --destination  $WORKSPACE/vulnscan/screenshot/raw-gowitness/ --db $WORKSPACE/vulnscan/screenshot/gowitness.db",
                 "output_path": "$WORKSPACE/vulnscan/screenshot/gowitness.db",
@@ -297,14 +326,6 @@ class VulnScan:
                 "post_run": "clean_gowitness",
                 "pre_run": "get_scheme",
             },
-            {
-                "requirement": "$WORKSPACE/vulnscan/summary.csv",
-                "banner": "CSV beautify",
-                "cmd": "csvcut -c 1-7 $WORKSPACE/vulnscan/$OUTPUT-masscan.csv | csvlook --no-inference | tee $WORKSPACE/vulnscan/beautify-summary-$OUTPUT.txt",
-                "output_path": "$WORKSPACE/vulnscan/beautify-summary-$OUTPUT.txt",
-                "std_path": "",
-                # "waiting": "last",
-            }
         ],
     }
 

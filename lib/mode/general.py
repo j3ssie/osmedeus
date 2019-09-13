@@ -16,6 +16,7 @@ from modules import ipspace
 from modules import portscan
 from modules import vulnscan
 from modules import dirbscan
+from modules import corscan
 
 
 def handle(options):
@@ -36,6 +37,7 @@ def single_handle(options):
     # permutation.PermutationScan(options)
     probing.Probing(options)
     formatting.Formatting(options)
+    corscan.CORScan(options)
     fingerprint.Fingerprint(options)
     stoscan.StoScan(options)
     screenshot.ScreenShot(options)

@@ -67,13 +67,10 @@ class Fingerprint:
 class CORSScan:
     reports = [
         {
-            "path": "$WORKSPACE/assets/http-$OUTPUT.txt",
-            "type": "bash"
+            "path": "$WORKSPACE/cors/$OUTPUT-corstest.txt",
+            "type": "bash",
+            "note": "final",
         },
-        {
-            "path": "$WORKSPACE/assets/wayback-$OUTPUT.txt",
-            "type": "bash"
-        }
     ]
     logs = []
     commands = {
@@ -81,9 +78,9 @@ class CORSScan:
             {
                 "requirement": "$WORKSPACE/formatted/ip-$OUTPUT.txt",
                 "banner": "CORS Scan",
-                "cmd": "python2 $PLUGINS_PATH/CORStest/corstest.py $WORKSPACE/cors/$OUTPUT-corstest.txt | tee $WORKSPACE/cors/$OUTPUT-corstest.txt",
+                "cmd": "python2 $PLUGINS_PATH/CORStest/corstest.py -p 50 $WORKSPACE/formatted/http-$OUTPUT.txt| tee $WORKSPACE/cors/$OUTPUT-corstest.txt",
                 "output_path": "$WORKSPACE/cors/$TARGET-corstest.txt",
-                "std_path": "$WORKSPACE/cors/std-$TARGET-corstest.std"
+                "std_path": "$WORKSPACE/cors/std-$TARGET-corstest.std",
             }
         ],
     }
@@ -179,7 +176,7 @@ class VulnScan:
             {
                 "requirement": "$WORKSPACE/vulnscan/summary-$OUTPUT.csv",
                 "banner": "CSV beautify",
-                "cmd": "csvcut -c 1-7 $WORKSPACE/vulnscan/summary-$OUTPUT.csv | csvlook --no-inference | tee $WORKSPACE/vulnscan/beautify-summary-$OUTPUT.txt",
+                "cmd": "cat $WORKSPACE/vulnscan/summary-$OUTPUT.csv | csvlook --no-inference | tee $WORKSPACE/vulnscan/beautify-summary-$OUTPUT.txt",
                 "output_path": "$WORKSPACE/vulnscan/beautify-summary-$OUTPUT.txt",
                 "std_path": "",
             },

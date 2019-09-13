@@ -194,6 +194,28 @@ class Formatting:
     }
 
 
+class CORScan:
+    reports = [
+        {
+            "path": "$WORKSPACE/cors/$OUTPUT-corstest.txt",
+            "type": "bash",
+            "note": "final",
+        },
+    ]
+    logs = []
+    commands = {
+        'general': [
+            {
+                "requirement": "$WORKSPACE/probing/http-$OUTPUT.txt",
+                "banner": "CORS Scan",
+                "cmd": "python2 $PLUGINS_PATH/CORStest/corstest.py -p 50 $WORKSPACE/probing/http-$OUTPUT.txt | tee $WORKSPACE/cors/$OUTPUT-corstest.txt",
+                "output_path": "$WORKSPACE/cors/$TARGET-corstest.txt",
+                "std_path": "$WORKSPACE/cors/std-$TARGET-corstest.std",
+            }
+        ],
+    }
+
+
 class Fingerprint:
     reports = [
         {
@@ -207,7 +229,7 @@ class Fingerprint:
         'general': [
             {
                 "banner": "webanalyze",
-                "cmd": "$GO_PATH/webanalyze -apps $DATA_PATH/apps.json -hosts $WORKSPACE/probing/resolved-$OUTPUT.txt -output json -worker 20 | tee $WORKSPACE/fingerprint/$OUTPUT-technology.json",
+                "cmd": "$GO_PATH/webanalyze -apps $DATA_PATH/apps.json -hosts $WORKSPACE/probing/http-$OUTPUT.txt -output json -worker 20 | tee $WORKSPACE/fingerprint/$OUTPUT-technology.json",
                 "output_path": "$WORKSPACE/fingerprint/$OUTPUT-technology.json",
                 "std_path": "$WORKSPACE/fingerprint/std-$OUTPUT-technology.std",
                 "post_run": "update_tech",
@@ -215,7 +237,7 @@ class Fingerprint:
             },
             {
                 "banner": "meg /",
-                "cmd": "$GO_PATH/meg / $WORKSPACE/probing/resolved-$OUTPUT.txt $WORKSPACE/fingerprint/responses/ -v -c 100",
+                "cmd": "$GO_PATH/meg / $WORKSPACE/probing/http-$OUTPUT.txt $WORKSPACE/fingerprint/responses/ -v -c 100",
                 "output_path": "$WORKSPACE/fingerprint/responses/index",
                 "std_path": "",
             },
@@ -316,7 +338,7 @@ class LinkFinding:
             "note": "final",
         },
         {
-            "path": "$WORKSPACE/links/waybackurls-$OUTPUT.txt",
+            "path": "$WORKSPACE/links/raw-wayback-$OUTPUT.txt",
             "type": "bash",
             "note": "final",
         }
@@ -338,7 +360,7 @@ class LinkFinding:
                 "pre_run": "get_domains",
                 "banner": "linkfinder",
                 "cmd": "$ALIAS_PATH/linkfinding -i '[[0]]' -o '$WORKSPACE/links/raw/' -s '$WORKSPACE/links/summary-$OUTPUT.txt' -p '$PLUGINS_PATH'",
-                "output_path": "tee $WORKSPACE/links/raw/[[0]]-$OUTPUT.txt",
+                "output_path": "$WORKSPACE/links/raw/[[0]]-$OUTPUT.txt",
                 "std_path": "",
                 "chunk": 5,
                 "cmd_type": "list",
@@ -463,7 +485,7 @@ class VulnScan:
             {
                 "requirement": "$WORKSPACE/probing/domain-$OUTPUT.txt",
                 "banner": "Nmap all port",
-                "cmd": "$ALIAS_PATH/vulnscan -i [[0]] -o '$WORKSPACE/vulnscan/details/[[0]]' -s '$WORKSPACE/vulnscan/summary.csv' -p '$PLUGINS_PATH'",
+                "cmd": "$ALIAS_PATH/vulnscan -i [[0]] -o '$WORKSPACE/vulnscan/details/[[0]]' -s '$WORKSPACE/vulnscan/summary-$OUTPUT.csv' -p '$PLUGINS_PATH'",
                 "output_path": "$WORKSPACE/vulnscan/details/[[0]].gnmap",
                 "std_path": "$WORKSPACE/vulnscan/details/std-[[0]].std",
                 "chunk": 3,
@@ -474,7 +496,7 @@ class VulnScan:
                 "waiting": "first",
             },
             {
-                "requirement": "$WORKSPACE/vulnscan/summary.csv",
+                "requirement": "$WORKSPACE/vulnscan/summary-$OUTPUT.csv",
                 "banner": "Screenshot on ports found",
                 "cmd": "$GO_PATH/gowitness file -s $WORKSPACE/vulnscan/scheme-$OUTPUT.txt -t 30 --log-level fatal --destination  $WORKSPACE/vulnscan/screenshot/raw-gowitness/ --db $WORKSPACE/vulnscan/screenshot/gowitness.db",
                 "output_path": "$WORKSPACE/vulnscan/screenshot/gowitness.db",
@@ -484,9 +506,9 @@ class VulnScan:
                 "pre_run": "get_scheme",
             },
             {
-                "requirement": "$WORKSPACE/vulnscan/summary.csv",
+                "requirement": "$WORKSPACE/vulnscan/summary-$OUTPUT.csv",
                 "banner": "CSV beautify",
-                "cmd": "csvcut -c 1-7 $WORKSPACE/vulnscan/$OUTPUT-masscan.csv | csvlook --no-inference | tee $WORKSPACE/vulnscan/beautify-summary-$OUTPUT.txt",
+                "cmd": "cat $WORKSPACE/vulnscan/summary-$OUTPUT.csv | csvlook --no-inference | tee $WORKSPACE/vulnscan/beautify-summary-$OUTPUT.txt",
                 "output_path": "$WORKSPACE/vulnscan/beautify-summary-$OUTPUT.txt",
                 "std_path": "",
                 # "waiting": "last",

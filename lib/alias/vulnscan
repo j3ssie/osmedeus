@@ -25,19 +25,25 @@ def routine(args):
 
     cmd = f'sudo nmap --open -T4 -Pn -n -sSV -p- {target} --script {plugin}/nmap-stuff/vulners.nse --oA {output}'
     utils.print_info(f"Execute: {cmd}")
-    os.system(cmd)
+
+    if not utils.not_empty_file(f'{output}.csv'):
+        os.system(cmd)
     if not utils.not_empty_file(f'{output}.xml'):
         utils.print_bad("Nmap command fail")
         sys.exit(-1)
 
+    if not utils.not_empty_file(f'{output}.xml'):
+        utils.print_bad("Error with nmap command")
+        sys.exit(-1)
+
     os.system(
-        f'python3 {plugin}/nmap-stuff/nmap_xml_parser.py -f {output}.xml -csv {output}.csv')
+        f'python3 {plugin}/nmap-stuff/nmaptocsv.py -d "," -x {output}.xml -o {output}.csv')
 
     if not utils.not_empty_file(f'{output}.csv'):
         utils.print_bad("No open port found")
         sys.exit(-1)
     time.sleep(0.3)
-    os.system(f'csvcut -c 1-7 {output}.csv | csvlook --no-inference | tee {output}.txt')
+    os.system(f'cat {output}.csv | csvlook --no-inference | tee {output}.txt')
     append_result(f'{output}.csv', summary)
 
 

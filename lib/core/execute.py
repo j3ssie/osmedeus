@@ -53,6 +53,8 @@ def run_single(command):
     if not forced:
         if utils.not_empty_file(command.get('output_path')):
             return True
+        if utils.not_empty_file(command.get('cleaned_output')):
+            return True
     std_out = run(command.get('cmd'))
     # store std and output
     if command.get('std_path') != '':
@@ -125,6 +127,7 @@ def get_chunk_commands(command):
         item['cmd'] = really_replace(command.get('cmd'), ele)
         item['output_path'] = really_replace(command.get('output_path'), ele)
         item['std_path'] = really_replace(command.get('std_path'), ele)
+        item['cleaned_output'] = command.get('cleaned_output')
         # print(item)
         commands.append(utils.just_copy(item))
 

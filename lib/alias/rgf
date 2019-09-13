@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+import os
+import sys
+import time
+import argparse
+import urllib.parse
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
+from core import utils
+
+
+# vulnscan -i example.com -o '$WORKSPACE/vulnscan/details/[[0]]' -s '$WORKSPACE/vulnscan/summary.txt' -p '$PLUGINS_PATH'
+
+signs = [
+    ''
+]
+
+
+def routine(args):
+    target = args.input
+    output = args.output
+    strip_target = utils.strip_slash(target)
+    summary = args.summary
+
+    for sign in signs:
+
+        cmd = f'rg -uu -L -C 4 --smart-case {sign} {target} | tee {output}'
+        utils.print_info(f"Execute: {cmd}")
+        os.system(cmd)
+
+        if utils.not_empty_file(f'{output}/{strip_target}.txt'):
+            content = utils.just_read(f'{output}.txt')
+            utils.just_append(summary, content + "\n")
+            time.sleep(0.3)
+
+
+parser = argparse.ArgumentParser(description="VulnScan alias")
+parser.add_argument('-i', '--input', action='store', dest='input', help='input')
+parser.add_argument('-o', '--output', action='store', dest='output', help='output')
+parser.add_argument('-s', '--summary', action='store',
+                    dest='summary', help='summary')
+args = parser.parse_args()
+routine(args)
