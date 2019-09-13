@@ -23,14 +23,10 @@ class VulnScan(skeleton.Skeleton):
             self.options['WORKSPACE'] + '/vulnscan/screenshot/raw-gowitness/')
         self.delay = 1200
 
-    # only run on direct mode
-    def get_domains(self, command):
-        pass
-
     def gen_summary(self, command):
         summary_path = utils.replace_argument(
             self.options, '$WORKSPACE/vulnscan/summary-$OUTPUT.csv')
-        sum_head = 'IP,Host,OS,Proto,Port,Service,Product,Service FP,NSE Script ID,NSE Script Output,Notes'
+        sum_head = '"IP","FQDN","PORT","PROTOCOL","SERVICE","VERSION"'
 
         details_folder = utils.replace_argument(
             self.options, '$WORKSPACE/vulnscan/details/')
@@ -42,35 +38,6 @@ class VulnScan(skeleton.Skeleton):
                 summary_data.append("\n".join(really_detail[1:]))
 
         utils.just_write(summary_path, "\n".join(summary_data))
-
-    # update ports found in db
-    def update_ports(self, command):
-        utils.print_good('Cleaning for {0}:{1}'.format(
-            command.get('banner'), command.get('post_run')))
-
-        csv_data = utils.just_read(command.get('output_path'), get_list=True)
-        if not csv_data:
-            utils.print_bad('Output not found: {0}'.format(
-                command.get('output_path')))
-            return False
-
-        result = {}
-        for line in csv_data[1:]:
-            host = line.split(',')[0]
-            port = line.split(',')[3]
-            if result.get('host', None):
-                result[host] += "," + str(port).strip(',')
-            else:
-                result[host] = port
-
-        final_result = []
-        for host, ports in result.items():
-            item = "ip_address|{0};;ports|{1}".format(host, ports)
-            final_result.append(item)
-
-        utils.just_write(command.get('cleaned_output'),
-                         "\n".join(final_result))
-        # update ports to db
 
     # get all scheme from csv summary
     def get_scheme(self, command):
@@ -85,11 +52,12 @@ class VulnScan(skeleton.Skeleton):
         summaries, result = [], []
         for line in csv_data[1:]:
             # print(line)
-            if ',' not in line or len(line.split(',')) < 4:
+            if ',' not in line or len(line.split(',')) < 3:
                 continue
-            host = line.split(',')[0]
-            port = line.split(',')[4]
-            service = line.split(',')[5] + "/" + line.split(',')[6]
+            _results = line.split(',')
+            host = _results[0].strip('"')
+            port = _results[2].strip('"')
+            service = _results[4].strip('"') + "/" + _results[5].strip('"')
             result.append("http://" + host + ":" + port)
             result.append("https://" + host + ":" + port)
             sum_line = f"domain|{host};;ip_address|{host};;ports|{port};;technologies|{service}"
