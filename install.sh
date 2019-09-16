@@ -24,6 +24,7 @@ install_banner "git, nmap, masscan, chromium, npm, golang"
 [ -x "$(command -v csvlook)" ] || sudo $PACKGE_MANAGER install csvkit -y 2>/dev/null
 [ -x "$(command -v ripgrep)" ] || sudo $PACKGE_MANAGER install ripgrep -y 2>/dev/null
 [ -x "$(command -v unzip)" ] || sudo $PACKGE_MANAGER install unzip -y 2>/dev/null
+[ -x "$(command -v chromium-browser)" ] || sudo $PACKGE_MANAGER install chromium-browser -y 2>/dev/null
 
 #### Download stuff directly
 install_banner "wordlists"
@@ -206,6 +207,9 @@ git clone https://github.com/drwetter/testssl.sh 2>/dev/null
 install_banner "Metabigor"
 git clone https://github.com/j3ssie/Metabigor 2>/dev/null
 pip3 install -r Metabigor/requirements.txt
+
+install_banner "rgf"
+git clone https://github.com/j3ssie/rgf 2>/dev/null
 
 install_banner "dirsearch"
 git clone https://github.com/maurosoria/dirsearch 2>/dev/null

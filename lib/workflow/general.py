@@ -1,6 +1,10 @@
 '''
 Storing all pre-defined commands
 '''
+import multiprocessing
+
+cpu_cores = multiprocessing.cpu_count()
+threads = str(cpu_cores * 2)
 
 
 class Sample:
@@ -229,7 +233,7 @@ class Fingerprint:
         'general': [
             {
                 "banner": "webanalyze",
-                "cmd": "$GO_PATH/webanalyze -apps $DATA_PATH/apps.json -hosts $WORKSPACE/probing/http-$OUTPUT.txt -output json -worker 20 | tee $WORKSPACE/fingerprint/$OUTPUT-technology.json",
+                "cmd": f"$GO_PATH/webanalyze -apps $DATA_PATH/apps.json -hosts $WORKSPACE/probing/http-$OUTPUT.txt -output json -worker {threads} | tee $WORKSPACE/fingerprint/$OUTPUT-technology.json",
                 "output_path": "$WORKSPACE/fingerprint/$OUTPUT-technology.json",
                 "std_path": "$WORKSPACE/fingerprint/std-$OUTPUT-technology.std",
                 "post_run": "update_tech",
@@ -239,6 +243,13 @@ class Fingerprint:
                 "banner": "meg /",
                 "cmd": "$GO_PATH/meg / $WORKSPACE/probing/http-$OUTPUT.txt $WORKSPACE/fingerprint/responses/ -v -c 100",
                 "output_path": "$WORKSPACE/fingerprint/responses/index",
+                "std_path": "",
+            },
+            {
+                "requirement": "$WORKSPACE/fingerprint/responses/index",
+                "banner": "rgf extract all",
+                "cmd": "$PLUGINS_PATH/rgf/rgf.py -d $WORKSPACE/fingerprint/responses/ | tee $WORKSPACE/fingerprint/rgf-all-$OUTPUT.txt",
+                "output_path": "$WORKSPACE/fingerprint/rgf-all-$OUTPUT.txt",
                 "std_path": "",
             },
         ],
@@ -263,13 +274,13 @@ class ScreenShot:
         'general': [
             {
                 "banner": "aquatone",
-                "cmd": "cat $WORKSPACE/probing/resolved-$OUTPUT.txt | $GO_PATH/aquatone -scan-timeout 1000 -threads 20 -out $WORKSPACE/screenshot/$OUTPUT-aquatone",
+                "cmd": f"cat $WORKSPACE/probing/resolved-$OUTPUT.txt | $GO_PATH/aquatone -scan-timeout 1000 -threads {threads} -out $WORKSPACE/screenshot/$OUTPUT-aquatone",
                 "output_path": "$WORKSPACE/screenshot/$OUTPUT-aquatone/aquatone_report.html",
                 "std_path": "$WORKSPACE/screenshot/std-$OUTPUT-aquatone.std"
             },
             {
                 "banner": "gowitness",
-                "cmd": "$GO_PATH/gowitness file -s $WORKSPACE/probing/http-$OUTPUT.txt -t 30 --log-level fatal --destination  $WORKSPACE/screenshot/raw-gowitness/ --db $WORKSPACE/screenshot/gowitness.db",
+                "cmd": f"$GO_PATH/gowitness file -s $WORKSPACE/probing/http-$OUTPUT.txt -t {threads}  --log-level fatal --destination  $WORKSPACE/screenshot/raw-gowitness/ --db $WORKSPACE/screenshot/gowitness.db",
                 "output_path": "$WORKSPACE/screenshot/gowitness.db",
                 "std_path": "",
             },
@@ -322,9 +333,14 @@ class StoScan:
                 "cmd": "cat $WORKSPACE/probing/resolved-$OUTPUT.txt | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o F -w $WORKSPACE/stoscan/all-dig-info.txt",
                 "output_path": "$WORKSPACE/stoscan/all-dig-info.txt",
                 "std_path": "",
-                "waiting": "last",
-                # "post_run": "grepping_sign",
-                # "cleaned_output": "$WORKSPACE/probing/really-final-$OUTPUT.txt",
+                "waiting": "first",
+            },
+            {
+                "requirement": "$WORKSPACE/stoscan/all-dig-info.txt",
+                "banner": "rgf extract CNAME",
+                "cmd": "$PLUGINS_PATH/rgf/rgf.py -s cname -f $WORKSPACE/stoscan/all-dig-info.txt -o $WORKSPACE/stoscan/have-cname.txt",
+                "output_path": "$WORKSPACE/stoscan/have-cname.txt",
+                "std_path": "",
             },
         ],
     }

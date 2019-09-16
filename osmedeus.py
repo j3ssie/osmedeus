@@ -126,7 +126,7 @@ def main():
     parser.add_argument('--reset', action='store_true',
                         help='Clean configurations')
     parser.add_argument('-hh', '--helps', dest='helps',
-                        action='store_true', help='Display more help messaage')
+                        action='store_true', help='Display more help message')
 
     args = parser.parse_args()
     if len(sys.argv) == 1:

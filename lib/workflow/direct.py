@@ -189,7 +189,7 @@ class LinkFinding:
             "note": "final",
         },
         {
-            "path": "$WORKSPACE/links/waybackurls-$OUTPUT.txt",
+            "path": "$WORKSPACE/links/raw-wayback-$OUTPUT.txt",
             "type": "bash",
             "note": "final",
         }
@@ -207,17 +207,25 @@ class LinkFinding:
                 "cleaned_output": "$WORKSPACE/links/waybackurls-$OUTPUT.txt",
             },
             {
-                "requirement": "$WORKSPACE/probing/domain-$OUTPUT.txt",
+                "requirement": "$WORKSPACE/probing/http-$OUTPUT.txt",
                 "pre_run": "get_domains",
                 "banner": "linkfinder",
-                "cmd": "python3 $PLUGINS_PATH/LinkFinder/linkfinder.py -i [[0]] -d -o cli | tee $WORKSPACE/links/raw/[[1]]-$OUTPUT.txt",
-                "output_path": "tee $WORKSPACE/links/raw/[[1]]-$OUTPUT.txt",
+                "cmd": "$ALIAS_PATH/linkfinding -i '[[0]]' -o '$WORKSPACE/links/raw/' -s '$WORKSPACE/links/summary-$OUTPUT.txt' -p '$PLUGINS_PATH'",
+                "output_path": "$WORKSPACE/links/raw/[[0]]-$OUTPUT.txt",
                 "std_path": "",
                 "chunk": 5,
                 "cmd_type": "list",
-                "resources": "l0|$WORKSPACE/probing/http-$OUTPUT.txt;;l1|$WORKSPACE/probing/domain-$OUTPUT.txt",
+                "resources": "l0|$WORKSPACE/probing/http-$OUTPUT.txt",
                 "post_run": "clean_linkfinder",
                 "cleaned_output": "$WORKSPACE/links/summary-$OUTPUT.txt",
+            },
+            {
+                "requirement": "$WORKSPACE/links/raw-wayback-$OUTPUT.txt",
+                "banner": "Formatting Input",
+                "cmd": "cat $WORKSPACE/links/raw-wayback-$OUTPUT.txt | unfurl -u format %d%p",
+                "output_path": "$WORKSPACE/links/$OUTPUT-paths.txt",
+                "std_path": "",
+                "waiting": "last",
             },
         ],
     }
