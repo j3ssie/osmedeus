@@ -20,10 +20,12 @@ class SubdomainScanning(skeleton.Skeleton):
         # print(outputs)
         final_output = utils.replace_argument(
             self.options, "$WORKSPACE/subdomain/final-$OUTPUT.txt")
+
         # print(final_output)
         outputs = utils.join_files(outputs, final_output)
         utils.check_output(final_output)
         summary.push_with_file(self.options, final_output)
+        utils.print_elapsed(self.options)
 
     '''
     Start clean part
@@ -73,10 +75,13 @@ class SubdomainScanning(skeleton.Skeleton):
 
         result = []
         for line in output:
-            if '>>' in line.strip():
-                domain = line.strip().strip('>> ').split(' => ')[0]
-                ip = line.strip().strip('>> ').split(' => ')[0]
+            if ',' in line.strip():
+                domain = line.strip().split(',')[0]
                 result.append(domain)
+                # later use
+                raw_ip = line.strip().split(',')[1]
+                if 'No IP' not in raw_ip:
+                    ip = raw_ip
 
         cleaned_output = utils.just_write(command.get(
             'cleaned_output'), "\n".join(result))

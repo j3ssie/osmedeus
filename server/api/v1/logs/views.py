@@ -44,6 +44,7 @@ class LogsView(
 
         if workspace is not None:
             queryset = queryset.filter(workspace=workspace)
+
         if module is not None:
             queryset = queryset.filter(module=module)
 
@@ -59,6 +60,17 @@ class LogsView(
         return real_queryset
 
     def get(self, request, *args, **kwargs):
+        workspace = self.request.query_params.get('workspace', None)
+        obj = Workspaces.objects.get(workspace=workspace)
+        wss = obj.workspaces
+
         content = self.list(request, *args, **kwargs).data
-        return Response({'logs': content})
+        response = []
+        for log in content:
+            item = dict(log)
+            item['output_path'] = item['output_path'].replace(wss, '').strip('/')
+            item['std_path'] = item['std_path'].replace(wss, '').strip('/')
+            response.append(item)
+
+        return Response({'logs': response})
 
