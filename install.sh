@@ -227,7 +227,7 @@ git clone https://github.com/RUB-NDS/CORStest 2>/dev/null
 
 install_banner "LinkFinder"
 git clone https://github.com/GerbenJavado/LinkFinder.git 2>/dev/null
-pip3 install LinkFinder/requirements.txt
+pip3 install -r LinkFinder/requirements.txt
 cd $PLUGINS_PATH/LinkFinder/
 python3 setup.py install
 
