@@ -139,6 +139,8 @@ install_banner "subjack"
 $GO_BIN get -u github.com/haccer/subjack
 install_banner "tko-subs"
 $GO_BIN get -u github.com/anshumanbh/tko-subs
+install_banner "subzy"
+$GO_BIN get -u github.com/lukasikic/subzy
 install_banner "goaltdns"
 $GO_BIN get -u github.com/subfinder/goaltdns
 install_banner "gitleaks"
@@ -148,7 +150,7 @@ $GO_BIN get -u github.com/sensepost/gowitness
 install_banner "webanalyze"
 $GO_BIN get -u github.com/rverton/webanalyze/...
 install_banner "assetfinder"
-go get -u github.com/tomnomnom/assetfinder
+$GO_BIN get -u github.com/tomnomnom/assetfinder
 install_banner "waybackurls"
 $GO_BIN get -u github.com/tomnomnom/waybackurls
 install_banner "meg"
@@ -156,7 +158,9 @@ $GO_BIN get -u github.com/tomnomnom/meg
 install_banner "httprobe"
 $GO_BIN get -u github.com/tomnomnom/httprobe
 install_banner "unfurl"
-go get -u github.com/tomnomnom/unfurl
+$GO_BIN get -u github.com/tomnomnom/unfurl
+install_banner "rgf"
+$GO_BIN get -u github.com/j3ssie/rgf
 
 cp $GO_DIR/* "$PLUGINS_PATH/go/" 2>/dev/null
 install_banner "observatory"
@@ -201,15 +205,19 @@ pip install truffleHog
 pip3 install wfuzz
 
 cd $PLUGINS_PATH
-install_banner "testssl.sh"
-git clone https://github.com/drwetter/testssl.sh 2>/dev/null
+
+install_banner "rgf signatures"
+git clone https://github.com/j3ssie/rgf 2>/dev/null
+mkdir -p ~/.rgf/ 2>/dev/null
+cp -R $PLUGINS_PATH/rgf/signatures/* ~/.rgf/
+
+# install_banner "testssl.sh"
+# git clone https://github.com/drwetter/testssl.sh 2>/dev/null
 
 install_banner "Metabigor"
 git clone https://github.com/j3ssie/Metabigor 2>/dev/null
 pip3 install -r Metabigor/requirements.txt
 
-install_banner "rgf"
-git clone https://github.com/j3ssie/rgf 2>/dev/null
 
 install_banner "dirsearch"
 git clone https://github.com/maurosoria/dirsearch 2>/dev/null
@@ -219,7 +227,8 @@ git clone https://github.com/RUB-NDS/CORStest 2>/dev/null
 
 install_banner "LinkFinder"
 git clone https://github.com/GerbenJavado/LinkFinder.git 2>/dev/null
+pip3 install LinkFinder/requirements.txt
 cd $PLUGINS_PATH/LinkFinder/
-python2 setup.py install
+python3 setup.py install
 
 echo -e "\033[1;32m[+] Installing done... \033[1;37m"
