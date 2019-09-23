@@ -21,7 +21,7 @@ def list_module_():
     print(''' 
 List module
 ===========
-subdomain   - Scanning subdomain and subdomain takerover
+subdomain   - Scanning subdomain and subdomain takeover
 portscan    - Screenshot and Scanning service for list of domain
 screenshot  - Screenshot list of hosts
 vuln        - Scanning version of services and checking vulnerable service
