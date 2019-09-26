@@ -51,7 +51,7 @@ class SubdomainScanning:
             },
             {
                 "banner": "findomain",
-                "cmd": "$PLUGINS_PATH/findomain -t $TARGET -i | tee $WORKSPACE/subdomain/$OUTPUT-findomain.txt",
+                "cmd": "$PLUGINS_PATH/findomain -t $TARGET | tee $WORKSPACE/subdomain/$OUTPUT-findomain.txt",
                 "output_path": "$WORKSPACE/subdomain/$OUTPUT-findomain.txt",
                 "std_path": "$WORKSPACE/subdomain/std-$OUTPUT-findomain.std",
                 "post_run": "clean_findomain",
