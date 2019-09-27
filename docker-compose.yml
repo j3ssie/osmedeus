@@ -1,0 +1,16 @@
+version: '3.7'
+
+services:
+    web:
+        image: osmedeus:latest
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - "8000:8000"
+        volumes:
+            - osmedeusworkspaces:/root/.osmedeus/workspaces
+        environment:
+            DEBUG: 'false'
+volumes:
+    osmedeusworkspaces:
