@@ -38,7 +38,7 @@ def main(args):
 
 
 parser = argparse.ArgumentParser(description="Reload routine for server")
-parser.add_argument('-w', '--workspace', action='store',
-                    dest='workspace', help='workspace')
+parser.add_argument('-c', '--config', action='store',
+                    dest='config', help='config')
 args = parser.parse_args()
 main(args)

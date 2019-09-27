@@ -32,6 +32,7 @@ mkdir -p $DATA_PATH 2>/dev/null
 mkdir -p $DATA_PATH/wordlists/ 2>/dev/null
 mkdir -p $DATA_PATH/wordlists/dns/ 2>/dev/null
 mkdir -p $DATA_PATH/wordlists/content/ 2>/dev/null
+mkdir -p $DATA_PATH/wordlists/params/ 2>/dev/null
 mkdir -p $PLUGINS_PATH 2>/dev/null
 mkdir -p $DATA_PATH/nmap-stuff/ 2>/dev/null
 mkdir -p $PLUGINS_PATH/nmap-stuff/ 2>/dev/null
@@ -57,11 +58,19 @@ mkdir -p "$PLUGINS_PATH/go/" 2>/dev/null
 
 [[ -f $DATA_PATH/wordlists/content/really-quick.txt ]] || wget -q -O $DATA_PATH/wordlists/content/really-quick.txt https://raw.githubusercontent.com/maurosoria/dirsearch/master/db/dicc.txt
 
-[[ -f $DATA_PATH/wordlists/content/top10000.txt ]] || wget -q -O $DATA_PATH/wordlists/content/top10000.txt https://raw.githubusercontent.com/danielmiessler/RobotsDisallowed/master/top10000.txt
 
-cat $DATA_PATH/wordlists/content/really-quick.txt $DATA_PATH/wordlists/content/top10000.txt >$DATA_PATH/wordlists/quick-content-discovery.txt
+[[ -f $DATA_PATH/wordlists/content/top10000.txt ]] || wget -q -O $DATA_PATH/wordlists/content/top10000.txt https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/RobotsDisallowed-Top1000.txt
+
+cat $DATA_PATH/wordlists/content/really-quick.txt $DATA_PATH/wordlists/content/top10000.txt > $DATA_PATH/wordlists/content/quick-content-discovery.txt
 
 [[ -f $DATA_PATH/wordlists/content/dir-all.txt ]] || wget -q -O $DATA_PATH/wordlists/content/dir-all.txt https://gist.githubusercontent.com/jhaddix/b80ea67d85c13206125806f0828f4d10/raw/c81a34fe84731430741e0463eb6076129c20c4c0/content_discovery_all.txt
+
+# params
+[[ -f $DATA_PATH/wordlists/params/param-miner.txt ]] || wget -q -O $DATA_PATH/wordlists/params/param-miner.txt https://raw.githubusercontent.com/PortSwigger/param-miner/master/resources/params
+
+[[ -f $DATA_PATH/wordlists/params/parameth.txt ]] || wget -q -O $DATA_PATH/wordlists/params/parameth.txt https://raw.githubusercontent.com/maK-/parameth/master/lists/all.txt
+
+cat $DATA_PATH/wordlists/params/param-miner.txt $DATA_PATH/wordlists/params/parameth.txt | sort -u > $DATA_PATH/wordlists/params/all.txt
 
 # Subdomain takeover signature
 install_banner "providers-data for subdomain takeover"
@@ -71,6 +80,11 @@ install_banner "providers-data for subdomain takeover"
 
 # secret words to grep
 [[ -f $DATA_PATH/keywords.txt ]] || wget -q -O $DATA_PATH/keywords.txt https://raw.githubusercontent.com/random-robbie/keywords/master/keywords.txt
+
+# resolvers
+[[ -f $DATA_PATH/resolvers.txt ]] || wget -q -O $DATA_PATH/resolvers.txt https://raw.githubusercontent.com/Abss0x7tbh/bass/master/resolvers/public.txt
+
+
 
 #####
 # Start of nmap stuff
@@ -159,12 +173,19 @@ install_banner "httprobe"
 $GO_BIN get -u github.com/tomnomnom/httprobe
 install_banner "unfurl"
 $GO_BIN get -u github.com/tomnomnom/unfurl
+install_banner "filter-resolved"
+$GO_BIN get -u github.com/tomnomnom/hacks/filter-resolved
+install_banner "ffuf"
+$GO_BIN get -u github.com/ffuf/ffuf
 install_banner "rgf"
 $GO_BIN get -u github.com/j3ssie/rgf
+install_banner "go cli-utils"
+$GO_BIN get -u github.com/j3ssie/go-auxs/getIP
+$GO_BIN get -u github.com/j3ssie/go-auxs/just-resolved
 
 cp $GO_DIR/* "$PLUGINS_PATH/go/" 2>/dev/null
-install_banner "observatory"
-npm install -g observatory-cli 2>/dev/null
+# install_banner "observatory"
+# npm install -g observatory-cli 2>/dev/null
 
 # install massdns
 install_banner "massdns"
@@ -187,22 +208,12 @@ else
 fi
 chmod +x $PLUGINS_PATH/findomain
 
-install_banner "dirble"
-mkdir -p $PLUGINS_PATH/ 2>/dev/null
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    curl -s https://api.github.com/repos/nccgroup/dirble/releases/latest | grep "x86_64-apple-darwin.zip" | cut -d '"' -f 4 | wget -O $PLUGINS_PATH/dirble-release.zip -qi -
-else
-    curl -s https://api.github.com/repos/nccgroup/dirble/releases/latest | grep "x86_64-linux.zip" | cut -d '"' -f 4 | wget -O $PLUGINS_PATH/dirble-release.zip -qi -
-fi
-unzip $PLUGINS_PATH/dirble-release.zip -d $PLUGINS_PATH 2>/dev/null
-
 ##
 # Install python stuff
 ##
 
 install_banner "truffleHog, wfuzz"
 pip install truffleHog
-pip3 install wfuzz
 
 cd $PLUGINS_PATH
 
@@ -218,9 +229,14 @@ install_banner "Metabigor"
 git clone https://github.com/j3ssie/Metabigor 2>/dev/null
 pip3 install -r Metabigor/requirements.txt
 
+install_banner "bass"
+git clone https://github.com/Abss0x7tbh/bass 2>/dev/null
+pip3 install -r bass/requirements.txt
 
 install_banner "dirsearch"
 git clone https://github.com/maurosoria/dirsearch 2>/dev/null
+install_banner "Arjun"
+git clone https://github.com/s0md3v/Arjun 2>/dev/null
 
 install_banner "CORStest"
 git clone https://github.com/RUB-NDS/CORStest 2>/dev/null

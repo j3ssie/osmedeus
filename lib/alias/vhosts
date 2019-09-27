@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+import os
+import sys
+import time
+import argparse
+import urllib.parse
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
+from core import utils
+
+
+# $ALIAS_PATH/vhosts -i '[[0]]' -o '$WORKSPACE/vhosts/raw/' -s '$WORKSPACE/vhosts/raw-summary-$OUTPUT.txt' -p 'PLUGINS_PATH' -w $DATA_PATH/wordlists/dns/virtual-host-scanning.txt
+def append_result(out, summary):
+    data = utils.just_read(out, get_list=True)
+    utils.just_write(summary, "\n".join(data))
+
+
+def routine(args):
+    parsed = urllib.parse.urlparse(args.input)
+    target = parsed.netloc if parsed.netloc else parsed.path
+    # target = args.input
+    output = args.output
+    strip_target = utils.strip_slash(target)
+    plugin = args.plugin
+    wordlist = args.wordlist
+    summary = args.summary
+
+    cmd = f"{plugin}/go/gobuster vhost -U 'Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)' -z -q -t 40 -u 'https://{target}' -w {wordlist} --insecuressl --username admin --password admin --output {output}/{target}-gobuster.txt"
+    # utils.print_info(f"Execute: {cmd}")
+    os.system(cmd)
+    # append to summary
+    if utils.not_empty_file(f'{output}/{strip_target}.txt'):
+        utils.just_append(f'{output}/{strip_target}.txt', summary)
+
+
+parser = argparse.ArgumentParser(description="LinkFinder alias")
+parser.add_argument('-i', '--input', action='store', dest='input', help='input')
+parser.add_argument('-o', '--output', action='store', dest='output', help='output')
+parser.add_argument('-p', '--plugin', action='store', dest='plugin', help='plugin')
+parser.add_argument('-w', '--wordlist', action='store', dest='wordlist', help='wordlist')
+parser.add_argument('-s', '--summary', action='store',
+                    dest='summary', help='summary')
+args = parser.parse_args()
+routine(args)

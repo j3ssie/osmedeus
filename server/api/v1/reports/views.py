@@ -76,10 +76,13 @@ class ReportsView(APIView):
         if not grouped:
             return reports
 
+        seen = []
         for i in range(len(group_report)):
             for report in reports:
                 if report.get('module') == group_report[i]['module']:
-                    group_report[i]['reports'].append(report)
+                    if report.get('report_path') not in seen:
+                        group_report[i]['reports'].append(report)
+                        seen.append(report.get('report_path'))
 
         return group_report
 
@@ -89,7 +92,7 @@ class ReportsView(APIView):
         full = request.query_params.get('full', None)
         grouped = request.query_params.get('grouped', None)
         # workspace validate
-        if not workspace:
+        if not workspace or workspace == 'null':
             return common.message(500, "Workspace not specifed")
         obj = Workspaces.objects.filter(workspace=workspace)
         if not obj.first():
@@ -101,8 +104,6 @@ class ReportsView(APIView):
         real_workspace = utils.join_path(options.get(
             'WORKSPACES'), options.get('WORKSPACE'))
         options['WORKSPACE'] = real_workspace
-        # print(options)
-
         reports = self.get_reports(options, module, full, grouped)
 
         content = {'reports': reports}

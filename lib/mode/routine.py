@@ -7,6 +7,7 @@ from lib.mode import general
 from lib.mode import direct
 from lib.mode import direct_list
 from lib.mode import report
+from lib.monitor import backup
 
 
 def routine_handle(options):
@@ -14,8 +15,15 @@ def routine_handle(options):
         utils.print_load("Running with report mode")
         report.handle(options)
         return
-    utils.print_target(options.get('TARGET'))
 
+    utils.print_target(options.get('TARGET'))
+    # move last result to monitor path and add options to compare
+    if options.get('MONITOR'):
+        options['COMPARE_PATH'] = backup.init_backup(options)
+        utils.print_good("Created compare workspaces: {0}".format(
+            options['COMPARE_PATH']))
+
+    # really start the routine
     if options['MODE'] == "general":
         general.handle(options)
 

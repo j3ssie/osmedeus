@@ -122,6 +122,32 @@ def gen_default_config(config_path):
     configs.set('Slack', 'stds_channel', stds_channel)
     configs.set('Slack', 'verbose_report_channel', verbose_report_channel)
 
+    # monitor mode
+    backups = utils.join_path(utils.get_parent(
+        utils.DEAFULT_CONFIG_PATH), 'backups')
+    utils.make_directory(backups)
+
+    monitors = utils.join_path(utils.get_parent(
+        utils.DEAFULT_CONFIG_PATH), 'monitors')
+    utils.make_directory(monitors)
+
+    configs.set('Monitor', 'monitors', monitors)
+    configs.set('Monitor', 'backups', backups)
+    monitor_level = utils.get_enviroment("monitor_level", 'final')
+    configs.set('Monitor', 'monitor_level', monitor_level)
+
+    # monitor bot
+    slack_monitor_token = utils.get_enviroment("SLACK_MONITOR_TOKEN")
+    new_channel = utils.get_enviroment("NEW_CHANNEL")
+    new_name = utils.get_enviroment("NEW_NAME")
+    missing_channel = utils.get_enviroment("MISSING_CHANNEL")
+    missing_name = utils.get_enviroment("MISSING_NAME")
+    configs.set('Monitor', 'slack_monitor_token', slack_monitor_token)
+    configs.set('Monitor', 'new_channel', new_channel)
+    configs.set('Monitor', 'new_name', new_name)
+    configs.set('Monitor', 'missing_channel', missing_channel)
+    configs.set('Monitor', 'missing_name', missing_name)
+
     # write it again
     with open(config_path, 'w+') as configfile:
         configs.write(configfile)

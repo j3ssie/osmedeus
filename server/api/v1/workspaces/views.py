@@ -101,12 +101,10 @@ class WorkspacesView(APIView):
             workspace=workspace)
         Workspaces.objects.filter(workspace=workspace).update(**item)
         real_workspace = utils.join_path(workspaces, workspace)
-        
+
         if created:
             if instance.arch == 'server':
-
                 utils.make_directory(real_workspace)
-
                 return common.returnJSON({
                     "workspace": workspace,
                     "msg": "Workspaces created Successfully"
@@ -126,6 +124,15 @@ class WorkspacesListView(APIView):
     def get(self, request, *args, **kwargs):
         workspaces = list(Workspaces.objects.all(
         ).values_list('workspace', flat=True))
+
+        options = dbutils.get_stateless_options()
+        wss = options.get('WORKSPACES')
+
+        # remove blank workspace
+        for ws in workspaces:
+            real_ws = utils.join_path(wss, ws)
+            if not utils.not_empty_dir(real_ws):
+                workspaces.remove(ws)
 
         return common.returnJSON({
             "workspaces": workspaces,

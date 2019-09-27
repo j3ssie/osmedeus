@@ -57,6 +57,7 @@ class Probing(skeleton.Skeleton):
             elif '. CNAME ' in line:
                 resolved.append(line.split('. CNAME ')[0])
 
+        only_A_record = list(set(only_A_record))
         cleaned_output = utils.just_write(command.get(
             'cleaned_output'), "\n".join(only_A_record))
 

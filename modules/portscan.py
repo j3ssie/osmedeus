@@ -77,7 +77,7 @@ class PortScan(skeleton.Skeleton):
 
         real_cmd = utils.resolve_command(self.options, {
             "banner": "gowitness gen report",
-            "cmd": "$GO_PATH/gowitness generate -n $WORKSPACE/portscan/screenshot/$OUTPUT-raw-gowitness.html --destination $WORKSPACE/portscan/screenshot/raw-gowitness/ --db $WORKSPACE/portscan/screenshot/gowitness.db",
+            "cmd": "$GO_PATH/gowitness report generate -n $WORKSPACE/portscan/screenshot/$OUTPUT-raw-gowitness.html --destination $WORKSPACE/portscan/screenshot/raw-gowitness/ --db $WORKSPACE/portscan/screenshot/gowitness.db",
             "output_path": "$WORKSPACE/portscan/screenshot/$OUTPUT-raw-gowitness.html",
         })
 

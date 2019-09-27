@@ -43,6 +43,38 @@ def get_report_path(options, resolve=True, get_final=False, module=None):
     return final_reports
 
 
+# get raw report path
+def get_custom_report(options, grep_string='slack', module=None):
+    # ws = utils.get_workspace(options=options)
+    if not module and module is not False:
+        module = options.get('CURRENT_MODULE', False)
+
+    if module:
+        url = options.get(
+            'REMOTE_API') + "/api/reports/raw/?module={0}".format(module)
+    else:
+        url = options.get('REMOTE_API') + "/api/reports/raw/"
+    headers = send.osmedeus_headers
+    headers['Authorization'] = options.get('JWT')
+
+    r = send.send_get(url, data=None, headers=headers)
+
+    if not r:
+        return False
+    reports = utils.resolve_commands(options, r.json().get('reports'))
+
+    final_reports = []
+    if grep_string:
+        for item in reports:
+            if grep_string in item.get('note').lower():
+                final_reports.append(item.get('report_path'))
+    else:
+        final_reports = reports
+    if len(final_reports) == 1:
+        return final_reports[0]
+    return final_reports
+
+
 def list_workspaces(options):
     url = options.get('REMOTE_API') + "/api/workspaces/"
     headers = send.osmedeus_headers

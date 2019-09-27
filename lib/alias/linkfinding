@@ -17,8 +17,8 @@ def routine(args):
     plugin = args.plugin
     summary = args.summary
 
-    cmd = f'{plugin}/LinkFinder/linkfinder.py -i {target} -d -o cli | tee {output}/{strip_target}.txt'
-    # utils.print_info(f"Execute: {cmd}")
+    cmd = f'python3 {plugin}/LinkFinder/linkfinder.py -i {target} -d -o cli | tee {output}/{strip_target}.txt'
+    utils.print_info(f"Execute: {cmd}")
     os.system(cmd)
     # append to summary
     if utils.not_empty_file(f'{output}/{strip_target}.txt'):

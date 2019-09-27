@@ -14,6 +14,10 @@ class Formatting(skeleton.Skeleton):
         utils.print_banner("Start Formatting")
         utils.make_directory(self.options['WORKSPACE'] + '/formatted')
 
+    # just disable slack for this module
+    def additional_routine(self):
+        pass
+
     # clean up for massdns result
     def clean_massdns(self, command):
         utils.print_good('Cleaning for {0}:{1}'.format(

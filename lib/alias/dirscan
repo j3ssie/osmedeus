@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+import os
+import sys
+import time
+import argparse
+import urllib.parse
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
+from core import utils
+
+
+# dirscan -i [[0]] -w '$DATA_PATH/wordlists/quick-content-discovery.txt' -o '$WORKSPACE/directory/raw' -w '$WORKSPACE/vulnscan/summary.txt' -p '$GO_PATH' -s '$WORKSPACE/directory/'
+def routine(args):
+    # parsed = urllib.parse.urlparse(args.input)
+    target = args.input
+    output = args.output
+    strip_target = utils.strip_slash(target)
+    wordlist = args.wordlist
+    plugin = args.plugin
+    summary = args.summary
+
+    cmd = f"{plugin}/ffuf -w {wordlist} -t 20 -c -sf -fc '404,429,501,502,503' -D -e '.php,.asp,.jsp,.js,.html,.swp,.swf,.zip' -of csv -o {output}/{strip_target}.csv -u {target} | tee -a {summary}/raw-summary.txt"
+
+    # utils.print_info(f"Execute: {cmd}")
+
+    if not utils.not_empty_file(f'{output}/{strip_target}.csv'):
+        os.system(cmd)
+
+    if not utils.not_empty_file(f'{output}/{strip_target}.csv'):
+        utils.print_bad("No paths found")
+        sys.exit(-1)
+
+    final_summary = f'{summary}/directory-summary.csv'
+    data = utils.just_read(f'{output}/{strip_target}.csv', get_list=True)[1:]
+    if len(data) < 2:
+        utils.print_bad("No paths found")
+        sys.exit(-1)
+
+    # init the summary
+    if not utils.not_empty_file(f'{final_summary}'):
+        head = "input,position,status_code,content_length,content_words\n"
+        utils.just_write(final_summary, head)
+
+    sep = f"{target},,,,\n"
+    utils.just_append(final_summary, sep + "\n".join(data))
+
+
+parser = argparse.ArgumentParser(description="VulnScan alias")
+parser.add_argument('-i', '--input', action='store', dest='input', help='input')
+parser.add_argument('-o', '--output', action='store', dest='output', help='output')
+parser.add_argument('-w', '--wordlist', action='store', dest='wordlist', help='wordlist')
+parser.add_argument('-p', '--plugin', action='store', dest='plugin', help='plugin')
+parser.add_argument('-s', '--summary', action='store',
+                    dest='summary', help='summary')
+args = parser.parse_args()
+routine(args)

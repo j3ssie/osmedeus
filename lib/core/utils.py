@@ -25,6 +25,8 @@ import tldextract
 from urllib.parse import quote, unquote
 import urllib.parse
 import urllib3
+from datetime import datetime
+from distutils.dir_util import copy_tree
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 #################
 
@@ -59,6 +61,14 @@ PROXY = {
     'http': 'http://127.0.0.1:8081',
     'https': 'http://127.0.0.1:8081'
 }
+
+
+def print_added(text):
+    print(f'{G} + {GR}' + str(text))
+
+
+def print_missing(text):
+    print(f'{R} + {GR}' + str(text))
 
 
 def print_load(text):
@@ -106,9 +116,11 @@ def get_perf_time():
 
 
 def print_elapsed(options):
+    print_line()
     current_module = options.get('CURRENT_MODULE', '')
     elapsed = time.perf_counter() - options.get('start_time')
     print(f"{GR}[{G}ESTIMATED{GR}] {C}{current_module}{GR} module executed in {C}{elapsed:0.2f}{GR} seconds.")
+    print_line()
 
 
 def print_debug(text, options=None):
@@ -253,9 +265,52 @@ def gen_checksum(string_in):
     return checksum
 
 
+def gen_checksum_folder(folder):
+    folders_string = ' '.join(
+        [x for x in list_all(folder=folder, ext='*')])
+    return gen_checksum(folders_string)
+
+
 def gen_ts():
     ts = int(time.time())
     return ts
+
+
+def get_readable_time():
+    ts = int(time.time())
+    return str(datetime.utcfromtimestamp(ts).strftime('%Y.%m.%d')) + f"__{ts}"
+
+
+def copy_dir(dirA, dirB):
+    if not_empty_dir(dirA):
+        copy_tree(dirA, dirB)
+        return dirB
+    return False
+
+
+def remove_dir(directory):
+    directory = os.path.normpath(directory)
+    if os.path.isdir(directory):
+        shutil.rmtree(directory)
+
+
+def move_dir(dirA, dirB):
+    if not_empty_dir(dirA):
+        shutil.move(dirA, dirB)
+    return dirB
+
+
+def get_newest_folder(directory, raw=False):
+    base = get_parent(directory)
+    try:
+        if not_empty_dir(base):
+            real_directory = f'{directory}*'
+            if raw:
+                return sorted(glob.glob(real_directory), key=os.path.getmtime)
+            return max(glob.glob(real_directory), key=os.path.getmtime)
+    except:
+        pass
+    return False
 
 
 # @TODO check XXE here
@@ -397,8 +452,11 @@ def get_json(text):
     return False
 
 
-def get_enviroment(env_name):
-    return str(os.getenv(env_name))
+def get_enviroment(env_name, default_value=None):
+    variable = str(os.getenv(env_name))
+    if variable == "None" and default_value is not None:
+        return default_value
+    return variable
 
 
 def get_query(url):
@@ -669,6 +727,15 @@ def not_empty_file(filepath):
         return False
     fpath = os.path.normpath(filepath)
     return os.path.isfile(fpath) and os.path.getsize(fpath) > 0
+
+
+def not_empty_dir(dpath):
+    if not dpath:
+        return False
+    dpath = os.path.normpath(dpath)
+    if os.path.exists(dpath) and len(os.listdir(dpath)) > 0:
+        return True
+    return False
 
 
 def isFile(filepath):

@@ -43,6 +43,7 @@ def custom_help_():
 {2}Basic Usage{1}
 ===========
 python3 osmedeus.py -t <your_target>
+python3 osmedeus.py -t <your_target> --slack --monitor
 python3 osmedeus.py -T <list_of_targets>
 python3 osmedeus.py -m <module> [-i <input>|-I <input_file>] [-t workspace_name]
 python3 osmedeus.py --report <mode> -t <workspace> [-m <module>]
@@ -56,13 +57,12 @@ python3 osmedeus.py -M
 python3 osmedeus.py --report help
 
 {0}[*] Running with specific module{1}
-python3 osmedeus.py -t <result_folder> -m <module_name> -i <your_target>
+python3 osmedeus.py -w <result_folder> -m <module_name> -i <your_target>
 
 {0}[*] Example command{1}
-python3 osmedeus.py -m subdomain -t example.com
-python3 osmedeus.py -t example.com --slow "subdomain"
-python3 osmedeus.py -t sample2 -m vuln -i hosts.txt
-python3 osmedeus.py -t sample2 -m dirb -i /tmp/list_of_hosts.txt
+python3 osmedeus.py -w sample2 -m vuln -i hosts.txt
+python3 osmedeus.py -w sample2 -m dirb -I /tmp/list_of_hosts.txt
+
 
 {2}Remote Options{1}
 ==============
@@ -76,10 +76,10 @@ python3 osmedeus.py -t sample2 -m dirb -i /tmp/list_of_hosts.txt
 ==============
 --update              Update lastest from git
 
--c CONFIG, --config CONFIG    
+-c CONFIG, --config CONFIG
                       Specify config file (default: {2}core/config.conf{1})
 
--w WORKSPACE, --workspace WORKSPACE 
+-w WORKSPACE, --workspace WORKSPACE
                       Custom workspace folder
 
 -f, --force           force to run the module again if output exists
@@ -88,6 +88,8 @@ python3 osmedeus.py -t sample2 -m dirb -i /tmp/list_of_hosts.txt
 -s, --slow  "subdomain"
                       Only running slow mode in subdomain module      
 
+--noslack               Disable slack notification
+--nomonitor             Disable monitor new assets
 --debug               Just for debug purpose
             '''.format(G, GR, B))
     sys.exit(0)
@@ -108,10 +110,10 @@ html        - Export to html
 
 {1}[{0}Filter module{1}]{1}
 ===================
-subdomain, recon, assetfinding
+subdomain, vhosts
 takeover, screenshot
 portscan, dirbrute, vulnscan
-gitscan, cors, ipspace, sslscan, headers
+gitscan, cors, ipspace
 
 
 {1}[{0}Report Usage{1}]{1}

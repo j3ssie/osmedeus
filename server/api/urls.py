@@ -13,7 +13,9 @@ from api.v1.options.views import OptionsView
 from api.v1.activities.views import ActivitiesView
 from api.v1.logs.views import LogsView
 from api.v1.reports.views import ReportsSkeletonView, ReportsView
+from api.v1.monitors.views import MonitorsView
 from api.v1.exports.views import ExportSumView
+from api.v1.stdout.views import StdOutView
 from api.v1.summaries.views import (
     SummariesView, 
     SummariesListView, 
@@ -47,6 +49,10 @@ urlpatterns = [
     url(r'^api/workspace/create/$', WorkspacesView.as_view(),
         name='create_workspace'),
 
+    # Get commands
+    url(r'^api/monitor/$', MonitorsView.as_view(),
+        name='monitor'),
+
     # Get workspace config
     url(r'^api/workspace/get/$', OptionsView.as_view(),
         name='get_options'),
@@ -54,6 +60,7 @@ urlpatterns = [
     # Get commands
     url(r'^api/commands/get/$', DetailCommandsDetailView.as_view(),
         name='get_commands'),
+
 
     # Get activities
     url(r'^api/activities/get/$', ActivitiesView.as_view(),
@@ -67,9 +74,13 @@ urlpatterns = [
     url(r'^api/reports/raw/$', ReportsSkeletonView.as_view(),
         name='get_commands'),
 
-    # Get report skeleton
+    # Get report csv
     url(r'^api/exports/csv/$', ExportSumView.as_view(),
         name='get_commands'),
+
+    # Get std output
+    url(r'^api/stdout/get/$', StdOutView.as_view(),
+        name='get_stdout'),
 
     # Get real report
     url(r'^api/reports/real/$', ReportsView.as_view(),

@@ -16,13 +16,14 @@ def routine(args):
 
     os.system(f'cat {target} | unfurl -u format http://%d >> {output}-scheme.txt')
     os.system(f'cat {target} | unfurl -u format https://%d >> {output}-scheme.txt')
+    os.system(f'cat {target} | unfurl -u format %s://%d%p >> {output}-raw-scheme.txt')
     os.system(f'cat {target} | unfurl -u format http://%d:%P >> {output}-port.txt')
+    os.system(f'cat {target} | unfurl -u format %s://%d%p >> {output}-paths.txt')
     os.system(
         f'cat {target} | unfurl -u format https://%d:%P >> {output}-port.txt')
     os.system(f'cat {target} | unfurl -u format %d >> {output}-domains.txt')
     os.system(f'cat {target} | unfurl -u format %r >> {output}-root.txt')
     time.sleep(0.3)
-    # os.system(f'cat {output}-domains.txt | {plugin}/massdns/bin/massdns -r {plugin}/massdns/lists/resolvers.txt -q -t A -o S -w {output}-rawmassdns.txt')
 
 
 parser = argparse.ArgumentParser(description="VulnScan alias")

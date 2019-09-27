@@ -30,14 +30,14 @@ def handle(options):
     else:
         modules = [options.get('MODULES')]
 
-    if utils.loop_grep(modules, 'subdomain'):
+    if utils.loop_grep(modules, 'sub'):
         subdomain.SubdomainScanning(options)
         # vhosts.VhostScan(options)
         # permutation.PermutationScan(options)
         probing.Probing(options)
-        screenshot.ScreenShot(options)
-        stoscan.StoScan(options)
         fingerprint.Fingerprint(options)
+        # stoscan.StoScan(options)
+        # screenshot.ScreenShot(options)
 
     if utils.loop_grep(modules, 'screen'):
         screenshot.ScreenShot(options)
@@ -59,3 +59,6 @@ def handle(options):
 
     if utils.loop_grep(modules, 'git'):
         gitscan.GitScan(options)
+    
+    if utils.loop_grep(modules, 'dir'):
+        dirbscan.DirbScan(options)

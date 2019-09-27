@@ -55,7 +55,7 @@ If you have no idea what are you doing just type the command below or check out 
 - [x] Slack notifications.
 - [x] Easily view [report](https://j3ssie.github.io/Osmedeus/report/) from commnad line.
 
-Check this [Wiki page](https://j3ssie.github.io/Osmedeus/modules/) for more detail about each module.
+Check this [Documentation](https://j3ssie.github.io/Osmedeus/modules/) for more detail about each module.
 
 ## Love Osmedeus? Back it!
 If you love my tool and would like to support my work. [Become a backer](https://opencollective.com/osmedeus) and you will appear here.
@@ -81,18 +81,23 @@ If you love my tool and would like to support my work. [Become a backer](https:/
 ```
 # normal routine
 ./osmedeus.py -t example.com
+./osmedeus.py -T list_of_target.txt
 
 # normal routine but slow speed on subdomain module
 ./osmedeus.py -t example.com --slow 'all'
 
 # direct mode examples
+./osmedeus.py -m subdomain -t example.com
 ./osmedeus.py -m portscan -i "1.2.3.4/24"
 
-./osmedeus.py -m portscan -I list_of_targets.txt -t result_folder
-
-./osmedeus.py -m "portscan,vulnscan" -i "1.2.3.4/24" -t result_folder
+./osmedeus.py -m "portscan,vulnscan" -i "1.2.3.4/24" -w result_folder
 ./osmedeus.py -m "git" -i 'repo:https://github.com/foo/bar'
 ./osmedeus.py -m "git" -i 'user:sample'
+
+# direct list mode examples
+./osmedeus.py -m portscan -I list_of_targets.txt
+./osmedeus.py -m portscan,vulnscan -I list_of_targets.txt
+./osmedeus.py -m screen -I list_of_targets.txt -w result_folder
 
 # report mode
 ./osemdeus.py -t example.com --report list

@@ -4,7 +4,8 @@ from lib.sender import execute
 from lib.sender import polling
 from lib.sender import report
 from lib.sender import summary
-from lib.noti import slack
+from lib.monitor import compare
+from lib.noti import slack_noti
 
 
 class Skeleton(object):
@@ -30,10 +31,12 @@ class Skeleton(object):
         if not self.resume():
             utils.print_line()
             return
+        slack_noti.slack_notification('status', self.options)
         self.routine()
-        self.additional_routine()
         # some noti here
         self.conclude()
+        slack_noti.slack_notification('done', self.options)
+        self.additional_routine()
 
     def resume(self):
         polling.clear_activities(self.options)
@@ -64,11 +67,11 @@ class Skeleton(object):
 
     # prepare some stuff
     def routine(self):
-        slack.slack_notification('status', self.options)
         self.gen_commands()
         self.really_routine(self.pre_commands)
         self.really_routine(self.mid_commands)
         self.really_routine(self.post_commands)
+        
 
     def really_routine(self, commands):
         self.sub_routine(commands, kind='pre')
@@ -107,10 +110,16 @@ class Skeleton(object):
         utils.random_sleep(fixed=0.5)
 
     def conclude(self):
-        utils.print_line()
         utils.print_elapsed(self.options)
-        utils.print_line()
 
     # just run additional command doesn't fit the main routine
     def additional_routine(self):
-        pass
+        if self.options.get('SLACK'):
+            slack_report = report.get_custom_report(self.options, grep_string='slack')
+            slack_noti.slack_notification(
+                'report', self.options, output=slack_report)
+
+        if self.options.get('MONITOR'):
+            # checking for diff result
+            diff_reports = report.get_custom_report(self.options, grep_string='diff')
+            compare.check_diff(self.options, diff_reports)

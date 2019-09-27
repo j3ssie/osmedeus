@@ -12,7 +12,6 @@ def init_workspace(options):
     url = options.get('remote_api') + "/api/workspace/create/"
     headers = send.osmedeus_headers
     headers['Authorization'] = options.get('JWT')
-
     body = {
         "raw_target": options.get('raw_target'),
         'mode': options.get('mode'),
@@ -21,6 +20,8 @@ def init_workspace(options):
         'forced': options.get('forced'),
         'debug': options.get('debug'),
     }
+    if options.get('workspace', False):
+        body["workspace"] = options.get('workspace')
 
     r = send.send_post(url, body, headers=headers, is_json=True)
     if r:

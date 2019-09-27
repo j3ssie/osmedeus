@@ -7,7 +7,6 @@ import argparse
 from multiprocessing import Process
 
 from lib.core import utils
-from lib.noti import slack
 from lib.client import config
 from lib.sender import auth
 from lib.sender import initial
@@ -19,39 +18,47 @@ from lib.mode import routine
 #############
 
 __author__ = '@j3ssiejjj'
-__version__ = '2.0'
+__version__ = '2.1'
 
 
 # run Django API as another process
-def start_server():
+def start_server(localhost=True):
     utils.print_banner("Starting Django API")
-    os.system('python3 server/manage.py runserver')
+    if localhost:
+        os.system('python3 server/manage.py runserver')
+    else:
+        os.system('python3 server/manage.py runserver 0.0.0.0:8000')
 
 
 def parsing_argument(args):
     # parsing agument
     options = config.parsing_config(args)
-
-    # Start Django API if it's not
+    # Start Django API if it's not running
     if not args.client:
         if not utils.connection_check('127.0.0.1', 8000):
-            utils.print_line()
-            p = Process(target=start_server)
+            p = Process(target=start_server, args=(options.get('localhost'),))
             p.start()
             # wait for Django API start
             time.sleep(3)
-            utils.print_line()
         else:
             utils.print_info("Look like Django API already ran")
+
     options = auth.login(options)
-    single_target(options)
-
-
-def single_target(options):
     if not options or not (options['JWT'] and options['JWT'] != "None"):
         utils.print_bad("Can't login to get JWT")
         sys.exit(-1)
+    # run list of target 
+    if options.get('target_list') and utils.not_empty_file(options.get('target_list')):
+        targets = utils.just_read(options.get('target_list'), get_list=True)
+        for target in targets:
+            options['raw_target'] = target
+            options['workspace'] = target
+            single_target(options)
+    else:
+        single_target(options)
 
+
+def single_target(options):
     # don't create new workspace in report mode
     if options.get('mode') != 'report':
         options = initial.init_workspace(options)
@@ -120,13 +127,17 @@ def main():
     parser.add_argument('--debug', action='store_true',
                         help='just for debug purpose')
 
-    parser.add_argument('--slack', action='store_true',
+    parser.add_argument('--localhost', action='store_true',
+                        help='Bind API Server on localhost')
+
+    parser.add_argument('--nomonitor', action='store_true',
+                        help='Turn on monitor mode')
+
+    parser.add_argument('--noslack', action='store_true',
                         help='Turn on slack notification')
 
-    parser.add_argument('--reset', action='store_true',
-                        help='Clean configurations')
     parser.add_argument('-hh', '--helps', dest='helps',
-                        action='store_true', help='Display more help message')
+                        action='store_true', help='Display more help messaage')
 
     args = parser.parse_args()
     if len(sys.argv) == 1:

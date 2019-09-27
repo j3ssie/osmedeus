@@ -63,27 +63,3 @@ class SubdomainScanning(skeleton.Skeleton):
             'cleaned_output'), only_A_record)
         if cleaned_output:
             utils.check_output(command.get('cleaned_output'))
-
-    # clean up for findomain
-    def clean_findomain(self, command):
-        utils.print_good('Cleaning for {0}:{1}'.format(command.get('banner'), command.get('post_run')))
-        output = utils.just_read(command.get('output_path'), get_list=True)
-        if not output:
-            utils.print_bad('Output not found: {0}'.format(
-                command.get('output_path')))
-            return False
-
-        result = []
-        for line in output:
-            if ',' in line.strip():
-                domain = line.strip().split(',')[0]
-                result.append(domain)
-                # later use
-                raw_ip = line.strip().split(',')[1]
-                if 'No IP' not in raw_ip:
-                    ip = raw_ip
-
-        cleaned_output = utils.just_write(command.get(
-            'cleaned_output'), "\n".join(result))
-        if cleaned_output:
-            utils.check_output(command.get('cleaned_output'))

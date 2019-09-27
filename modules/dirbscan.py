@@ -12,5 +12,6 @@ class DirbScan(skeleton.Skeleton):
 
     def banner(self):
         utils.print_banner("Starting DirbScan")
+        utils.make_directory(self.options['WORKSPACE'] + '/directory/raw')
         utils.make_directory(self.options['WORKSPACE'] + '/directory')
 

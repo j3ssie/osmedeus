@@ -39,7 +39,7 @@ def banner_(__version__, __author__):
                               {0}#@{1}  {0}'@{1}          {0}@;{1}  {0}@#{1}
 
 
-                           Osmedeus v{5}{6}{1} by {2}{7}{1}
+                            Osmedeus v{5}{6}{1} by {2}{7}{1}
 
                                     ¯\_(ツ)_/¯
         """.format(C, G, P, R, B, GR, __version__, __author__))

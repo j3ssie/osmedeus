@@ -113,7 +113,7 @@ def parsing_config(args):
 
     # Target stuff
     target = args.target if args.target else None
-    target_list = args.targetlist if args.targetlist else None
+    target_list = args.targetlist if args.targetlist else False
     target = _verify_target(target, target_list)
 
     # get direct input as single or a file
@@ -132,8 +132,20 @@ def parsing_config(args):
 
     # parsing modules
     modules = args.modules if args.modules else None
-    slack = args.slack if args.slack else None
+
     report = args.report if args.report else None
+
+    # turn on default
+    try:
+        slack = False if args.noslack else True
+        monitor = False if args.nomonitor else True
+        localhost = args.localhost if args.localhost else False
+    # catch config different from private version
+    except:
+        slack = True if args.slack else False
+        monitor = False
+        localhost = True
+
     if modules:
         if direct_input_list:
             mode = 'direct_list'
@@ -155,9 +167,10 @@ def parsing_config(args):
         real_target = utils.set_value(target, direct_input)
 
     options = {
+        'start_ts': utils.gen_ts(),
         'raw_target': real_target,
+        'target_list': target_list,
         'mode': mode,
-        'report': report,
         'slack': slack,
         'speed': speed,
         'workspace': workspace,
@@ -166,6 +179,9 @@ def parsing_config(args):
         'debug': debug,
         'remote_api': remote.strip('/'),
         'credentials': credentials,
+        'localhost': localhost,
+        'report': report,
+        'monitor': monitor,
     }
     # clean None options before send submit request
     options = _clean_None(options)

@@ -279,6 +279,31 @@ class Reports(models.Model):
         )
 
 
+class Monitors(models.Model):
+    old_path = models.TextField(default='')
+    new_path = models.TextField(default='')
+    compare_ts = models.TextField(default='')
+    diff_content = models.TextField(default='')
+    diff_type = models.TextField(default='new')
+    workspace = models.TextField(default='')
+    level = models.TextField(default='final')
+    notified = models.BooleanField(default=False)
+
+    def as_json(self):
+        return dict(
+            source_model=self.__class__.__name__,
+            pk=self.pk,
+            old_path=self.old_path,
+            new_path=self.new_path,
+            compare_ts=self.compare_ts,
+            diff_content=self.diff_content,
+            diff_type=self.diff_type,
+            workspace=self.workspace,
+            level=self.level,
+            notified=self.notified,
+        )
+
+
 class Exploits(models.Model):
     description = models.TextField(default='')
     condition_command = models.TextField(default='')
