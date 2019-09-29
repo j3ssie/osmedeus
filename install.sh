@@ -26,6 +26,14 @@ install_banner "git, nmap, masscan, chromium, npm, golang"
 [ -x "$(command -v ripgrep)" ] || sudo $PACKGE_MANAGER install ripgrep -y 2>/dev/null
 [ -x "$(command -v unzip)" ] || sudo $PACKGE_MANAGER install unzip -y 2>/dev/null
 [ -x "$(command -v chromium-browser)" ] || sudo $PACKGE_MANAGER install chromium-browser -y 2>/dev/null
+[ -x "$(command -v pip)" ] || sudo $PACKGE_MANAGER install python-pip -y 2>/dev/null
+[ -x "$(command -v pip3)" ] || sudo $PACKGE_MANAGER install python3-pip -y 2>/dev/null
+[ -x "$(command -v xsltproc)" ] || sudo $PACKGE_MANAGER install xsltproc -y 2>/dev/null
+
+pip install setuptools 2>/dev/null
+pip3 install setuptools 2>/dev/null
+pip install wheel 2>/dev/null
+pip3 install wheel 2>/dev/null
 
 #### Download stuff directly
 install_banner "wordlists"

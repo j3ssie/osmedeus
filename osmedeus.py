@@ -130,10 +130,10 @@ def main():
     parser.add_argument('--localhost', action='store_true',
                         help='Bind API Server on localhost')
 
-    parser.add_argument('--nomonitor', action='store_true',
+    parser.add_argument('--monitor', action='store_true',
                         help='Turn on monitor mode')
 
-    parser.add_argument('--noslack', action='store_true',
+    parser.add_argument('--slack', action='store_true',
                         help='Turn on slack notification')
 
     parser.add_argument('-hh', '--helps', dest='helps',
