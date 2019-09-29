@@ -12,28 +12,31 @@ Sending message to Slack
 
 
 def slack_monitor(options, filename, monitor_type='new'):
-    if options.get('SLACK_MONITOR_TOKEN') and options.get('SLACK_MONITOR_TOKEN') != 'None':
-        token = options.get('SLACK_MONITOR_TOKEN')
-    else:
-        token = options.get('SLACK_BOT_TOKEN')
+    try:
+        if options.get('SLACK_MONITOR_TOKEN') and options.get('SLACK_MONITOR_TOKEN') != 'None':
+            token = options.get('SLACK_MONITOR_TOKEN')
+        else:
+            token = options.get('SLACK_BOT_TOKEN')
 
-    client = slack.WebClient(token=token)
+        client = slack.WebClient(token=token)
 
-    if monitor_type == 'new':
-        channel = options.get('NEW_CHANNEL', None)
-        if channel is None:
-            return
-    elif monitor_type == 'missing':
-        channel = options.get('MISSING_CHANNEL', None)
-        if channel is None:
-            return
+        if monitor_type == 'new':
+            channel = options.get('NEW_CHANNEL', None)
+            if channel is None:
+                return
+        elif monitor_type == 'missing':
+            channel = options.get('MISSING_CHANNEL', None)
+            if channel is None:
+                return
 
-    client.files_upload(
-        channels=channel,
-        file=filename,
-        title=filename,
-        filetype='text'
-    )
+        client.files_upload(
+            channels=channel,
+            file=filename,
+            title=filename,
+            filetype='text'
+        )
+    except:
+        pass
 
 
 # shortcut for sending noti to slack
@@ -76,7 +79,7 @@ def slack_status(options):
 
     target = options.get('TARGET')
     message = f':ghost: Start *{module}* on *{target}*'
-    
+
     client = slack.WebClient(token=options.get('SLACK_BOT_TOKEN'))
     client.chat_postMessage(
         channel=channel,
@@ -125,19 +128,22 @@ def slack_done(options):
 
 
 def slack_file(options, filename, token=None):
-    if not token:
-        token = options.get('SLACK_BOT_TOKEN')
-    client = slack.WebClient(token=token)
-    channel = options.get('REPORT_CHANNEL')
-    if channel is None:
-        return
+    try:
+        if not token:
+            token = options.get('SLACK_BOT_TOKEN')
+        client = slack.WebClient(token=token)
+        channel = options.get('REPORT_CHANNEL')
+        if channel is None:
+            return
 
-    client.files_upload(
-        channels=channel,
-        file=filename,
-        title=filename,
-        filetype='text'
-    )
+        client.files_upload(
+            channels=channel,
+            file=filename,
+            title=filename,
+            filetype='text'
+        )
+    except:
+        pass
 
 
 def get_emoji():

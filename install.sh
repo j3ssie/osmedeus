@@ -21,6 +21,7 @@ install_banner "git, nmap, masscan, chromium, npm, golang"
 [ -x "$(command -v chromium)" ] || sudo $PACKGE_MANAGER install chromium -y 2>/dev/null
 [ -x "$(command -v npm)" ] || sudo $PACKGE_MANAGER install npm -y 2>/dev/null
 [ -x "$(command -v go)" ] || sudo $PACKGE_MANAGER install golang -y 2>/dev/null
+[ -x "$(command -v make)" ] || sudo $PACKGE_MANAGER install build-essential -y 2>/dev/null
 [ -x "$(command -v csvlook)" ] || sudo $PACKGE_MANAGER install csvkit -y 2>/dev/null
 [ -x "$(command -v ripgrep)" ] || sudo $PACKGE_MANAGER install ripgrep -y 2>/dev/null
 [ -x "$(command -v unzip)" ] || sudo $PACKGE_MANAGER install unzip -y 2>/dev/null

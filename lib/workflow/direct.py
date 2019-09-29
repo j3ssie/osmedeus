@@ -135,23 +135,6 @@ class Probing:
     commands = {
         'general': [
             {
-                "banner": "get resolver",
-                "cmd": "python3 $PLUGINS_PATH/bass/bass.py -d $TARGET -o $WORKSPACE/probing/resolvers.txt",
-                "output_path": "$WORKSPACE/probing/resolvers.txt",
-                "std_path": "",
-                "waiting": "first",
-            },
-            {
-                "banner": "massdns resolve IP with custom resolvers",
-                "requirement": "$WORKSPACE/probing/raw-all-$OUTPUT.txt",
-                "cmd": "cat $WORKSPACE/probing/raw-all-$OUTPUT.txt | $PLUGINS_PATH/massdns/bin/massdns -r $WORKSPACE/probing/resolvers.txt -q -t A -o S -w $WORKSPACE/probing/raw-allmassdns.txt",
-                "output_path": "$WORKSPACE/probing/raw-allmassdns.txt",
-                "std_path": "",
-                "pre_run": "get_subdomains",
-                "post_run": "clean_massdns",
-                "cleaned_output": "$WORKSPACE/probing/ip-$OUTPUT.txt",
-            },
-            {
                 # this only run if something wrong with custom resolvers
                 "banner": "massdns resolve IP",
                 "requirement": "$WORKSPACE/probing/raw-all-$OUTPUT.txt",

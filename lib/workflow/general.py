@@ -273,7 +273,7 @@ class ScreenShot:
         'general': [
             {
                 "banner": "aquatone",
-                "cmd": f"cat $WORKSPACE/probing/resolved-$OUTPUT.txt | $GO_PATH/aquatone -scan-timeout 1000 -threads {threads} -out $WORKSPACE/screenshot/$OUTPUT-aquatone",
+                "cmd": f"cat $WORKSPACE/probing/http-$OUTPUT.txt | $GO_PATH/aquatone -scan-timeout 1000 -threads {threads} -out $WORKSPACE/screenshot/$OUTPUT-aquatone",
                 "output_path": "$WORKSPACE/screenshot/$OUTPUT-aquatone/aquatone_report.html",
                 "std_path": "$WORKSPACE/screenshot/std-$OUTPUT-aquatone.std"
             },
@@ -317,13 +317,13 @@ class StoScan:
         'general': [
             {
                 "banner": "tko-subs",
-                "cmd": "$GO_PATH/tko-subs -data $DATA_PATH/providers-data.csv -domains $WORKSPACE/probing/resolved-$OUTPUT.txt -output $WORKSPACE/stoscan/takeover-$TARGET-tko-subs.txt",
+                "cmd": "$GO_PATH/tko-subs -data $DATA_PATH/providers-data.csv -domains $WORKSPACE/probing/domains-$OUTPUT.txt -output $WORKSPACE/stoscan/takeover-$TARGET-tko-subs.txt",
                 "output_path": "$WORKSPACE/stoscan/takeover-$TARGET-tko-subs.txt",
                 "std_path": "$WORKSPACE/stoscan/std-takeover-$TARGET-tko-subs.std",
             },
             {
                 "banner": "Subjack",
-                "cmd": "$GO_PATH/subjack -v -m -c $DATA_PATH/fingerprints.json -w $WORKSPACE/probing/resolved-$OUTPUT.txt -t 100 -timeout 30 -o $WORKSPACE/stoscan/takeover-$TARGET-subjack.txt -ssl",
+                "cmd": "$GO_PATH/subjack -v -m -c $DATA_PATH/fingerprints.json -w $WORKSPACE/probing/domains-$OUTPUT.txt -t 100 -timeout 30 -o $WORKSPACE/stoscan/takeover-$TARGET-subjack.txt -ssl",
                 "output_path": "$WORKSPACE/stoscan/takeover-$TARGET-subjack.txt",
                 "std_path": "$WORKSPACE/stoscan/std-takeover-$TARGET-subjack.std"
             },
