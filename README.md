@@ -4,7 +4,7 @@
     <a href="https://github.com/j3ssie/Osmedeus"><img alt="python" src="https://img.shields.io/badge/python-3.6%2B-blue.svg"></a>
     <a href=""><img alt="Software License" src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square"></a>
     <a href=""><img alt="tested" src="https://img.shields.io/badge/tested-Kali%20Linux-green.svg"></a>
-    <a href="https://github.com/j3ssie/Osmedeus"><img alt="Release" src="https://img.shields.io/badge/version-2.0-red.svg"></a>
+    <a href="https://github.com/j3ssie/Osmedeus"><img alt="Release" src="https://img.shields.io/badge/version-2.1-red.svg"></a>
     <a href="https://www.youtube.com/watch?v=kZ-uMC7c5OY&list=PLqpLl_iGMLnA6vbi1ZM-HmWLuedIP2PJl"><img alt="Demo" src="https://img.shields.io/badge/demo-youtube-blue.svg"></a>
   </p>
 </p>
@@ -68,8 +68,6 @@ If you love my tool and would like to support my work. [Become a backer](https:/
 
 ![Slack Noti](imgs/slack_noti.png)
 
-![Slack Report](imgs/slack_report.png)
-
 ![Web UI 1](imgs/ui-1.png)
 
 ![Web UI 3](imgs/ui-3.png)
@@ -108,7 +106,6 @@ If you love my tool and would like to support my work. [Become a backer](https:/
 
 ```
 
-
 ## Disclaimer
 
 Most of this tool done by the authors of the tool that list in [CREDITS.md](https://github.com/j3ssie/Osmedeus/blob/master/CREDITS.md).
@@ -120,21 +117,17 @@ This tool is for educational purposes only. You are responsible for your own act
 
 Please take a look at [CREDITS.md](https://github.com/j3ssie/Osmedeus/blob/master/CREDITS.md)
 
-
 ## Changelog
 
 Please take a look at [CHANGELOG.md](https://github.com/j3ssie/Osmedeus/blob/master/CHANGELOG.md)
 
-
-## Contribute
+## Contributors
 
 If you have some new idea about this project, issue, feedback or found some valuable tool feel free to open an issue for just DM me via [@j3ssiejjj](https://twitter.com/j3ssiejjj).
 
-## Stargazers over time
+### Special thanks
 
-[![Stargazers over time](https://starchart.cc/j3ssie/Osmedeus.svg)](https://starchart.cc/j3ssie/Osmedeus)
-
-## Contributors
+Thanks to [@gujjuboy10x00](https://twitter.com/vis_hacker) for contribute so many awesome ideas to this tool.
 
 ### Code Contributors
 
@@ -163,3 +156,8 @@ Support this project with your organization. Your logo will show up here with a 
 <a href="https://opencollective.com/Osmedeus/organization/7/website"><img src="https://opencollective.com/Osmedeus/organization/7/avatar.svg"></a>
 <a href="https://opencollective.com/Osmedeus/organization/8/website"><img src="https://opencollective.com/Osmedeus/organization/8/avatar.svg"></a>
 <a href="https://opencollective.com/Osmedeus/organization/9/website"><img src="https://opencollective.com/Osmedeus/organization/9/avatar.svg"></a>
+
+
+## Stargazers over time
+
+[![Stargazers over time](https://starchart.cc/j3ssie/Osmedeus.svg)](https://starchart.cc/j3ssie/Osmedeus)
