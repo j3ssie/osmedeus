@@ -41,7 +41,7 @@ def routine(args):
         head = "input,position,status_code,content_length,content_words\n"
         utils.just_write(final_summary, head)
 
-    sep = f"{target},,,,\n"
+    sep = f"\n{target},,,,\n"
     utils.just_append(final_summary, sep + "\n".join(data))
 
 
