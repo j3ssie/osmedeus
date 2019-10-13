@@ -519,7 +519,7 @@ class IPSpace:
         'general': [
             {
                 "banner": "Metabigor IP Lookup",
-                "cmd": "PLUGINS_PATH/Metabigor/metabigor.py -m ip -t $TARGET -o $WORKSPACE/ipspace/range-$OUTPUT.txt",
+                "cmd": "$PLUGINS_PATH/Metabigor/metabigor.py -m ip -t $TARGET -o $WORKSPACE/ipspace/range-$OUTPUT.txt",
                 "output_path": "$WORKSPACE/ipspace/range-$OUTPUT.txt",
                 "std_path": "",
                 "post_run": "get_amass",
