@@ -402,29 +402,34 @@ class PortScan:
             "note": "final",
         },
         {
-            "path": "$WORKSPACE/portscan/screenshot-$OUTPUT.html",
+            "path": "$WORKSPACE/portscan/$OUTPUT.html",
             "type": "html",
             "note": "final",
         },
         {
-            "path": "$WORKSPACE/portscan/$OUTPUT-masscan.csv",
+            "path": "$WORKSPACE/portscan/beautify-$OUTPUT.txt",
             "type": "bash",
+            "note": "final, slack, diff",
+        },
+        {
+            "path": "$WORKSPACE/portscan/$OUTPUT-aquatone/aquatone_report.html",
+            "type": "html",
             "note": "final",
         },
         {
             "path": "$WORKSPACE/portscan/screenshot/$OUTPUT-raw-gowitness.html",
             "type": "html",
-            "note": "",
+            "note": "final",
         },
     ]
     logs = []
     commands = {
         'general': [
             {
-                # "requirement": "$WORKSPACE/formatted/ip-$OUTPUT.txt",
+                "requirement": "$WORKSPACE/probing/ip-$OUTPUT.txt",
                 "banner": "Masscan 65535 ports",
-                "cmd": "$ALIAS_PATH/portscan -i $TARGET -o '$WORKSPACE/portscan/$OUTPUT' -s '$WORKSPACE/portscan/summary.txt' -p '$PLUGINS_PATH'",
-                "output_path": "$WORKSPACE/portscan/$OUTPUT.xml",
+                "cmd": "$ALIAS_PATH/portscan -i $WORKSPACE/probing/ip-$OUTPUT.txt -o '$WORKSPACE/portscan/$OUTPUT' -s '$WORKSPACE/portscan/summary.txt' -p '$PLUGINS_PATH'",
+                "output_path": "$WORKSPACE/portscan/$OUTPUT.csv",
                 "std_path": "",
                 "waiting": "first",
             },
@@ -436,20 +441,21 @@ class PortScan:
                 "std_path": "",
                 "pre_run": "update_ports",
                 "cleaned_output": "$WORKSPACE/portscan/formatted-$OUTPUT.txt",
-                # "waiting": "last",
             },
             {
                 "requirement": "$WORKSPACE/portscan/$OUTPUT.csv",
-                "banner": "Screenshot on ports found",
-                "cmd": "$GO_PATH/gowitness file -s $WORKSPACE/portscan/scheme-$OUTPUT.txt -t 30 --log-level fatal --destination $WORKSPACE/portscan/screenshot/raw-gowitness/ --db $WORKSPACE/portscan/screenshot/gowitness.db",
-                "output_path": "$WORKSPACE/portscan/screenshot/gowitness.db",
+                "banner": "CSV beautify",
+                "cmd": '''cat $WORKSPACE/portscan/$OUTPUT.csv | awk -F',' '{print $1":"$4}' | httprobe -c 30 | tee $WORKSPACE/portscan/http-$OUTPUT.txt''',
+                "output_path": "$WORKSPACE/portscan/http-$OUTPUT.txt",
                 "std_path": "",
-                "post_run": "clean_gowitness",
-                "pre_run": "get_scheme",
-                "cleaned_output": "$WORKSPACE/portscan/screenshot-$OUTPUT.html",
+            },
+            {
+                "banner": "aquatone",
+                "cmd": f"cat $WORKSPACE/portscan/http-$OUTPUT.txt | $GO_PATH/aquatone -screenshot-timeout 50000 -threads {threads} -out $WORKSPACE/portscan/$OUTPUT-aquatone",
+                "output_path": "$WORKSPACE/portscan/$OUTPUT-aquatone/aquatone_report.html",
+                "std_path": "$WORKSPACE/portscan/std-$OUTPUT-aquatone.std",
                 "waiting": "last",
             },
-            
         ],
     }
 

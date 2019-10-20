@@ -189,8 +189,8 @@ $GO_BIN get -u github.com/ffuf/ffuf
 install_banner "rgf"
 $GO_BIN get -u github.com/j3ssie/rgf
 install_banner "go cli-utils"
-$GO_BIN get -u github.com/j3ssie/go-auxs/getIP
 $GO_BIN get -u github.com/j3ssie/go-auxs/just-resolved
+$GO_BIN get -u github.com/j3ssie/go-auxs/cinfo
 
 cp $GO_DIR/* "$PLUGINS_PATH/go/" 2>/dev/null
 # install_banner "observatory"

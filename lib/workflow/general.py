@@ -431,7 +431,7 @@ class PortScan:
             "note": "final",
         },
         {
-            "path": "$WORKSPACE/portscan/screenshot-$OUTPUT.html",
+            "path": "$WORKSPACE/portscan/$OUTPUT.html",
             "type": "html",
             "note": "final",
         },
@@ -441,9 +441,14 @@ class PortScan:
             "note": "final, slack, diff",
         },
         {
+            "path": "$WORKSPACE/portscan/$OUTPUT-aquatone/aquatone_report.html",
+            "type": "html",
+            "note": "final",
+        },
+        {
             "path": "$WORKSPACE/portscan/screenshot/$OUTPUT-raw-gowitness.html",
             "type": "html",
-            "note": "",
+            "note": "final",
         },
     ]
     logs = []
@@ -468,17 +473,14 @@ class PortScan:
             },
             {
                 "requirement": "$WORKSPACE/portscan/$OUTPUT.csv",
-                "banner": "Screenshot on ports found",
-                "cmd": "$GO_PATH/gowitness file -s $WORKSPACE/portscan/scheme-$OUTPUT.txt -t 30 --log-level fatal --destination $WORKSPACE/portscan/screenshot/raw-gowitness/ --db $WORKSPACE/portscan/screenshot/gowitness.db",
-                "output_path": "$WORKSPACE/portscan/screenshot/gowitness.db",
+                "banner": "CSV beautify",
+                "cmd": '''cat $WORKSPACE/portscan/$OUTPUT.csv | awk -F',' '{print $1":"$4}' | httprobe -c 30 | tee $WORKSPACE/portscan/http-$OUTPUT.txt''',
+                "output_path": "$WORKSPACE/portscan/http-$OUTPUT.txt",
                 "std_path": "",
-                "post_run": "clean_gowitness",
-                "pre_run": "get_scheme",
-                "cleaned_output": "$WORKSPACE/portscan/screenshot-$OUTPUT.html",
             },
             {
                 "banner": "aquatone",
-                "cmd": f"cat $WORKSPACE/portscan/scheme-$OUTPUT.txt | $GO_PATH/aquatone -scan-timeout 1000 -threads {threads} -out $WORKSPACE/portscan/$OUTPUT-aquatone",
+                "cmd": f"cat $WORKSPACE/portscan/http-$OUTPUT.txt | $GO_PATH/aquatone -screenshot-timeout 50000 -threads {threads} -out $WORKSPACE/portscan/$OUTPUT-aquatone",
                 "output_path": "$WORKSPACE/portscan/$OUTPUT-aquatone/aquatone_report.html",
                 "std_path": "$WORKSPACE/portscan/std-$OUTPUT-aquatone.std",
                 "waiting": "last",
