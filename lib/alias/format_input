@@ -19,7 +19,7 @@ def grep_the_IP(data):
         ips.append(m.group())
     if ips:
         return ips[0]
-    return ips
+    return ""
 
 def routine(args):
     target = args.input
@@ -39,8 +39,9 @@ def routine(args):
     data = utils.just_read(target, get_list=True)
     for line in data:
         ips.append(grep_the_IP(line))
-    utils.just_write(f"{output}-range.txt", "\n".join(ips))
-    time.sleep(0.2)
+    if ips:
+        utils.just_write(f"{output}-range.txt", "\n".join(ips))
+        time.sleep(0.2)
 
 
 parser = argparse.ArgumentParser(description="VulnScan alias")

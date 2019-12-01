@@ -500,7 +500,7 @@ class VulnScan:
 class DirbScan:
     reports = [
         {
-            "path": "$WORKSPACE/directory/raw-summary.txt",
+            "path": "$WORKSPACE/directory/summary.txt",
             "type": "bash",
             "note": "final, diff, slack",
         },
@@ -515,25 +515,16 @@ class DirbScan:
         'general': [
             {
                 "requirement": "$WORKSPACE/probing/http-$OUTPUT.txt",
-                "banner": "Format fuzz URL",
-                "cmd": "cat $WORKSPACE/probing/http-$OUTPUT.txt | unfurl -u format %s://%d%p/FUZZ | tee $WORKSPACE/directory/fuzz-$OUTPUT.txt",
-                "output_path": "$WORKSPACE/directory/fuzz-$OUTPUT.txt",
-                "std_path": "",
-                "waiting": "first",
-            },
-            {
                 "banner": "ffuf dirscan",
-                "cmd": "$ALIAS_PATH/dirscan -i [[0]] -w '$DATA_PATH/wordlists/content/quick.txt' -o '$WORKSPACE/directory/raw' -p '$GO_PATH' -s '$WORKSPACE/directory'",
-                "output_path": "",
-                "std_path": "",
-                "chunk": 5,
-                "cmd_type": "list",
-                "resources": "l0|$WORKSPACE/directory/fuzz-$OUTPUT.txt",
+                "cmd": "$GO_PATH/ffuf -t 40 -c -sf -fc '404,429,501,502,503' -D -e '.php,.asp,.jsp,.js,.html,.swp,.swf,.zip' -of csv -o $WORKSPACE/directory/summary.csv -c -u HOST/FUZZ -w $WORKSPACE/probing/http-$OUTPUT.txt:HOST -w $DATA_PATH/wordlists/content/quick.txt:FUZZ -mode clusterbomb",
+                "output_path": "$WORKSPACE/directory/summary.csv",
+                "std_path": "$WORKSPACE/directory/std-$OUTPUT-ffuf.std",
             },
             {
+                "requirement": "$WORKSPACE/directory/summary.csv",
                 "banner": "csv beautify",
-                "cmd": "cat $WORKSPACE/directory/raw/* | csvcut -c 2-6 | csvlook | tee -a $WORKSPACE/directory/beautify-summary.csv",
-                "output_path": "",
+                "cmd": "cat $WORKSPACE/directory/summary.csv | csvcut -c 3-6 | csvlook | tee -a $WORKSPACE/directory/beautify-summary.csv",
+                "output_path": "$WORKSPACE/directory/beautify-summary.csv",
                 "std_path": "",
                 "waiting": "last",
             },
