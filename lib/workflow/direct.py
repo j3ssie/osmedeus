@@ -561,23 +561,46 @@ class IPSpace:
 class DirbScan:
     reports = [
         {
-            "path": "$WORKSPACE/directory/quick-$OUTPUT-dirsearch.txt",
+            "path": "$WORKSPACE/directory/raw-summary.txt",
             "type": "bash",
-            "note": "final",
+            "note": "final, diff, slack",
+        },
+        {
+            "path": "$WORKSPACE/directory/beautify-summary.csv",
+            "type": "bash",
+            "note": "final, diff, slack",
         },
     ]
     logs = []
     commands = {
         'general': [
             {
-                "requirement": "$RAW_TARGET",
-                "banner": "dirsearch",
-                "cmd": "python3 $PLUGINS_PATH/dirsearch/dirsearch.py -b -e php,aspx,jsp,html,swp,swf,zip --wordlist=$DATA_PATH/wordlists/content/really-quick.txt -x '302,404' --simple-report=$WORKSPACE/directory/quick-$OUTPUT-dirsearch.txt -t 50 -L $RAW_TARGET",
-                "output_path": "$WORKSPACE/directory/quick-$OUTPUT-dirsearch.txt",
-                "std_path": "$WORKSPACE/directory/std-$OUTPUT-dirsearch.std"
+                "requirement": "$WORKSPACE/formatted/$OUTPUT-paths.txt",
+                "banner": "Format fuzz URL",
+                "cmd": "cat $WORKSPACE/formatted/$OUTPUT-paths.txt | unfurl -u format %s://%d%p/FUZZ | grep -v 'http:///FUZZ' > $WORKSPACE/directory/fuzz-$OUTPUT.txt",
+                "output_path": "$WORKSPACE/directory/fuzz-$OUTPUT.txt",
+                "std_path": "",
+                "waiting": "first",
+            },
+            {
+                "banner": "ffuf dirscan",
+                "cmd": "$ALIAS_PATH/dirscan -i [[0]] -w '$DATA_PATH/wordlists/content/quick.txt' -o '$WORKSPACE/directory/raw' -p '$GO_PATH' -s '$WORKSPACE/directory'",
+                "output_path": "",
+                "std_path": "",
+                "chunk": 5,
+                "cmd_type": "list",
+                "resources": "l0|$WORKSPACE/directory/fuzz-$OUTPUT.txt",
+            },
+            {
+                "banner": "csv beautify",
+                "cmd": "cat $WORKSPACE/directory/raw/* | csvcut -c 2-6 | csvlook | tee -a $WORKSPACE/directory/beautify-summary.csv",
+                "output_path": "",
+                "std_path": "",
+                "waiting": "last",
             },
         ],
     }
+
 
 
 class GitScan:

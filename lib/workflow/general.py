@@ -531,9 +531,8 @@ class DirbScan:
                 "resources": "l0|$WORKSPACE/directory/fuzz-$OUTPUT.txt",
             },
             {
-                "requirement": "$WORKSPACE/probing/http-$OUTPUT.txt",
                 "banner": "csv beautify",
-                "cmd": "cat $WORKSPACE/directory/raw/* | csvcut -c 2-6 | csvlook | tee $WORKSPACE/directory/beautify-summary.csv",
+                "cmd": "cat $WORKSPACE/directory/raw/* | csvcut -c 2-6 | csvlook | tee -a $WORKSPACE/directory/beautify-summary.csv",
                 "output_path": "",
                 "std_path": "",
                 "waiting": "last",
