@@ -18,7 +18,7 @@ from lib.mode import routine
 #############
 
 __author__ = '@j3ssiejjj'
-__version__ = '2.1'
+__version__ = '2.2'
 
 
 # run Django API as another process
