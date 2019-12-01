@@ -5,7 +5,6 @@ cpu_cores = multiprocessing.cpu_count()
 threads = str(cpu_cores * 2)
 
 
-
 class SubdomainScanning:
     reports = [
         {
@@ -19,7 +18,7 @@ class SubdomainScanning:
         'general': [
             {
                 "banner": "Amass",
-                "cmd": "$GO_PATH/amass enum -timeout 5 -active -max-dns-queries 10000 -include-unresolvable -active -dir $WORKSPACE/subdomain/amass-$OUTPUT -d $TARGET -o $WORKSPACE/subdomain/$OUTPUT-amass.txt",
+                "cmd": "$GO_PATH/amass enum -timeout 10 -active -max-dns-queries 10000 -include-unresolvable -active -dir $WORKSPACE/subdomain/amass-$OUTPUT -d $TARGET -o $WORKSPACE/subdomain/$OUTPUT-amass.txt",
                 "output_path": "$WORKSPACE/subdomain/$OUTPUT-amass.txt",
                 "std_path": "$WORKSPACE/subdomain/std-$TARGET-amass.std"
             },
@@ -119,6 +118,11 @@ class Probing:
             "path": "$WORKSPACE/probing/ip-$OUTPUT.txt",
             "type": "bash",
             "note": "final, slack, diff",
+        },
+        {
+            "path": "$WORKSPACE/probing/raw-allmassdns.txt",
+            "type": "bash",
+            "note": "final",
         },
         {
             "path": "$WORKSPACE/probing/resolved-$OUTPUT.txt",
@@ -233,7 +237,7 @@ class Fingerprint:
             {
                 "requirement": "$WORKSPACE/fingerprint/responses/index",
                 "banner": "rgf extract all",
-                "cmd": "$GO_PATH/rgf -d $WORKSPACE/fingerprint/responses/ | tee $WORKSPACE/fingerprint/rgf-all-$OUTPUT.txt",
+                "cmd": "$GO_PATH/rgf -dir $WORKSPACE/fingerprint/responses/ | tee $WORKSPACE/fingerprint/rgf-all-$OUTPUT.txt",
                 "output_path": "$WORKSPACE/fingerprint/rgf-all-$OUTPUT.txt",
                 "std_path": "",
             },
@@ -421,15 +425,20 @@ class PortScan:
             "type": "html",
             "note": "final",
         },
+        {
+            "path": "$WORKSPACE/portscan/screenshot/$OUTPUT-raw-gowitness.html",
+            "type": "html",
+            "note": "",
+        },
     ]
     logs = []
     commands = {
         'general': [
             {
-                "requirement": "$WORKSPACE/probing/ip-$OUTPUT.txt",
+                # "requirement": "$WORKSPACE/formatted/ip-$OUTPUT.txt",
                 "banner": "Masscan 65535 ports",
-                "cmd": "$ALIAS_PATH/portscan -i $WORKSPACE/probing/ip-$OUTPUT.txt -o '$WORKSPACE/portscan/$OUTPUT' -s '$WORKSPACE/portscan/summary.txt' -p '$PLUGINS_PATH'",
-                "output_path": "$WORKSPACE/portscan/$OUTPUT.csv",
+                "cmd": "$ALIAS_PATH/portscan -i $TARGET -o '$WORKSPACE/portscan/$OUTPUT' -s '$WORKSPACE/portscan/summary.txt' -p '$PLUGINS_PATH'",
+                "output_path": "$WORKSPACE/portscan/$OUTPUT.xml",
                 "std_path": "",
                 "waiting": "first",
             },
@@ -444,18 +453,32 @@ class PortScan:
             },
             {
                 "requirement": "$WORKSPACE/portscan/$OUTPUT.csv",
-                "banner": "CSV beautify",
+                "banner": "Httprode new port",
                 "cmd": '''cat $WORKSPACE/portscan/$OUTPUT.csv | awk -F',' '{print $1":"$4}' | httprobe -c 30 | tee $WORKSPACE/portscan/http-$OUTPUT.txt''',
                 "output_path": "$WORKSPACE/portscan/http-$OUTPUT.txt",
                 "std_path": "",
             },
             {
+                "requirement": "$WORKSPACE/portscan/http-$OUTPUT.txt",
                 "banner": "aquatone",
                 "cmd": f"cat $WORKSPACE/portscan/http-$OUTPUT.txt | $GO_PATH/aquatone -screenshot-timeout 50000 -threads {threads} -out $WORKSPACE/portscan/$OUTPUT-aquatone",
                 "output_path": "$WORKSPACE/portscan/$OUTPUT-aquatone/aquatone_report.html",
                 "std_path": "$WORKSPACE/portscan/std-$OUTPUT-aquatone.std",
                 "waiting": "last",
             },
+
+            # {
+            #     "requirement": "$WORKSPACE/portscan/$OUTPUT.csv",
+            #     "banner": "Screenshot on ports found",
+            #     "cmd": "$GO_PATH/gowitness file -s $WORKSPACE/portscan/scheme-$OUTPUT.txt -t 30 --log-level fatal --destination $WORKSPACE/portscan/screenshot/raw-gowitness/ --db $WORKSPACE/portscan/screenshot/gowitness.db",
+            #     "output_path": "$WORKSPACE/portscan/screenshot/gowitness.db",
+            #     "std_path": "",
+            #     "post_run": "clean_gowitness",
+            #     "pre_run": "get_scheme",
+            #     "cleaned_output": "$WORKSPACE/portscan/screenshot-$OUTPUT.html",
+            #     "waiting": "last",
+            # },
+            
         ],
     }
 
@@ -525,7 +548,7 @@ class IPSpace:
         'general': [
             {
                 "banner": "Metabigor IP Lookup",
-                "cmd": "$PLUGINS_PATH/Metabigor/metabigor.py -m ip -t $TARGET -o $WORKSPACE/ipspace/range-$OUTPUT.txt",
+                "cmd": "PLUGINS_PATH/Metabigor/metabigor.py -m ip -t $TARGET -o $WORKSPACE/ipspace/range-$OUTPUT.txt",
                 "output_path": "$WORKSPACE/ipspace/range-$OUTPUT.txt",
                 "std_path": "",
                 "post_run": "get_amass",

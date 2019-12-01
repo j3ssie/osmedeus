@@ -11,7 +11,7 @@ class Formatting:
             "type": "bash"
         },
         {
-            "path": "$WORKSPACE/formatted/ip-$OUTPUT.txt",
+            "path": "$WORKSPACE/formatted/$OUTPUT-range.txt",
             "type": "bash"
         }
     ]
@@ -29,8 +29,8 @@ class Formatting:
             {
                 "banner": "Resolve IP",
                 "requirement": "$WORKSPACE/formatted/$OUTPUT-domains.txt",
-                "cmd": "cat $WORKSPACE/formatted/$OUTPUT-domains.txt | $GO_PATH/just-resolved | tee $WORKSPACE/formatted/ip-$OUTPUT.txt",
-                "output_path": "$WORKSPACE/formatted/ip-$OUTPUT.txt",
+                "cmd": "cat $WORKSPACE/formatted/$OUTPUT-domains.txt | $GO_PATH/just-resolved | tee -a $WORKSPACE/formatted/$OUTPUT-range.txt",
+                "output_path": "$WORKSPACE/formatted/$OUTPUT-range.txt",
                 "std_path": "",
             },
             {
@@ -122,6 +122,12 @@ class StoScan:
                 "std_path": "$WORKSPACE/stoscan/std-takeover-$TARGET-subjack.std"
             },
             {
+                "banner": "subzy",
+                "cmd": "$GO_PATH/subzy -hide_fails -https -concurrency 20 -targets $WORKSPACE/formatted/resolved-$OUTPUT.txt | tee $WORKSPACE/stoscan/takeover-$TARGET-subzy.txt",
+                "output_path": "$WORKSPACE/stoscan/takeover-$TARGET-subzy.txt",
+                "std_path": "$WORKSPACE/stoscan/std-takeover-$TARGET-subzy.std"
+            },
+            {
                 "banner": "massdns resolve IP",
                 "cmd": "cat $WORKSPACE/formatted/resolved-$OUTPUT.txt | $PLUGINS_PATH/massdns/bin/massdns -r $DATA_PATH/resolvers.txt -q -t A -o F -w $WORKSPACE/stoscan/all-dig-info.txt",
                 "output_path": "$WORKSPACE/stoscan/all-dig-info.txt",
@@ -133,6 +139,13 @@ class StoScan:
                 "banner": "rgf extract CNAME",
                 "cmd": "$GO_PATH/rgf -file $WORKSPACE/stoscan/all-dig-info.txt cname | tee $WORKSPACE/stoscan/have-cname.txt",
                 "output_path": "$WORKSPACE/stoscan/have-cname.txt",
+                "std_path": "",
+            },
+            {
+                "requirement": "$WORKSPACE/stoscan/all-dig-info.txt",
+                "banner": "rgf extract Azure",
+                "cmd": "$GO_PATH/rgf -file $WORKSPACE/stoscan/all-dig-info.txt azure | tee $WORKSPACE/stoscan/azure-sto.txt",
+                "output_path": "$WORKSPACE/stoscan/azure-sto.txt",
                 "std_path": "",
             },
         ],
@@ -172,6 +185,15 @@ class ParamFinding:
     logs = []
     commands = {
         'general': [
+            {
+                "banner": "Arjun param finding",
+                "cmd": "$ALIAS_PATH/paramfinder -i '[[0]]' -o '$WORKSPACE/params/raw' -s '$WORKSPACE/params/summary-$OUTPUT.txt' -p '$PLUGINS_PATH'",
+                "output_path": "",
+                "std_path": "",
+                "chunk": 5,
+                "cmd_type": "list",
+                "resources": "l0|$WORKSPACE/formatted/$OUTPUT-paths.txt",
+            },
         ],
     }
 
@@ -245,13 +267,13 @@ class ScreenShot:
             {
                 "requirement": "$WORKSPACE/formatted/http-$OUTPUT.txt",
                 "banner": "aquatone",
-                "cmd": f"cat $WORKSPACE/formatted/http-$OUTPUT.txt | $GO_PATH/aquatone -scan-timeout 1000 -threads {threads} -out $WORKSPACE/screenshot/$OUTPUT-aquatone",
+                "cmd": f"cat $WORKSPACE/formatted/http-$OUTPUT.txt | $GO_PATH/aquatone -screenshot-timeout 50000 -threads {threads} -out $WORKSPACE/screenshot/$OUTPUT-aquatone",
                 "output_path": "$WORKSPACE/screenshot/$OUTPUT-aquatone/aquatone_report.html",
                 "std_path": "$WORKSPACE/screenshot/std-$OUTPUT-aquatone.std"
             },
             {
                 "banner": "gowitness",
-                "cmd": f"$GO_PATH/gowitness file -s $WORKSPACE/formatted/http-$OUTPUT.txt -t {threads}  --log-level fatal --destination  $WORKSPACE/screenshot/raw-gowitness/ --db $WORKSPACE/screenshot/gowitness.db",
+                "cmd": f"$GO_PATH/gowitness file -s $WORKSPACE/formatted/http-$OUTPUT.txt -t {threads} --timeout 10  --log-level fatal --destination  $WORKSPACE/screenshot/raw-gowitness/ --db $WORKSPACE/screenshot/gowitness.db",
                 "output_path": "$WORKSPACE/screenshot/gowitness.db",
                 "std_path": "",
             },
@@ -294,7 +316,7 @@ class DirbScan:
             },
             {
                 "banner": "ffuf dirscan",
-                "cmd": "$ALIAS_PATH/dirscan -i [[0]] -w '$DATA_PATH/wordlists/content/quick-content-discovery.txt' -o '$WORKSPACE/directory/raw' -p '$GO_PATH' -s '$WORKSPACE/directory'",
+                "cmd": "$ALIAS_PATH/dirscan -i [[0]] -w '$DATA_PATH/wordlists/content/quick.txt' -o '$WORKSPACE/directory/raw' -p '$GO_PATH' -s '$WORKSPACE/directory'",
                 "output_path": "",
                 "std_path": "",
                 "chunk": 5,
@@ -304,7 +326,7 @@ class DirbScan:
             {
                 "requirement": "$WORKSPACE/formatted/http-$OUTPUT.txt",
                 "banner": "csv beautify",
-                "cmd": "cat $WORKSPACE/directory/directory-summary.csv | csvlook --max-column-width 100 | tee $WORKSPACE/directory/beautify-summary.csv",
+                "cmd": "cat $WORKSPACE/directory/raw/* | csvcut -c 2-6 | csvlook | tee $WORKSPACE/directory/beautify-summary.csv",
                 "output_path": "",
                 "std_path": "",
                 "waiting": "last",
@@ -321,7 +343,7 @@ class PortScan:
             "note": "final",
         },
         {
-            "path": "$WORKSPACE/portscan/$OUTPUT.html",
+            "path": "$WORKSPACE/portscan/screenshot-$OUTPUT.html",
             "type": "html",
             "note": "final",
         },
@@ -331,23 +353,18 @@ class PortScan:
             "note": "final, slack, diff",
         },
         {
-            "path": "$WORKSPACE/portscan/$OUTPUT-aquatone/aquatone_report.html",
-            "type": "html",
-            "note": "final",
-        },
-        {
             "path": "$WORKSPACE/portscan/screenshot/$OUTPUT-raw-gowitness.html",
             "type": "html",
-            "note": "final",
+            "note": "",
         },
     ]
     logs = []
     commands = {
         'general': [
             {
-                "requirement": "$WORKSPACE/probing/ip-$OUTPUT.txt",
+                "requirement": "$WORKSPACE/formatted/$OUTPUT-range.txt",
                 "banner": "Masscan 65535 ports",
-                "cmd": "$ALIAS_PATH/portscan -i $WORKSPACE/probing/ip-$OUTPUT.txt -o '$WORKSPACE/portscan/$OUTPUT' -s '$WORKSPACE/portscan/summary.txt' -p '$PLUGINS_PATH'",
+                "cmd": "$ALIAS_PATH/portscan -i $WORKSPACE/formatted/$OUTPUT-range.txt -o '$WORKSPACE/portscan/$OUTPUT' -s '$WORKSPACE/portscan/summary.txt' -p '$PLUGINS_PATH'",
                 "output_path": "$WORKSPACE/portscan/$OUTPUT.csv",
                 "std_path": "",
                 "waiting": "first",
@@ -363,12 +380,13 @@ class PortScan:
             },
             {
                 "requirement": "$WORKSPACE/portscan/$OUTPUT.csv",
-                "banner": "CSV beautify",
+                "banner": "Httprode new port",
                 "cmd": '''cat $WORKSPACE/portscan/$OUTPUT.csv | awk -F',' '{print $1":"$4}' | httprobe -c 30 | tee $WORKSPACE/portscan/http-$OUTPUT.txt''',
                 "output_path": "$WORKSPACE/portscan/http-$OUTPUT.txt",
                 "std_path": "",
             },
             {
+                "requirement": "$WORKSPACE/portscan/http-$OUTPUT.txt",
                 "banner": "aquatone",
                 "cmd": f"cat $WORKSPACE/portscan/http-$OUTPUT.txt | $GO_PATH/aquatone -screenshot-timeout 50000 -threads {threads} -out $WORKSPACE/portscan/$OUTPUT-aquatone",
                 "output_path": "$WORKSPACE/portscan/$OUTPUT-aquatone/aquatone_report.html",

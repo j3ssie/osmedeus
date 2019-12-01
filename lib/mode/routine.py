@@ -18,7 +18,8 @@ def routine_handle(options):
 
     utils.print_target(options.get('TARGET'))
     # move last result to monitor path and add options to compare
-    if options.get('MONITOR'):
+    # only do monitor on general mode
+    if options.get('MONITOR') and options['MODE'] == "general":
         options['COMPARE_PATH'] = backup.init_backup(options)
         utils.print_good("Created compare workspaces: {0}".format(
             options['COMPARE_PATH']))

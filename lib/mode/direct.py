@@ -32,12 +32,8 @@ def handle(options):
 
     if utils.loop_grep(modules, 'sub'):
         subdomain.SubdomainScanning(options)
-        # vhosts.VhostScan(options)
-        # permutation.PermutationScan(options)
         probing.Probing(options)
         fingerprint.Fingerprint(options)
-        # stoscan.StoScan(options)
-        # screenshot.ScreenShot(options)
 
     if utils.loop_grep(modules, 'screen'):
         screenshot.ScreenShot(options)

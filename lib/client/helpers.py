@@ -88,8 +88,8 @@ python3 osmedeus.py -w sample2 -m dirb -I /tmp/list_of_hosts.txt
 -s, --slow  "subdomain"
                       Only running slow mode in subdomain module      
 
---noslack               Disable slack notification
---nomonitor             Disable monitor new assets
+--slack               Enable slack notification
+--monitor             Enable monitor new assets
 --debug               Just for debug purpose
             '''.format(G, GR, B))
     sys.exit(0)
@@ -118,15 +118,15 @@ gitscan, cors, ipspace
 
 {1}[{0}Report Usage{1}]{1}
 ===================
-./osemdeus.py --report <mode> -t <workspace> [-m <module>]
+./osmedeus.py --report <mode> -t <workspace> [-m <module>]
 
 {1}[{0}Example Commands{1}]{1}
 ===================
-./osemdeus.py -t example.com --report list
-./osemdeus.py -t example.com --report sum
-./osemdeus.py -t example.com --report path
-./osemdeus.py -t example.com --report short
-./osemdeus.py -t example.com -m subdomain --report short
-./osemdeus.py -t example.com -m subdomain, portscan --report short
-./osemdeus.py -t example.com -m subdomain, portscan --report full
+./osmedeus.py -t example.com --report list
+./osmedeus.py -t example.com --report sum
+./osmedeus.py -t example.com --report path
+./osmedeus.py -t example.com --report short
+./osmedeus.py -t example.com -m subdomain --report short
+./osmedeus.py -t example.com -m subdomain, portscan --report short
+./osmedeus.py -t example.com -m subdomain, portscan --report full
     '''.format(G, GR, B))

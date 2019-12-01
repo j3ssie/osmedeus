@@ -38,10 +38,10 @@ def routine(args):
 
     # init the summary
     if not utils.not_empty_file(f'{final_summary}'):
-        head = "input,position,status_code,content_length,content_words\n"
+        head = "FUZZ,url,redirectlocation,position,status_code,content_length,content_words,content_lines\n"
         utils.just_write(final_summary, head)
 
-    sep = f"\n{target},,,,\n"
+    sep = f"{target},,,,\n"
     utils.just_append(final_summary, sep + "\n".join(data))
 
 

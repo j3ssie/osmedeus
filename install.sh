@@ -23,12 +23,13 @@ install_banner "git, nmap, masscan, chromium, npm, golang"
 [ -x "$(command -v go)" ] || sudo $PACKGE_MANAGER install golang -y 2>/dev/null
 [ -x "$(command -v make)" ] || sudo $PACKGE_MANAGER install build-essential -y 2>/dev/null
 [ -x "$(command -v csvlook)" ] || sudo $PACKGE_MANAGER install csvkit -y 2>/dev/null
-[ -x "$(command -v ripgrep)" ] || sudo $PACKGE_MANAGER install ripgrep -y 2>/dev/null
+[ -x "$(command -v rg)" ] || sudo $PACKGE_MANAGER install ripgrep -y 2>/dev/null
 [ -x "$(command -v unzip)" ] || sudo $PACKGE_MANAGER install unzip -y 2>/dev/null
 [ -x "$(command -v chromium-browser)" ] || sudo $PACKGE_MANAGER install chromium-browser -y 2>/dev/null
+[ -x "$(command -v xsltproc)" ] || sudo $PACKGE_MANAGER install xsltproc -y 2>/dev/null
+[ -x "$(command -v make)" ] || sudo $PACKGE_MANAGER install build-essential -y 2>/dev/null
 [ -x "$(command -v pip)" ] || sudo $PACKGE_MANAGER install python-pip -y 2>/dev/null
 [ -x "$(command -v pip3)" ] || sudo $PACKGE_MANAGER install python3-pip -y 2>/dev/null
-[ -x "$(command -v xsltproc)" ] || sudo $PACKGE_MANAGER install xsltproc -y 2>/dev/null
 
 pip install setuptools 2>/dev/null
 pip3 install setuptools 2>/dev/null
@@ -128,6 +129,7 @@ python3 server/manage.py migrate
 python3 server/manage.py makemigrations api
 python3 server/manage.py migrate api
 python3 scripts/init.py
+python3 scripts/reload.py
 
 ### adding gopath if GOPATH not in default shellrc
 if ! grep -Fxq "GOPATH" "$DEFAULT_SHELL"; then
@@ -148,8 +150,6 @@ GO_BIN=$(which go)
 ##
 # Install go stuff
 ##
-install_banner "amass"
-$GO_BIN get -u github.com/OWASP/Amass/...
 install_banner "subfinder"
 $GO_BIN get -u github.com/subfinder/subfinder
 install_banner "gobuster"
@@ -188,9 +188,15 @@ install_banner "ffuf"
 $GO_BIN get -u github.com/ffuf/ffuf
 install_banner "rgf"
 $GO_BIN get -u github.com/j3ssie/rgf
+install_banner "jaeles"
+$GO_BIN get -u github.com/jaeles-project/jaeles
 install_banner "go cli-utils"
+$GO_BIN get -u github.com/j3ssie/go-auxs/getIP
 $GO_BIN get -u github.com/j3ssie/go-auxs/just-resolved
-$GO_BIN get -u github.com/j3ssie/go-auxs/cinfo
+
+install_banner "amass"
+export GO111MODULE=on
+go get -u github.com/OWASP/Amass/v3/...
 
 cp $GO_DIR/* "$PLUGINS_PATH/go/" 2>/dev/null
 # install_banner "observatory"
@@ -221,7 +227,7 @@ chmod +x $PLUGINS_PATH/findomain
 # Install python stuff
 ##
 
-install_banner "truffleHog, wfuzz"
+install_banner "truffleHog"
 pip install truffleHog
 
 cd $PLUGINS_PATH
@@ -238,12 +244,9 @@ install_banner "Metabigor"
 git clone https://github.com/j3ssie/Metabigor 2>/dev/null
 pip3 install -r Metabigor/requirements.txt
 
-install_banner "bass"
-git clone https://github.com/Abss0x7tbh/bass 2>/dev/null
-pip3 install -r bass/requirements.txt
-
 install_banner "dirsearch"
 git clone https://github.com/maurosoria/dirsearch 2>/dev/null
+
 install_banner "Arjun"
 git clone https://github.com/s0md3v/Arjun 2>/dev/null
 

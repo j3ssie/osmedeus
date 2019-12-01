@@ -6,20 +6,6 @@ import multiprocessing
 cpu_cores = multiprocessing.cpu_count()
 threads = str(cpu_cores * 3)
 
-
-class Sample:
-    ''' Sample module '''
-    reports = []  # point out reports file
-    logs = []  # point out logs file
-    # point out commands will run for each mode
-    commands = {
-        'general': [],  # run any time
-        'quick': [],   # default mode
-        'slow': [],  # will run if specific --slow '<module name>'
-        'direct': [],  # will run in direct mode which is '-i' or '-I' options
-    }
-
-
 class SubdomainScanning:
     reports = [
         {
@@ -33,7 +19,7 @@ class SubdomainScanning:
         'general': [
             {
                 "banner": "Amass",
-                "cmd": "$GO_PATH/amass enum -timeout 5 -active -max-dns-queries 10000 -include-unresolvable -active -dir $WORKSPACE/subdomain/amass-$OUTPUT -d $TARGET -o $WORKSPACE/subdomain/$OUTPUT-amass.txt",
+                "cmd": "$GO_PATH/amass enum -timeout 10 -active -max-dns-queries 10000 -include-unresolvable -dir $WORKSPACE/subdomain/amass-$OUTPUT -d $TARGET -o $WORKSPACE/subdomain/$OUTPUT-amass.txt",
                 "output_path": "$WORKSPACE/subdomain/$OUTPUT-amass.txt",
                 "std_path": "$WORKSPACE/subdomain/std-$TARGET-amass.std"
             },
@@ -78,61 +64,17 @@ class SubdomainScanning:
     }
 
 
-class VhostScan:
-    note = "Pro-only"
-    reports = [
-        {
-            "path": "$WORKSPACE/vhosts/vhost-$OUTPUT.txt",
-            "type": "bash",
-            "note": "final, slack",
-        }
-    ]
-    logs = []
-    commands = {
-        'general': [
-            {
-                "banner": "Gobuster Vhost",
-                "cmd": "$ALIAS_PATH/vhosts -i '[[0]]' -o '$WORKSPACE/vhosts/raw' -s '$WORKSPACE/vhosts/raw-summary-$OUTPUT.txt' -p '$PLUGINS_PATH' -w $DATA_PATH/wordlists/dns/virtual-host-scanning.txt",
-                "output_path": "",
-                "std_path": "",
-                "chunk": 5,
-                "cmd_type": "list",
-                "resources": "l0|$WORKSPACE/subdomain/final-$OUTPUT.txt",
-                "post_run": "clean_vhosts_gobuster",
-                "cleaned_output": "$WORKSPACE/vhosts/vhosts-$OUTPUT.txt",
-            },
-        ],
-    }
-
-
-class PermutationScan:
-    note = "Pro-only"
-    reports = [
-        {
-            "path": "$WORKSPACE/permutation/permutation-$OUTPUT.txt",
-            "type": "bash",
-            "note": "final",
-        }
-    ]
-    logs = []
-    commands = {
-        'general': [
-            {
-                "banner": "goaltdns",
-                "cmd": "$GO_PATH/goaltdns -w $DATA_PATH/wordlists/dns/short-permutation.txt -l $WORKSPACE/subdomain/final-$OUTPUT.txt -o $WORKSPACE/permutation/permutation-$OUTPUT.txt",
-                "output_path": "$WORKSPACE/permutation/permutation-$OUTPUT.txt",
-                "std_path": "",
-            },
-        ],
-    }
-
-
 class Probing:
     reports = [
         {
             "path": "$WORKSPACE/probing/ip-$OUTPUT.txt",
             "type": "bash",
             "note": "final, slack, diff",
+        },
+        {
+            "path": "$WORKSPACE/probing/raw-allmassdns.txt",
+            "type": "bash",
+            "note": "final",
         },
         {
             "path": "$WORKSPACE/probing/resolved-$OUTPUT.txt",
@@ -149,13 +91,12 @@ class Probing:
     commands = {
         'general': [
             {
-                # this only run if something wrong with custom resolvers
                 "banner": "massdns resolve IP",
                 "requirement": "$WORKSPACE/probing/raw-all-$OUTPUT.txt",
                 "cmd": "cat $WORKSPACE/probing/raw-all-$OUTPUT.txt | $PLUGINS_PATH/massdns/bin/massdns -r $DATA_PATH/resolvers.txt -q -t A -o S -w $WORKSPACE/probing/raw-allmassdns.txt",
                 "output_path": "$WORKSPACE/probing/raw-allmassdns.txt",
                 "std_path": "",
-                "waiting": "last",
+                "waiting": "first",
                 "pre_run": "get_subdomains",
                 "post_run": "clean_massdns",
                 "cleaned_output": "$WORKSPACE/probing/ip-$OUTPUT.txt",
@@ -163,10 +104,9 @@ class Probing:
             {
                 "banner": "httprobe",
                 "requirement": "$WORKSPACE/probing/raw-all-$OUTPUT.txt",
-                "cmd": "cat $WORKSPACE/probing/raw-all-$OUTPUT.txt | $GO_PATH/httprobe -c 100 -t 20000 | tee $WORKSPACE/probing/http-$OUTPUT.txt",
+                "cmd": "cat $WORKSPACE/probing/raw-all-$OUTPUT.txt | $GO_PATH/httprobe -c 50 -t 20000 | tee $WORKSPACE/probing/http-$OUTPUT.txt",
                 "output_path": "$WORKSPACE/probing/http-$OUTPUT.txt",
                 "std_path": "$WORKSPACE/probing/std-http-$OUTPUT.std",
-                "waiting": "last",
                 "post_run": "get_domain",
                 "cleaned_output": "$WORKSPACE/probing/domains-$OUTPUT.txt",
             },
@@ -225,7 +165,12 @@ class Fingerprint:
             "path": "$WORKSPACE/fingerprint/$OUTPUT-technology.json",
             "type": "bash",
             "note": "final",
-        }
+        },
+        {
+            "path": "$WORKSPACE/fingerprint/responses/index",
+            "type": "bash",
+            "note": "final",
+        },
     ]
     logs = []
     commands = {
@@ -240,14 +185,20 @@ class Fingerprint:
             },
             {
                 "banner": "meg /",
-                "cmd": "$GO_PATH/meg / $WORKSPACE/probing/http-$OUTPUT.txt $WORKSPACE/fingerprint/responses/ -v -c 100",
+                "cmd": "$GO_PATH/meg -v -c 100 / $WORKSPACE/probing/http-$OUTPUT.txt $WORKSPACE/fingerprint/responses/",
                 "output_path": "$WORKSPACE/fingerprint/responses/index",
+                "std_path": "",
+            },
+            {
+                "banner": "Get success page",
+                "cmd": "cat $WORKSPACE/fingerprint/responses/index | grep '200 OK' | awk '{print $2}' | tee $WORKSPACE/fingerprint/success-http-$OUTPUT.txt",
+                "output_path": "$WORKSPACE/fingerprint/success-http-$OUTPUT.txt",
                 "std_path": "",
             },
             {
                 "requirement": "$WORKSPACE/fingerprint/responses/index",
                 "banner": "rgf extract all",
-                "cmd": "$GO_PATH/rgf -dir $WORKSPACE/fingerprint/responses/ | tee $WORKSPACE/fingerprint/rgf-all-$OUTPUT.txt",
+                "cmd": "$GO_PATH/rgf -dirir $WORKSPACE/fingerprint/responses/ | tee $WORKSPACE/fingerprint/rgf-all-$OUTPUT.txt",
                 "output_path": "$WORKSPACE/fingerprint/rgf-all-$OUTPUT.txt",
                 "std_path": "",
             },
@@ -273,13 +224,13 @@ class ScreenShot:
         'general': [
             {
                 "banner": "aquatone",
-                "cmd": f"cat $WORKSPACE/probing/http-$OUTPUT.txt | $GO_PATH/aquatone -scan-timeout 1000 -threads {threads} -out $WORKSPACE/screenshot/$OUTPUT-aquatone",
+                "cmd": f"cat $WORKSPACE/fingerprint/success-http-$OUTPUT.txt | $GO_PATH/aquatone -threads {threads} -out $WORKSPACE/screenshot/$OUTPUT-aquatone",
                 "output_path": "$WORKSPACE/screenshot/$OUTPUT-aquatone/aquatone_report.html",
                 "std_path": "$WORKSPACE/screenshot/std-$OUTPUT-aquatone.std"
             },
             {
                 "banner": "gowitness",
-                "cmd": f"$GO_PATH/gowitness file -s $WORKSPACE/probing/http-$OUTPUT.txt -t {threads}  --log-level fatal --destination  $WORKSPACE/screenshot/raw-gowitness/ --db $WORKSPACE/screenshot/gowitness.db",
+                "cmd": f"$GO_PATH/gowitness file -s $WORKSPACE/fingerprint/success-http-$OUTPUT.txt -t {threads}  --log-level fatal --destination  $WORKSPACE/screenshot/raw-gowitness/ --db $WORKSPACE/screenshot/gowitness.db",
                 "output_path": "$WORKSPACE/screenshot/gowitness.db",
                 "std_path": "",
             },
@@ -309,7 +260,7 @@ class StoScan:
         },
         {
             "path": "$WORKSPACE/stoscan/all-dig-info.txt",
-            "type": "bash"
+            "type": "final, bash"
         },
     ]
     logs = []
@@ -317,7 +268,7 @@ class StoScan:
         'general': [
             {
                 "banner": "tko-subs",
-                "cmd": "$GO_PATH/tko-subs -data $DATA_PATH/providers-data.csv -domains $WORKSPACE/probing/domains-$OUTPUT.txt -output $WORKSPACE/stoscan/takeover-$TARGET-tko-subs.txt",
+                "cmd": "$GO_PATH/tko-subs -data $DATA_PATH/providers-data.csv -domains $WORKSPACE/probing/resolved-$OUTPUT.txt -output $WORKSPACE/stoscan/takeover-$TARGET-tko-subs.txt",
                 "output_path": "$WORKSPACE/stoscan/takeover-$TARGET-tko-subs.txt",
                 "std_path": "$WORKSPACE/stoscan/std-takeover-$TARGET-tko-subs.std",
             },
@@ -326,10 +277,9 @@ class StoScan:
                 "cmd": "$GO_PATH/subjack -v -m -c $DATA_PATH/fingerprints.json -w $WORKSPACE/probing/domains-$OUTPUT.txt -t 100 -timeout 30 -o $WORKSPACE/stoscan/takeover-$TARGET-subjack.txt -ssl",
                 "output_path": "$WORKSPACE/stoscan/takeover-$TARGET-subjack.txt",
                 "std_path": "$WORKSPACE/stoscan/std-takeover-$TARGET-subjack.std"
-            },
-            {
+            },            {
                 "banner": "massdns resolve IP",
-                "cmd": "cat $WORKSPACE/probing/resolved-$OUTPUT.txt | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o F -w $WORKSPACE/stoscan/all-dig-info.txt",
+                "cmd": "cat $WORKSPACE/probing/raw-all-$OUTPUT.txt | $PLUGINS_PATH/massdns/bin/massdns -r $PLUGINS_PATH/massdns/lists/resolvers.txt -q -t A -o F -w $WORKSPACE/stoscan/all-dig-info.txt",
                 "output_path": "$WORKSPACE/stoscan/all-dig-info.txt",
                 "std_path": "",
                 "waiting": "first",
@@ -339,6 +289,13 @@ class StoScan:
                 "banner": "rgf extract CNAME",
                 "cmd": "$GO_PATH/rgf -file $WORKSPACE/stoscan/all-dig-info.txt cname | tee $WORKSPACE/stoscan/have-cname.txt",
                 "output_path": "$WORKSPACE/stoscan/have-cname.txt",
+                "std_path": "",
+            },
+            {
+                "requirement": "$WORKSPACE/stoscan/all-dig-info.txt",
+                "banner": "rgf extract Azure",
+                "cmd": "$GO_PATH/rgf -file $WORKSPACE/stoscan/all-dig-info.txt azure | tee $WORKSPACE/stoscan/azure-sto.txt",
+                "output_path": "$WORKSPACE/stoscan/azure-sto.txt",
                 "std_path": "",
             },
         ],
@@ -566,7 +523,7 @@ class DirbScan:
             },
             {
                 "banner": "ffuf dirscan",
-                "cmd": "$ALIAS_PATH/dirscan -i [[0]] -w '$DATA_PATH/wordlists/content/top10000.txt' -o '$WORKSPACE/directory/raw' -p '$GO_PATH' -s '$WORKSPACE/directory'",
+                "cmd": "$ALIAS_PATH/dirscan -i [[0]] -w '$DATA_PATH/wordlists/content/quick.txt' -o '$WORKSPACE/directory/raw' -p '$GO_PATH' -s '$WORKSPACE/directory'",
                 "output_path": "",
                 "std_path": "",
                 "chunk": 5,
@@ -576,7 +533,7 @@ class DirbScan:
             {
                 "requirement": "$WORKSPACE/probing/http-$OUTPUT.txt",
                 "banner": "csv beautify",
-                "cmd": "cat $WORKSPACE/directory/directory-summary.csv | csvlook --max-column-width 100 | tee $WORKSPACE/directory/beautify-summary.csv",
+                "cmd": "cat $WORKSPACE/directory/raw/* | csvcut -c 2-6 | csvlook | tee $WORKSPACE/directory/beautify-summary.csv",
                 "output_path": "",
                 "std_path": "",
                 "waiting": "last",

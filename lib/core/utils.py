@@ -126,7 +126,7 @@ def print_elapsed(options):
 def print_debug(text, options=None):
     if not options:
         return
-    if options.get('DEBUG'):
+    if options.get('DEBUG', False) or options.get('debug', False):
         print(G + "#" * 20 + GR)
         print(text)
         print("#" * 20)

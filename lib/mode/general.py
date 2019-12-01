@@ -4,8 +4,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from lib.core import utils
 
 from modules import subdomain
-from modules import vhosts
-from modules import permutation
 from modules import probing
 from modules import formatting
 from modules import fingerprint
@@ -33,8 +31,6 @@ def handle(options):
 
 def single_handle(options):
     subdomain.SubdomainScanning(options)
-    # vhosts.VhostScan(options)
-    # permutation.PermutationScan(options)
     probing.Probing(options)
     formatting.Formatting(options)
     corscan.CORScan(options)

@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+import os
+import sys
+import time
+import argparse
+import urllib.parse
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
+from core import utils
+
+
+# $ALIAS_PATH/paramfinding -i '[[0]]' -o '$WORKSPACE/params/raw' -s '$WORKSPACE/params/summary-$OUTPUT.txt' -p '$PLUGINS_PATH'
+def routine(args):
+    target = args.input
+    output = args.output
+    strip_target = utils.strip_slash(target)
+    plugin = args.plugin
+    summary = args.summary
+
+    cmd = f'python3 {plugin}/Arjun/arjun.py -t 40 -f {plugin}/Arjun/db/params.txt --get -u {target} > {output}/{strip_target}.txt'
+    utils.print_info(f"Execute: {cmd}")
+    os.system(cmd)
+    contents = utils.just_read(f'{output}/{strip_target}.txt')
+    if 'parameter found:' in contents or 'potential parameter:' in contents:
+        params = []
+        for line in contents.split("\n"):
+            if 'Valid parameter found: ' in line:
+                params.append(line.split(': ')[1])
+            if 'potential parameter: ' in line:
+                params.append(line.split(': ')[1])
+        data = f"{target} | params: " + ", ".join(list(set(params))) + "\n"
+        # append to summary
+        utils.just_append(summary, data)
+        time.sleep(0.3)
+
+
+parser = argparse.ArgumentParser(description="LinkFinder alias")
+parser.add_argument('-i', '--input', action='store', dest='input', help='input')
+parser.add_argument('-o', '--output', action='store', dest='output', help='output')
+parser.add_argument('-p', '--plugin', action='store', dest='plugin', help='plugin')
+parser.add_argument('-s', '--summary', action='store',
+                    dest='summary', help='summary')
+args = parser.parse_args()
+routine(args)
+

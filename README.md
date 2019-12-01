@@ -25,6 +25,10 @@ cd Osmedeus
 
 This install only focus on Kali linux, check more install on [Usage page](https://j3ssie.github.io/Osmedeus/installation/)
 
+## Using Docker
+
+Check out [docker-osmedeus](https://github.com/mablanco/docker-osmedeus) by [mabnavarrete](https://twitter.com/mabnavarrete)
+
 ## How to use
 
 If you have no idea what are you doing just type the command below or check out the [Advanced Usage](https://j3ssie.github.io/Osmedeus/advanced/)
@@ -64,10 +68,6 @@ If you love my tool and would like to support my work. [Become a backer](https:/
 ## Demo
 [![asciicast](https://asciinema.org/a/266599.svg)](https://asciinema.org/a/266599)
 
-![Reports](imgs/osmedeus-report.png)
-
-![Slack Noti](imgs/slack_noti.png)
-
 ![Web UI 1](imgs/ui-1.png)
 
 ![Web UI 3](imgs/ui-3.png)
@@ -89,8 +89,6 @@ If you love my tool and would like to support my work. [Become a backer](https:/
 ./osmedeus.py -m portscan -i "1.2.3.4/24"
 
 ./osmedeus.py -m "portscan,vulnscan" -i "1.2.3.4/24" -w result_folder
-./osmedeus.py -m "git" -i 'repo:https://github.com/foo/bar'
-./osmedeus.py -m "git" -i 'user:sample'
 
 # direct list mode examples
 ./osmedeus.py -m portscan -I list_of_targets.txt
@@ -98,13 +96,18 @@ If you love my tool and would like to support my work. [Become a backer](https:/
 ./osmedeus.py -m screen -I list_of_targets.txt -w result_folder
 
 # report mode
-./osemdeus.py -t example.com --report list
-./osemdeus.py -t example.com --report export
-./osemdeus.py -t example.com --report sum
-./osemdeus.py -t example.com --report short
-./osemdeus.py -t example.com --report full
+./osmedeus.py -t example.com --report list
+./osmedeus.py -t example.com --report export
+./osmedeus.py -t example.com --report sum
+./osmedeus.py -t example.com --report short
+./osmedeus.py -t example.com --report full
 
 ```
+
+## What to do next after do recon?
+
+Check out my scanner [Jaeles](https://github.com/jaeles-project/jaeles).
+
 
 ## Disclaimer
 
