@@ -151,7 +151,7 @@ GO_BIN=$(which go)
 # Install go stuff
 ##
 install_banner "subfinder"
-$GO_BIN get -u github.com/subfinder/subfinder
+$GO_BIN get -u github.com/projectdiscovery/subfinder/cmd/subfinder
 install_banner "gobuster"
 $GO_BIN get -u github.com/OJ/gobuster
 install_banner "aquatone"
