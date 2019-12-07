@@ -113,7 +113,7 @@ def parsing_config(args):
 
     # Target stuff
     target = args.target if args.target else None
-    target_list = args.targetlist if args.targetlist else False
+    target_list = args.targetlist if args.targetlist else None
     target = _verify_target(target, target_list)
 
     # get direct input as single or a file
@@ -132,19 +132,13 @@ def parsing_config(args):
 
     # parsing modules
     modules = args.modules if args.modules else None
+    exclude = args.exclude if args.exclude else ''
 
+    localhost = args.localhost if args.localhost else False
     report = args.report if args.report else None
-
     # turn on default
-    try:
-        slack = False if args.noslack else True
-        monitor = False if args.nomonitor else True
-        localhost = args.localhost if args.localhost else False
-    # catch config different from private version
-    except:
-        slack = True if args.slack else False
-        monitor = False
-        localhost = True
+    slack = False if args.noslack else True
+    monitor = False if args.nomonitor else True
 
     if modules:
         if direct_input_list:
@@ -175,6 +169,7 @@ def parsing_config(args):
         'speed': speed,
         'workspace': workspace,
         'modules': modules,
+        'exclude': exclude,
         'forced': forced,
         'debug': debug,
         'remote_api': remote.strip('/'),

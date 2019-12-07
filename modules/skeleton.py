@@ -24,6 +24,10 @@ class Skeleton(object):
         self.module_name = self.__class__.__name__
         self.delay = 30
         self.options['CURRENT_MODULE'] = str(self.module_name)
+        # check if you want to ignore a module or not
+        if speed.excluded(self.options):
+            utils.print_info("Detect Ignore module: {0}".format(self.module_name))
+            return
         # check speed of the modules
         self.options['CURRENT_SPEED'] = speed.parse_speed(self.options)
         # check report file here

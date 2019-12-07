@@ -81,8 +81,11 @@ If you love my tool and would like to support my work. [Become a backer](https:/
 ./osmedeus.py -t example.com
 ./osmedeus.py -T list_of_target.txt
 
-# normal routine but slow speed on subdomain module
+# normal routine but slow speed on all moddule
 ./osmedeus.py -t example.com --slow 'all'
+
+# normal routine but exclude some modules
+./osmedeus.py -t example.com -x 'linkfinding,dirb'
 
 # direct mode examples
 ./osmedeus.py -m subdomain -t example.com

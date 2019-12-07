@@ -75,6 +75,8 @@ def main():
                         help='config file')
     parser.add_argument('-m', '--modules', action='store',
                         dest='modules', help='specific modules to action')
+    parser.add_argument('-x', '--exclude', action='store',
+                        dest='exclude', help='ignore modules (eg: -x "linkfinding")')
 
     # input
     parser.add_argument('-i', '--input', action='store',
