@@ -136,9 +136,9 @@ def parsing_config(args):
 
     localhost = args.localhost if args.localhost else False
     report = args.report if args.report else None
-    # turn on default
-    slack = False if args.noslack else True
-    monitor = False if args.nomonitor else True
+    # turn off by default
+    slack = True if args.slack else False
+    monitor = True if args.monitor else False
 
     if modules:
         if direct_input_list:
