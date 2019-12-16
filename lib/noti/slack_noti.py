@@ -41,10 +41,8 @@ def slack_monitor(options, filename, monitor_type='new'):
 
 # shortcut for sending noti to slack
 def slack_notification(noti_type, options, output=None):
-    utils.print_info(f"Sending {noti_type} notification to slack")
     if not options.get('SLACK'):
         return
-
     if output and 'report' in noti_type:
         if type(output) == list:
             output = list(set(output))
@@ -67,7 +65,6 @@ def slack_noti(options, noti_type):
         else:
             slack_status(options)
     except:
-        utils.print_bad("Fail to send noti to slack")
         pass
 
 
@@ -99,6 +96,7 @@ def slack_status(options):
 
 
 def slack_done(options):
+    utils.print_info(f"Sending {noti_type} notification to slack")
     channel = options.get('STATUS_CHANNEL')
     module = options.get('CURRENT_MODULE')
     target = options.get('TARGET')
