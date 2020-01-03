@@ -186,6 +186,8 @@ install_banner "filter-resolved"
 $GO_BIN get -u github.com/tomnomnom/hacks/filter-resolved
 install_banner "ffuf"
 $GO_BIN get -u github.com/ffuf/ffuf
+install_banner "metabigor"
+$GO_BIN get -u github.com/j3ssie/metabigor
 install_banner "rgf"
 $GO_BIN get -u github.com/j3ssie/rgf
 install_banner "jaeles"
@@ -239,9 +241,9 @@ cp -R $PLUGINS_PATH/rgf/signatures/* ~/.rgf/
 # install_banner "testssl.sh"
 # git clone https://github.com/drwetter/testssl.sh 2>/dev/null
 
-install_banner "Metabigor"
-git clone https://github.com/j3ssie/Metabigor 2>/dev/null
-pip3 install -r Metabigor/requirements.txt
+# install_banner "Metabigor"
+# git clone https://github.com/j3ssie/Metabigor 2>/dev/null
+# pip3 install -r Metabigor/requirements.txt
 
 install_banner "dirsearch"
 git clone https://github.com/maurosoria/dirsearch 2>/dev/null
