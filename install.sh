@@ -190,14 +190,14 @@ install_banner "metabigor"
 $GO_BIN get -u github.com/j3ssie/metabigor
 install_banner "rgf"
 $GO_BIN get -u github.com/j3ssie/rgf
-install_banner "jaeles"
-$GO_BIN get -u github.com/jaeles-project/jaeles
 install_banner "go cli-utils"
 $GO_BIN get -u github.com/j3ssie/go-auxs/getIP
 $GO_BIN get -u github.com/j3ssie/go-auxs/just-resolved
 
 install_banner "amass"
-export GO111MODULE=on; $GO_BIN get -u github.com/OWASP/Amass/v3/... 2>/dev/null
+GO111MODULE=on $GO_BIN get -u github.com/OWASP/Amass/v3/... 2>/dev/null
+install_banner "jaeles"
+GO111MODULE=on $GO_BIN get -u github.com/jaeles-project/jaeles 2>/dev/null
 
 cp $GO_DIR/* "$PLUGINS_PATH/go/" 2>/dev/null
 # install_banner "observatory"
