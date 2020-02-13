@@ -11,7 +11,7 @@ class VulnScan(skeleton.Skeleton):
     """docstring for VulnScan"""
 
     def banner(self):
-        utils.print_banner("Vulnerabily Scanning")
+        utils.print_banner("Vulnerability Scanning")
         utils.make_directory(self.options['WORKSPACE'] + '/vulnscan')
         utils.make_directory(
             self.options['WORKSPACE'] + '/vulnscan/details')
