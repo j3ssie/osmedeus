@@ -188,6 +188,7 @@ install_banner "ffuf"
 $GO_BIN get -u github.com/ffuf/ffuf
 install_banner "metabigor"
 $GO_BIN get -u github.com/j3ssie/metabigor
+$GO_BIN get -u github.com/jaeles-project/gospider
 install_banner "rgf"
 $GO_BIN get -u github.com/j3ssie/rgf
 install_banner "go cli-utils"
@@ -241,23 +242,11 @@ cp -R $PLUGINS_PATH/rgf/signatures/* ~/.rgf/
 # install_banner "testssl.sh"
 # git clone https://github.com/drwetter/testssl.sh 2>/dev/null
 
-# install_banner "Metabigor"
-# git clone https://github.com/j3ssie/Metabigor 2>/dev/null
-# pip3 install -r Metabigor/requirements.txt
-
-install_banner "dirsearch"
-git clone https://github.com/maurosoria/dirsearch 2>/dev/null
 
 install_banner "Arjun"
 git clone https://github.com/s0md3v/Arjun 2>/dev/null
 
 install_banner "CORStest"
 git clone https://github.com/RUB-NDS/CORStest 2>/dev/null
-
-install_banner "LinkFinder"
-git clone https://github.com/GerbenJavado/LinkFinder.git 2>/dev/null
-pip3 install -r LinkFinder/requirements.txt
-cd $PLUGINS_PATH/LinkFinder/
-python3 setup.py install
 
 echo -e "\033[1;32m[+] Installing done... \033[1;37m"

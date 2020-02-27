@@ -309,43 +309,18 @@ class LinkFinding:
             "type": "bash",
             "note": "final",
         },
-        {
-            "path": "$WORKSPACE/links/raw-wayback-$OUTPUT.txt",
-            "type": "bash",
-            "note": "final",
-        }
     ]
     logs = []
     commands = {
         'general': [
             {
-                "requirement": "$WORKSPACE/probing/resolved-$OUTPUT.txt",
-                "banner": "waybackurls",
-                "cmd": "cat $WORKSPACE/probing/resolved-$OUTPUT.txt | $GO_PATH/waybackurls | tee $WORKSPACE/links/raw-wayback-$OUTPUT.txt",
-                "output_path": "$WORKSPACE/links/raw-wayback-$OUTPUT.txt",
-                "std_path": "$WORKSPACE/links/std-wayback-$OUTPUT.std",
-                "post_run": "clean_waybackurls",
-                "cleaned_output": "$WORKSPACE/links/waybackurls-$OUTPUT.txt",
-            },
-            {
                 "requirement": "$WORKSPACE/probing/http-$OUTPUT.txt",
-                "pre_run": "get_domains",
-                "banner": "linkfinder",
-                "cmd": "$ALIAS_PATH/linkfinding -i '[[0]]' -o '$WORKSPACE/links/raw/' -s '$WORKSPACE/links/summary-$OUTPUT.txt' -p '$PLUGINS_PATH'",
-                "output_path": "$WORKSPACE/links/raw/[[0]]-$OUTPUT.txt",
-                "std_path": "",
-                "chunk": 5,
-                "cmd_type": "list",
-                "resources": "l0|$WORKSPACE/probing/http-$OUTPUT.txt",
-                "post_run": "clean_linkfinder",
-                "cleaned_output": "$WORKSPACE/links/summary-$OUTPUT.txt",
+                "banner": "waybackurls",
+                "cmd": "$GO_PATH/gospider -S $WORKSPACE/probing/http-$OUTPUT.txt --depth 3 --no-redirect -t 50 -c 3 -o $WORKSPACE/links/raw/",
             },
             {
-                "requirement": "$WORKSPACE/links/raw-wayback-$OUTPUT.txt",
-                "banner": "Formatting Input",
-                "cmd": "cat $WORKSPACE/links/raw-wayback-$OUTPUT.txt | unfurl -u format %d%p",
-                "output_path": "$WORKSPACE/links/$OUTPUT-paths.txt",
-                "std_path": "",
+                "banner": "Joining Input",
+                "cmd": "cat $WORKSPACE/links/raw/* | sort -u -r > $WORKSPACE/links/summary-$OUTPUT.txt",
                 "waiting": "last",
             },
         ],
