@@ -230,7 +230,7 @@ chmod +x $PLUGINS_PATH/findomain
 ##
 
 install_banner "truffleHog"
-pip install truffleHog
+pip3 install truffleHog
 
 cd $PLUGINS_PATH
 
