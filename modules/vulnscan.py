@@ -80,7 +80,7 @@ class VulnScan(skeleton.Skeleton):
 
         command = utils.resolve_command(self.options, {
             "banner": "gowitness gen report",
-            "cmd": "$GO_PATH/gowitness generate -n $WORKSPACE/vulnscan/screenshot/$OUTPUT-raw-gowitness.html --destination $WORKSPACE/vulnscan/screenshot/raw-gowitness/ --db $WORKSPACE/vulnscan/screenshot/gowitness.db",
+            "cmd": "$GO_PATH/gowitness report generate -n $WORKSPACE/vulnscan/screenshot/$OUTPUT-raw-gowitness.html --destination $WORKSPACE/vulnscan/screenshot/raw-gowitness/ --db $WORKSPACE/vulnscan/screenshot/gowitness.db",
             "output_path": "$WORKSPACE/vulnscan/screenshot/$OUTPUT-raw-gowitness.html",
         })
         execute.send_cmd(self.options, command)
