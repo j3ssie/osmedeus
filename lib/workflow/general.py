@@ -198,7 +198,7 @@ class Fingerprint:
             {
                 "requirement": "$WORKSPACE/fingerprint/responses/index",
                 "banner": "rgf extract all",
-                "cmd": "$GO_PATH/rgf -dirir $WORKSPACE/fingerprint/responses/ | tee $WORKSPACE/fingerprint/rgf-all-$OUTPUT.txt",
+                "cmd": "$GO_PATH/rgf -dir $WORKSPACE/fingerprint/responses/ | tee $WORKSPACE/fingerprint/rgf-all-$OUTPUT.txt",
                 "output_path": "$WORKSPACE/fingerprint/rgf-all-$OUTPUT.txt",
                 "std_path": "",
             },

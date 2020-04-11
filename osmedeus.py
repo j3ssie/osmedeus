@@ -138,6 +138,9 @@ def main():
     parser.add_argument('--slack', action='store_true',
                         help='Turn on slack notification')
 
+    parser.add_argument('--telegram', action='store_true',
+                        help='Turn on telegram notification')
+
     parser.add_argument('-hh', '--helps', dest='helps',
                         action='store_true', help='Display more help messaage')
 

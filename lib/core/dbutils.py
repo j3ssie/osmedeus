@@ -122,6 +122,19 @@ def gen_default_config(config_path):
     configs.set('Slack', 'stds_channel', stds_channel)
     configs.set('Slack', 'verbose_report_channel', verbose_report_channel)
 
+    telegram_bot_token = utils.get_enviroment("TELEGRAM_BOT_TOKEN")
+    telegram_log_channel = utils.get_enviroment("TELEGRAM_LOG_CHANNEL")
+    telegram_status_channel = utils.get_enviroment("TELEGRAM_STATUS_CHANNEL")
+    telegram_report_channel = utils.get_enviroment("TELEGRAM_REPORT_CHANNEL")
+    telegram_stds_channel = utils.get_enviroment("TELEGRAM_STDS_CHANNEL")
+    telegram_verbose_report_channel = utils.get_enviroment("TELEGRAM_VERBOSE_REPORT_CHANNEL")
+    configs.set('Telegram', 'telegram_bot_token', telegram_bot_token)
+    configs.set('Telegram', 'telegram_log_channel', telegram_log_channel)
+    configs.set('Telegram', 'telegram_status_channel', telegram_status_channel)
+    configs.set('Telegram', 'telegram_report_channel', telegram_report_channel)
+    configs.set('Telegram', 'telegram_stds_channel', telegram_stds_channel)
+    configs.set('Telegram', 'telegram_verbose_report_channel', telegram_verbose_report_channel)
+
     # monitor mode
     backups = utils.join_path(utils.get_parent(
         utils.DEAFULT_CONFIG_PATH), 'backups')

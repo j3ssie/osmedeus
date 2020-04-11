@@ -14,3 +14,5 @@ ansi2html==1.5.2
 tabulate==0.8.2
 slackclient==2.1.0
 csvkit==1.0.4
+python-telegram-bot==12.6.1
+emoji==0.5.4

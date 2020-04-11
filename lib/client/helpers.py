@@ -44,6 +44,7 @@ def custom_help_():
 ===========
 python3 osmedeus.py -t <your_target>
 python3 osmedeus.py -t <your_target> --slack --monitor
+python3 osmedeus.py -t <your_target> --telegram
 python3 osmedeus.py -T <list_of_targets>
 python3 osmedeus.py -m <module> [-i <input>|-I <input_file>] [-t workspace_name]
 python3 osmedeus.py --report <mode> -t <workspace> [-m <module>]
@@ -89,6 +90,7 @@ python3 osmedeus.py -w sample2 -m dirb -I /tmp/list_of_hosts.txt
                       Only running slow mode in subdomain module      
 
 --slack               Enable slack notification
+--telegram            Enable telegram notification
 --monitor             Enable monitor new assets
 --debug               Just for debug purpose
             '''.format(G, GR, B))

@@ -138,6 +138,7 @@ def parsing_config(args):
     report = args.report if args.report else None
     # turn off by default
     slack = True if args.slack else False
+    telegram = True if args.telegram else False
     monitor = True if args.monitor else False
 
     if modules:
@@ -166,6 +167,7 @@ def parsing_config(args):
         'target_list': target_list,
         'mode': mode,
         'slack': slack,
+        'telegram': telegram,
         'speed': speed,
         'workspace': workspace,
         'modules': modules,

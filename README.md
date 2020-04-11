@@ -57,6 +57,7 @@ If you have no idea what are you doing just type the command below or check out 
 - [x] React [Web UI](https://j3ssie.github.io/Osmedeus/web-ui/).
 - [x] Support Continuous Scan.
 - [x] Slack notifications.
+- [x] Telegram notifications.
 - [x] Easily view [report](https://j3ssie.github.io/Osmedeus/report/) from commnad line.
 
 Check this [Documentation](https://j3ssie.github.io/Osmedeus/modules/) for more detail about each module.

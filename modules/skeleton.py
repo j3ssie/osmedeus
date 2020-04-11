@@ -5,7 +5,7 @@ from lib.sender import polling
 from lib.sender import report
 from lib.sender import summary
 from lib.monitor import compare
-from lib.noti import slack_noti
+from lib.noti import slack_noti, telegram_noti
 
 
 class Skeleton(object):
@@ -36,10 +36,12 @@ class Skeleton(object):
             utils.print_line()
             return
         slack_noti.slack_notification('status', self.options)
+        telegram_noti.telegram_notification('status', self.options)
         self.routine()
         # some noti here
         self.conclude()
         slack_noti.slack_notification('done', self.options)
+        telegram_noti.telegram_notification('done', self.options)
         self.additional_routine()
 
     def resume(self):
@@ -121,6 +123,11 @@ class Skeleton(object):
         if self.options.get('SLACK'):
             slack_report = report.get_custom_report(self.options, grep_string='slack')
             slack_noti.slack_notification(
+                'report', self.options, output=slack_report)
+
+        if self.options.get('TELEGRAM'):
+            slack_report = report.get_custom_report(self.options, grep_string='slack')
+            telegram_noti.telegram_notification(
                 'report', self.options, output=slack_report)
 
         if self.options.get('MONITOR'):
