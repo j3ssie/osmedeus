@@ -57,7 +57,6 @@ def telegram_status(options):
 
 
 def telegram_done(options):
-    utils.print_info(f"Sending {noti_type} notification to telegram")
     channel = options.get('TELEGRAM_STATUS_CHANNEL')
     module = options.get('CURRENT_MODULE')
     target = options.get('TARGET')
@@ -79,6 +78,8 @@ def telegram_file(options, filename, token=None):
         channel = options.get('TELEGRAM_REPORT_CHANNEL')
         if channel is None:
             return
+        
+        emoji = get_emoji()
 
         target = options.get('TARGET')
         module = options.get('CURRENT_MODULE')
@@ -86,7 +87,7 @@ def telegram_file(options, filename, token=None):
 
         client.send_document(
             chat_id=channel,
-            document=utils.just_read(filename=filename),
+            document=open(filename, 'rb'),
             caption=emojize(message, use_aliases=True),
             parse_mode=telegram.ParseMode.MARKDOWN
         )
