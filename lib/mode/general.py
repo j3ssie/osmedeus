@@ -32,7 +32,7 @@ def handle(options):
 def single_handle(options):
     subdomain.SubdomainScanning(options)
     probing.Probing(options)
-    formatting.Formatting(options)
+    # formatting.Formatting(options)
     corscan.CORScan(options)
     fingerprint.Fingerprint(options)
     stoscan.StoScan(options)
@@ -40,5 +40,5 @@ def single_handle(options):
     linkfinding.LinkFinding(options)
     ipspace.IPSpace(options)
     portscan.PortScan(options)
-    vulnscan.VulnScan(options)
+    # vulnscan.VulnScan(options)
     dirbscan.DirbScan(options)

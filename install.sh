@@ -19,8 +19,6 @@ install_banner "git, nmap, masscan, chromium, npm, golang"
 [ -x "$(command -v nmap)" ] || sudo $PACKGE_MANAGER install nmap -y 2>/dev/null
 [ -x "$(command -v masscan)" ] || sudo $PACKGE_MANAGER install masscan -y 2>/dev/null
 [ -x "$(command -v chromium)" ] || sudo $PACKGE_MANAGER install chromium -y 2>/dev/null
-[ -x "$(command -v npm)" ] || sudo $PACKGE_MANAGER install npm -y 2>/dev/null
-[ -x "$(command -v go)" ] || sudo $PACKGE_MANAGER install golang -y 2>/dev/null
 [ -x "$(command -v make)" ] || sudo $PACKGE_MANAGER install build-essential -y 2>/dev/null
 [ -x "$(command -v csvlook)" ] || sudo $PACKGE_MANAGER install csvkit -y 2>/dev/null
 [ -x "$(command -v rg)" ] || sudo $PACKGE_MANAGER install ripgrep -y 2>/dev/null
@@ -141,11 +139,14 @@ PS="$ "
 source $DEFAULT_SHELL
 
 # update golang version
-install_banner "Update Golang version"
-wget -qO- https://raw.githubusercontent.com/udhos/update-golang/master/update-golang.sh | bash 2>/dev/null
-
-GO_BIN=$(which go)
-[[ -f /usr/local/go/bin/go ]] && GO_BIN=/usr/local/go/bin/go
+install_banner "Install Golang latest version"
+curl -sL https://raw.githubusercontent.com/kerolloz/go-installer/master/go.sh | bash 2>/dev/null
+GO_BIN="$HOME/.go/bin/go"
+# in case the script fail
+[[ -f $GO_BIN ]] || GO_BIN=$(which go)
+echo -e "\033[1;32m[+] Detected go binary: $GO_BIN \033[0m"
+[[ -d $GO_DIR ]] || GO_BIN=$GOPATH/bin
+echo -e "\033[1;32m[+] Detected go tools: $GO_DIR \033[0m"
 
 ##
 # Install go stuff
@@ -189,10 +190,7 @@ $GO_BIN get -u github.com/ffuf/ffuf
 install_banner "metabigor"
 $GO_BIN get -u github.com/j3ssie/metabigor
 $GO_BIN get -u github.com/jaeles-project/gospider
-install_banner "rgf"
-$GO_BIN get -u github.com/j3ssie/rgf
 install_banner "go cli-utils"
-$GO_BIN get -u github.com/j3ssie/go-auxs/getIP
 $GO_BIN get -u github.com/j3ssie/go-auxs/just-resolved
 
 install_banner "amass"
@@ -233,11 +231,6 @@ install_banner "truffleHog"
 pip3 install truffleHog
 
 cd $PLUGINS_PATH
-
-install_banner "rgf signatures"
-git clone https://github.com/j3ssie/rgf 2>/dev/null
-mkdir -p ~/.rgf/ 2>/dev/null
-cp -R $PLUGINS_PATH/rgf/signatures/* ~/.rgf/
 
 # install_banner "testssl.sh"
 # git clone https://github.com/drwetter/testssl.sh 2>/dev/null

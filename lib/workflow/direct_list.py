@@ -134,20 +134,6 @@ class StoScan:
                 "std_path": "",
                 "waiting": "first",
             },
-            {
-                "requirement": "$WORKSPACE/stoscan/all-dig-info.txt",
-                "banner": "rgf extract CNAME",
-                "cmd": "$GO_PATH/rgf -file $WORKSPACE/stoscan/all-dig-info.txt cname | tee $WORKSPACE/stoscan/have-cname.txt",
-                "output_path": "$WORKSPACE/stoscan/have-cname.txt",
-                "std_path": "",
-            },
-            {
-                "requirement": "$WORKSPACE/stoscan/all-dig-info.txt",
-                "banner": "rgf extract Azure",
-                "cmd": "$GO_PATH/rgf -file $WORKSPACE/stoscan/all-dig-info.txt azure | tee $WORKSPACE/stoscan/azure-sto.txt",
-                "output_path": "$WORKSPACE/stoscan/azure-sto.txt",
-                "std_path": "",
-            },
         ],
     }
 
