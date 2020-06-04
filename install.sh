@@ -194,9 +194,9 @@ install_banner "go cli-utils"
 $GO_BIN get -u github.com/j3ssie/go-auxs/just-resolved
 
 install_banner "amass"
-GO111MODULE=on $GO_BIN get -u github.com/OWASP/Amass/v3/... 2>/dev/null
+GO111MODULE=on $GO_BIN get github.com/OWASP/Amass/v3/... 2>/dev/null
 install_banner "jaeles"
-GO111MODULE=on $GO_BIN get -u github.com/jaeles-project/jaeles 2>/dev/null
+GO111MODULE=on $GO_BIN get github.com/jaeles-project/jaeles 2>/dev/null
 
 cp $GO_DIR/* "$PLUGINS_PATH/go/" 2>/dev/null
 # install_banner "observatory"
