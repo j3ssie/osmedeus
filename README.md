@@ -25,7 +25,7 @@ cd Osmedeus
 
 This install only focus on Kali linux, check more install on [Usage page](https://j3ssie.github.io/Osmedeus/installation/).
 
-**NOTE:** You might need to do `sudo su` before install or using this otherwise you might get problem with dependency problems.
+**NOTE:** You might need to do `sudo su` before install or using this otherwise you might get issues with dependency problems.
 
 ## Using Docker
 
