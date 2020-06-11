@@ -1,5 +1,5 @@
 bs4==0.0.1
-Django==2.2.10
+Django==2.2.13
 django-cors-headers==3.0.2
 django-filter==2.1.0
 djangorestframework==3.10.3
