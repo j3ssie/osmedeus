@@ -140,12 +140,12 @@ source $DEFAULT_SHELL
 
 # update golang version
 install_banner "Install Golang latest version"
-curl -sL https://raw.githubusercontent.com/kerolloz/go-installer/master/go.sh | bash 2>/dev/null
+wget -q -O - https://raw.githubusercontent.com/canha/golang-tools-install-script/master/goinstall.sh | bash 2>&1 >/dev/null
 GO_BIN="$HOME/.go/bin/go"
 # in case the script fail
 [[ -f $GO_BIN ]] || GO_BIN=$(which go)
 echo -e "\033[1;32m[+] Detected go binary: $GO_BIN \033[0m"
-[[ -d $GO_DIR ]] || GO_BIN=$GOPATH/bin
+[[ -d $GO_DIR ]] || GO_DIR=$GOPATH/bin
 echo -e "\033[1;32m[+] Detected go tools: $GO_DIR \033[0m"
 
 ##
