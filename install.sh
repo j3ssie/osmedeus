@@ -166,52 +166,54 @@ cd $CWD
 ##
 # Install go stuff
 ##
-install_banner "subfinder"
-$GO_BIN get -u github.com/projectdiscovery/subfinder/cmd/subfinder
 install_banner "gobuster"
-$GO_BIN get -u github.com/OJ/gobuster
+$GO_BIN get -ldflags "-s -w" -u github.com/OJ/gobuster
 install_banner "aquatone"
-$GO_BIN get -u github.com/michenriksen/aquatone
+$GO_BIN get -ldflags "-s -w" -u github.com/michenriksen/aquatone
 install_banner "gitrob"
-$GO_BIN get -u github.com/michenriksen/gitrob
+$GO_BIN get -ldflags "-s -w" -u github.com/michenriksen/gitrob
 install_banner "subjack"
-$GO_BIN get -u github.com/haccer/subjack
+$GO_BIN get -ldflags "-s -w" -u github.com/haccer/subjack
 install_banner "tko-subs"
-$GO_BIN get -u github.com/anshumanbh/tko-subs
+$GO_BIN get -ldflags "-s -w" -u github.com/anshumanbh/tko-subs
 install_banner "subzy"
-$GO_BIN get -u github.com/lukasikic/subzy
+$GO_BIN get -ldflags "-s -w" -u github.com/lukasikic/subzy
 install_banner "goaltdns"
-$GO_BIN get -u github.com/subfinder/goaltdns
+$GO_BIN get -ldflags "-s -w" -u github.com/subfinder/goaltdns
 install_banner "gitleaks"
-$GO_BIN get -u github.com/zricethezav/gitleaks
+$GO_BIN get -ldflags "-s -w" -u github.com/zricethezav/gitleaks
 install_banner "gowitness"
-$GO_BIN get -u github.com/sensepost/gowitness
+$GO_BIN get -ldflags "-s -w" -u github.com/sensepost/gowitness
 install_banner "webanalyze"
-$GO_BIN get -u github.com/rverton/webanalyze/...
+$GO_BIN get -ldflags "-s -w" -u github.com/rverton/webanalyze/...
 install_banner "assetfinder"
-$GO_BIN get -u github.com/tomnomnom/assetfinder
+$GO_BIN get -ldflags "-s -w" -u github.com/tomnomnom/assetfinder
 install_banner "waybackurls"
-$GO_BIN get -u github.com/tomnomnom/waybackurls
+$GO_BIN get -ldflags "-s -w" -u github.com/tomnomnom/waybackurls
 install_banner "meg"
-$GO_BIN get -u github.com/tomnomnom/meg
+$GO_BIN get -ldflags "-s -w" -u github.com/tomnomnom/meg
 install_banner "httprobe"
-$GO_BIN get -u github.com/tomnomnom/httprobe
+$GO_BIN get -ldflags "-s -w" -u github.com/tomnomnom/httprobe
 install_banner "unfurl"
-$GO_BIN get -u github.com/tomnomnom/unfurl
+$GO_BIN get -ldflags "-s -w" -u github.com/tomnomnom/unfurl
 install_banner "filter-resolved"
-$GO_BIN get -u github.com/tomnomnom/hacks/filter-resolved
+$GO_BIN get -ldflags "-s -w" -u github.com/tomnomnom/hacks/filter-resolved
 install_banner "ffuf"
-$GO_BIN get -u github.com/ffuf/ffuf
+$GO_BIN get -ldflags "-s -w" -u github.com/ffuf/ffuf
 install_banner "metabigor"
-$GO_BIN get -u github.com/j3ssie/metabigor
-$GO_BIN get -u github.com/jaeles-project/gospider
+$GO_BIN get -ldflags "-s -w" -u github.com/j3ssie/metabigor
+$GO_BIN get -ldflags "-s -w" -u github.com/jaeles-project/gospider
 install_banner "go cli-utils"
-$GO_BIN get -u github.com/j3ssie/go-auxs/just-resolved
+$GO_BIN get -ldflags "-s -w" -u github.com/j3ssie/go-auxs/just-resolved
 
 install_banner "amass"
-GO111MODULE=on $GO_BIN get github.com/OWASP/Amass/v3/... 2>/dev/null
+GO111MODULE=on $GO_BIN get -ldflags "-s -w" github.com/OWASP/Amass/v3/... 2>/dev/null
+install_banner "subfinder"
+GO111MODULE=on $GO_BIN get -ldflags "-s -w" -u github.com/projectdiscovery/subfinder/v2/cmd/subfinder
+install_banner "fprobe"
+GO111MODULE=on $GO_BIN get -ldflags "-s -w" -u github.com/theblackturtle/fprobe
 install_banner "jaeles"
-GO111MODULE=on $GO_BIN get github.com/jaeles-project/jaeles 2>/dev/null
+GO111MODULE=on $GO_BIN get -ldflags "-s -w" github.com/jaeles-project/jaeles
 
 cp $GO_DIR/* "$PLUGINS_PATH/go/" 2>/dev/null
 # install_banner "observatory"
