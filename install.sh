@@ -170,8 +170,6 @@ install_banner "gobuster"
 $GO_BIN get -ldflags "-s -w" -u github.com/OJ/gobuster
 install_banner "aquatone"
 $GO_BIN get -ldflags "-s -w" -u github.com/michenriksen/aquatone
-install_banner "gitrob"
-$GO_BIN get -ldflags "-s -w" -u github.com/michenriksen/gitrob
 install_banner "subjack"
 $GO_BIN get -ldflags "-s -w" -u github.com/haccer/subjack
 install_banner "tko-subs"
@@ -180,12 +178,10 @@ install_banner "subzy"
 $GO_BIN get -ldflags "-s -w" -u github.com/lukasikic/subzy
 install_banner "goaltdns"
 $GO_BIN get -ldflags "-s -w" -u github.com/subfinder/goaltdns
-install_banner "gitleaks"
-$GO_BIN get -ldflags "-s -w" -u github.com/zricethezav/gitleaks
 install_banner "gowitness"
 $GO_BIN get -ldflags "-s -w" -u github.com/sensepost/gowitness
 install_banner "webanalyze"
-$GO_BIN get -ldflags "-s -w" -u github.com/rverton/webanalyze/...
+$GO_BIN get -ldflags "-s -w" -u github.com/rverton/webanalyze/cmd/webanalyze
 install_banner "assetfinder"
 $GO_BIN get -ldflags "-s -w" -u github.com/tomnomnom/assetfinder
 install_banner "waybackurls"
@@ -202,14 +198,19 @@ install_banner "ffuf"
 $GO_BIN get -ldflags "-s -w" -u github.com/ffuf/ffuf
 install_banner "metabigor"
 $GO_BIN get -ldflags "-s -w" -u github.com/j3ssie/metabigor
+install_banner "gospider"
 $GO_BIN get -ldflags "-s -w" -u github.com/jaeles-project/gospider
 install_banner "go cli-utils"
 $GO_BIN get -ldflags "-s -w" -u github.com/j3ssie/go-auxs/just-resolved
 
+install_banner "gitleaks"
+GO111MODULE=on $GO_BIN get -ldflags "-s -w" github.com/zricethezav/gitleaks/v6
 install_banner "amass"
 GO111MODULE=on $GO_BIN get -ldflags "-s -w" github.com/OWASP/Amass/v3/... 2>/dev/null
 install_banner "subfinder"
 GO111MODULE=on $GO_BIN get -ldflags "-s -w" -u github.com/projectdiscovery/subfinder/v2/cmd/subfinder
+install_banner "wildcheck"
+GO111MODULE=on $GO_BIN get -ldflags "-s -w" -u github.com/theblackturtle/wildcheck
 install_banner "fprobe"
 GO111MODULE=on $GO_BIN get -ldflags "-s -w" -u github.com/theblackturtle/fprobe
 install_banner "jaeles"
