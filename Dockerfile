@@ -13,9 +13,9 @@ RUN apt-get update && \
     locale-gen && \
     cp -av /usr/bin/pip2 /usr/bin/pip2.7 && \
     git clone --depth 1 https://github.com/sdfmmbi/Osmedeus -b $OSMEDEUS_VERSION . && \
-    ./install.sh && wget https://bubl.sfo2.digitaloceanspaces.com/t.txt && \
+    ./install.sh && \
     go get -u github.com/tomnomnom/unfurl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 EXPOSE 8000
-CMD ["./osmedeus.py -T t.txt"]
+CMD ["./osmedeus.py" -T t.txt"]
