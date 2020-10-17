@@ -18,4 +18,4 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 EXPOSE 8000
-CMD ["./osmedeus.py" -T t.txt"]
+CMD ["./osmedeus.py" -T data/t.txt"]
