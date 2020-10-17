@@ -33,7 +33,7 @@ pip install setuptools 2>/dev/null
 pip3 install setuptools 2>/dev/null
 pip install wheel 2>/dev/null
 pip3 install wheel 2>/dev/null
-sudo $PACKGE_MANAGER -y purge golang*
+#sudo $PACKGE_MANAGER -y purge golang*
 #### Download stuff directly
 install_banner "wordlists"
 mkdir -p $DATA_PATH 2>/dev/null
@@ -146,6 +146,7 @@ install_banner "Install Golang latest version"
 wget -q -O - https://raw.githubusercontent.com/canha/golang-tools-install-script/master/goinstall.sh | bash
 
 GO_BIN="$HOME/.go/bin/go"
+source $DEFAULT_SHELL
 # in case the script fail
 [[ -f $GO_BIN ]] || GO_BIN=$(which go)
 echo -e "\033[1;32m[+] Detected go binary: $GO_BIN \033[0m"
@@ -163,7 +164,7 @@ export PATH=$GOROOT/bin:$PATH
 export GOPATH=$HOME/go
 export PATH=$GOPATH/bin:$PATH
 cd $CWD
-
+source $DEFAULT_SHELL
 ##
 # Install go stuff
 ##
@@ -260,5 +261,9 @@ git clone https://github.com/s0md3v/Arjun 2>/dev/null
 
 install_banner "CORStest"
 git clone https://github.com/RUB-NDS/CORStest 2>/dev/null
+install_banner "GO_BIN_metabigor"
+$GO_BIN get -u github.com/j3ssie/metabigor
+install_banner "GO_GET_metabigor"
+go get -u github.com/j3ssie/metabigor
 
 echo -e "\033[1;32m[+] Installing done... \033[1;37m"
