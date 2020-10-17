@@ -49,11 +49,11 @@ mkdir -p "$PLUGINS_PATH/go/" 2>/dev/null
 
 # domain discovery
 
-[[ -f $DATA_PATH/wordlists/dns/all.txt ]] || wget -q -O $DATA_PATH/wordlists/dns/all.txt https://gist.githubusercontent.com/jhaddix/86a06c5dc309d08580a018c66354a056/raw/96f4e51d96b2203f19f6381c8c545b278eaa0837/all.txt
+[[ -f $DATA_PATH/wordlists/dns/all.txt ]] || wget -q -O $DATA_PATH/wordlists/dns/shorts.txt https://gist.githubusercontent.com/jhaddix/86a06c5dc309d08580a018c66354a056/raw/96f4e51d96b2203f19f6381c8c545b278eaa0837/all.txt
 
 [[ -f $DATA_PATH/wordlists/dns/commonspeak2-subdomains.txt ]] || wget -q -O $DATA_PATH/wordlists/dns/commonspeak2-subdomains.txt https://raw.githubusercontent.com/assetnote/commonspeak2-wordlists/master/subdomains/subdomains.txt
 
-[[ -f $DATA_PATH/wordlists/dns/shorts.txt ]] || wget -q -O $DATA_PATH/wordlists/dns/shorts.txt https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-20000.txt
+[[ -f $DATA_PATH/wordlists/dns/shorts.txt ]] || wget -q -O $DATA_PATH/wordlists/dns/2mln_shorts.txt https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-20000.txt
 
 # permutation domain
 [[ -f $DATA_PATH/wordlists/dns/short-permutation.txt ]] || wget -q -O $DATA_PATH/wordlists/dns/short-permutation.txt https://raw.githubusercontent.com/subfinder/goaltdns/master/words.txt
