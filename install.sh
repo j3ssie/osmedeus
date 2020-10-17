@@ -1,5 +1,5 @@
 #!/bin/bash
-apt-get -y purge golang*
+
 # global stuff
 CWD=$(pwd)
 PLUGINS_PATH="$CWD/plugins"
@@ -140,6 +140,7 @@ source $DEFAULT_SHELL
 
 ## Install latest go binary
 cd $CWD
+apt-get -y purge golang*
 # update golang version
 install_banner "Install Golang latest version"
 wget -q -O - https://raw.githubusercontent.com/canha/golang-tools-install-script/master/goinstall.sh | bash
