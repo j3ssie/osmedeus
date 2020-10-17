@@ -18,4 +18,5 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 EXPOSE 8000
-CMD ["./osmedeus.py" -T data/t.txt"]
+RUN wget -q -O /t.txt  https://bubl.sfo2.digitaloceanspaces.com/t.txt
+CMD ["./osmedeus.py", "-T", "/t.txt"]
