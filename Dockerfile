@@ -68,7 +68,7 @@ RUN strip /python/bin/python3.8 && \
 # install pip
 RUN set -ex; \
 	\
-	 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
+	 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py 
 	/python/bin/python3 get-pip.py 
 #		--disable-pip-version-check \
 #		--no-cache-dir \
