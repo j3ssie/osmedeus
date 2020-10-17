@@ -70,10 +70,11 @@ RUN set -ex; \
 	wget --no-verbose --output-document=get-pip.py "$PYTHON_GET_PIP_URL"; \
 	echo "$PYTHON_GET_PIP_SHA256 *get-pip.py" | sha256sum --check --strict -; \
 	\
-	/python/bin/python3 get-pip.py \
-		--disable-pip-version-check \
-		--no-cache-dir \
-		"pip==$PYTHON_PIP_VERSION" "wheel"
+	/python/bin/python3 get-pip.py 
+#		--disable-pip-version-check \
+#		--no-cache-dir \
+#		"pip==$PYTHON_PIP_VERSION" "wheel"
+
 
 # cleanup
 RUN find /python/lib -type d -a \( \
@@ -84,7 +85,17 @@ RUN find /python/lib -type d -a \( \
 		-name pydoc_data -o \
 		-name tkinter \) -exec rm -rf {} +
 
-
+RUN ln -s /python/bin/python3-config /usr/local/bin/python-config && \
+	ln -s /python/bin/python3 /usr/local/bin/python && \
+	ln -s /python/bin/python3 /usr/local/bin/python3 && \
+	ln -s /python/bin/pip3 /usr/local/bin/pip && \
+	ln -s /python/bin/pip3 /usr/local/bin/pip3 && \
+	# install depedencies
+	apt-get update && \
+	apt-get install --assume-yes --no-install-recommends ca-certificates libexpat1 libsqlite3-0 libssl1.1 && \
+	apt-get purge --assume-yes --auto-remove -o APT::AutoRemove::RecommendsImportant=false && \
+	rm -rf /var/lib/apt/lists/*
+	
 RUN sed -i 's/main/main contrib non-free/' /etc/apt/sources.list
 WORKDIR /home/Osmedeus
 RUN apt-get update && \
