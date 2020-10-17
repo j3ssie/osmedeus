@@ -262,9 +262,5 @@ git clone https://github.com/s0md3v/Arjun 2>/dev/null
 
 install_banner "CORStest"
 git clone https://github.com/RUB-NDS/CORStest 2>/dev/null
-install_banner "GO_BIN_metabigor"
-$GO_BIN get -u github.com/j3ssie/metabigor
-install_banner "GO_GET_metabigor"
-go get -u github.com/j3ssie/metabigor
 
 echo -e "\033[1;32m[+] Installing done... \033[1;37m"
