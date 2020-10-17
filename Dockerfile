@@ -1,4 +1,4 @@
-FROM debian:buster-slim
+FROM kalilinux/kali-rolling
 ENV PYTHON_VERSION 3.8.3
 ENV PYTHON_PIP_VERSION 20.1.1
 ENV LANG="en_US.UTF-8" \
