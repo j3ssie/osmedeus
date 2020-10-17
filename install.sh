@@ -182,7 +182,7 @@ install_banner "goaltdns"
 $GO_BIN get -ldflags "-s -w" -u github.com/subfinder/goaltdns
 install_banner "gowitness"
 #$GO_BIN get -ldflags "-s -w" -u github.com/sensepost/gowitness
-git clone https://github.com/sensepost/gowitness.git && cd gowitness/ && go build -ldflags "-s -w"
+git clone https://github.com/sensepost/gowitness.git && cd gowitness/ && $GO_BIN build -ldflags "-s -w"
 install_banner "webanalyze"
 $GO_BIN get -ldflags "-s -w" -u github.com/rverton/webanalyze/cmd/webanalyze
 install_banner "assetfinder"
