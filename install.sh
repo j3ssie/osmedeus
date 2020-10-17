@@ -6,7 +6,6 @@ PLUGINS_PATH="$CWD/plugins"
 DATA_PATH="$CWD/data"
 DEFAULT_SHELL="$HOME/.bashrc"
 PACKGE_MANAGER="apt-get"
-GO_DIR=~/go/bin
 
 # some function
 install_banner() {
@@ -44,7 +43,6 @@ mkdir -p $DATA_PATH/wordlists/params/ 2>/dev/null
 mkdir -p $PLUGINS_PATH 2>/dev/null
 mkdir -p $DATA_PATH/nmap-stuff/ 2>/dev/null
 mkdir -p $PLUGINS_PATH/nmap-stuff/ 2>/dev/null
-mkdir -p "$GO_DIR" 2>/dev/null
 mkdir -p "$PLUGINS_PATH/go/" 2>/dev/null
 
 # domain discovery
@@ -129,92 +127,67 @@ python3 server/manage.py migrate api
 python3 scripts/init.py
 python3 scripts/reload.py
 
-### adding gopath if GOPATH not in default shellrc
-if ! grep -Fxq "GOPATH" "$DEFAULT_SHELL"; then
-    echo 'export GOPATH=$HOME/go' >>$DEFAULT_SHELL
-    echo 'PATH=$GOPATH/bin:$PATH' >>$DEFAULT_SHELL
-    source $DEFAULT_SHELL
-fi
-PS="$ "
-source $DEFAULT_SHELL
+
 
 ## Install latest go binary
 cd $CWD
 # update golang version
-install_banner "Install Golang latest version"
-wget -q -O - https://raw.githubusercontent.com/canha/golang-tools-install-script/master/goinstall.sh | bash
+#install_banner "Install Golang latest version"
+#wget -q -O - https://raw.githubusercontent.com/canha/golang-tools-install-script/master/goinstall.sh | bash
 
-GO_BIN="$HOME/.go/bin/go"
-# in case the script fail
-[[ -f $GO_BIN ]] || GO_BIN=$(which go)
-echo -e "\033[1;32m[+] Detected go binary: $GO_BIN \033[0m"
-[[ -d $GO_DIR ]] || GO_DIR=$GOPATH/bin
-echo -e "\033[1;32m[+] Detected go tools: $GO_DIR \033[0m"
-
-GOROOT=$HOME/.go
-PATH=$GOROOT/bin:$PATH
-GOPATH=$HOME/go
-PATH=$GOPATH/bin:$PATH
-
-export GO_BIN="$HOME/.go/bin/go"
-export GOROOT=$HOME/.go
-export PATH=$GOROOT/bin:$PATH
-export GOPATH=$HOME/go
-export PATH=$GOPATH/bin:$PATH
-cd $CWD
 
 ##
 # Install go stuff
 ##
 install_banner "gobuster"
-$GO_BIN get -ldflags "-s -w" -u github.com/OJ/gobuster
+go get -ldflags "-s -w" -u github.com/OJ/gobuster
 install_banner "aquatone"
-$GO_BIN get -ldflags "-s -w" -u github.com/michenriksen/aquatone
+go get -ldflags "-s -w" -u github.com/michenriksen/aquatone
 install_banner "subjack"
-$GO_BIN get -ldflags "-s -w" -u github.com/haccer/subjack
+go get -ldflags "-s -w" -u github.com/haccer/subjack
 install_banner "tko-subs"
-$GO_BIN get -ldflags "-s -w" -u github.com/anshumanbh/tko-subs
+go get -ldflags "-s -w" -u github.com/anshumanbh/tko-subs
 install_banner "subzy"
-$GO_BIN get -ldflags "-s -w" -u github.com/lukasikic/subzy
+go get -ldflags "-s -w" -u github.com/lukasikic/subzy
 install_banner "goaltdns"
-$GO_BIN get -ldflags "-s -w" -u github.com/subfinder/goaltdns
+go get -ldflags "-s -w" -u github.com/subfinder/goaltdns
 install_banner "gowitness"
-$GO_BIN get -ldflags "-s -w" -u github.com/sensepost/gowitness
+go get -ldflags "-s -w" -u github.com/sensepost/gowitness
 install_banner "webanalyze"
-$GO_BIN get -ldflags "-s -w" -u github.com/rverton/webanalyze/cmd/webanalyze
+go get -ldflags "-s -w" -u github.com/rverton/webanalyze/cmd/webanalyze
 install_banner "assetfinder"
-$GO_BIN get -ldflags "-s -w" -u github.com/tomnomnom/assetfinder
+go get -ldflags "-s -w" -u github.com/tomnomnom/assetfinder
 install_banner "waybackurls"
-$GO_BIN get -ldflags "-s -w" -u github.com/tomnomnom/waybackurls
+go get -ldflags "-s -w" -u github.com/tomnomnom/waybackurls
 install_banner "meg"
-$GO_BIN get -ldflags "-s -w" -u github.com/tomnomnom/meg
+go get -ldflags "-s -w" -u github.com/tomnomnom/meg
 install_banner "httprobe"
-$GO_BIN get -ldflags "-s -w" -u github.com/tomnomnom/httprobe
+go get -ldflags "-s -w" -u github.com/tomnomnom/httprobe
 install_banner "unfurl"
-$GO_BIN get -ldflags "-s -w" -u github.com/tomnomnom/unfurl
+go get -ldflags "-s -w" -u github.com/tomnomnom/unfurl
 install_banner "filter-resolved"
-$GO_BIN get -ldflags "-s -w" -u github.com/tomnomnom/hacks/filter-resolved
+go get -ldflags "-s -w" -u github.com/tomnomnom/hacks/filter-resolved
 install_banner "ffuf"
-$GO_BIN get -ldflags "-s -w" -u github.com/ffuf/ffuf
+go get -ldflags "-s -w" -u github.com/ffuf/ffuf
 install_banner "metabigor"
-$GO_BIN get -ldflags "-s -w" -u github.com/j3ssie/metabigor
+go get -ldflags "-s -w" -u github.com/j3ssie/metabigor
 install_banner "gospider"
-$GO_BIN get -ldflags "-s -w" -u github.com/jaeles-project/gospider
+go get -ldflags "-s -w" -u github.com/jaeles-project/gospider
 install_banner "go cli-utils"
-$GO_BIN get -ldflags "-s -w" -u github.com/j3ssie/go-auxs/just-resolved
+go get -ldflags "-s -w" -u github.com/j3ssie/go-auxs/just-resolved
 
 install_banner "gitleaks"
-GO111MODULE=on $GO_BIN get -ldflags "-s -w" github.com/zricethezav/gitleaks/v6
+GO111MODULE=on go get -ldflags "-s -w" github.com/zricethezav/gitleaks/v6
 install_banner "amass"
-GO111MODULE=on $GO_BIN get -ldflags "-s -w" github.com/OWASP/Amass/v3/... 2>/dev/null
+GO111MODULE=on go get -ldflags "-s -w" github.com/OWASP/Amass/v3/... 2>/dev/null
 install_banner "subfinder"
-GO111MODULE=on $GO_BIN get -ldflags "-s -w" -u github.com/projectdiscovery/subfinder/v2/cmd/subfinder
+GO111MODULE=on go get -ldflags "-s -w" -u github.com/projectdiscovery/subfinder/v2/cmd/subfinder
 install_banner "wildcheck"
-GO111MODULE=on $GO_BIN get -ldflags "-s -w" -u github.com/theblackturtle/wildcheck
+GO111MODULE=on go get -ldflags "-s -w" -u github.com/theblackturtle/wildcheck
 install_banner "fprobe"
-GO111MODULE=on $GO_BIN get -ldflags "-s -w" -u github.com/theblackturtle/fprobe
+GO111MODULE=on go get -ldflags "-s -w" -u github.com/theblackturtle/fprobe
 install_banner "jaeles"
-GO111MODULE=on $GO_BIN get -ldflags "-s -w" github.com/jaeles-project/jaeles
+GO111MODULE=on go get -ldflags "-s -w" github.com/jaeles-project/jaeles
 
 cp $GO_DIR/* "$PLUGINS_PATH/go/" 2>/dev/null
 # install_banner "observatory"
