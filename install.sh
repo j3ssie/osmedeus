@@ -33,7 +33,7 @@ pip install setuptools 2>/dev/null
 pip3 install setuptools 2>/dev/null
 pip install wheel 2>/dev/null
 pip3 install wheel 2>/dev/null
-
+sudo $PACKGE_MANAGER -y purge golang*
 #### Download stuff directly
 install_banner "wordlists"
 mkdir -p $DATA_PATH 2>/dev/null
@@ -140,7 +140,6 @@ source $DEFAULT_SHELL
 
 ## Install latest go binary
 cd $CWD
-apt-get -y purge golang*
 # update golang version
 install_banner "Install Golang latest version"
 wget -q -O - https://raw.githubusercontent.com/canha/golang-tools-install-script/master/goinstall.sh | bash
