@@ -22,7 +22,7 @@ RUN apt-get update && \
       libcurl4-openssl-dev \
       bsdmainutils \
       xsltproc && \
-    git clone  https://github.com/sdfmmbi/Osmedeus  && cd Osmedeus && \
+    git clone  https://github.com/sdfmmbi/Osmedeus -b $OSMEDEUS_VERSION . && \
     ./install.sh && \
      /root/.go/bin/go get -u github.com/tomnomnom/unfurl && \
   #  go get -u github.com/tomnomnom/unfurl && \
