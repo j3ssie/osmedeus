@@ -68,8 +68,7 @@ RUN strip /python/bin/python3.8 && \
 # install pip
 RUN set -ex; \
 	\
-	 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py 
-	/python/bin/python3 get-pip.py 
+	 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && /python/bin/python3.8 get-pip.py 
 #		--disable-pip-version-check \
 #		--no-cache-dir \
 #		"pip==$PYTHON_PIP_VERSION" "wheel"
@@ -85,10 +84,10 @@ RUN find /python/lib -type d -a \( \
 		-name tkinter \) -exec rm -rf {} +
 
 RUN ln -s /python/bin/python3-config /usr/local/bin/python-config && \
-	ln -s /python/bin/python3 /usr/local/bin/python && \
-	ln -s /python/bin/python3 /usr/local/bin/python3 && \
-	ln -s /python/bin/pip3 /usr/local/bin/pip && \
-	ln -s /python/bin/pip3 /usr/local/bin/pip3 && \
+	#ln -s /python/bin/python3.8 /usr/local/bin/python && \
+	ln -s /python/bin/python3.8 /usr/local/bin/python3 && \
+	ln -s /python/bin/pip3.8 /usr/local/bin/pip && \
+	ln -s /python/bin/pip3.8 /usr/local/bin/pip3 && \
 	# install depedencies
 	apt-get update && \
 	apt-get install --assume-yes --no-install-recommends ca-certificates libexpat1 libsqlite3-0 libssl1.1 && \
