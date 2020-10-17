@@ -8,7 +8,7 @@ ENV LANG="en_US.UTF-8" \
 RUN apt-get update && \
     apt-get -yu dist-upgrade && \
     apt-get -qq install npm && \
-    apt-get -qq install locales git sudo wget python3-pip python-pip curl libcurl4-openssl-dev bsdmainutils xsltproc && \
+    apt-get -qq install locales git sudo wget python3-pip python-pip curl libcurl4-openssl-dev bsdmainutils xsltproc golang && \
     sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     locale-gen && \
     cp -av /usr/bin/pip2 /usr/bin/pip2.7 && \
