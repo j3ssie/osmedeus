@@ -136,10 +136,11 @@ if ! grep -Fxq "GOPATH" "$DEFAULT_SHELL"; then
     source $DEFAULT_SHELL
 fi
 PS="$ "
+sudo $PACKGE_MANAGER -y purge golang*
 source $DEFAULT_SHELL
 
 ## Install latest go binary
-cd $CWD
+#cd $CWD
 # update golang version
 install_banner "Install Golang latest version"
 wget -q -O - https://raw.githubusercontent.com/canha/golang-tools-install-script/master/goinstall.sh | bash
