@@ -21,12 +21,11 @@ RUN apt-get update && \
       curl \
       libcurl4-openssl-dev \
       bsdmainutils \
-      golang \
       xsltproc && \
-    git clone --depth 1 https://github.com/sdfmmbi/Osmedeus -b $OSMEDEUS_VERSION . && \
+    git clone  https://github.com/sdfmmbi/Osmedeus -b $OSMEDEUS_VERSION . && \
     ./install.sh && \
- #   /root/.go/bin/go get -u github.com/tomnomnom/unfurl && \
-    go get -u github.com/tomnomnom/unfurl && \
+     /root/.go/bin/go get -u github.com/tomnomnom/unfurl && \
+  #  go get -u github.com/tomnomnom/unfurl && \
     apt-get -y autoremove && \
     apt-get clean && \
     rm -rf /var/lib/{apt,dpkg,cache,log}
