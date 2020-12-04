@@ -19,7 +19,7 @@ Osmedeus allows you automated run the collection of awesome tools to reconnaissa
 ## Next generation version?
 
 <p align="center">
-  <img alt="Osmedeus" src="https://user-images.githubusercontent.com/23289085/101143253-35ea6b80-3649-11eb-9130-d1fc306c9a76.png" height="140" />
+  <img alt="huntersuite" src="https://user-images.githubusercontent.com/23289085/101143253-35ea6b80-3649-11eb-9130-d1fc306c9a76.png" height="200" />
   <p align="center">
 Enjoying this tool? Support it's development and take your game to the next level by using <a href="https://huntersuite.io">HunterSuite.io</a>
   </p>
