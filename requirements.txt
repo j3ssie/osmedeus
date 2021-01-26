@@ -14,3 +14,4 @@ ansi2html==1.5.2
 tabulate==0.8.2
 slackclient==2.1.0
 csvkit==1.0.4
+PyJWT==1.7.1
