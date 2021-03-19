@@ -2,7 +2,7 @@ bs4==0.0.1
 Django==2.2.13
 django-cors-headers==3.0.2
 django-filter==2.1.0
-djangorestframework==3.10.3
+djangorestframework==3.11.2
 djangorestframework-jsonp==1.0.2
 djangorestframework-simplejwt==4.3.0
 django-queryset-csv==1.0.2
