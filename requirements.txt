@@ -7,7 +7,7 @@ djangorestframework-jsonp==1.0.2
 djangorestframework-simplejwt==4.3.0
 django-queryset-csv==1.0.2
 tldextract==2.2.0
-lxml==4.5.0
+lxml==4.6.5
 requests==2.22.0
 Markdown==3.1.1
 ansi2html==1.5.2
