@@ -1,0 +1,17 @@
+name: test
+desc: testing workflow
+type: test
+validator: domain
+
+params:
+  - repo: "test-module"
+
+local_pre_run:
+  - 'RRSync("root@{{.RemoteIP}}", "/tmp/sam/", "/tmp/sam/")'
+  - ExecCmd('echo --> {{.repo}}')
+
+routines:
+  - modules:
+      - sub-test
+  - modules:
+      - prob-test

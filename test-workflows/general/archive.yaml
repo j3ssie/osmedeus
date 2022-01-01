@@ -1,0 +1,10 @@
+name: archive
+desc: archive
+
+params:
+  - testData: "~/go/src/github.com/j3ssie/osmedeus/test-data"
+
+steps:
+  # get data from cdn
+  - scripts:
+      - ImportArchive("{{.testData}}/{{.Workspace}}/archive/archive.txt")

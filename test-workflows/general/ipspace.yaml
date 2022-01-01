@@ -1,0 +1,10 @@
+name: ipspace
+desc: ipspace
+
+params:
+  - testData: "~/go/src/github.com/j3ssie/osmedeus/test-data"
+
+steps:
+  # get data from cdn
+  - scripts:
+      - ImportIPRange("{{.testData}}/{{.Workspace}}/ipspace/ipspace-summary.txt")

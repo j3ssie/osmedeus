@@ -1,0 +1,7 @@
+name: echo2
+desc: echo testing
+
+steps:
+  - commands:
+      - echo '222 from another flow folder'
+

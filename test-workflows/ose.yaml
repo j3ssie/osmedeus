@@ -1,0 +1,20 @@
+name: test-ose
+desc: test-ose
+
+
+steps:
+  # get data from cdn
+  - ose:
+      # run the script directly
+      - |
+        if (FileLength('/tmp/ott/sam') > 0) {
+          ExecCmd('touch /tmp/ott/from-ose && sleep 10')
+        }
+      # run the script directly
+      - |
+        if (FileLength('/tmp/ott/sam') > 0) {
+          ExecCmdB('touch /tmp/ott/after-5-ose && sleep 10');
+          ExecCmdB('touch /tmp/ott/after-10-ose');
+        }
+      # this will get JS file from ~/osmedeus-plugins/ose/sample.js
+      - sample.js

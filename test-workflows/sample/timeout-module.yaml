@@ -1,0 +1,17 @@
+name: timeout-module
+mtimeout: '{{.firstTimeout}}'
+
+params:
+  - runSlow: 'true'
+
+steps:
+  # runSlow scan
+  - conditions:
+      - '{{.runSlow}} == true'
+    commands:
+      - "echo '---> Slow '"
+    rcommands:
+      - "echo '<---- Reverse '"
+
+  - commands:
+      - "sleep 20 && echo '---> done sleep 20s'"

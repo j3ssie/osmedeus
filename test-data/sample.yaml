@@ -1,0 +1,16 @@
+name: sample
+desc: Sample module
+type: modules
+
+
+params:
+  - m1: 'test-1'
+
+routines:
+  - modules:
+      - echo
+  - flow: '{{.m1}}'
+    modules:
+      - echo2
+  - modules:
+      - resume-inline

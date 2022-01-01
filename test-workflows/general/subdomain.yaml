@@ -1,0 +1,10 @@
+name: subdomain
+desc: Scanning for subdomain
+
+params:
+  - testData: "~/go/src/github.com/j3ssie/osmedeus/test-data"
+
+steps:
+  # get data from cdn
+  - scripts:
+      - ImportSubdomain("{{.testData}}/{{.Workspace}}/subdomain/final-{{.Workspace}}.txt")

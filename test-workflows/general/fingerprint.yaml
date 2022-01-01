@@ -1,0 +1,13 @@
+name: fingerprint
+desc: Scanning for subdomain
+
+params:
+  - testData: "~/go/src/github.com/j3ssie/osmedeus/test-data"
+
+steps:
+  # get data from cdn
+  - scripts:
+      - ImportTech("{{.testData}}/{{.Workspace}}/fingerprint/{{.Workspace}}-technologies.txt")
+      - ImportHTTPJson("{{.testData}}/{{.Workspace}}/fingerprint/{{.Workspace}}-technologies.txt")
+      - ImportScreenShotJson("{{.testData}}/{{.Workspace}}/screenshot/goverview/screenshot-summary.txt")
+      - ImportHTTPJson("{{.testData}}/{{.Workspace}}/screenshot/goverview/content-summary.txt")

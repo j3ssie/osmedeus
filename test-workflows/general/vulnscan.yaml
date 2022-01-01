@@ -1,0 +1,11 @@
+name: vulnscan
+desc: vulnscan
+
+params:
+  - testData: "~/go/src/github.com/j3ssie/osmedeus/test-data"
+
+steps:
+  # get data from cdn
+  - scripts:
+      - ImportJaelesVulnJson("{{.testData}}/{{.Workspace}}/vuln/active/jaeles-summary.txt")
+      - ImportNucleiVulnJson("{{.testData}}/{{.Workspace}}/vuln/nuclei-sto.txt")

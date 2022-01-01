@@ -1,0 +1,10 @@
+name: spider
+desc: spider
+
+params:
+  - testData: "~/go/src/github.com/j3ssie/osmedeus/test-data"
+
+steps:
+  # get data from cdn
+  - scripts:
+      - ImportLinks("{{.testData}}/{{.Workspace}}/linkfinding/links-json.txt")
