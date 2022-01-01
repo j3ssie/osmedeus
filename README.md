@@ -22,6 +22,17 @@
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/osmedeus/osmedeus-base/master/install.sh)"
 ```
 
+## Build the engine
+
+Make sure you installed `golang >= v1.17`
+
+```shell
+mkdir -p $GOPATH/src/github.com/j3ssie
+git clone --depth=1 https://github.com/j3ssie/osmedeus $GOPATH/src/github.com/j3ssie/osmedeus
+cd $GOPATH/src/github.com/j3ssie/osmedeus
+make build
+```
+
 ## Usage
 
 ```shell
