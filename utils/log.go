@@ -37,11 +37,11 @@ func InitLog(options *libs.Options) {
 
     // defer f.Close()
     mwr := io.MultiWriter(os.Stdout, f)
-    logger.SetLevel(logrus.InfoLevel)
+    logger.SetLevel(logrus.ErrorLevel)
 
     logger = &logrus.Logger{
         Out:   mwr,
-        Level: logrus.InfoLevel,
+        Level: logrus.FatalLevel,
         Formatter: &prefixed.TextFormatter{
             ForceColors:     true,
             ForceFormatting: true,
@@ -52,9 +52,12 @@ func InitLog(options *libs.Options) {
 
     if options.Debug == true {
         logger.SetLevel(logrus.DebugLevel)
+    } else if options.Verbose == true {
+        logger.SetLevel(logrus.InfoLevel)
     } else if options.Quite == true {
         logger.SetOutput(ioutil.Discard)
     }
+
 }
 
 // PrintLine print seperate line

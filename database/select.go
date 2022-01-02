@@ -17,7 +17,7 @@ func GetWorkspaces() []Target {
 
 func GetScans() []Scan {
     var objs []Scan
-    DB.Preload(clause.Associations).Preload("Targets").Find(&objs).Order("created_at desc")
+    DB.Order("created_at desc").Find(&objs)
     return objs
 }
 

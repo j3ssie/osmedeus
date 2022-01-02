@@ -295,7 +295,7 @@ func SetupOpt(options *libs.Options) {
     osPATH := utils.GetOSEnv("PATH", "PATH")
     if !strings.Contains(osPATH, options.Env.BinariesFolder) {
         utils.DebugF("Append $PATH with: %s", options.Env.BinariesFolder)
-        os.Setenv("PATH", fmt.Sprintf("%s:%s", osPATH, options.Env.BinariesFolder))
+        os.Setenv("PATH", fmt.Sprintf("%s:%s", osPATH, strings.TrimRight(options.Env.BinariesFolder, "/")))
     }
 
     /* some special conditions below */
@@ -658,6 +658,7 @@ func ReloadConfig(options libs.Options) {
     })
 
     v.Set("Update", map[string]string{
+        "update_type": "git",
         "update_url":  utils.GetOSEnv("UPDATE_BASE_URL", "UPDATE_BASE_URL"),
         "update_date": utils.GetOSEnv("UPDATE_DATE", "UPDATE_DATE"),
         "update_meta": utils.GetOSEnv("META_URL", "META_URL"),

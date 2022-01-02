@@ -60,10 +60,10 @@ func StartServer(options libs.Options) {
     }
 
     if enableSSL {
-        utils.InforF("Web UI available at: https://%v/ui/", options.Server.Bind)
+        utils.GoodF("Web UI available at: https://%v/ui/", options.Server.Bind)
         log.Fatal(app.Listener(ln))
     } else {
-        utils.InforF("Web UI available at: http://%v/ui/", options.Server.Bind)
+        utils.GoodF("Web UI available at: http://%v/ui/", options.Server.Bind)
         log.Fatal(app.Listen(options.Server.Bind))
     }
 }
