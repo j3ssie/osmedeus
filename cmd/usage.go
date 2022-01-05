@@ -19,7 +19,34 @@ func RootUsage() {
 }
 
 func ScanUsage() string {
-    h := color.HiCyanString("\nScan Usage:\n")
+    h := color.HiCyanString("Example Scan Commands:")
+    h += `
+  ## Start a simple scan with default 'general' flow
+  osmedeus scan -t sample.com
+  
+  ## Start a general scan but exclude some of the module
+  osmedeus scan -t sample.com -x screenshot -x spider
+  
+  ## Start a simple scan with other flow
+  osmedeus scan -f vuln -t sample.com
+  
+  ## Scan for CIDR with file contains CIDR with the format '1.2.3.4/24'
+  osmedeus scan -f cidr -t list-of-cidrs.txt
+  osmedeus scan -f cidr -t '1.2.3.4/24' # this will auto convert the single input to the file and run
+  
+  ## Directly run on vuln scan and directory scan on list of domains
+  osmedeus scan -f vuln-and-dirb -t list-of-domains.txt
+  
+  ## Use a custom wordlist
+  osmedeus scan -t sample.com -p 'wordlists={{.Data}}/wordlists/content/big.txt' -p 'fthreads=40'
+  
+  ## Scan list of targets
+  osmedeus scan -T list_of_targets.txt
+  
+  ## Get target from a stdin and start the scan with 2 concurrency
+  cat list_of_targets.txt | osmedeus scan -c 2
+            `
+    h += color.HiCyanString("\nScan Usage:\n")
     h += "  osmedeus scan -f [flowName] -t [target] \n"
     h += "  osmedeus scan -m [modulePath] -T [targetsFile] \n"
     h += "  osmedeus scan -f /path/to/flow.yaml -t [target] \n"
@@ -33,7 +60,6 @@ func ScanUsage() string {
     h += "  osmedeus scan -f general -t www.sample.com\n"
     h += "  osmedeus scan -f gdirb -T list_of_target.txt\n"
     h += "  osmedeus scan -m ~/.osmedeus/core/workflow/test/dirbscan.yaml -t list_of_urls.txt\n"
-
     return h
 }
 
@@ -86,7 +112,7 @@ func ScanHelp(cmd *cobra.Command, _ []string) {
     fmt.Println(cmd.UsageString())
     h := ScanUsage()
     fmt.Println(h)
-    fmt.Printf("Documentation can be found here: %s\n", color.GreenString(libs.DOCS))
+    printDocs()
 }
 
 // CloudHelp scan help message
@@ -95,7 +121,7 @@ func CloudHelp(cmd *cobra.Command, _ []string) {
     fmt.Println(cmd.UsageString())
     h := CloudUsage()
     fmt.Println(h)
-    fmt.Printf("Documentation can be found here: %s\n", color.GreenString(libs.DOCS))
+    printDocs()
 }
 
 // ConfigHelp config help message
@@ -104,7 +130,7 @@ func ConfigHelp(cmd *cobra.Command, _ []string) {
     fmt.Println(cmd.UsageString())
     h := ConfigUsage()
     fmt.Println(h)
-    fmt.Printf("Documentation can be found here: %s\n", color.GreenString(libs.DOCS))
+    printDocs()
 }
 
 // UtilsHelp utils help message
@@ -113,7 +139,7 @@ func UtilsHelp(cmd *cobra.Command, _ []string) {
     fmt.Println(cmd.UsageString())
     h := UtilsUsage()
     fmt.Println(h)
-    fmt.Printf("Documentation can be found here: %s\n", color.GreenString(libs.DOCS))
+    printDocs()
 }
 
 // RootHelp print help message
@@ -121,5 +147,9 @@ func RootHelp(cmd *cobra.Command, _ []string) {
     fmt.Println(core.Banner())
     fmt.Println(cmd.UsageString())
     RootUsage()
+    printDocs()
+}
+
+func printDocs() {
     fmt.Printf("Documentation can be found here: %s\n", color.GreenString(libs.DOCS))
 }

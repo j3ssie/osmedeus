@@ -10,6 +10,10 @@ type Cloud struct {
     OnlyCreateInstance bool
     NoDelete           bool
     EnablePrivateIP    bool
+
+    EnableSyncWorkflow    bool
+    RemoteWorkflowFolder string
+
     CopyWorkspaceToGit bool
     ClearTime          string
     InstanceName       string

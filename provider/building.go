@@ -18,8 +18,8 @@ func (p *Provider) PrePareBuildData() {
     data["snapshot_name"] = p.SnapshotName
     data["api_token"] = p.Token
 
-    // c.Cloud.ProviderFolder --> ~/.osmedeus/provider/<osmp-name>
-    p.ProviderConfig.ProviderFolder = path.Join(p.Opt.Env.ProviderFolder, p.SnapshotName)
+    // c.Cloud.ProviderFolder --> ~/.osmedeus/provider/<osmp-name>-v4.x-randomstring
+    p.ProviderConfig.ProviderFolder = path.Join(p.Opt.Env.ProviderFolder, fmt.Sprintf("%s-%s", p.SnapshotName, utils.RandomString(6)))
     utils.MakeDir(p.ProviderConfig.ProviderFolder)
     data["ProviderFolder"] = p.ProviderConfig.ProviderFolder
 
@@ -66,6 +66,7 @@ func (p *Provider) BuildImage() (err error) {
     p.DeleteOldSnapshot()
 
     // p.ProviderConfig.ProviderFolder --> ~/.osmedeus/provider/<osmp-name>
+
     utils.DebugF("Cleaning old provider build: %s", p.ProviderConfig.ProviderFolder)
     os.RemoveAll(p.ProviderConfig.ProviderFolder)
     utils.MakeDir(p.ProviderConfig.ProviderFolder)

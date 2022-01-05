@@ -30,7 +30,7 @@ func GitDiff(dest string, output string, history string, options libs.Options) {
         return
     }
     if !utils.FileExists(dest) {
-        utils.ErrorF("File not found: %v", dest)
+        utils.WarnF("File not found: %v", dest)
         return
     }
     utils.DebugF("Git Diff: %v", dest)
@@ -99,12 +99,12 @@ func PushResult(storageFolder string, commitMess string, options libs.Options) {
 // GitClone update latest UI and Plugins from default repo
 func GitClone(url string, dest string, forced bool, options libs.Options) {
     if options.NoGit || options.Storages["secret_key"] == "" {
-        utils.ErrorF("Storage Disable")
+        utils.WarnF("Storage Disable")
         return
     }
 
     if url == "" || dest == "" {
-        utils.ErrorF("Invalid repo or no destination")
+        utils.WarnF("Invalid repo or no destination")
         return
     }
 

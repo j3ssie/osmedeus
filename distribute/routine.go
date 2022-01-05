@@ -24,6 +24,14 @@ func (c *CloudRunner) Scan(target string) error {
     // pre run before starting the scan
     c.PreRunLocal()
 
+    if c.Opt.Cloud.EnableSyncWorkflow {
+        err = c.CopyWorkflow()
+        if err != nil {
+            utils.ErrorF("Error to copy workflow to instance")
+            return err
+        }
+    }
+
     // copy target to droplet first
     err = c.CopyTarget()
     if err != nil {

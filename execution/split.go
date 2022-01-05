@@ -47,12 +47,12 @@ func SplitFile(kind string, arguments []otto.Value) {
     utils.DebugF("Splitting %v to %v %v", source, chunkParts, kind)
     rawChunks, err := utils.SplitLineChunks(source, chunkParts)
     if err != nil || len(rawChunks) == 0 {
-        utils.ErrorF("error to split input file: %v", source)
+        utils.WarnF("error to split input file: %v", source)
         return
     }
     fp, err := os.Open(source)
     if err != nil {
-        utils.ErrorF("error to open input file: %v", source)
+        utils.WarnF("error to open input file: %v", source)
         return
     }
 
@@ -63,7 +63,7 @@ func SplitFile(kind string, arguments []otto.Value) {
         body := make([]byte, offset.Stop-offset.Start+1)
         _, err := reader.Read(body)
         if err != nil {
-            utils.ErrorF("error to read chunk file: %s", err)
+            utils.WarnF("error to read chunk file: %s", err)
             continue
         }
         sumFile = append(sumFile, targetName)
@@ -75,7 +75,7 @@ func SplitFile(kind string, arguments []otto.Value) {
     indexFile := path.Join(destDir, dest)
     _, err = utils.WriteToFile(indexFile, strings.Join(sumFile, "\n"))
     if err != nil {
-        utils.ErrorF("Error writing to %v", indexFile)
+        utils.WarnF("Error writing to %v", indexFile)
     }
 }
 

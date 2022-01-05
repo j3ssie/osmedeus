@@ -30,9 +30,6 @@ func runServer(cmd *cobra.Command, _ []string) error {
     options.Server.Bind = fmt.Sprintf("%v:%v", host, port)
     DBInit()
 
-    // create default user
-    //database.CreateUser(options.Client.Username, options.Client.Password)
-
     server.StartServer(options)
     return nil
 }

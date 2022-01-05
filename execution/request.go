@@ -99,7 +99,7 @@ func JustSend(url string, client *resty.Client) (res libs.Response, err error) {
     }
 
     if err != nil || resp == nil {
-        utils.ErrorF("%v %v", url, err)
+        utils.WarnF("%v %v", url, err)
         return libs.Response{}, err
     }
 

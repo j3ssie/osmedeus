@@ -29,7 +29,7 @@ func runHealth(_ *cobra.Command, _ []string) error {
         fmt.Printf("🚀 Osmedeus %s: Run diagnostics to check if everything okay\n", libs.VERSION)
     }
 
-    err := checkCorePrograms(options)
+    err := healCheck(options)
     if err != nil {
         fmt.Printf("‼️ There is might be something wrong with your setup: %v\n", err)
         return nil
@@ -45,7 +45,7 @@ func runHealth(_ *cobra.Command, _ []string) error {
     return nil
 }
 
-func checkCorePrograms(options libs.Options) error {
+func healCheck(options libs.Options) error {
     exist := utils.FolderExists(options.Env.BaseFolder)
     if !exist {
         color.Red("[-] Core folder setup incorrect: %v", options.Env.BaseFolder)
@@ -106,7 +106,7 @@ func checkCorePrograms(options libs.Options) error {
         if utils.DirLength(path.Join(options.Env.CloudConfigFolder, "providers")) == 0 {
             okCloud = false
         }
-        if utils.DirLength(path.Join(options.Env.CloudConfigFolder, "ssh")) < 2 {
+        if utils.DirLength(path.Join(options.Env.CloudConfigFolder, "ssh")) < 2 && utils.FileExists(options.Cloud.SecretKey) {
             okCloud = false
         }
         if okCloud {

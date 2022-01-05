@@ -16,8 +16,7 @@ func CommandBuilder(options libs.Options) string {
         binary += " --debug"
     }
 
-    // always enable update options unless you're disable it
-    if !options.Update.NoUpdate {
+    if options.Update.EnableUpdate {
         binary += " --update"
     }
 

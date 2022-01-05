@@ -28,8 +28,8 @@ func init() {
 
 func runScan(_ *cobra.Command, _ []string) error {
     DBInit()
-    utils.InforF("%v %v by %v", strings.Title(libs.BINARY), libs.VERSION, libs.AUTHOR)
-    utils.InforF("Store log file to: %v", options.LogFile)
+    utils.GoodF("%v %v by %v", strings.Title(libs.BINARY), libs.VERSION, libs.AUTHOR)
+    utils.GoodF("Store log file to: %v", options.LogFile)
 
     var wg sync.WaitGroup
     p, _ := ants.NewPoolWithFunc(options.Concurrency, func(i interface{}) {

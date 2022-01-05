@@ -118,7 +118,6 @@ func InitConfig(options *libs.Options) {
             "telegram": utils.GetOSEnv("TELEGRAM_API_TOKEN", "TELEGRAM_API_TOKEN"),
             "gitlab":   utils.GetOSEnv("GITLAB_API_TOKEN", "GITLAB_API_TOKEN"),
             "github":   utils.GetOSEnv("GITHUB_API_KEY", "GITHUB_API_KEY"),
-            "discord":  utils.GetOSEnv("DISCORD_API_TOKEN", "DISCORD_API_TOKEN"),
         })
 
         // dedicated storages
@@ -141,7 +140,6 @@ func InitConfig(options *libs.Options) {
             "slack_report_channel":       utils.GetOSEnv("SLACK_REPORT_CHANNEL", "SLACK_REPORT_CHANNEL"),
             "slack_diff_channel":         utils.GetOSEnv("SLACK_DIFF_CHANNEL", "SLACK_DIFF_CHANNEL"),
             "slack_webhook":              utils.GetOSEnv("SLACK_WEBHOOK", "SLACK_WEBHOOK"),
-            "discord_channel":            utils.GetOSEnv("DISCORD_CHANNEL", "DISCORD_CHANNEL"),
             "telegram_channel":           utils.GetOSEnv("TELEGRAM_CHANNEL", "TELEGRAM_CHANNEL"),
             "telegram_status_channel":    utils.GetOSEnv("TELEGRAM_STATUS_CHANNEL", "TELEGRAM_STATUS_CHANNEL"),
             "telegram_report_channel":    utils.GetOSEnv("TELEGRAM_REPORT_CHANNEL", "TELEGRAM_REPORT_CHANNEL"),
@@ -194,6 +192,12 @@ func InitConfig(options *libs.Options) {
         })
 
         v.WriteConfigAs(options.ConfigFile)
+    }
+
+    if isWritable, _ := utils.IsWritable(options.ConfigFile); isWritable {
+        utils.ErrorF("config file does not writable: %v", options.ConfigFile)
+        utils.BlockF("fatal", "Make sure you are login as 'root user' if your installation done via root user")
+        os.Exit(-1)
     }
 
     GetEnv(options)
@@ -269,6 +273,8 @@ func GetEnv(options *libs.Options) {
     options.Cloud.BuildRepo = cloud["build_repo"]
 
     // load the config file here
+    // ~/osmedeus-base/cloud/ssh/cloud.pub
+    // ~/osmedeus-base/cloud/ssh/cloud.privte
     options.Cloud.SecretKey = utils.NormalizePath(cloud["cloud_secret_key"])
     options.Cloud.PublicKey = utils.NormalizePath(cloud["cloud_public_key"])
     if utils.FileExists(options.Cloud.SecretKey) {
@@ -410,7 +416,6 @@ func GetNotification(options *libs.Options) {
 
     options.Noti.SlackToken = tokens["slack"]
     options.Noti.TelegramToken = tokens["telegram"]
-    options.Noti.DiscordToken = tokens["discord"]
     options.Noti.ClientName = noti["client_name"]
 
     options.Noti.SlackStatusChannel = noti["slack_status_channel"]
@@ -498,15 +503,15 @@ func GetGit(options *libs.Options) {
     options.Git.DefaultUser = git["default_user"]
     options.Git.DefaultUID = utils.StrToInt(git["default_uid"])
 }
-
-// GetSync get options for client
-func GetSync(options *libs.Options) {
-    v, _ := LoadConfig(*options)
-    fb := v.GetStringMapString("Sync")
-    options.Sync.BaseURL = fb["firebase_url"]
-    options.Sync.Prefix = fb["firebase_prefix"]
-    options.Sync.Pool = fb["firebase_pool"]
-}
+//
+//// GetSync get options for client
+//func GetSync(options *libs.Options) {
+//    v, _ := LoadConfig(*options)
+//    fb := v.GetStringMapString("Sync")
+//    options.Sync.BaseURL = fb["firebase_url"]
+//    options.Sync.Prefix = fb["firebase_prefix"]
+//    options.Sync.Pool = fb["firebase_pool"]
+//}
 
 // GetCdn get options for client
 func GetCdn(options *libs.Options) {
@@ -567,22 +572,6 @@ func ReloadConfig(options libs.Options) {
         "cloud_config": path.Join(BaseFolder, "cloud"),
     })
 
-    //
-    //v.Set("Environments", map[string]string{
-    //	//"workflows":       path.Join(RootFolder, "core/workflow"),
-    //	"workflows":       path.Join(BaseFolder, "core/workflow"),
-    //	"binaries":         path.Join(BaseFolder, "binaries"),
-    //	"storages":        path.Join(RootFolder, "storages"),
-    //	"workspaces":      path.Join(RootFolder, "workspaces"),
-    //	"plugins":         path.Join(BaseFolder, "plugins"),
-    //	"data":            path.Join(BaseFolder, "data"),
-    //	"cloud_data":      path.Join(RootFolder, "clouds"),
-    //	"provider_config": path.Join(RootFolder, "provider"),
-    //	"cloud_config":    path.Join(BaseFolder, "cloud"),
-    //	//
-    //	"backups":         path.Join(RootFolder, "backups"),
-    //})
-
     v.Set("Cloud", map[string]string{
         "cloud_secret_key": utils.GetOSEnv("CLOUD_SECRET_KEY", "CLOUD_SECRET_KEY"),
         "cloud_public_key": utils.GetOSEnv("CLOUD_PUBLIC_KEY", "CLOUD_PUBLIC_KEY"),
@@ -616,7 +605,6 @@ func ReloadConfig(options libs.Options) {
         "slack":    utils.GetOSEnv("SLACK_API_TOKEN", "SLACK_API_TOKEN"),
         "gitlab":   utils.GetOSEnv("GITLAB_API_TOKEN", "GITLAB_API_TOKEN"),
         "github":   utils.GetOSEnv("GITHUB_API_KEY", "GITHUB_API_KEY"),
-        "discord":  utils.GetOSEnv("DISCORD_API_TOKEN", "DISCORD_API_TOKEN"),
         "telegram": utils.GetOSEnv("TELEGRAM_API_TOKEN", "TELEGRAM_API_TOKEN"),
     })
 
@@ -639,7 +627,6 @@ func ReloadConfig(options libs.Options) {
         "slack_report_channel":       utils.GetOSEnv("SLACK_REPORT_CHANNEL", "SLACK_REPORT_CHANNEL"),
         "slack_diff_channel":         utils.GetOSEnv("SLACK_DIFF_CHANNEL", "SLACK_DIFF_CHANNEL"),
         "slack_webhook":              utils.GetOSEnv("SLACK_WEBHOOK", "SLACK_WEBHOOK"),
-        "discord_channel":            utils.GetOSEnv("DISCORD_CHANNEL", "DISCORD_CHANNEL"),
         "telegram_channel":           utils.GetOSEnv("TELEGRAM_CHANNEL", "TELEGRAM_CHANNEL"),
         "telegram_status_channel":    utils.GetOSEnv("TELEGRAM_STATUS_CHANNEL", "TELEGRAM_STATUS_CHANNEL"),
         "telegram_report_channel":    utils.GetOSEnv("TELEGRAM_REPORT_CHANNEL", "TELEGRAM_REPORT_CHANNEL"),
@@ -664,22 +651,6 @@ func ReloadConfig(options libs.Options) {
         "update_meta": utils.GetOSEnv("META_URL", "META_URL"),
         "workflow":    utils.GetOSEnv("UPDATE_URL", "UPDATE_URL"),
     })
-
-    //
-    //v.Set("Sync", map[string]string{
-    //	"firebase_url":    utils.GetOSEnv("FIREBASE_URL", "FIREBASE_URL"),
-    //	"firebase_prefix": utils.GetOSEnv("FIREBASE_PREFIX", "FIREBASE_PREFIX"),
-    //	"firebase_pool":   utils.GetOSEnv("FIREBASE_POOL", "FIREBASE_POOL"),
-    //})
-    //
-    //v.Set("Master", map[string]string{
-    //	"host": utils.GetOSEnv("MASTER_HOST", "MASTER_HOST"),
-    //	"cred": utils.GetOSEnv("MASTER_CRED", "MASTER_CRED"),
-    //})
-    //v.Set("Pool", map[string]string{
-    //	"host": utils.GetOSEnv("POOL_HOST", "POOL_HOST"),
-    //	"cred": utils.GetOSEnv("POOL_CRED", "POOL_CRED"),
-    //})
 
     v.WriteConfig()
 }

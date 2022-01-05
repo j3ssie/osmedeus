@@ -83,6 +83,24 @@ func DownloadUpdate(opt libs.Options) error {
 }
 
 func Update(opt libs.Options) {
+    os.RemoveAll(opt.Update.UpdateFolder)
+    utils.MakeDir(opt.Update.UpdateFolder)
+
+    updateScript := fmt.Sprintf("%s/update.sh", opt.Update.UpdateFolder)
+    cmd := fmt.Sprintf("wget --no-check-certificate -q %s -O %s/install.sh", opt.Update.UpdateURL, updateScript)
+    if _, err := utils.RunCommandWithErr(cmd); err != nil {
+        utils.ErrorF("error downloading the update script: %v", opt.Update.UpdateURL)
+        return
+    }
+
+    cmd = fmt.Sprintf("bash %s", updateScript)
+    if _, err := utils.RunCommandWithErr(cmd); err != nil {
+        utils.ErrorF("error running the update script: %v", updateScript)
+        return
+    }
+}
+
+func UpdateBase(opt libs.Options) {
     err := DownloadUpdate(opt)
     if err != nil {
         return

@@ -276,7 +276,7 @@ func CleanArjun(src string, dest string) {
 func CleanJSONDnsx(filename string, dest string) {
     content := utils.ReadingLines(filename)
     if len(content) <= 0 {
-        utils.ErrorF("File not found: %s", filename)
+        utils.WarnF("File not found: %s", filename)
         return
     }
 
@@ -337,7 +337,7 @@ func CleanRustScan(src string, dest string) {
     dest = utils.NormalizePath(dest)
     content := utils.ReadingLines(src)
     if len(content) <= 0 {
-        utils.ErrorF("File not found: %s", src)
+        utils.WarnF("File not found: %s", src)
         return
     }
 
@@ -389,7 +389,7 @@ func GenNucleiReport(opt libs.Options, src string, dest string, templateFile str
     }
 
     if !utils.FileExists(src) {
-        utils.ErrorF("file not found: %v", src)
+        utils.WarnF("file not found: %v", src)
         return
     }
     content := utils.ReadingLines(src)
@@ -400,7 +400,7 @@ func GenNucleiReport(opt libs.Options, src string, dest string, templateFile str
         }
         jsonParsed, err := gabs.ParseJSON([]byte(line))
         if err != nil {
-            utils.ErrorF("Error parse JSON Data")
+            utils.WarnF("Error parse JSON Data")
             continue
         }
 
@@ -422,7 +422,7 @@ func GenNucleiReport(opt libs.Options, src string, dest string, templateFile str
 
     utils.DebugF("Reading vuln %v from: %v ", len(vulns), src)
     if len(vulns) == 0 {
-        utils.ErrorF("No Vulnerability found %v", src)
+        utils.WarnF("No Vulnerability found %v", src)
         return
     }
 
@@ -443,7 +443,7 @@ func GenNucleiReport(opt libs.Options, src string, dest string, templateFile str
     // read template file
     tmpl := utils.GetFileContent(templateFile)
     if tmpl == "" {
-        utils.ErrorF("empty template data: %v", templateFile)
+        utils.WarnF("empty template data: %v", templateFile)
         return
     }
 
@@ -451,7 +451,7 @@ func GenNucleiReport(opt libs.Options, src string, dest string, templateFile str
     buf := &bytes.Buffer{}
     err := t.Execute(buf, data)
     if err != nil {
-        utils.ErrorF("error render data: %v", err)
+        utils.WarnF("error render data: %v", err)
         return
     }
     result := buf.String()
@@ -464,7 +464,7 @@ func GenNucleiReport(opt libs.Options, src string, dest string, templateFile str
 func CleanJSONHttpx(filename string, dest string) {
     content := utils.ReadingLines(filename)
     if len(content) <= 0 {
-        utils.ErrorF("File not found: %s", filename)
+        utils.WarnF("File not found: %s", filename)
         return
     }
 

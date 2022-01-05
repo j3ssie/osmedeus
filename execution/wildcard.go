@@ -21,7 +21,7 @@ func IsWildCard(domain string) bool {
     //resolvers = defaultResolvers
     //resolverPool := amassresolvers.SetupResolverPool(resolvers, 1000, false, nil)
     //if resolverPool == nil {
-    //	utils.ErrorF("Failed to init DNS pool")
+    //	utils.WarnF("Failed to init DNS pool")
     //	return false
     //}
     //

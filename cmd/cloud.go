@@ -42,6 +42,7 @@ func init() {
     cloudCmd.Flags().StringVar(&options.Cloud.TempTarget, "tempTargets", "/tmp/osm-tmp-inputs/", "Temp Folder to store targets file")
 
     // mics option
+    cloudCmd.Flags().BoolVar(&options.Cloud.EnableSyncWorkflow, "sync-workflow",  false, "Enable Sync Workflow folder to remote machine first before starting the scan")
     cloudCmd.Flags().BoolVarP(&options.Cloud.CopyWorkspaceToGit, "gws", "G", false, "Enable Copy Workspace to Git (run -f sync after done)")
     cloudCmd.Flags().BoolVarP(&options.Cloud.DisableLocalSync, "no-lsync", "z", false, "Disable sync back data to local machine")
     cloudCmd.Flags().BoolVar(&options.Cloud.BackgroundRun, "bg", false, "Send command to instance without checking if process is done or not")
@@ -60,8 +61,8 @@ func runCloud(cmd *cobra.Command, _ []string) error {
     if threads > 1 || options.Cloud.Threads <= 1 {
         options.Cloud.Threads = threads
     }
-    utils.InforF("%v %v by %v", strings.Title(libs.BINARY), libs.VERSION, libs.AUTHOR)
-    utils.InforF("Store log file to: %v", options.LogFile)
+    utils.GoodF("%v %v by %v", strings.Title(libs.BINARY), libs.VERSION, libs.AUTHOR)
+    utils.GoodF("Store log file to: %v", options.LogFile)
 
     // get pre run commands
     getPreRun(&options)

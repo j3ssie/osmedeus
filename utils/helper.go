@@ -18,6 +18,7 @@ import (
     "regexp"
     "strconv"
     "strings"
+    "syscall"
     "time"
 
     "github.com/mitchellh/go-homedir"
@@ -787,4 +788,37 @@ func Move(src string, dest string) error {
     os.RemoveAll(dest)
     DebugF("Moving %v --> %v", src, dest)
     return os.Rename(src, dest)
+}
+
+
+func IsWritable(filename string) (isWritable bool, err error) {
+    isWritable = false
+    info, err := os.Stat(filename)
+    if err != nil {
+        return
+    }
+
+    err = nil
+    if !info.IsDir() {
+        return
+    }
+
+    // Check if the user bit is enabled in file permission
+    if info.Mode().Perm() & (1 << (uint(7))) == 0 {
+        return
+    }
+
+    var stat syscall.Stat_t
+    if err = syscall.Stat(filename, &stat); err != nil {
+        return
+    }
+
+    err = nil
+    if uint32(os.Geteuid()) != stat.Uid {
+        isWritable = false
+        return
+    }
+
+    isWritable = true
+    return
 }

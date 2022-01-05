@@ -190,17 +190,24 @@ func (c *CloudRunner) CopyTarget() error {
     return nil
 }
 
+func (c *CloudRunner) CopyWorkflow() error {
+    utils.DebugF("Sync workflow of %s to %s", c.Opt.Env.WorkFlowsFolder, c.DestInstance)
+    destWorkflow := "/root/osmedeus-base/workflow/"
+    if c.Opt.Cloud.RemoteWorkflowFolder != "" {
+        destWorkflow = c.Opt.Cloud.RemoteWorkflowFolder
+    }
+
+    c.SSHExec(fmt.Sprintf("rm -rf %s && mkdir -p %s", destWorkflow, destWorkflow))
+    cmd := fmt.Sprintf("rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i %s' -avzr --progress %s %s:%s", c.SshPrivateKey, c.Opt.Env.WorkFlowsFolder, c.DestInstance, destWorkflow)
+    c.RetryCommandWithExpectString(cmd, `bytes/sec`)
+    return nil
+}
+
 func (c *CloudRunner) PreRunRemote() error {
     if len(c.Opt.Cloud.RemotePreRun) <= 0 {
         return nil
     }
     utils.InforF("Run remote command on: %s", c.PublicIP)
-
-    //// just checking to make sure SSH is open
-    // out, err := c.SSHExec(fmt.Sprintf("%s scan -F", libs.BINARY))
-    // if !strings.Contains(out, "Osmedeus Professional") {
-    //   return err
-    // }
 
     // really start to run pre commands
     for _, rcmd := range c.Opt.Cloud.RemotePreRun {

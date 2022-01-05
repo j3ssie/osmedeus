@@ -37,11 +37,10 @@ func InitLog(options *libs.Options) {
 
     // defer f.Close()
     mwr := io.MultiWriter(os.Stdout, f)
-    logger.SetLevel(logrus.ErrorLevel)
-
+    //logger.SetLevel(logrus.InfoLevel)
     logger = &logrus.Logger{
         Out:   mwr,
-        Level: logrus.FatalLevel,
+        Level: logrus.InfoLevel,
         Formatter: &prefixed.TextFormatter{
             ForceColors:     true,
             ForceFormatting: true,
@@ -52,12 +51,11 @@ func InitLog(options *libs.Options) {
 
     if options.Debug == true {
         logger.SetLevel(logrus.DebugLevel)
-    } else if options.Verbose == true {
-        logger.SetLevel(logrus.InfoLevel)
-    } else if options.Quite == true {
+    }  else if options.Verbose == true {
+        logger.SetLevel(logrus.ErrorLevel)
+    }  else if options.Quite == true {
         logger.SetOutput(ioutil.Discard)
     }
-
 }
 
 // PrintLine print seperate line
@@ -100,10 +98,15 @@ func ErrorF(format string, args ...interface{}) {
     logger.Error(fmt.Sprintf(format, args...))
 }
 
-// WarningF print good message
-func WarningF(format string, args ...interface{}) {
-    good := color.YellowString("[!]")
-    fmt.Printf("%s %s\n", good, fmt.Sprintf(format, args...))
+// WarnF print good message
+func WarnF(format string, args ...interface{}) {
+    logger.Warning(fmt.Sprintf(format, args...))
+}
+
+
+// TraceF print good message
+func TraceF(format string, args ...interface{}) {
+    logger.Trace(fmt.Sprintf(format, args...))
 }
 
 // DebugF print debug message

@@ -21,7 +21,6 @@ func runUpdate(cmd *cobra.Command, _ []string) error {
     if repo != "" {
         options.Update.UpdateURL = repo
     }
-
     core.Update(options)
     return nil
 }

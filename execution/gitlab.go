@@ -25,7 +25,7 @@ func GitlabAuth(options libs.Options) (*gitlab.Client, error) {
             gitlab.WithBaseURL(options.Git.BaseURL),
         )
         if err != nil {
-            utils.ErrorF("Error authen in Gitlab %v: %v", options.Git.BaseURL, err)
+            utils.WarnF("Error authen in Gitlab %v: %v", options.Git.BaseURL, err)
             return nil, err
         }
         return git, nil
@@ -40,7 +40,7 @@ func GitlabAuth(options libs.Options) (*gitlab.Client, error) {
         gitlab.WithBaseURL(options.Git.BaseURL),
     )
     if err != nil {
-        utils.ErrorF("Error authen in Gitlab %v: %v", options.Git.BaseURL, err)
+        utils.WarnF("Error authen in Gitlab %v: %v", options.Git.BaseURL, err)
         return nil, err
     }
     return git, nil
@@ -75,7 +75,7 @@ func CreateGitlabRepo(repo string, tag string, options libs.Options) string {
     }
     gRepo, _, err := git.Projects.CreateProject(&opt, nil)
     if err != nil {
-        utils.ErrorF("Error to create %v: %v", repo, err)
+        utils.WarnF("Error to create %v: %v", repo, err)
         return ""
     }
 
@@ -113,7 +113,7 @@ func DeleteRepo(repo string, pid int, options libs.Options) {
             return
         }
     }
-    utils.ErrorF("Project not found: %v", repo)
+    utils.WarnF("Project not found: %v", repo)
 }
 
 // ListProjects delete repo by id or name
@@ -123,7 +123,7 @@ func ListProjects(gitUser int, options libs.Options) {
     }
     git, err := GitlabAuth(options)
     if err != nil {
-        utils.ErrorF("Err get do authen user: %v", err)
+        utils.WarnF("Err get do authen user: %v", err)
         return
     }
     uid := gitUser
@@ -131,7 +131,7 @@ func ListProjects(gitUser int, options libs.Options) {
     if gitUser == 0 {
         user, _, err := git.Users.CurrentUser()
         if err != nil {
-            utils.ErrorF("Err get current user: %v", err)
+            utils.WarnF("Err get current user: %v", err)
             return
         }
         uid = user.ID
@@ -139,7 +139,7 @@ func ListProjects(gitUser int, options libs.Options) {
     } else {
         //user, _, err := git.Users.GetUser(uid, git.Users.)
         //if err != nil {
-        //	utils.ErrorF("Err get current user: %v", err)
+        //	utils.WarnF("Err get current user: %v", err)
         //	return
         //}
         //username = user.Username
@@ -147,7 +147,7 @@ func ListProjects(gitUser int, options libs.Options) {
     utils.InforF("Listing projects of uid: %v", uid)
     projects, _, err := git.Projects.ListUserProjects(uid, nil)
     if err != nil {
-        utils.ErrorF("Error listing projects: %v", err)
+        utils.WarnF("Error listing projects: %v", err)
         return
     }
     for _, project := range projects {

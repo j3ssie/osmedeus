@@ -34,12 +34,12 @@ func GetTargetFromCDN(options libs.Options, targetWS string) string {
     var cdnSummary CdnSummary
     err = jsoniter.UnmarshalFromString(resp.Body, &cdnSummary)
     if err != nil {
-        utils.ErrorF("error parsing body")
+        utils.WarnF("error parsing body")
         return ""
     }
 
     if len(cdnSummary.Targets) == 0 {
-        utils.ErrorF("index file empty")
+        utils.WarnF("index file empty")
         return ""
     }
 
@@ -52,7 +52,7 @@ func GetTargetFromCDN(options libs.Options, targetWS string) string {
             return target.DownloadURL
         }
     }
-    utils.ErrorF("no target match")
+    utils.WarnF("no target match")
     return ""
 }
 
@@ -90,7 +90,7 @@ func GetWSFromCDN(options libs.Options, target string, dest string) {
 
     downloadURL := GetTargetFromCDN(options, target)
     if downloadURL == "" {
-        utils.ErrorF("Target not found from cdn: %v", target)
+        utils.WarnF("Target not found from cdn: %v", target)
         return
     }
 

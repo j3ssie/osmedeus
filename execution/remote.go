@@ -32,7 +32,7 @@ func RemoteLogin(username string, password string, URL string, options libs.Opti
 
     token := strings.Trim(jsonParsed.S("token").String(), `"`)
     if token == "null" {
-        utils.ErrorF("Login fail at %v", URL)
+        utils.WarnF("Login fail at %v", URL)
     }
     options.Client.JWT = fmt.Sprintf("Osmedeus %v", token)
     options.Client.URL = URL
@@ -43,7 +43,7 @@ func RemoteLogin(username string, password string, URL string, options libs.Opti
 // RemoteUpload upload data to remote url
 func RemoteUpload(src string, options libs.Options) {
     if options.Client.JWT == "" || options.Client.URL == "" {
-        utils.ErrorF("JWT Token was not set")
+        utils.WarnF("JWT Token was not set")
         return
     }
     // keep \n not escape from JSON body
@@ -62,7 +62,7 @@ func RemoteUpload(src string, options libs.Options) {
     remoteFile := strings.Trim(jsonParsed.S("content").String(), `"`)
 
     if remoteFile == "null" {
-        utils.ErrorF("Fail to Upload %v at %v", src, options.Client.URL)
+        utils.WarnF("Fail to Upload %v at %v", src, options.Client.URL)
     }
     utils.DebugF("Sucessfully uploaded: %v", remoteFile)
 }
@@ -70,7 +70,7 @@ func RemoteUpload(src string, options libs.Options) {
 // RemoteExec run command on a remote client
 func RemoteExec(command string, options libs.Options) {
     if options.Client.JWT == "" || options.Client.URL == "" {
-        utils.ErrorF("JWT Token was not set")
+        utils.WarnF("JWT Token was not set")
         return
     }
 
@@ -86,7 +86,7 @@ func RemoteExec(command string, options libs.Options) {
     jsonParsed, _ := gabs.ParseJSON([]byte(body))
     message := jsonParsed.S("content").String()
     if message == "null" {
-        utils.ErrorF("Run Command Fail at %v", options.Client.URL)
+        utils.WarnF("Run Command Fail at %v", options.Client.URL)
     }
     utils.DebugF("Sucessfully run Command: %v", command)
 
@@ -95,7 +95,7 @@ func RemoteExec(command string, options libs.Options) {
 // RemoteExecSchedule run command on a remote client with schedule
 func RemoteExecSchedule(command string, schedule string, options libs.Options) {
     if options.Client.JWT == "" || options.Client.URL == "" {
-        utils.ErrorF("JWT Token was not set")
+        utils.WarnF("JWT Token was not set")
         return
     }
 
@@ -111,7 +111,7 @@ func RemoteExecSchedule(command string, schedule string, options libs.Options) {
     jsonParsed, _ := gabs.ParseJSON([]byte(body))
     message := jsonParsed.S("content").String()
     if message == "null" {
-        utils.ErrorF("Run Schedule Command Fail at %v", options.Client.URL)
+        utils.WarnF("Run Schedule Command Fail at %v", options.Client.URL)
     }
     utils.DebugF("Sucessfully run Schedule Command: %v", command)
 

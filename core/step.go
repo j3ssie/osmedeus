@@ -80,7 +80,7 @@ func (r *Runner) CheckRequired(requires []string, options libs.Options) error {
         if strings.Contains(require, "(") && strings.Contains(require, ")") {
             validate := r.ConditionExecScript(require)
             if !validate {
-                utils.ErrorF("Missing Requirement: %v", require)
+                utils.DebugF("Missing Requirement: %v", require)
                 return fmt.Errorf("condition not met: %s", require)
             }
             continue
@@ -89,7 +89,7 @@ func (r *Runner) CheckRequired(requires []string, options libs.Options) error {
         require = utils.NormalizePath(require)
         if !utils.FileExists(require) && utils.EmptyFile(require, 0) {
             if !utils.FolderExists(require) && utils.DirLength(require) > 0 {
-                utils.ErrorF("Missing %v", require)
+                utils.DebugF("Missing %v", require)
                 return fmt.Errorf("missing requirement")
             }
         }
@@ -132,7 +132,7 @@ func RunCommands(commands []string, std string, options libs.Options) string {
             }
 
             if err != nil {
-                utils.ErrorF("error running command: %v", command)
+                utils.DebugF("error running command: %v", command)
             }
 
             if out != "" {

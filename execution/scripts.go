@@ -107,7 +107,7 @@ func DeleteFolder(path string) {
 // Append append content to a file
 func Append(dest string, src string) {
     if !utils.FileExists(src) || utils.FileLength(src) <= 0 {
-        utils.ErrorF("error to append %v", src)
+        utils.DebugF("error to append %v", src)
         return
     }
     data := utils.GetFileContent(src)
@@ -139,7 +139,7 @@ func Sort(src string) {
 // SortU sort content of a file
 func SortU(src string) {
     if !utils.FileExists(src) {
-        utils.ErrorF("File not found: %s", src)
+        utils.DebugF("File not found: %s", src)
     }
     cmd := fmt.Sprintf("LC_ALL=C sort -u -o %s %s", src, src)
     utils.RunCmdWithOutput(cmd)
