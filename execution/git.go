@@ -168,6 +168,9 @@ func CloneRepo(url string, dest string, options libs.Options) error {
 
 // ValidGitURL simple validate git repo
 func ValidGitURL(raw string) bool {
+    if strings.TrimSpace(raw) == "" {
+        return false
+    }
     if !strings.HasPrefix(raw, "git@") {
         return false
     }

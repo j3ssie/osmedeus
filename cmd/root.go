@@ -37,6 +37,7 @@ func init() {
     RootCmd.PersistentFlags().StringVar(&options.Env.RootFolder, "rootFolder", fmt.Sprintf("~/.%s/", libs.BINARY), "Root Folder to store Result")
     RootCmd.PersistentFlags().StringVar(&options.Env.BaseFolder, "baseFolder", fmt.Sprintf("~/%s-base/", libs.BINARY), "Base Folder which is store data, binaries and workflows")
     RootCmd.PersistentFlags().StringVar(&options.ConfigFile, "configFile", fmt.Sprintf("~/.%s/config.yaml", libs.BINARY), "Config File")
+    RootCmd.PersistentFlags().StringVar(&options.Env.WorkspacesFolder, "wsFolder", fmt.Sprintf("~/.%s/workspaces", libs.BINARY), "Root Workspace folder")
     RootCmd.PersistentFlags().StringVar(&options.LogFile, "log", "", "Log File")
     RootCmd.PersistentFlags().IntVarP(&options.Concurrency, "concurrency", "c", 1, "Concurrency level (recommend to keep it as 1 on machine has RAM smaller than 2GB)")
 
@@ -49,10 +50,10 @@ func init() {
     RootCmd.PersistentFlags().IntVarP(&options.Cloud.NumberOfParts, "chunk-parts", "P", 0, "Number of chunks file to split (default: equal with concurrency)")
     RootCmd.PersistentFlags().StringVar(&options.Cloud.ChunkInputs, "chunkFolder", "/tmp/chunk-inputs/", "Temp Folder to store chunk inputs")
     RootCmd.PersistentFlags().StringVar(&options.Timeout, "timeout", "", "Global timeout for each step (e.g: 60s, 30m, 2h)")
-    RootCmd.PersistentFlags().StringVar(&options.Cloud.Size, "size", "", "Override Size of cloud instance (default will get from 'cloud/config.yaml')")
-    RootCmd.PersistentFlags().StringVar(&options.Cloud.Region, "region", "", "Override Region of cloud instance (default will get from 'cloud/config.yaml')")
-    RootCmd.PersistentFlags().StringVar(&options.Cloud.Token, "token", "", "Override token of cloud instance (default will get from 'cloud/config.yaml')")
-    RootCmd.PersistentFlags().StringVar(&options.Cloud.Provider, "provider", "", "Override provider of cloud instance (default will get from 'cloud/config.yaml')")
+    RootCmd.PersistentFlags().StringVar(&options.Cloud.Size, "size", "", "Override Size of cloud instance (default will get from 'cloud/provider.yaml')")
+    RootCmd.PersistentFlags().StringVar(&options.Cloud.Region, "region", "", "Override Region of cloud instance (default will get from 'cloud/provider.yaml')")
+    RootCmd.PersistentFlags().StringVar(&options.Cloud.Token, "token", "", "Override token of cloud instance (default will get from 'cloud/provider.yaml')")
+    RootCmd.PersistentFlags().StringVar(&options.Cloud.Provider, "provider", "", "Override provider of cloud instance (default will get from 'cloud/provider.yaml')")
     RootCmd.PersistentFlags().BoolVar(&options.Cloud.ReBuildBaseImage, "rebuild", false, "Forced to rebuild the images event though the version didn't change")
 
     // mics option

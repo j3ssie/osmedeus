@@ -123,7 +123,7 @@ func (p *Provider) BuildImage() (err error) {
 
 // RunBuild run the packer command
 func (p *Provider) RunBuild() error {
-    packerBinary := fmt.Sprintf("%s/packer", p.Opt.Cloud.Target["Plugins"])
+    packerBinary := fmt.Sprintf("%s/packer", p.Opt.Env.BinariesFolder)
     if !utils.FileExists(packerBinary) {
         packerBinary = "packer"
     }

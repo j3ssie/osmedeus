@@ -8,7 +8,9 @@ import (
     "github.com/j3ssie/osmedeus/libs"
     "github.com/j3ssie/osmedeus/utils"
     "github.com/spf13/cobra"
+    "os"
     "path"
+    "sort"
 )
 
 func init() {
@@ -22,14 +24,47 @@ func init() {
     RootCmd.AddCommand(execCmd)
 }
 
-func runHealth(_ *cobra.Command, _ []string) error {
+func runHealth(_ *cobra.Command, args []string) error {
     if options.PremiumPackage {
         fmt.Printf("💠 Osmedeus %s: Run diagnostics to check if everything okay\n", libs.VERSION)
     } else {
         fmt.Printf("🚀 Osmedeus %s: Run diagnostics to check if everything okay\n", libs.VERSION)
     }
 
-    err := healCheck(options)
+    sort.Strings(args)
+    var err error
+    for _, arg := range args {
+        switch arg {
+        case "store", "git", "storages", "stora":
+            err = checkStorages()
+        case "cloud", "dist", "provider":
+            err = checkCloud()
+        case "all", "a", "full":
+            err = checkStorages()
+            if err != nil {
+                fmt.Println(color.YellowString("⚠️️ There is might be something wrong with your storages: %v\n", err))
+            }
+            err = checkCloud()
+            if err != nil {
+                fmt.Println(color.YellowString("%s If you install osmedeus on a single machine then it's okay to ignore the cloud setup\n", "[!] Cloud config setup incorrectly."))
+            }
+            err = generalCheck()
+            if err != nil {
+                fmt.Printf("‼️ There is might be something wrong with your setup: %v\n", err)
+                return nil
+            }
+            break
+        }
+        if err != nil {
+            fmt.Println(color.YellowString("⚠️️ There is might be something wrong with your cloud or storages setup: %v\n", err))
+            return nil
+        }
+    }
+    if len(args) > 0 {
+        return nil
+    }
+
+    err = generalCheck()
     if err != nil {
         fmt.Printf("‼️ There is might be something wrong with your setup: %v\n", err)
         return nil
@@ -40,12 +75,64 @@ func runHealth(_ *cobra.Command, _ []string) error {
         fmt.Printf("‼️ There is might be something wrong with your setup: %v\n", err)
         return nil
     }
-
     fmt.Printf(color.GreenString("\n🦾 It’s all good. Happy Hacking 🦾\n"))
     return nil
 }
 
-func healCheck(options libs.Options) error {
+func checkCloud() error {
+    // check packer program
+    if _, err := utils.RunCommandWithErr("packer -h"); err != nil {
+        if _, err := utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "packer"))); err != nil {
+            color.Red("[-] Packer program setup incorrectly")
+            return fmt.Errorf("error checking core programs: %v", fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "packer")))
+        }
+    }
+
+    // check config files
+    if !utils.FileExists(path.Join(options.Env.CloudConfigFolder, "provider.yaml")) {
+        return fmt.Errorf("distributed cloud config doesn't exist: %v", path.Join(options.Env.CloudConfigFolder, "provider.yaml"))
+    }
+    if utils.DirLength(path.Join(options.Env.CloudConfigFolder, "providers")) == 0 {
+        return fmt.Errorf("providers file doesn't exist: %v", path.Join(options.Env.CloudConfigFolder, "providers"))
+    }
+
+    // check SSH Keys
+    if !utils.FileExists(options.Cloud.SecretKey) {
+        keysDir := path.Dir(options.Cloud.SecretKey)
+        os.RemoveAll(keysDir)
+        utils.MakeDir(keysDir)
+
+        utils.InforF("Generate SSH Key at: %v", options.Cloud.SecretKey)
+        var err error
+        _, err = utils.RunCommandWithErr(fmt.Sprintf(`ssh-keygen -t ed25519 -f %s -q -N ''`, options.Cloud.SecretKey))
+        if err != nil {
+            color.Red("[-] error generated SSH Key for cloud config at: %v", options.Cloud.SecretKey)
+            return fmt.Errorf("[-] error generated SSH Key for cloud config at: %v", options.Cloud.SecretKey)
+        }
+    }
+    if !utils.FileExists(options.Cloud.PublicKey) {
+        return fmt.Errorf("providers SSH Key missing: %v", options.Cloud.PublicKey)
+    }
+
+    fmt.Printf("[+] Health Check Cloud Config: %s\n", color.GreenString("✔"))
+    return nil
+}
+
+func checkStorages() error {
+    utils.DebugF("Checking storages setup")
+    if execution.ValidGitURL(options.Storages["summary_repo"]) {
+        return fmt.Errorf("invalid git summary %v", options.Storages["summary_repo"])
+    }
+
+    if utils.DirLength(options.Storages["summary_storage"]) > 1 {
+        fmt.Printf("[+] Health Check Storages Config: %s\n", color.GreenString("✔"))
+        return nil
+    }
+
+    return fmt.Errorf("storages config didn't setup yet")
+}
+
+func generalCheck() error {
     exist := utils.FolderExists(options.Env.BaseFolder)
     if !exist {
         color.Red("[-] Core folder setup incorrect: %v", options.Env.BaseFolder)
@@ -70,7 +157,6 @@ func healCheck(options libs.Options) error {
     if err != nil {
         color.Red("[-] Core program setup incorrectly")
         return fmt.Errorf("error checking core programs: %v", fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "httprobe")))
-
     }
     fmt.Printf("[+] Health Check Core Programs: %s\n", color.GreenString("✔"))
 
@@ -98,31 +184,6 @@ func healCheck(options libs.Options) error {
         color.Red("[-] Data setup incorrectly: %v", options.Env.DataFolder)
         return fmt.Errorf("[-] Data setup incorrectly: %v", options.Env.DataFolder)
     }
-
-    // check cloud config
-    var okCloud bool
-    if utils.FileExists(path.Join(options.Env.CloudConfigFolder, "config.yaml")) {
-        okCloud = true
-        if utils.DirLength(path.Join(options.Env.CloudConfigFolder, "providers")) == 0 {
-            okCloud = false
-        }
-        if utils.DirLength(path.Join(options.Env.CloudConfigFolder, "ssh")) < 2 && utils.FileExists(options.Cloud.SecretKey) {
-            okCloud = false
-        }
-        if okCloud {
-            fmt.Printf("[+] Health Check Cloud Config: %s\n", color.GreenString("✔"))
-        } else {
-            fmt.Printf(color.YellowString("%s If you install osmedeus on a single machine then it's okay to ignore the cloud setup\n", "[!] Cloud config setup incorrectly."))
-        }
-
-    }
-
-    if execution.ValidGitURL(options.Storages["summary_repo"]) {
-        if utils.DirLength(options.Storages["summary_storage"]) > 1 {
-            fmt.Printf("[+] Health Check Storages Config: %s\n", color.GreenString("✔"))
-        }
-    }
-
     return nil
 }
 

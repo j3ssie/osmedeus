@@ -112,8 +112,8 @@ func InitCloud(options libs.Options, targets []string) {
 func GetClouds(options libs.Options) []CloudRunner {
     var cloudInfos []CloudRunner
 
-    // ~/osmedeus-plugins/cloud/config.yaml
-    cloudConfigFile := path.Join(options.Env.CloudConfigFolder, "config.yaml")
+    // ~/osmedeus-plugins/cloud/provider.yaml
+    cloudConfigFile := path.Join(options.Env.CloudConfigFolder, "provider.yaml")
     utils.DebugF("Parsing cloud config from: %s", cloudConfigFile)
 
     // parse config from cloud/config.yaml file
