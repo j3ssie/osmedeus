@@ -74,6 +74,8 @@ func (r *Runner) CheckRequired(requires []string, options libs.Options) error {
     if len(requires) == 0 {
         return nil
     }
+
+    utils.DebugF("Checking require: %v", requires)
     for _, require := range requires {
         require = ResolveData(require, options.Scan.ROptions)
 
@@ -88,7 +90,7 @@ func (r *Runner) CheckRequired(requires []string, options libs.Options) error {
 
         require = utils.NormalizePath(require)
         if !utils.FileExists(require) && utils.EmptyFile(require, 0) {
-            if !utils.FolderExists(require) && utils.DirLength(require) > 0 {
+            if !utils.FolderExists(require) && utils.DirLength(require) == 0 {
                 utils.DebugF("Missing %v", require)
                 return fmt.Errorf("missing requirement")
             }
