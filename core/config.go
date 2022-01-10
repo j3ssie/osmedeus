@@ -320,10 +320,12 @@ func GetStorages(options *libs.Options) {
     v, _ := LoadConfig(*options)
     storages := v.GetStringMapString("Storages")
 
-    for k, v := range storages {
-        storages[k], _ = homedir.Expand(v)
-    }
     storagesOptions := make(map[string]string)
+    for k, v := range storages {
+        storages[k] = utils.NormalizePath(v)
+        storagesOptions[k] = utils.NormalizePath(v)
+    }
+
     // cloning stuff
     // path to private to push result
     storagesOptions["secret_key"] = storages["secret_key"]
@@ -394,6 +396,7 @@ func GetStorages(options *libs.Options) {
     storagesOptions[storages["vuln_storage"]] = storages["vuln_repo"]
 
     options.Storages = storagesOptions
+
     if options.NoGit {
         return
     }
@@ -503,6 +506,7 @@ func GetGit(options *libs.Options) {
     options.Git.DefaultUser = git["default_user"]
     options.Git.DefaultUID = utils.StrToInt(git["default_uid"])
 }
+
 //
 //// GetSync get options for client
 //func GetSync(options *libs.Options) {

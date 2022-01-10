@@ -2,12 +2,15 @@ package cmd
 
 import (
     "fmt"
+    "github.com/fatih/color"
     "github.com/j3ssie/osmedeus/core"
     "github.com/j3ssie/osmedeus/distribute"
     "github.com/j3ssie/osmedeus/provider"
     "github.com/j3ssie/osmedeus/utils"
+    "github.com/panjf2000/ants"
     "github.com/spf13/cobra"
     "sort"
+    "sync"
 )
 
 func init() {
@@ -73,13 +76,42 @@ func runProvider(_ *cobra.Command, args []string) error {
     if len(args) == 0 {
         fmt.Println(CloudUsage())
     }
+    err := checkCloud()
+    if err != nil {
+        fmt.Println(color.YellowString("⚠️️ There is might be something wrong with your cloud setup: %v\n", err))
+        return err
+    }
+
     return nil
 }
 
 func runProviderBuild(_ *cobra.Command, _ []string) error {
     options.Cloud.OnlyCreateDroplet = true
     options.Cloud.ReBuildBaseImage = true
+
+    // building multiple tokens
+    if options.Cloud.TokensFile != "" && utils.FileExists(options.Cloud.TokensFile) {
+        tokens := utils.ReadingFileUnique(options.Cloud.TokensFile)
+        if len(tokens) > 0 {
+            var wg sync.WaitGroup
+            p, _ := ants.NewPoolWithFunc(options.Concurrency, func(i interface{}) {
+                lOptions := options
+                lOptions.Cloud.Token = i.(string)
+                distribute.InitCloud(lOptions, lOptions.Scan.Inputs)
+                wg.Done()
+            }, ants.WithPreAlloc(true))
+            defer p.Release()
+
+            for _, token := range tokens {
+                wg.Add(1)
+                _ = p.Invoke(token)
+            }
+            return nil
+        }
+    }
+
     distribute.InitCloud(options, options.Scan.Inputs)
+
     return nil
 }
 

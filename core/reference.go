@@ -38,7 +38,7 @@ const (
     CleanWebanalyze  = "CleanWebanalyze"
     CleanArjun       = "CleanArjun"
     GenNucleiReport  = "GenNucleiReport"
-    CleanJSONHttpx  = "CleanJSONHttpx"
+    CleanJSONHttpx   = "CleanJSONHttpx"
 )
 
 const (

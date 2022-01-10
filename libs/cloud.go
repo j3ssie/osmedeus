@@ -11,8 +11,9 @@ type Cloud struct {
     NoDelete           bool
     EnablePrivateIP    bool
 
-    EnableSyncWorkflow    bool
+    EnableSyncWorkflow   bool
     RemoteWorkflowFolder string
+    TokensFile           string
 
     CopyWorkspaceToGit bool
     ClearTime          string

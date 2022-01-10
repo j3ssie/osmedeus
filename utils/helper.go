@@ -278,6 +278,11 @@ func DirLength(dir string) int {
     dir = NormalizePath(dir)
     files, err := ioutil.ReadDir(dir)
     if err != nil {
+        dir = dir + "/"
+        files, err = ioutil.ReadDir(dir)
+        if err == nil {
+            return len(files)
+        }
         return 0
     }
     return len(files)
@@ -790,7 +795,6 @@ func Move(src string, dest string) error {
     return os.Rename(src, dest)
 }
 
-
 func IsWritable(filename string) (isWritable bool, err error) {
     isWritable = false
     info, err := os.Stat(filename)
@@ -804,7 +808,7 @@ func IsWritable(filename string) (isWritable bool, err error) {
     }
 
     // Check if the user bit is enabled in file permission
-    if info.Mode().Perm() & (1 << (uint(7))) == 0 {
+    if info.Mode().Perm()&(1<<(uint(7))) == 0 {
         return
     }
 

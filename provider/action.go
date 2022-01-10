@@ -82,7 +82,7 @@ func (p *Provider) CreateInstance(name string) (err error) {
     }
     err = backoff.Retry(operation, p.BackOff)
     if err != nil {
-        utils.ErrorF("error create instance action %v -- %v", p.ProviderName, name)
+        utils.WarnF("error create instance action %v -- %v", p.ProviderName, name)
         return err
     }
     return nil
@@ -120,7 +120,7 @@ func (p *Provider) BootInstance(id int) (err error) {
         err = p.BootInstanceLN(id)
     }
     if err != nil {
-        utils.ErrorF("error booting instance: %v", id)
+        utils.WarnF("error booting instance: %v", id)
         return err
     }
     return nil
@@ -137,7 +137,7 @@ func (p *Provider) GetInstanceInfo(id int) (err error) {
         instance, err = p.InstanceInfoDO(id)
     }
     if err != nil {
-        utils.ErrorF("error getting public IP of instance: %v", instance.InstanceID)
+        utils.WarnF("error getting public IP of instance: %v", instance.InstanceID)
         return err
     }
     return nil

@@ -102,7 +102,7 @@ func checkCloud() error {
         os.RemoveAll(keysDir)
         utils.MakeDir(keysDir)
 
-        utils.InforF("Generate SSH Key at: %v", options.Cloud.SecretKey)
+        utils.DebugF("Generate SSH Key at: %v", options.Cloud.SecretKey)
         var err error
         _, err = utils.RunCommandWithErr(fmt.Sprintf(`ssh-keygen -t ed25519 -f %s -q -N ''`, options.Cloud.SecretKey))
         if err != nil {
@@ -120,16 +120,22 @@ func checkCloud() error {
 
 func checkStorages() error {
     utils.DebugF("Checking storages setup")
-    if execution.ValidGitURL(options.Storages["summary_repo"]) {
-        return fmt.Errorf("invalid git summary %v", options.Storages["summary_repo"])
+    if !execution.ValidGitURL(options.Storages["summary_repo"]) {
+        return fmt.Errorf("invalid git summary: %v", options.Storages["summary_repo"])
     }
 
-    if utils.DirLength(options.Storages["summary_storage"]) > 1 {
-        fmt.Printf("[+] Health Check Storages Config: %s\n", color.GreenString("✔"))
-        return nil
+    utils.DebugF("Check if your summary directory is exist or not: %v", options.Env.StoragesFolder)
+    if utils.DirLength(options.Env.StoragesFolder) < 1 {
+        return fmt.Errorf("storages folder doesn't exist: %v", options.Env.StoragesFolder)
     }
 
-    return fmt.Errorf("storages config didn't setup yet")
+    utils.DebugF("Check the secret key for git usage: %v", options.Storages["secret_key"])
+    if !utils.FileExists(options.Storages["secret_key"]) {
+        return fmt.Errorf("secret key for git command doesn't exist: %v", options.Storages["secret_key"])
+    }
+
+    fmt.Printf("[+] Health Check Storages Config: %s\n", color.GreenString("✔"))
+    return nil
 }
 
 func generalCheck() error {

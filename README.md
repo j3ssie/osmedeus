@@ -22,7 +22,7 @@
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/osmedeus/osmedeus-base/master/install.sh)"
 ```
 
-## Build the engine
+## Build the engine from source
 
 Make sure you installed `golang >= v1.17`
 
@@ -70,7 +70,6 @@ Join Our Discord server [here](https://discord.gg/gy4SWhpaPU)
 ## 💎 Donation
 
 Please check out [this page](https://docs.osmedeus.org/donation/) for couple donation methods here
-
 
 ## License
 

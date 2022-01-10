@@ -51,9 +51,9 @@ func InitLog(options *libs.Options) {
 
     if options.Debug == true {
         logger.SetLevel(logrus.DebugLevel)
-    }  else if options.Verbose == true {
+    } else if options.Verbose == true {
         logger.SetLevel(logrus.ErrorLevel)
-    }  else if options.Quite == true {
+    } else if options.Quite == true {
         logger.SetOutput(ioutil.Discard)
     }
 }
@@ -102,7 +102,6 @@ func ErrorF(format string, args ...interface{}) {
 func WarnF(format string, args ...interface{}) {
     logger.Warning(fmt.Sprintf(format, args...))
 }
-
 
 // TraceF print good message
 func TraceF(format string, args ...interface{}) {
