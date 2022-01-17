@@ -38,6 +38,7 @@ func init() {
     RootCmd.PersistentFlags().StringVar(&options.Env.BaseFolder, "baseFolder", fmt.Sprintf("~/%s-base/", libs.BINARY), "Base Folder which is store data, binaries and workflows")
     RootCmd.PersistentFlags().StringVar(&options.ConfigFile, "configFile", fmt.Sprintf("~/.%s/config.yaml", libs.BINARY), "Config File")
     RootCmd.PersistentFlags().StringVar(&options.Env.WorkspacesFolder, "wsFolder", fmt.Sprintf("~/.%s/workspaces", libs.BINARY), "Root Workspace folder")
+    RootCmd.PersistentFlags().StringVar(&options.Env.WorkFlowsFolder, "wfFolder", "", fmt.Sprintf("Custom Workflow folder (default will get from '$HOME/%s-base/workflow')", libs.BINARY))
     RootCmd.PersistentFlags().StringVar(&options.LogFile, "log", "", "Log File")
     RootCmd.PersistentFlags().IntVarP(&options.Concurrency, "concurrency", "c", 1, "Concurrency level (recommend to keep it as 1 on machine has RAM smaller than 2GB)")
 

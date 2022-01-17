@@ -90,28 +90,34 @@ func runProviderBuild(_ *cobra.Command, _ []string) error {
     options.Cloud.ReBuildBaseImage = true
 
     // building multiple tokens
-    if options.Cloud.TokensFile != "" && utils.FileExists(options.Cloud.TokensFile) {
+    options.Cloud.TokensFile = utils.NormalizePath(options.Cloud.TokensFile)
+    if options.Cloud.TokensFile != "" {
         tokens := utils.ReadingFileUnique(options.Cloud.TokensFile)
-        if len(tokens) > 0 {
-            var wg sync.WaitGroup
-            p, _ := ants.NewPoolWithFunc(options.Concurrency, func(i interface{}) {
-                lOptions := options
-                lOptions.Cloud.Token = i.(string)
-                distribute.InitCloud(lOptions, lOptions.Scan.Inputs)
-                wg.Done()
-            }, ants.WithPreAlloc(true))
-            defer p.Release()
-
-            for _, token := range tokens {
-                wg.Add(1)
-                _ = p.Invoke(token)
-            }
+        if len(tokens) == 0 {
+            utils.ErrorF("token file not found: %v", options.Cloud.TokensFile)
             return nil
         }
+
+        var wg sync.WaitGroup
+        p, _ := ants.NewPoolWithFunc(options.Concurrency, func(i interface{}) {
+            lOptions := options
+            lOptions.Cloud.Token = i.(string)
+
+            distribute.InitCloud(lOptions, lOptions.Scan.Inputs)
+            wg.Done()
+        }, ants.WithPreAlloc(true))
+        defer p.Release()
+
+        for _, token := range tokens {
+            wg.Add(1)
+            _ = p.Invoke(token)
+        }
+        wg.Wait()
+        return nil
+
     }
 
     distribute.InitCloud(options, options.Scan.Inputs)
-
     return nil
 }
 

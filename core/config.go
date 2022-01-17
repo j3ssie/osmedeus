@@ -252,7 +252,20 @@ func GetEnv(options *libs.Options) {
     utils.MakeDir(options.Env.StoragesFolder)
     options.Env.WorkspacesFolder = utils.NormalizePath(envs["workspaces"])
     utils.MakeDir(options.Env.WorkspacesFolder)
-    options.Env.WorkFlowsFolder = utils.NormalizePath(envs["workflows"])
+
+    // get workflow folder
+    if options.Env.WorkFlowsFolder != "" {
+        options.Env.WorkFlowsFolder = utils.NormalizePath(options.Env.WorkFlowsFolder)
+    }
+
+    customWorkflow := utils.GetOSEnv("CUSTOM_OSM_WORKFLOW", "CUSTOM_OSM_WORKFLOW")
+    if customWorkflow != "CUSTOM_OSM_WORKFLOW" && options.Env.WorkFlowsFolder == "" {
+        options.Env.WorkFlowsFolder = utils.NormalizePath(customWorkflow)
+    }
+
+    if options.Env.WorkFlowsFolder == "" {
+        options.Env.WorkFlowsFolder = utils.NormalizePath(envs["workflows"])
+    }
 
     if utils.FileExists(path.Join(options.Env.WorkFlowsFolder, "premium.md")) {
         options.PremiumPackage = true

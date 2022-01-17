@@ -48,6 +48,10 @@ func ScanUsage() string {
   
   ## Get target from a stdin and start the scan with 2 concurrency
   cat list_of_targets.txt | osmedeus scan -c 2
+
+  ## Start the scan with your custom workflow folder
+  osmedeus scan --wfFolder ~/custom-workflow/ -f your-custom-workflow -t sample.com
+
             `
     h += color.HiCyanString("\nScan Usage:\n")
     h += "  osmedeus scan -f [flowName] -t [target] \n"
@@ -63,6 +67,7 @@ func ScanUsage() string {
     h += "  osmedeus scan -f general -t www.sample.com\n"
     h += "  osmedeus scan -f gdirb -T list_of_target.txt\n"
     h += "  osmedeus scan -m ~/.osmedeus/core/workflow/test/dirbscan.yaml -t list_of_urls.txt\n"
+    h += "  osmedeus scan --wfFolder ~/custom-workflow/ -f your-custom-workflow -t list_of_urls.txt\n"
     return h
 }
 

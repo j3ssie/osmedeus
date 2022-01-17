@@ -70,7 +70,7 @@ func runHealth(_ *cobra.Command, args []string) error {
         return nil
     }
 
-    err = listFlows(options)
+    err = listFlows()
     if err != nil {
         fmt.Printf("‼️ There is might be something wrong with your setup: %v\n", err)
         return nil
@@ -193,7 +193,7 @@ func generalCheck() error {
     return nil
 }
 
-func listFlows(options libs.Options) error {
+func listFlows() error {
     flows := core.ListFlow(options)
     if len(flows) == 0 {
         color.Red("[-] Error to list workflows: %s", options.Env.WorkFlowsFolder)
