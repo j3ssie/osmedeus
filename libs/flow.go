@@ -11,9 +11,10 @@ type Routine struct {
 
 // Flow struct to define specific field for a mode
 type Flow struct {
-    NoDB      bool `yaml:"nodb"`
-    Input     string
-    Validator string // domain, cidr, ip or domain-file, cidr-file and so on
+    NoDB        bool `yaml:"nodb"`
+    ForceParams bool `yaml:"force-params"`
+    Input       string
+    Validator   string // domain, cidr, ip or domain-file, cidr-file and so on
 
     Name        string
     Type        string
@@ -32,8 +33,9 @@ type Flow struct {
 
 // Module struct to define specific field for a module
 type Module struct {
-    NoDB      bool   `yaml:"nodb"`
-    Validator string // domain, cidr, ip
+    NoDB        bool   `yaml:"nodb"`
+    Validator   string // domain, cidr, ip
+    ForceParams bool   `yaml:"force-params"`
 
     // just for print some info
     Name  string
@@ -44,8 +46,6 @@ type Module struct {
     Resume bool
     // run module despite resume enable
     Forced bool
-
-    Permanent bool
 
     MTimeout   string `yaml:"mtimeout"`
     Params     []map[string]string

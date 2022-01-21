@@ -168,14 +168,15 @@ func MoreParams(module libs.Module, options *libs.Options) {
     if len(ROptions) == 0 {
         ROptions = make(map[string]string)
     }
-    // params from module
+
+    // params from module file
     if len(module.Params) > 0 {
         for _, param := range module.Params {
             for k, v := range param {
                 // skip params if override: false
                 _, exist := ROptions[k]
-                if module.Permanent && exist {
-                    utils.DebugF("Skip Override param: %v", k)
+                if module.ForceParams && exist {
+                    utils.DebugF("Skip Override param: %v --> %v", v, k)
                     continue
                 }
 
@@ -188,7 +189,7 @@ func MoreParams(module libs.Module, options *libs.Options) {
         }
     }
 
-    // more params
+    // more params from -p flag
     if len(options.Scan.Params) > 0 {
         params := ParseParams(options.Scan.Params)
         if len(params) > 0 {

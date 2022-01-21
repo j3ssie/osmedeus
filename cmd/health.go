@@ -207,7 +207,7 @@ func listFlows() error {
         if err != nil {
             utils.ErrorF("Error parsing flow: %v", flow)
         }
-        fmt.Printf("%10s - %s\n", parsedFlow.Name, parsedFlow.Desc)
+        fmt.Printf("    %15s - %s\n", parsedFlow.Name, parsedFlow.Desc)
     }
     h := "\nUsage:\n"
     h += "  osmedeus scan -f [flowName] -t [target] \n"

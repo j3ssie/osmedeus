@@ -84,7 +84,9 @@ Join Our Discord server [here](https://discord.gg/gy4SWhpaPU)
 
 ## 💎 Donation & Sponsor
 
-Check out for a couple of **[donation methods here]((https://docs.osmedeus.org/donation/))** to get a **[premium package](https://docs.osmedeus.org/premium/)**
+Check out for a couple of **[donation methods here]((https://docs.osmedeus.org/donation/))** to get
+a **[premium package](https://docs.osmedeus.org/premium/)**
+
 ## License
 
 `Osmedeus` is made with ♥ by [@j3ssiejjj](https://twitter.com/j3ssiejjj) and it is released under the MIT license.

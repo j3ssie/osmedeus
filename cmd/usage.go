@@ -32,6 +32,10 @@ func ScanUsage() string {
   
   ## Start a simple scan with other flow
   osmedeus scan -f vuln -t sample.com
+  osmedeus scan -f extensive -t sample.com -t another.com
+  
+  ## Scan list of targets
+  osmedeus scan -T list_of_targets.txt
   
   ## Scan for CIDR with file contains CIDR with the format '1.2.3.4/24'
   osmedeus scan -f cidr -t list-of-cidrs.txt
@@ -43,15 +47,14 @@ func ScanUsage() string {
   ## Use a custom wordlist
   osmedeus scan -t sample.com -p 'wordlists={{.Data}}/wordlists/content/big.txt' -p 'fthreads=40'
   
-  ## Scan list of targets
-  osmedeus scan -T list_of_targets.txt
-  
   ## Get target from a stdin and start the scan with 2 concurrency
   cat list_of_targets.txt | osmedeus scan -c 2
 
   ## Start the scan with your custom workflow folder
   osmedeus scan --wfFolder ~/custom-workflow/ -f your-custom-workflow -t sample.com
 
+  ## Start the scan with chunkk inputs to review the output way more much faster
+  osmedeus scan --chunk --chunk-parts 20 -f cidr -t list-of-100-cidr.txt
             `
     h += color.HiCyanString("\nScan Usage:\n")
     h += "  osmedeus scan -f [flowName] -t [target] \n"
@@ -64,7 +67,8 @@ func ScanUsage() string {
     h += color.HiCyanString("\nPractical Scan Usage:\n")
     h += "  osmedeus scan -T list_of_targets.txt -W custom_workspaces\n"
     h += "  osmedeus scan -t target.com -w workspace_name --debug\n"
-    h += "  osmedeus scan -f general -t www.sample.com\n"
+    h += "  osmedeus scan -f general -t sample.com\n"
+    h += "  osmedeus scan -f extensive -t sample.com -t another.com\n"
     h += "  osmedeus scan -f gdirb -T list_of_target.txt\n"
     h += "  osmedeus scan -m ~/.osmedeus/core/workflow/test/dirbscan.yaml -t list_of_urls.txt\n"
     h += "  osmedeus scan --wfFolder ~/custom-workflow/ -f your-custom-workflow -t list_of_urls.txt\n"

@@ -106,6 +106,13 @@ func (r *Runner) LoadScripts() string {
         return result
     })
 
+    // Cat the file to stdout
+    vm.Set(Cat, func(call otto.FunctionCall) otto.Value {
+        utils.Cat(call.Argument(0).String())
+        result, _ := vm.ToValue(true)
+        return result
+    })
+
     // ExecCmdB execute in the background
     vm.Set(ExecCmdB, func(call otto.FunctionCall) otto.Value {
         cmd := call.Argument(0).String()

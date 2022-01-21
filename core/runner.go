@@ -21,6 +21,7 @@ type Runner struct {
     InputType     string // domain, url, ip, cidr or domain-file, url-file, ip-file, cidr-file
     RequiredInput string // this should match with InputType
     IsInvalid     bool
+    ForceParams   bool
 
     RoutineType  string // module or flow
     RoutineName  string // general
@@ -92,6 +93,7 @@ func (r *Runner) PrepareWorkflow() {
 
         r.Target["FlowPath"] = flow
         r.RequiredInput = r.Opt.Flow.Validator
+        r.ForceParams = r.Opt.Flow.ForceParams
 
         // get more params from flow
         if len(r.Opt.Flow.Params) > 0 {
@@ -101,6 +103,7 @@ func (r *Runner) PrepareWorkflow() {
                 }
             }
         }
+
     }
 
     // generate routines
@@ -216,6 +219,7 @@ func (r *Runner) StartRoutine() {
     for _, routine := range r.Routines {
         for _, module := range routine.ParsedModules {
             module = ResolveReports(module, r.Opt)
+            module.ForceParams = r.ForceParams
             r.Opt.Module = module
 
             // check exclude options

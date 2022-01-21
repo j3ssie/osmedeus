@@ -180,6 +180,29 @@ func ReadingLines(filename string) []string {
     return result
 }
 
+// Cat Reading file and return content as []string
+func Cat(filename string) {
+    filename = NormalizePath(filename)
+    if !FileExists(filename) {
+        return
+    }
+    file, err := os.Open(filename)
+    if err != nil {
+        return
+    }
+    defer file.Close()
+
+    scanner := bufio.NewScanner(file)
+    for scanner.Scan() {
+        line := strings.TrimSpace(scanner.Text())
+        if line == "" {
+            continue
+        }
+        fmt.Println(line)
+    }
+    return
+}
+
 // ReadingFileUnique Reading file and return content as []string
 func ReadingFileUnique(filename string) []string {
     var result []string

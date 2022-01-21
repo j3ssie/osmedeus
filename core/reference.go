@@ -70,6 +70,7 @@ const (
     CastToInt  = "CastToInt"
     StripSlash = "StripSlash"
     Printf     = "Printf"
+    Cat        = "Cat"
 )
 
 const (
