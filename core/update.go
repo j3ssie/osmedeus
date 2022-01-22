@@ -93,6 +93,7 @@ func Update(opt libs.Options) {
         return
     }
 
+
     cmd = fmt.Sprintf("bash %s", updateScript)
     if _, err := utils.RunCommandWithErr(cmd); err != nil {
         utils.ErrorF("error running the update script: %v", updateScript)

@@ -2,7 +2,6 @@ package cmd
 
 import (
     "fmt"
-    "github.com/fatih/color"
     "github.com/j3ssie/osmedeus/core"
     "github.com/j3ssie/osmedeus/distribute"
     "github.com/j3ssie/osmedeus/provider"
@@ -76,11 +75,12 @@ func runProvider(_ *cobra.Command, args []string) error {
     if len(args) == 0 {
         fmt.Println(CloudUsage())
     }
-    err := checkCloud()
-    if err != nil {
-        fmt.Println(color.YellowString("⚠️️ There is might be something wrong with your cloud setup: %v\n", err))
-        return err
-    }
+
+    //err := checkCloud()
+    //if err != nil {
+    //    fmt.Println(color.YellowString("⚠️️ There is might be something wrong with your cloud setup: %v\n", err))
+    //    return err
+    //}
 
     return nil
 }

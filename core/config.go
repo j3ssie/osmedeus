@@ -180,7 +180,7 @@ func InitConfig(options *libs.Options) {
         })
 
         v.SetDefault("Update", map[string]string{
-            "update_type": "git",
+            "update_type": "http",
             "update_url":  utils.GetOSEnv("UPDATE_BASE_URL", "UPDATE_BASE_URL"),
             "update_date": utils.GetOSEnv("UPDATE_DATE", "UPDATE_DATE"),
             "update_meta": utils.GetOSEnv("META_URL", "META_URL"),

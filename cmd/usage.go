@@ -55,6 +55,9 @@ func ScanUsage() string {
 
   ## Start the scan with chunkk inputs to review the output way more much faster
   osmedeus scan --chunk --chunk-parts 20 -f cidr -t list-of-100-cidr.txt
+
+  ## Continuously run the scan on a target right after it finished
+  osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'
             `
     h += color.HiCyanString("\nScan Usage:\n")
     h += "  osmedeus scan -f [flowName] -t [target] \n"
@@ -78,6 +81,8 @@ func ScanUsage() string {
 func UtilsUsage() string {
     h := color.HiCyanString("\nUtilities Usage:\n")
     h += "  osmedeus health \n"
+    h += "  osmedeus health git\n"
+    h += "  osmedeus health cloud\n"
     h += "  osmedeus version --json \n"
     h += "  osmedeus utils tmux ls \n"
     h += "  osmedeus utils tmux logs -A -l 10 \n"
