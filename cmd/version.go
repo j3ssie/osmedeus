@@ -44,7 +44,7 @@ type StatData struct {
     CPU     string `json:"cpu"`
     Mem     string `json:"mem"`
     Name    string `json:"name"`
-    Version string `json:"verion"`
+    Version string `json:"version"`
 }
 
 // PrintStat print status
