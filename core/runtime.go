@@ -2,6 +2,7 @@ package core
 
 import (
     "fmt"
+    "github.com/fatih/color"
     "github.com/j3ssie/osmedeus/execution"
     "github.com/j3ssie/osmedeus/utils"
     "github.com/robertkrimen/otto"
@@ -108,7 +109,9 @@ func (r *Runner) LoadScripts() string {
 
     // Cat the file to stdout
     vm.Set(Cat, func(call otto.FunctionCall) otto.Value {
-        utils.Cat(call.Argument(0).String())
+        filename := call.Argument(0).String()
+        utils.InforF("Showing result of: %v", color.HiCyanString(filename))
+        utils.Cat(filename)
         result, _ := vm.ToValue(true)
         return result
     })
