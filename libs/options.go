@@ -50,8 +50,9 @@ type Options struct {
     Cdn    Cdn
     Update Update
 
-    Cloud   Cloud
-    GitSync bool
+    Cloud           Cloud
+    CloudConfigFile string
+    GitSync         bool
 
     ScanID   string
     Storages map[string]string
@@ -131,7 +132,6 @@ type Environment struct {
     // cloud stuff
     CloudConfigFolder string // ~/osmedeus-base/clouds/
     ProviderFolder    string // ~/.osmedeus/providers/
-    CloudDataFolder   string
     BackupFolder      string
 
     // Mics

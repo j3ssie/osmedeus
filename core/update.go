@@ -4,8 +4,11 @@ import (
     "fmt"
     "github.com/cenkalti/backoff/v4"
     "github.com/fatih/color"
+    "github.com/hashicorp/go-version"
     "github.com/j3ssie/osmedeus/libs"
     "github.com/j3ssie/osmedeus/utils"
+    jsoniter "github.com/json-iterator/go"
+    "github.com/mitchellh/go-homedir"
     "os"
     "os/exec"
     "path"
@@ -15,26 +18,98 @@ import (
 
 /* Mostly calling OS commands for double-check the PATH too */
 
-func UpdateMetadata(opt libs.Options) {
+func UpdateMetadata(options *libs.Options) {
     // t.Format("02-Jan-2006")
-    // ~/.osmedeus/update/metadata.json
-    opt.Update.UpdateConfig = path.Join(opt.Env.RootFolder, "update")
-    utils.MakeDir(opt.Update.UpdateConfig)
 
-    // check if it is a default one or not
-    if opt.Update.MetaDataURL == "" || opt.Update.MetaDataURL == "META_URL" {
+    var shouldUpdate bool
+    // ~/.osmedeus/update/metadata.json
+    options.Update.UpdateConfig = path.Join(utils.NormalizePath(options.Env.RootFolder), "update")
+    utils.MakeDir(options.Update.UpdateConfig)
+
+    if options.Update.MetaDataURL == "" {
+        options.Update.MetaDataURL = fmt.Sprintf("%s/public.json", libs.METADATA)
+        if options.PremiumPackage {
+            options.Update.MetaDataURL = fmt.Sprintf("%s/premium.json", libs.METADATA)
+        }
+    }
+
+    utils.InforF("Checking metadata information from: %v", options.Update.MetaDataURL)
+    metadataFile := path.Join(options.Update.UpdateConfig, "metadata.json")
+
+    var oldMetaData libs.UpdateMetaData
+    oldMetaData.CoreVersion = libs.VERSION
+    oldMetaData.WorkflowVersion = "v0.0.1"
+
+    if utils.FileExists(metadataFile) {
+        oldMetaDataContent := utils.GetFileContent(metadataFile)
+        if err := jsoniter.UnmarshalFromString(oldMetaDataContent, &oldMetaData); err != nil {
+            utils.ErrorF("error to parse metadata: %v", metadataFile)
+            return
+        }
+    }
+
+    var newMetaData libs.UpdateMetaData
+    res := utils.SendGET("", options.Update.MetaDataURL)
+    if res.StatusCode == 200 {
+        if err := jsoniter.UnmarshalFromString(res.Body, &newMetaData); err != nil {
+            utils.ErrorF("error to parse metadata: %v", options.Update.MetaDataURL)
+            return
+        }
+
+        utils.InforF("Writing metadata to: %v", color.HiCyanString(metadataFile))
+        if data, err := jsoniter.MarshalToString(&newMetaData); err == nil {
+            utils.WriteToFile(metadataFile, data)
+        }
+    } else {
+        utils.ErrorF("error fetching metadata from: %v", options.Update.MetaDataURL)
         return
     }
 
-    utils.DebugF("Updating metadata information from %v", opt.Update.MetaDataURL)
-    metadataFile := path.Join(opt.Update.UpdateConfig, "metadata.json")
-    if utils.FileExists(metadataFile) {
-        os.RemoveAll(metadataFile)
-    }
-    cmd := fmt.Sprintf("wget --no-check-certificate -q %s -O %s", opt.Update.MetaDataURL, metadataFile)
-    _, err := utils.RunCommandWithErr(cmd)
+    utils.DebugF(res.Body)
+
+    v1, err := version.NewVersion(oldMetaData.CoreVersion)
     if err != nil {
-        utils.ErrorF("error getting update metadata from: %v", opt.Update.MetaDataURL)
+        utils.ErrorF("error parsing version: %v -- %v", oldMetaData.CoreVersion, err)
+        return
+    }
+
+    // get from metadata URL
+    v2, err := version.NewVersion(newMetaData.CoreVersion)
+    if err != nil {
+        utils.ErrorF("error parsing version: %v -- %v", newMetaData.CoreVersion, err)
+
+        return
+    }
+
+    // Comparison example. There is also GreaterThan, Equal, and just
+    // a simple Compare that returns an int allowing easy >=, <=, etc.
+    if v1.LessThan(v2) {
+        fmt.Printf("Your current %s %s are outdated. Latest is %s\n", libs.BINARY, color.HiMagentaString("%v", v1), color.HiGreenString("%v", v2))
+        shouldUpdate = true
+    } else {
+        fmt.Printf("You're using %s core latest version %s updated at %s\n", libs.BINARY, color.HiMagentaString("%v", v1), color.HiGreenString("%v", newMetaData.UpdatedAt))
+    }
+
+    // check workflow version if core is updated
+    if !shouldUpdate {
+        wfv1, err := version.NewVersion(oldMetaData.WorkflowVersion)
+        if err != nil {
+            utils.ErrorF("error parsing version: %v -- %v", oldMetaData.WorkflowVersion, err)
+        }
+        wfv2, err := version.NewVersion(newMetaData.WorkflowVersion)
+        if err != nil {
+            utils.ErrorF("error parsing version: %v -- %v", newMetaData.WorkflowVersion, err)
+        }
+        if wfv1.LessThan(wfv2) {
+            fmt.Printf("Your current %s workflow %s are outdated. Latest is %s\n", libs.BINARY, color.HiMagentaString("%v", v1), color.HiGreenString("%v", v2))
+            shouldUpdate = true
+        }
+    }
+
+    if shouldUpdate {
+        home, _ := homedir.Dir()
+        fmt.Printf("📖 Run %s again to update Check out this page for more detail: %s\n", color.HiGreenString("the same install script"), color.HiGreenString("https://docs.osmedeus.org/installation/"))
+        fmt.Printf("💡 If you want a fresh install please run the command: %s\n", color.HiBlueString("rm -rf %s/osmedeus-base %s/.osmedeus", home, home))
     }
 }
 
@@ -92,7 +167,6 @@ func Update(opt libs.Options) {
         utils.ErrorF("error downloading the update script: %v", opt.Update.UpdateURL)
         return
     }
-
 
     cmd = fmt.Sprintf("bash %s", updateScript)
     if _, err := utils.RunCommandWithErr(cmd); err != nil {

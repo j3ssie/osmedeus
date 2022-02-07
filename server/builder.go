@@ -52,7 +52,7 @@ func Upload(c *fiber.Ctx) error {
 
 }
 
-// SaveTargets save upload data to /tmp/osmp-input/data-osm-xxx.txt
+// SaveTargets save upload data to /tmp/osm-input/data-osm-xxx.txt
 func SaveTargets(targets []string) string {
     tmpFile := fmt.Sprintf("data-%v-%v-%v.txt", utils.GetTS(), libs.BINARY, utils.RandomString(6))
     baseDir := fmt.Sprintf("/tmp/%v-input/", libs.BINARY)

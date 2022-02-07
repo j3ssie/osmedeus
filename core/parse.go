@@ -132,7 +132,7 @@ func ParseInput(raw string, options libs.Options) map[string]string {
     ROptions["Cloud"] = options.Env.CloudConfigFolder
 
     // ~/.osmedeus/clouds
-    ROptions["CWorkspaces"] = options.Env.CloudDataFolder
+    //ROptions["CWorkspaces"] = options.Env.CloudDataFolder
     ROptions["Workspaces"] = options.Env.WorkspacesFolder
     if options.Scan.BaseWorkspace != "" {
         ROptions["Workspaces"] = options.Scan.BaseWorkspace

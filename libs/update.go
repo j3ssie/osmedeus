@@ -16,8 +16,8 @@ type Update struct {
     NoUpdate      bool
 }
 
-type UpdateJSON struct {
-    UpdateDate      string `json:"update_date"`
-    CoreVersion     string `json:"core_version"`
+type UpdateMetaData struct {
     WorkflowVersion string `json:"workflow_version"`
+    CoreVersion     string `json:"core_version"`
+    UpdatedAt       string `json:"updated_at"`
 }

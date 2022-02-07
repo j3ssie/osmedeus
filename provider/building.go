@@ -2,7 +2,6 @@ package provider
 
 import (
     "fmt"
-    "github.com/j3ssie/osmedeus/core"
     "github.com/j3ssie/osmedeus/libs"
     "github.com/j3ssie/osmedeus/utils"
     "os"
@@ -29,7 +28,7 @@ func (p *Provider) PrePareBuildData() {
     data["TS"] = utils.GetTS()
 
     // generate packer content file to run
-    providerString := core.ResolveData(content, data)
+    providerString := utils.RenderText(content, data)
     data["Builder"] = providerString
 
     // ~/osmedeus-base
@@ -39,8 +38,7 @@ func (p *Provider) PrePareBuildData() {
     data["Data"] = p.Opt.Env.DataFolder
     data["Cloud"] = p.Opt.Env.CloudConfigFolder
     data["Workflow"] = p.Opt.Env.WorkFlowsFolder
-    // ~/.osmedeus/clouds
-    data["CWorkspaces"] = p.Opt.Env.CloudDataFolder
+
     // ~/.osmedeus/workspaces
     data["Workspaces"] = p.Opt.Env.WorkspacesFolder
     data["Binary"] = libs.BINARY
@@ -49,7 +47,7 @@ func (p *Provider) PrePareBuildData() {
 
     // for terraform
     data["ssh_public_key"] = p.Opt.Cloud.PublicKeyContent
-    data["root_password"] = fmt.Sprintf("osmp-%s", utils.RandomString(8))
+    data["root_password"] = fmt.Sprintf("%s-%s", libs.SNAPSHOT, utils.RandomString(8))
 
     //spew.Dump("data --> ", data)
     //spew.Dump("p.ProviderConfig --> ", p.ProviderConfig)
@@ -73,7 +71,7 @@ func (p *Provider) BuildImage() (err error) {
 
     // generate provision process
     setupContent := utils.GetFileContent(path.Join(p.Opt.Env.CloudConfigFolder, "setup.sh"))
-    setupContent = core.ResolveData(setupContent, p.ProviderConfig.BuildData)
+    setupContent = utils.RenderText(setupContent, p.ProviderConfig.BuildData)
     setupFile := path.Join(p.ProviderConfig.ProviderFolder, "setup.sh")
     utils.WriteToFile(setupFile, setupContent)
 
@@ -104,7 +102,7 @@ func (p *Provider) BuildImage() (err error) {
         return fmt.Errorf(errStr)
     }
 
-    buildContent = core.ResolveData(buildContent, p.ProviderConfig.BuildData)
+    buildContent = utils.RenderText(buildContent, p.ProviderConfig.BuildData)
     buildFile := path.Join(p.ProviderConfig.ProviderFolder, "build.json")
     p.ProviderConfig.BuildFile = buildFile
     utils.WriteToFile(buildFile, buildContent)

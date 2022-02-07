@@ -8,10 +8,17 @@ import (
 
 // ConfigProviders cloud config file
 type ConfigProviders struct {
-    Clouds []ConfigProvider `yaml:"clouds"`
+    Builder Builder          `yaml:"builder"`
+    Clouds  []ConfigProvider `yaml:"clouds"`
 }
 
-// ConfigProvider single element in cloud config file
+// Builder config for builder file
+type Builder struct {
+    BuildRepo string `yaml:"build_repo"`
+    PublicKey string `yaml:"public_key"`
+    SecretKey string `yaml:"secret_key"`
+}
+
 type ConfigProvider struct {
     // core part
     Name         string `yaml:"name"`
@@ -23,24 +30,25 @@ type ConfigProvider struct {
     Limit        int    `yaml:"limit"`
 
     // BaseImage     string `yaml:"base"`
-    Snapshot     string `yaml:"snapshot"`
-    SnapshotID   string `yaml:"snapshot_id"`
-    InstanceName string `yaml:"instance"`
-    PublicIP     string `yaml:"ip"`
-    SshKey       string `yaml:"ssh_key"`
+    RedactedToken string `yaml:"-"`
+    Snapshot      string `yaml:"-"`
+    SnapshotID    string `yaml:"-"`
+    InstanceName  string `yaml:"-"`
+    PublicIP      string `yaml:"-"`
+    SshKey        string `yaml:"-"`
 
     // for config
-    ProviderFolder string
-    ConfigFile     string
-    BuildFile      string
-    BuildData      map[string]string
+    ProviderFolder string            `yaml:"-"`
+    ConfigFile     string            `yaml:"-"`
+    BuildFile      string            `yaml:"-"`
+    BuildData      map[string]string `yaml:"-"`
 
     // for building
-    VarsFile     string
-    RunnerFile   string
-    BuildCommand string
-    BaseFolder   string
-    RawCommand   string
+    VarsFile     string `yaml:"-"`
+    RunnerFile   string `yaml:"-"`
+    BuildCommand string `yaml:"-"`
+    BaseFolder   string `yaml:"-"`
+    RawCommand   string `yaml:"-"`
 }
 
 // ParseProvider parse cloud file

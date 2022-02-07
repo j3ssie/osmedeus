@@ -7,6 +7,7 @@ import (
     "github.com/j3ssie/osmedeus/execution"
     "github.com/j3ssie/osmedeus/libs"
     "github.com/j3ssie/osmedeus/utils"
+    "github.com/olekukonko/tablewriter"
     "github.com/spf13/cobra"
     "os"
     "path"
@@ -89,7 +90,7 @@ func checkCloud() error {
     }
 
     // check config files
-    if !utils.FileExists(path.Join(options.Env.CloudConfigFolder, "provider.yaml")) {
+    if !utils.FileExists(options.CloudConfigFile) {
         return fmt.Errorf("distributed cloud config doesn't exist: %v", path.Join(options.Env.CloudConfigFolder, "provider.yaml"))
     }
     if utils.DirLength(path.Join(options.Env.CloudConfigFolder, "providers")) == 0 {
@@ -202,15 +203,30 @@ func listFlows() error {
     fmt.Printf("[+] Health Check Workflows: %s\n", color.GreenString("✔"))
 
     fmt.Printf("\nChecking available workflow at: %s \n\n", color.HiBlueString(options.Env.WorkFlowsFolder))
+
+    var content [][]string
     for _, flow := range flows {
         parsedFlow, err := core.ParseFlow(flow)
         if err != nil {
             utils.ErrorF("Error parsing flow: %v", flow)
+            continue
         }
-        fmt.Printf("    %15s - %s\n", parsedFlow.Name, parsedFlow.Desc)
+        row := []string{
+            parsedFlow.Name, parsedFlow.Desc,
+        }
+        content = append(content, row)
     }
+
+    table := tablewriter.NewWriter(os.Stderr)
+    table.SetAutoFormatHeaders(false)
+    table.SetHeader([]string{"Flow Name", "Flow Description"})
+table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: false})
+    table.SetColWidth(120)
+    table.AppendBulk(content) // Add Bulk Data
+    table.Render()
+
     h := "\nUsage:\n"
-    h += "  osmedeus scan -f [flowName] -t [target] \n"
+    h += color.HiCyanString("  osmedeus scan -f [flowName] -t [target] \n")
     fmt.Printf(h)
     return nil
 }

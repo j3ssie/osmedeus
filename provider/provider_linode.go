@@ -8,7 +8,7 @@ import (
     "github.com/j3ssie/osmedeus/libs"
     "github.com/j3ssie/osmedeus/utils"
     "github.com/linode/linodego"
-    "github.com/linode/linodego/pkg/errors"
+    //"github.com/linode/linodego/pkg/errors"
     "github.com/spf13/cast"
     "golang.org/x/oauth2"
     "log"
@@ -77,6 +77,7 @@ func (p *Provider) AccountLN() error {
     opt := linodego.AccountSettingsUpdateOptions{
         NetworkHelper: &helper,
     }
+
     // @TODO: no idea why this function false
     // client.UpdateAccountSettings(context.Background(), opt)
 
@@ -85,9 +86,7 @@ func (p *Provider) AccountLN() error {
         req.URL = "https://api.linode.com/v4/account/settings"
         //fmt.Println("err marshal", err)
         body := string(bodyData)
-        _, err = errors.CoupleAPIErrors(req.
-            SetBody(body).
-            Put(req.URL))
+        req.SetBody(body).Put(req.URL)
     }
     //}
     return err
@@ -310,7 +309,7 @@ func (p *Provider) MountDiskLN(dropletId int) error {
     if !ok {
         return fmt.Errorf("error convert client")
     }
-    utils.InforF("Mouning disk: %v", dropletId)
+    utils.InforF("Mounting disk: %v", dropletId)
     //err := client.BootInstance(ctx, dropletId, 0)
     ctx := context.TODO()
 
@@ -386,7 +385,7 @@ func (p *Provider) DeleteInstanceLN(id string) error {
         utils.ErrorF("error delete instance -- %v", err)
         return fmt.Errorf("error delete instance")
     }
-    utils.InforF("Deleted instance ID: %v", id)
+    utils.InforF("Deleted instance ID: %v", color.HiRedString(id))
     return nil
 }
 
@@ -402,7 +401,7 @@ func (p *Provider) DeleteSnapShotLN(id string) error {
         utils.ErrorF("error delete snapshot -- %v", err)
         return fmt.Errorf("error delete instance")
     }
-    utils.InforF("Deleted snapshot ID: %v", id)
+    utils.InforF("Deleted snapshot ID: %v", color.HiRedString(id))
     return nil
 }
 

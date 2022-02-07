@@ -2,32 +2,37 @@ package core
 
 import (
     "fmt"
+    "github.com/fatih/color"
+    "github.com/j3ssie/osmedeus/execution"
+    "github.com/j3ssie/osmedeus/libs"
+    "github.com/j3ssie/osmedeus/provider"
+    "github.com/j3ssie/osmedeus/utils"
+    "github.com/mitchellh/go-homedir"
+    "github.com/spf13/viper"
     "net/url"
     "os"
     "path"
     "path/filepath"
     "strings"
-
-    "github.com/mitchellh/go-homedir"
-
-    "github.com/j3ssie/osmedeus/execution"
-    "github.com/j3ssie/osmedeus/libs"
-    "github.com/j3ssie/osmedeus/utils"
-
-    "github.com/spf13/viper"
 )
 
 // InitConfig Init the config
-func InitConfig(options *libs.Options) {
+func InitConfig(options *libs.Options) error {
+    // ~/.osmedeus
     RootFolder := filepath.Dir(utils.NormalizePath(options.ConfigFile))
     if !utils.FolderExists(RootFolder) {
-        os.MkdirAll(RootFolder, 0750)
+        if err := os.MkdirAll(RootFolder, 0750); err != nil {
+            return err
+        }
     }
 
     // Base folder
+    // ~/osmedeus-base
     BaseFolder := utils.NormalizePath(options.Env.BaseFolder)
     if !utils.FolderExists(BaseFolder) {
-        os.MkdirAll(BaseFolder, 0750)
+        if err := os.MkdirAll(BaseFolder, 0750); err != nil {
+            return err
+        }
     }
 
     // init config
@@ -76,10 +81,10 @@ func InitConfig(options *libs.Options) {
 
         v.SetDefault("Environments", map[string]string{
             // RootFolder --> ~/.osmedeus/
-            "storages":        path.Join(RootFolder, "storages"),
-            "workspaces":      path.Join(RootFolder, "workspaces"),
-            "backups":         path.Join(RootFolder, "backups"),
-            "cloud_data":      path.Join(RootFolder, "clouds"),
+            "storages":   path.Join(RootFolder, "storages"),
+            "workspaces": path.Join(RootFolder, "workspaces"),
+            "backups":    path.Join(RootFolder, "backups"),
+            //"cloud_data":      path.Join(RootFolder, "clouds"),
             "provider_config": path.Join(RootFolder, "provider"),
 
             // this update casually
@@ -173,19 +178,19 @@ func InitConfig(options *libs.Options) {
             "osm_cdn_secret": utils.GetOSEnv("OSM_CDN_SECRET", "OSM_CDN_SECRET"),
         })
 
-        v.SetDefault("Cloud", map[string]string{
-            "cloud_public_key": utils.GetOSEnv("CLOUD_PUBLIC_KEY", "CLOUD_PUBLIC_KEY"),
-            "cloud_secret_key": utils.GetOSEnv("CLOUD_SECRET_KEY", "CLOUD_SECRET_KEY"),
-            "build_repo":       utils.GetOSEnv("CLOUD_BUILD_REPO", "CLOUD_BUILD_REPO"),
-        })
+        //v.SetDefault("Cloud", map[string]string{
+        //    "cloud_public_key": utils.GetOSEnv("CLOUD_PUBLIC_KEY", "CLOUD_PUBLIC_KEY"),
+        //    "cloud_secret_key": utils.GetOSEnv("CLOUD_SECRET_KEY", "CLOUD_SECRET_KEY"),
+        //    "build_repo":       utils.GetOSEnv("CLOUD_BUILD_REPO", "CLOUD_BUILD_REPO"),
+        //})
 
-        v.SetDefault("Update", map[string]string{
-            "update_type": "http",
-            "update_url":  utils.GetOSEnv("UPDATE_BASE_URL", "UPDATE_BASE_URL"),
-            "update_date": utils.GetOSEnv("UPDATE_DATE", "UPDATE_DATE"),
-            "update_meta": utils.GetOSEnv("META_URL", "META_URL"),
-            "workflow":    utils.GetOSEnv("UPDATE_URL", "UPDATE_URL"),
-        })
+        //v.SetDefault("Update", map[string]string{
+        //    "update_type": "http",
+        //    "update_url":  utils.GetOSEnv("UPDATE_BASE_URL", "UPDATE_BASE_URL"),
+        //    "update_date": utils.GetOSEnv("UPDATE_DATE", "UPDATE_DATE"),
+        //    //"update_meta": utils.GetOSEnv("META_URL", "META_URL"),
+        //    "workflow":    utils.GetOSEnv("UPDATE_URL", "UPDATE_URL"),
+        //})
 
         v.SetDefault("Mics", map[string]string{
             "docs": utils.GetOSEnv("OSM_DOCS", libs.DOCS),
@@ -210,7 +215,8 @@ func InitConfig(options *libs.Options) {
     //GetSync(options)
     GetCdn(options)
     SetupOpt(options)
-
+    GetCloud(options)
+    return nil
 }
 
 // LoadConfig load config
@@ -276,36 +282,20 @@ func GetEnv(options *libs.Options) {
     utils.MakeDir(options.Env.BackupFolder)
 
     // cloud stuff
+
+    // ~/.osmedeus/providers/
     options.Env.ProviderFolder = utils.NormalizePath(envs["provider_config"])
     utils.MakeDir(options.Env.ProviderFolder)
-    options.Env.CloudDataFolder = utils.NormalizePath(envs["cloud_data"])
-    utils.MakeDir(options.Env.CloudDataFolder)
+    // ~/osmedeus-base/clouds/
     options.Env.CloudConfigFolder = utils.NormalizePath(envs["cloud_config"])
 
-    cloud := v.GetStringMapString("Cloud")
-    options.Cloud.BuildRepo = cloud["build_repo"]
-
-    // load the config file here
-    // ~/osmedeus-base/cloud/ssh/cloud.pub
-    // ~/osmedeus-base/cloud/ssh/cloud.privte
-    options.Cloud.SecretKey = utils.NormalizePath(cloud["cloud_secret_key"])
-    options.Cloud.PublicKey = utils.NormalizePath(cloud["cloud_public_key"])
-    if utils.FileExists(options.Cloud.SecretKey) {
-        options.Cloud.SecretKeyContent = strings.TrimSpace(utils.GetFileContent(options.Cloud.SecretKey))
-        options.Cloud.PublicKeyContent = strings.TrimSpace(utils.GetFileContent(options.Cloud.PublicKey))
-    }
-
-    //
-    //options.Env.RootFolder = utils.NormalizePath(options.Env.RootFolder)
-    //options.Env.BaseFolder = utils.NormalizePath(options.Env.BaseFolder)
-
-    update := v.GetStringMapString("Update")
-    options.Update.UpdateURL = update["update_url"]
-    options.Update.UpdateType = update["update_type"]
-    options.Update.UpdateDate = update["update_date"]
-    options.Update.UpdateKey = update["update_key"]
-    options.Update.MetaDataURL = update["update_meta"]
-    UpdateMetadata(*options)
+    //update := v.GetStringMapString("Update")
+    //options.Update.UpdateURL = update["update_url"]
+    //options.Update.UpdateType = update["update_type"]
+    //options.Update.UpdateDate = update["update_date"]
+    //options.Update.UpdateKey = update["update_key"]
+    //options.Update.MetaDataURL = update["update_meta"]
+    //UpdateMetadata(*options)
 }
 
 // SetupOpt get storage repos
@@ -430,6 +420,7 @@ func GetNotification(options *libs.Options) {
     noti := v.GetStringMapString("Notification")
     tokens := v.GetStringMapString("Tokens")
 
+    // tokens
     options.Noti.SlackToken = tokens["slack"]
     options.Noti.TelegramToken = tokens["telegram"]
     options.Noti.ClientName = noti["client_name"]
@@ -444,6 +435,53 @@ func GetNotification(options *libs.Options) {
     options.Noti.TelegramStatusChannel = noti["telegram_status_channel"]
     options.Noti.TelegramDirbChannel = noti["telegram_dirb_channel"]
     options.Noti.TelegramMicsChannel = noti["telegram_mics_channel"]
+}
+
+func GetCloud(options *libs.Options) {
+    if !options.PremiumPackage {
+        return
+    }
+
+    // ~/osemedeus-base/cloud/provider.yaml
+    cloudConfigFile := path.Join(options.Env.CloudConfigFolder, "provider.yaml")
+
+    options.CloudConfigFile = cloudConfigFile
+    utils.DebugF("Parsing cloud config from: %s", options.CloudConfigFile)
+    providerConfigs, err := provider.ParseProvider(options.CloudConfigFile)
+
+    if err != nil {
+        utils.InforF("💡 You can start the wizard with the command: %s", color.HiCyanString("%s provider wizard", libs.BINARY))
+    }
+
+    options.Cloud.BuildRepo = providerConfigs.Builder.BuildRepo
+    options.Cloud.SecretKey = utils.NormalizePath(providerConfigs.Builder.SecretKey)
+    options.Cloud.PublicKey = utils.NormalizePath(providerConfigs.Builder.PublicKey)
+    if options.Cloud.SecretKey == "" {
+        options.Cloud.SecretKey = path.Join(options.Env.CloudConfigFolder, "ssh/cloud")
+        options.Cloud.PublicKey = path.Join(options.Env.CloudConfigFolder, "ssh/cloud.pub")
+    }
+
+    // check SSH Keys
+    if !utils.FileExists(options.Cloud.SecretKey) {
+        keysDir := path.Dir(options.Cloud.SecretKey)
+        os.RemoveAll(keysDir)
+        utils.MakeDir(keysDir)
+
+        utils.InforF("Generate SSH Key at: %v", options.Cloud.SecretKey)
+        var err error
+        _, err = utils.RunCommandWithErr(fmt.Sprintf(`ssh-keygen -t ed25519 -f %s -q -N ''`, options.Cloud.SecretKey))
+        if err != nil {
+            color.Red("[-] error generated SSH Key for cloud config at: %v", options.Cloud.SecretKey)
+            return
+        }
+    }
+
+    if utils.FileExists(options.Cloud.SecretKey) {
+        utils.DebugF("Detected secret key: %v", options.Cloud.SecretKey)
+        utils.DebugF("Detected public key: %v", options.Cloud.PublicKey)
+        options.Cloud.SecretKeyContent = strings.TrimSpace(utils.GetFileContent(options.Cloud.SecretKey))
+        options.Cloud.PublicKeyContent = strings.TrimSpace(utils.GetFileContent(options.Cloud.PublicKey))
+    }
 }
 
 // GetServer get server options
@@ -578,7 +616,6 @@ func ReloadConfig(options libs.Options) {
         "storages":        path.Join(RootFolder, "storages"),
         "workspaces":      path.Join(RootFolder, "workspaces"),
         "backups":         path.Join(RootFolder, "backups"),
-        "cloud_data":      path.Join(RootFolder, "clouds"),
         "provider_config": path.Join(RootFolder, "provider"),
 
         // this update casually
@@ -587,12 +624,6 @@ func ReloadConfig(options libs.Options) {
         "binaries":     path.Join(BaseFolder, "binaries"),
         "data":         path.Join(BaseFolder, "data"),
         "cloud_config": path.Join(BaseFolder, "cloud"),
-    })
-
-    v.Set("Cloud", map[string]string{
-        "cloud_secret_key": utils.GetOSEnv("CLOUD_SECRET_KEY", "CLOUD_SECRET_KEY"),
-        "cloud_public_key": utils.GetOSEnv("CLOUD_PUBLIC_KEY", "CLOUD_PUBLIC_KEY"),
-        "build_repo":       utils.GetOSEnv("CLOUD_BUILD_REPO", "CLOUD_BUILD_REPO"),
     })
 
     // things should be reload by env
@@ -659,14 +690,6 @@ func ReloadConfig(options libs.Options) {
         "osm_cdn_prefix": utils.GetOSEnv("OSM_CDN_PREFIX", "OSM_CDN_PREFIX"),
         "osm_cdn_index":  utils.GetOSEnv("OSM_CDN_INDEX", "OSM_CDN_INDEX"),
         "osm_cdn_secret": utils.GetOSEnv("OSM_CDN_SECRET", "OSM_CDN_SECRET"),
-    })
-
-    v.Set("Update", map[string]string{
-        "update_type": "git",
-        "update_url":  utils.GetOSEnv("UPDATE_BASE_URL", "UPDATE_BASE_URL"),
-        "update_date": utils.GetOSEnv("UPDATE_DATE", "UPDATE_DATE"),
-        "update_meta": utils.GetOSEnv("META_URL", "META_URL"),
-        "workflow":    utils.GetOSEnv("UPDATE_URL", "UPDATE_URL"),
     })
 
     v.WriteConfig()

@@ -14,7 +14,6 @@ import (
     "net/http"
     "path"
 
-    swagger "github.com/arsmn/fiber-swagger/v2"
     "github.com/gofiber/fiber/v2/middleware/filesystem"
     "github.com/gofiber/fiber/v2/middleware/logger"
 )
@@ -91,11 +90,11 @@ func SetupRoutes(app *fiber.App) {
     }))
 
     // for swagger document
-    app.Get("/docs/*", swagger.Handler) // default
-    app.Get("/docs/*", swagger.New(swagger.Config{ // custom
-        URL:         "https://osmp.io/doc.json",
-        DeepLinking: false,
-    }))
+    //app.Get("/docs/*", swagger.Handler) // default
+    //app.Get("/docs/*", swagger.New(swagger.Config{ // custom
+    //    URL:         "https://osmp.io/doc.json",
+    //    DeepLinking: false,
+    //}))
 
     app.Get("/ping", Ping)
 

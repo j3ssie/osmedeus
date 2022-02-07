@@ -2,6 +2,7 @@ package cmd
 
 import (
     "fmt"
+    "github.com/fatih/color"
     "github.com/j3ssie/osmedeus/distribute"
     "io"
     "os"
@@ -86,10 +87,19 @@ func runCloud(cmd *cobra.Command, _ []string) error {
         return nil
     }
 
+    // @NOTE: pro-tips
+    if options.Concurrency > 1 && len(options.Scan.Inputs) == 1 {
+        if utils.FileExists(options.Scan.Inputs[0]) {
+            utils.WarnF("You're using %v in cloud scan but your input %v is just a single domain", color.HiMagentaString(`'-c %v'`, options.Concurrency), color.HiMagentaString(`'-t %v'`, options.Scan.Inputs[0]))
+            utils.WarnF("Consider running: osmedeus cloud -c 5 -T list-of-targets.txt")
+        }
+    }
+
     distribute.InitCloud(options, options.Scan.Inputs)
     return nil
 }
 
+// HandleChunksInputs split the inputs to multiple file first
 func HandleChunksInputs(target string) []string {
     var chunkTargets []string
     utils.MakeDir(options.Cloud.ChunkInputs)

@@ -89,15 +89,18 @@ func InitProviderWithConfig(opt libs.Options, providerConfig ConfigProvider) (Pr
     provider.ProviderConfig = providerConfig
     provider.Opt = opt
 
-    provider.InitClient()
-    provider.Prepare()
+    if err := provider.InitClient(); err != nil {
+        return provider, fmt.Errorf("unable to validate token: %v", provider.Token)
+    }
 
+    provider.Prepare()
     return provider, nil
 }
 
-func (p *Provider) InitClient() {
+func (p *Provider) InitClient() (err error) {
     if p.Token == "" {
         utils.ErrorF("empty or invalid token: %v", p.Token)
+        return fmt.Errorf("empty or invalid token")
     }
     if len(p.Token) > 5 {
         p.RedactedToken = p.Token[:5] + "***" + p.Token[len(p.Token)-5:len(p.Token)]
@@ -108,14 +111,15 @@ func (p *Provider) InitClient() {
     switch p.ProviderName {
     case "do", "digitalocean":
         p.ClientDO()
-        p.AccountDO()
+        err = p.AccountDO()
     case "ln", "line", "linode":
         p.ClientLinode()
-        p.AccountLN()
+        err = p.AccountLN()
     default:
         p.ClientDO()
-        p.AccountDO()
+        err = p.AccountDO()
     }
+    return err
 }
 
 // Prepare setup some default variables
@@ -165,7 +169,9 @@ func (p *Provider) Prepare() {
         p.Action(ListImage)
     }
 
-    utils.InforF("Found SSH Key ID: %v", p.SSHKeyID)
+    if p.SSHKeyID != "" {
+        utils.InforF("Found SSH Key ID: %v", p.SSHKeyID)
+    }
 }
 
 func (p *Provider) Action(actionName string, params ...interface{}) error {

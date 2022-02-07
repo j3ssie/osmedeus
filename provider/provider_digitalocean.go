@@ -49,7 +49,7 @@ func (p *Provider) AccountDO() error {
     if err != nil {
         return fmt.Errorf("error getting account information")
     }
-    utils.InforF("Account Billing Information: MonthToDateBalance: %v -- AccountBalance: %v", color.HiRedString(bill.MonthToDateBalance), color.HiGreenString(bill.AccountBalance))
+    utils.InforF("Account Billing Information: MonthToDateBalance: %v -- AccountBalance: %v", strings.TrimLeft(color.HiRedString(bill.MonthToDateBalance), "-"), color.HiGreenString(bill.AccountBalance))
 
     return nil
 }
@@ -126,11 +126,13 @@ func (p *Provider) GetSSHKeyDO() error {
         return fmt.Errorf("error listing ssh key -- %v", err)
     }
 
+    //utils.DebugF("Looking for key: %v", p.SSHPublicKey)
     for _, key := range keys {
+        //utils.DebugF("SSH Key: %v -- %v", key.ID, key.PublicKey)
         if strings.TrimSpace(key.PublicKey) == strings.TrimSpace(p.SSHPublicKey) {
             p.SSHKeyID = cast.ToString(key.ID)
             p.SSHKeyFound = true
-            utils.DebugF("Found SSH Key: %v -- %v ", key.Name, p.SSHKeyID)
+            utils.DebugF("Found SSH Key: %v -- %v ", color.HiCyanString(key.Name), color.HiCyanString(p.SSHKeyID))
         }
     }
 
@@ -145,7 +147,9 @@ func (p *Provider) GetSSHKeyDO() error {
         if err == nil {
             p.SSHKeyID = cast.ToString(transfer.ID)
             p.SSHKeyFound = true
-            utils.DebugF("Created new SSH Key: %v", p.SSHKeyID)
+            utils.DebugF("Created new SSH Key: %v", color.HiCyanString(p.SSHKeyID))
+        } else {
+            return fmt.Errorf("error create ssh key -- %v", err)
         }
     }
 
@@ -279,7 +283,7 @@ func (p *Provider) DeleteInstanceDO(id string) error {
         utils.ErrorF("error delete instance -- %v", err)
         return fmt.Errorf("error delete instance")
     }
-    utils.InforF("Deleted instance ID: %v", id)
+    utils.InforF("Deleted instance ID: %v", color.HiRedString(id))
     return nil
 }
 
@@ -296,6 +300,6 @@ func (p *Provider) DeleteSnapShotDO(id string) error {
         utils.ErrorF("error delete snapshot -- %v", err)
         return fmt.Errorf("error delete instance")
     }
-    utils.InforF("Deleted snapshot ID: %v", id)
+    utils.InforF("Deleted snapshot ID: %v", color.HiRedString(id))
     return nil
 }

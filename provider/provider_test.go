@@ -40,10 +40,6 @@ func TestProviderDelete(t *testing.T) {
         t.Errorf("error ")
     }
 
-    //provider.SSHPublicKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC0ZmMumN5GTKuPXVVqugz+6BZs6JyNaQGsPgsZk86uON//oXi5fkutsNu5IIPDZXph3P5NbUj2dPalNyzNY5jClPJeT0F/eowIhPeo5GfjmJlXR4TTgHSwPYrOQNop2w+xh2z5h4IXMEPVLpEsN67MuUjTKzRwirwPjigZS/gayhwfOfDsPaIwBhpoBGuR1x+Rzzxuiy7TToNoWhF6pT9qONoCtr0VrPMsmjVpEPKD/uTW/8KeFL0pb/9z18M4IlbtvkO0Y6RhrpFGNSmZTWc1eDsJpFJerrVd48rgx3aRHriijl4zX4GBhc0zjqJwv+nGTGFPJ9Tx/3kPMDUGna/f91VU7sL7YqeiSed8S0YcWfntYy64OknvMpN8VIoQ7WiJAkR3wPw+tL3ZduXXAiKHFTAiXev02mOvo2F2nQKdGS98lOH5m+zuUm8abYbyXYlGNEzz576ksb6nMWCSSXwhA5f4clPKaPmgBQFQMUtq6Wgb8Fjq2r1MpjIWwUvx84s= osmp-cloud"
-    //
-    //provider.Prepare()
-
     provider.DeleteInstance("258443728")
     spew.Dump(provider.Instances)
 }

@@ -108,10 +108,13 @@ func ConfigUsage() string {
 
 func CloudUsage() string {
     h := color.HiCyanString("\nProvider Usage:\n")
-    h += "  osmedeus provider build \n"
+    h += "  osmedeus provider wizard \n"
+    h += "  osmedeus provider validate \n"
     h += "  osmedeus provider build --token xxx --rebuild --ic\n"
     h += "  osmedeus provider create --name 'sample' \n"
     h += "  osmedeus provider health --debug \n"
+    h += "  osmedeus provider list \n"
+    h += "  osmedeus provider delete --id 34317111 --id 34317112 \n"
 
     h += color.HiCyanString("\nCloud Usage:\n")
     h += "  osmedeus cloud -f [flowName] -t [target] \n"
@@ -168,5 +171,5 @@ func RootHelp(cmd *cobra.Command, _ []string) {
 }
 
 func printDocs() {
-    fmt.Printf("Documentation can be found here: %s\n", color.GreenString(libs.DOCS))
+    fmt.Printf("📖 Documentation can be found here: %s\n", color.GreenString(libs.DOCS))
 }

@@ -11,13 +11,12 @@ import (
     "github.com/j3ssie/osmedeus/libs"
     "github.com/j3ssie/osmedeus/utils"
     "github.com/spf13/cobra"
-    "gorm.io/gorm"
 )
 
 var options = libs.Options{}
 
 // DB database variables
-var DB *gorm.DB
+//var DB *gorm.DB
 
 var RootCmd = &cobra.Command{
     Use:   fmt.Sprintf("%s", libs.BINARY),
@@ -104,7 +103,11 @@ func initConfig() {
 
     /* Really Start the program */
     utils.InitLog(&options)
-    core.InitConfig(&options)
+    utils.InitHTTPClient()
+    if err := core.InitConfig(&options); err != nil {
+        utils.ErrorF("config file does not writable: %v", options.ConfigFile)
+        utils.BlockF("fatal", "Make sure you are login as 'root user' if your installation done via root user")
+    }
 
     // parse inputs
     if options.Scan.InputList != "" {
@@ -124,19 +127,15 @@ func initConfig() {
             }
         }
     }
-
-    if options.Update.EnableUpdate && options.Update.NoUpdate == false {
-        core.Update(options)
-    }
 }
 
 // DBInit init database connection
 func DBInit() {
-    var err error
-    DB, err = database.InitDB(options)
+    //var err error
+    _, err := database.InitDB(options)
     if err != nil {
         // simple retry
-        DB, err = database.InitDB(options)
+        _, err = database.InitDB(options)
         if err != nil {
             fmt.Printf("[panic] Can't connect to DB at %v\n", options.Server.DBPath)
             os.Exit(-1)

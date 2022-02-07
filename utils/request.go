@@ -22,8 +22,8 @@ type Response struct {
     Body       string
 }
 
-func InitHTTPClient(options libs.Options) {
-    UA = fmt.Sprintf("osmctl/%s by %s", libs.VERSION, libs.AUTHOR)
+func InitHTTPClient() {
+    UA = fmt.Sprintf("Osmedeus/%s by %s", libs.VERSION, libs.AUTHOR)
     var transport = &http.Transport{
         TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
         DisableKeepAlives: true,

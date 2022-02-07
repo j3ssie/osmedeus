@@ -17,7 +17,7 @@ func CheckingCloudInstance(opt libs.Options) {
 
     instances := database.GetRunningClouds()
     if len(instances) == 0 {
-        utils.ErrorF("no active cloud instance running")
+        utils.WarnF("no active cloud instance running")
         return
     }
 
@@ -29,7 +29,6 @@ func CheckingCloudInstance(opt libs.Options) {
         }
 
         cloud := CloudRunner{
-            //Provider: instance.Provider,
             Opt:      opt,
             Provider: providerObj,
         }

@@ -6,9 +6,10 @@ import (
     "github.com/j3ssie/osmedeus/distribute"
     "github.com/j3ssie/osmedeus/provider"
     "github.com/j3ssie/osmedeus/utils"
+    "github.com/olekukonko/tablewriter"
     "github.com/panjf2000/ants"
     "github.com/spf13/cobra"
-    "sort"
+    "os"
     "sync"
 )
 
@@ -27,10 +28,19 @@ func init() {
     providerCmd.PersistentFlags().BoolVar(&options.Cloud.BackgroundRun, "bg", false, "Send command to instance and run it in background")
     providerCmd.PersistentFlags().BoolVar(&options.Cloud.IgnoreConfigFile, "ic", false, "Ignore token in the config file")
     providerCmd.PersistentFlags().IntVar(&options.Cloud.Retry, "retry", 8, "Number of retry when command is error")
+    providerCmd.PersistentFlags().StringSlice("id", []string{}, "Instance IDs that will be delete")
+
+    var providerWizard = &cobra.Command{
+        Use:     "wizard",
+        Aliases: []string{"wi", "wiz", "wizazrd"},
+        Short:   "Start a cloud config wizard",
+        Long:    core.Banner(),
+        RunE:    runCloudInit,
+    }
 
     var providerBuild = &cobra.Command{
         Use:   "build",
-        Short: "Build cloud image",
+        Short: "Build snapshot image",
         Long:  core.Banner(),
         RunE:  runProviderBuild,
     }
@@ -41,25 +51,40 @@ func init() {
         RunE:  runProviderCreate,
     }
 
-    var healthCmd = &cobra.Command{
+    var providerHealth = &cobra.Command{
         Use:   "health",
-        Short: "Cloud Utility to check cloud instance health",
+        Short: "Run a health check on running cloud instances",
         Long:  core.Banner(),
         RunE:  runCloudHealth,
     }
 
     var providerValidate = &cobra.Command{
         Use:   "validate",
-        Short: "Run various action on cloud provider",
+        Short: "Run validate of the existing cloud configs",
         Long:  core.Banner(),
         RunE:  runProviderValidate,
     }
+    var providerList = &cobra.Command{
+        Use:     "list",
+        Aliases: []string{"ls"},
+        Short:   "List all instances",
+        Long:    core.Banner(),
+        RunE:    runProviderListing,
+    }
+    var providerDel = &cobra.Command{
+        Use:     "delete",
+        Aliases: []string{"del"},
+        Short:   "Delete instances",
+        Long:    core.Banner(),
+        RunE:    runProviderDelete,
+    }
+    providerCmd.AddCommand(providerWizard)
+    providerCmd.AddCommand(providerList)
+    providerCmd.AddCommand(providerDel)
     providerCmd.AddCommand(providerValidate)
-
-    providerCmd.AddCommand(healthCmd)
+    providerCmd.AddCommand(providerHealth)
     providerCmd.AddCommand(providerCreate)
     providerCmd.AddCommand(providerBuild)
-    providerCmd.AddCommand(providerValidate)
     providerCmd.SetHelpFunc(CloudHelp)
     RootCmd.AddCommand(providerCmd)
 }
@@ -70,18 +95,18 @@ func runCloudHealth(_ *cobra.Command, _ []string) error {
     return nil
 }
 
+func runCloudInit(_ *cobra.Command, _ []string) error {
+    DBInit()
+    // interactive mode to show config file here
+    distribute.InitCloudSetup(options)
+    return nil
+}
+
 func runProvider(_ *cobra.Command, args []string) error {
     DBInit()
     if len(args) == 0 {
         fmt.Println(CloudUsage())
     }
-
-    //err := checkCloud()
-    //if err != nil {
-    //    fmt.Println(color.YellowString("⚠️️ There is might be something wrong with your cloud setup: %v\n", err))
-    //    return err
-    //}
-
     return nil
 }
 
@@ -131,21 +156,74 @@ func runProviderCreate(_ *cobra.Command, _ []string) error {
     return nil
 }
 
-func runProviderValidate(_ *cobra.Command, actions []string) error {
-    //options.Cloud.IgnoreSetup = true
-    clouds := distribute.GetClouds(options)
-    sort.Strings(actions)
+func runProviderValidate(_ *cobra.Command, _ []string) error {
+    cloudValidate()
+    return nil
+}
 
-    for _, cloud := range clouds {
-        for _, action := range actions {
-            err := cloud.Provider.Action(provider.ListInstance)
-            if err != nil {
-                utils.ErrorF("error running %v ", action)
-            }
-            for _, instance := range cloud.Provider.Instances {
-                fmt.Printf("[%v]: %v -- %v", instance.ProviderName, instance.InstanceID, instance.IPAddress)
-            }
+func runProviderListing(_ *cobra.Command, _ []string) error {
+    cloudRunners := distribute.GetClouds(options)
+    cloudListing(cloudRunners)
+    return nil
+}
+
+func runProviderDelete(cmd *cobra.Command, _ []string) error {
+    cloudRunners := distribute.GetClouds(options)
+    InstanceIDs, _ := cmd.Flags().GetStringSlice("id")
+
+    for _, InstanceID := range InstanceIDs {
+        for _, cloudRunner := range cloudRunners {
+            cloudRunner.Provider.DeleteInstance(InstanceID)
         }
     }
+
+    cloudListing(cloudRunners)
     return nil
+}
+
+func cloudListing(cloudRunners []distribute.CloudRunner) {
+    var content [][]string
+    for _, cloudRunner := range cloudRunners {
+        cloudRunner.Provider.Action(provider.ListInstance)
+        for _, instance := range cloudRunner.Provider.Instances {
+            row := []string{
+                cloudRunner.Provider.ProviderName,
+                cloudRunner.Provider.RedactedToken,
+                instance.InstanceID,
+                instance.InstanceName,
+                instance.IPAddress,
+            }
+            content = append(content, row)
+        }
+    }
+    table := tablewriter.NewWriter(os.Stderr)
+    table.SetAutoFormatHeaders(false)
+    table.SetHeader([]string{"Provider", "Token", "Instance ID", "Instance Name", "IP Address"})
+    table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
+    table.SetCenterSeparator("|")
+    table.AppendBulk(content) // Add Bulk Data
+    table.Render()
+}
+
+func cloudValidate() {
+    cloudRunners := distribute.GetClouds(options)
+
+    var content [][]string
+    for _, cloudRunner := range cloudRunners {
+        row := []string{
+            cloudRunner.Provider.ProviderName,
+            cloudRunner.Provider.RedactedToken,
+            cloudRunner.Provider.SSHKeyID,
+            cloudRunner.Provider.SnapshotID,
+        }
+        content = append(content, row)
+    }
+    table := tablewriter.NewWriter(os.Stderr)
+    table.SetAutoFormatHeaders(false)
+    table.SetHeader([]string{"Provider", "Token", "SSH Key ID", "Osmedeus Snapshot ID"})
+    table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
+    table.SetCenterSeparator("|")
+    table.AppendBulk(content) // Add Bulk Data
+    table.Render()
+
 }

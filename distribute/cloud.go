@@ -8,7 +8,6 @@ import (
     "github.com/j3ssie/osmedeus/utils"
     "github.com/panjf2000/ants"
     "os"
-    "path"
     "strings"
     "sync"
 )
@@ -113,20 +112,24 @@ func GetClouds(options libs.Options) []CloudRunner {
     var cloudInfos []CloudRunner
 
     // ~/osmedeus-plugins/cloud/provider.yaml
-    cloudConfigFile := path.Join(options.Env.CloudConfigFolder, "provider.yaml")
-    utils.DebugF("Parsing cloud config from: %s", cloudConfigFile)
+    //cloudConfigFile := path.Join(options.Env.CloudConfigFolder, "provider.yaml")
 
     // parse config from cloud/config.yaml file
-    providerConfigs, err := provider.ParseProvider(cloudConfigFile)
+    providerConfigs, err := provider.ParseProvider(options.CloudConfigFile)
+    utils.DebugF("Parsing cloud config from: %s", options.CloudConfigFile)
     if err != nil {
         return cloudInfos
     }
+
+    options.Cloud.BuildRepo = providerConfigs.Builder.BuildRepo
+    options.Cloud.SecretKey = utils.NormalizePath(providerConfigs.Builder.SecretKey)
+    options.Cloud.PublicKey = utils.NormalizePath(providerConfigs.Builder.PublicKey)
 
     // we only get provider info from config file but replace token with --token
     if options.Cloud.IgnoreConfigFile || options.Cloud.Token != "" {
         var providerConfig provider.ConfigProvider
         if len(providerConfigs.Clouds) > 0 {
-            utils.InforF("Ignore config file from: %v", cloudConfigFile)
+            utils.InforF("Ignore config file from: %v", options.CloudConfigFile)
             providerConfig = providerConfigs.Clouds[0]
         }
         providerConfig.Token = options.Cloud.Token
@@ -137,10 +140,13 @@ func GetClouds(options libs.Options) []CloudRunner {
 
     for _, providerConfig := range providerConfigs.Clouds {
         cloudInfo := SetupProvider(options, providerConfig)
+        if len(cloudInfo.Provider.Token) > 6 {
+            cloudInfo.Provider.RedactedToken = cloudInfo.Provider.Token[:5] + "***" + cloudInfo.Provider.Token[len(cloudInfo.Provider.Token)-5:]
+        }
         cloudInfos = append(cloudInfos, cloudInfo)
     }
 
-    utils.InforF("Prepared number of clouds in queue: %v", len(cloudInfos))
+    utils.InforF("Number of cloud provider prepared in queue: %v", len(cloudInfos))
     return cloudInfos
 }
 

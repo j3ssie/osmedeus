@@ -18,26 +18,32 @@ var logger = logrus.New()
 
 // InitLog init log
 func InitLog(options *libs.Options) {
-    dir := "/tmp/osm-log/"
+    mwr := io.MultiWriter(os.Stdout)
+    logDir := libs.LDIR
     if options.LogFile == "" {
-        if !FolderExists(dir) {
-            os.MkdirAll(dir, 0755)
+        if !FolderExists(logDir) {
+            os.MkdirAll(logDir, 0766)
         }
-        tmpFile, _ := ioutil.TempFile(dir, "osmedeus-*.log")
-        options.LogFile = tmpFile.Name()
-    }
-    dir = filepath.Dir(options.LogFile)
-    if !FolderExists(dir) {
-        os.MkdirAll(dir, 0755)
-    }
-    f, err := os.OpenFile(options.LogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-    if err != nil {
-        logger.Errorf("error opening file: %v", err)
+        tmpFile, err := ioutil.TempFile(logDir, "osmedeus-*.log")
+        if err == nil {
+            options.LogFile = tmpFile.Name()
+        }
     }
 
-    // defer f.Close()
-    mwr := io.MultiWriter(os.Stdout, f)
-    //logger.SetLevel(logrus.InfoLevel)
+    logDir = filepath.Dir(options.LogFile)
+    if !FolderExists(logDir) {
+        os.MkdirAll(logDir, 0755)
+    }
+
+    f, err := os.OpenFile(options.LogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "error opening log file: %v\n", logDir)
+        fmt.Fprintf(os.Stderr, "💡 You might want to switch to %v first via %v command", color.HiMagentaString("root user"), color.HiCyanString("sudo su"))
+        os.Exit(-1)
+    } else {
+        mwr = io.MultiWriter(os.Stdout, f)
+    }
+
     logger = &logrus.Logger{
         Out:   mwr,
         Level: logrus.InfoLevel,

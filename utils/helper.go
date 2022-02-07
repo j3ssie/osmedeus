@@ -3,6 +3,7 @@ package utils
 import (
     "archive/zip"
     "bufio"
+    "bytes"
     "context"
     "crypto/sha1"
     "encoding/base64"
@@ -19,6 +20,7 @@ import (
     "strconv"
     "strings"
     "syscall"
+    "text/template"
     "time"
 
     "github.com/mitchellh/go-homedir"
@@ -848,4 +850,15 @@ func IsWritable(filename string) (isWritable bool, err error) {
 
     isWritable = true
     return
+}
+
+// RenderText resolve template from signature file
+func RenderText(format string, data map[string]string) string {
+    t := template.Must(template.New("").Parse(format))
+    buf := &bytes.Buffer{}
+    err := t.Execute(buf, data)
+    if err != nil {
+        return format
+    }
+    return buf.String()
 }
