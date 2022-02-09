@@ -98,8 +98,9 @@ func InitConfig(options *libs.Options) error {
         // things should be reloaded by env
         v.SetDefault("Storages", map[string]string{
             // path of secret key for push result
+            // ~/.osmedeus/storages_key
+            "secret_key": utils.GetOSEnv("SECRET_KEY", "SECRET_KEY"),
             // the repo format should be like this "git@gitlab.com:j3ssie/example.git",
-            "secret_key":        utils.GetOSEnv("SECRET_KEY", "SECRET_KEY"),
             "summary_storage":   path.Join(options.Env.RootFolder, "storages/summary"),
             "summary_repo":      utils.GetOSEnv("SUMMARY_REPO", "SUMMARY_REPO"),
             "subdomain_storage": path.Join(options.Env.RootFolder, "storages/subdomain"),
@@ -320,40 +321,46 @@ func SetupOpt(options *libs.Options) {
 }
 
 func GetStorages(options *libs.Options) {
+    if !options.PremiumPackage || utils.GetOSEnv("ENABLE_GIT_STORAGES", "") != "TRUE" {
+        return
+    }
+
     v, _ := LoadConfig(*options)
     storages := v.GetStringMapString("Storages")
 
+    // get variables from config.yaml
     storagesOptions := make(map[string]string)
-    for k, v := range storages {
-        storages[k] = utils.NormalizePath(v)
-        storagesOptions[k] = utils.NormalizePath(v)
+    for k, dest := range storages {
+        storages[k] = utils.NormalizePath(dest)
+        storagesOptions[k] = utils.NormalizePath(dest)
+    }
+    secretKey := storages["secret_key"]
+    if secretKey == "" || secretKey == "SECRET_KEY" {
+        return
     }
 
-    // cloning stuff
-    // path to private to push result
-    storagesOptions["secret_key"] = storages["secret_key"]
-    options.Storages = storagesOptions
-
+    storagesOptions["secret_key"] = secretKey
     // load default existing key if it exists
-    if options.Storages["secret_key"] == "" || options.Storages["secret_key"] == "SECRET_KEY" {
-        // ~/.osmedeus/secret_key.private
-        secretKey := path.Join(options.Env.RootFolder, "secret_key.private")
-        if utils.FileExists(secretKey) {
-            options.Storages["secret_key"] = secretKey
-        } else {
-            secretKey = path.Join(options.Env.BaseFolder, "secret/secret_key.private")
-            if utils.FileExists(secretKey) {
-                options.Storages["secret_key"] = secretKey
-            }
+    defaultKey := path.Join(options.Env.BaseFolder, "secret/storages_key")
+    if !utils.FileExists(secretKey) && utils.FileExists(defaultKey) {
+        utils.InforF("Loaded default secret for storages from: %v", color.HiCyanString(defaultKey))
+        if _, err := utils.RunCommandWithErr(fmt.Sprintf("cp %s %s && chmod 600 %s", defaultKey, secretKey, secretKey)); err != nil {
+            utils.ErrorF("error copying default secret key: %v", defaultKey)
         }
     }
 
-    // disable git feature or no secret key found
-    if options.NoGit {
-        options.Storages["secret_key"] = ""
+    if !utils.FileExists(secretKey) {
+        utils.InforF("No SSH key for storages found. Generate a new one at: %v", color.HiCyanString(secretKey))
+        if _, err := utils.RunCommandWithErr(fmt.Sprintf(`ssh-keygen -t ed25519 -f %s -q -N ''`, secretKey)); err != nil {
+            color.Red("[-] error generated SSH Key for storages at: %v", secretKey)
+            return
+        }
+        utils.InforF("Please add the public key at %v to your gitlab profile", color.HiCyanString(secretKey+".pub"))
     }
-    if options.Storages["secret_key"] == "" {
-        options.NoGit = true
+
+    if !utils.FileExists("~/.gitconfig") {
+        utils.WarnF("Looks like you didn't set up the git user at %v yet", color.HiCyanString("~/.gitconfig"))
+        utils.WarnF("💡 Init git info with this command: %s", color.HiCyanString(`git config --global user.name "your-username" && git config --global user.email "your-username@users.noreply.gitlab.com"`))
     }
 
     if options.CustomGit {
@@ -397,13 +404,19 @@ func GetStorages(options *libs.Options) {
     storagesOptions[storages["ports_storage"]] = storages["ports_repo"]
     storagesOptions[storages["paths_storage"]] = storages["paths_repo"]
     storagesOptions[storages["vuln_storage"]] = storages["vuln_repo"]
-
     options.Storages = storagesOptions
+
+    // disable git feature or no secret key found
+    if options.NoGit {
+        options.Storages["secret_key"] = ""
+    }
+    if options.Storages["secret_key"] == "" {
+        options.NoGit = true
+    }
 
     if options.NoGit {
         return
     }
-
     execution.CloneRepo(storages["summary_repo"], storages["summary_storage"], *options)
     execution.CloneRepo(storages["http_repo"], storages["http_storage"], *options)
     execution.CloneRepo(storages["assets_repo"], storages["assets_storage"], *options)
@@ -629,8 +642,8 @@ func ReloadConfig(options libs.Options) {
     // things should be reload by env
     v.Set("Storages", map[string]string{
         // path of secret key for push result
+        "secret_key": utils.GetOSEnv("SECRET_KEY", "SECRET_KEY"),
         // the repo format should be like this "git@gitlab.com:j3ssie/example.git",
-        "secret_key":        utils.GetOSEnv("SECRET_KEY", "SECRET_KEY"),
         "summary_storage":   path.Join(options.Env.RootFolder, "storages/summary"),
         "summary_repo":      utils.GetOSEnv("SUMMARY_REPO", "SUMMARY_REPO"),
         "subdomain_storage": path.Join(options.Env.RootFolder, "storages/subdomain"),

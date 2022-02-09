@@ -37,6 +37,7 @@ func init() {
         Long:    core.Banner(),
         RunE:    runCloudInit,
     }
+    providerWizard.PersistentFlags().BoolVar(&options.Cloud.AddNewProvider, "add", false, "Open wizard to add new provider only")
 
     var providerBuild = &cobra.Command{
         Use:   "build",

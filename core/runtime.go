@@ -201,10 +201,11 @@ func (r *Runner) LoadScripts() string {
         return otto.Value{}
     })
 
-    // Printf execute command command
+    // Printf simply print a string to console
     vm.Set(Printf, func(call otto.FunctionCall) otto.Value {
-        fmt.Println(call.Argument(0).String())
-        return otto.Value{}
+        fmt.Printf("%v\n", color.HiCyanString(call.Argument(0).String()))
+        returnValue, _ := otto.ToValue(true)
+        return returnValue
     })
 
     // split file to multiple
@@ -221,19 +222,22 @@ func (r *Runner) LoadScripts() string {
 
     vm.Set(Sleep, func(call otto.FunctionCall) otto.Value {
         execution.Sleep(call.Argument(0).String())
-        return otto.Value{}
+        returnValue, _ := otto.ToValue(true)
+        return returnValue
     })
 
     vm.Set(SortU, func(call otto.FunctionCall) otto.Value {
         execution.SortU(call.Argument(0).String())
-        return otto.Value{}
+        returnValue, _ := otto.ToValue(true)
+        return returnValue
     })
 
     vm.Set(Append, func(call otto.FunctionCall) otto.Value {
         dest := call.Argument(0).String()
         src := call.Argument(1).String()
         execution.Append(dest, src)
-        return otto.Value{}
+        returnValue, _ := otto.ToValue(true)
+        return returnValue
     })
 
     vm.Set(CreateFolder, func(call otto.FunctionCall) otto.Value {

@@ -28,6 +28,15 @@ func InitCloudSetup(opt libs.Options) {
     configProviders.Builder.PublicKey = opt.Cloud.PublicKey
     configProviders.Builder.SecretKey = opt.Cloud.SecretKey
 
+    // get the existing one
+    if opt.Cloud.AddNewProvider {
+        fmt.Println("🪄 Add new provider config to the existing config")
+        providerConfigs, err := provider.ParseProvider(opt.CloudConfigFile)
+        if err == nil {
+            configProviders.Clouds = providerConfigs.Clouds
+        }
+    }
+
     for {
         configProvider := generateProvider()
         configProviders.Clouds = append(configProviders.Clouds, configProvider)

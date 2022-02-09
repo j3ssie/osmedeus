@@ -12,6 +12,7 @@ type Cloud struct {
     EnablePrivateIP    bool
 
     EnableSyncWorkflow   bool
+    AddNewProvider       bool
     RemoteWorkflowFolder string
     TokensFile           string
 

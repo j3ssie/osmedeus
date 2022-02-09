@@ -102,11 +102,8 @@ func checkCloud() error {
         keysDir := path.Dir(options.Cloud.SecretKey)
         os.RemoveAll(keysDir)
         utils.MakeDir(keysDir)
-
         utils.DebugF("Generate SSH Key at: %v", options.Cloud.SecretKey)
-        var err error
-        _, err = utils.RunCommandWithErr(fmt.Sprintf(`ssh-keygen -t ed25519 -f %s -q -N ''`, options.Cloud.SecretKey))
-        if err != nil {
+        if _, err := utils.RunCommandWithErr(fmt.Sprintf(`ssh-keygen -t ed25519 -f %s -q -N ''`, options.Cloud.SecretKey)); err != nil {
             color.Red("[-] error generated SSH Key for cloud config at: %v", options.Cloud.SecretKey)
             return fmt.Errorf("[-] error generated SSH Key for cloud config at: %v", options.Cloud.SecretKey)
         }
@@ -219,8 +216,8 @@ func listFlows() error {
 
     table := tablewriter.NewWriter(os.Stderr)
     table.SetAutoFormatHeaders(false)
-    table.SetHeader([]string{"Flow Name", "Flow Description"})
-table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: false})
+    table.SetHeader([]string{"Flow Name", "Description"})
+    table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: true})
     table.SetColWidth(120)
     table.AppendBulk(content) // Add Bulk Data
     table.Render()
