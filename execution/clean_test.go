@@ -1,10 +1,5 @@
 package execution
 
-import (
-    "github.com/j3ssie/osmedeus/utils"
-    "testing"
-)
-
 //
 //func TestCleanWebanalyze(t *testing.T) {
 //	var options libs.Options
@@ -16,9 +11,9 @@ import (
 //	}
 //}
 
-func TestCleanSWebanalyze(t *testing.T) {
-    CleanSWebanalyze("/tmp/mmm", "/tmp/technologies.txt")
-    if !utils.FileExists("/tmp/technologies.txt") {
-        t.WarnF("Error CleanSWebanalyze")
-    }
-}
+//func TestCleanSWebanalyze(t *testing.T) {
+//    CleanSWebanalyze("/tmp/mmm", "/tmp/technologies.txt")
+//    if !utils.FileExists("/tmp/technologies.txt") {
+//        t.WarnF("Error CleanSWebanalyze")
+//    }
+//}
