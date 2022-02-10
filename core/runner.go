@@ -128,6 +128,10 @@ func (r *Runner) PrepareWorkflow() {
         }
         r.Routines = append(r.Routines, routine)
     }
+
+    if len(r.Routines) == 0 {
+        utils.WarnF("Your workflow %v doesn't exist", color.HiRedString(r.Opt.Scan.Flow))
+    }
 }
 
 func (r *Runner) PrepareModule() {

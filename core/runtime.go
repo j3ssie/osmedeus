@@ -20,6 +20,9 @@ func (r *Runner) InitVM() {
 func (r *Runner) ExecScript(script string) string {
     utils.DebugF("[Run-Scripts] %v", script)
     value, err := r.VM.Run(script)
+    if err != nil {
+        return ""
+    }
     out, err := value.ToString()
     if err != nil {
         return ""
