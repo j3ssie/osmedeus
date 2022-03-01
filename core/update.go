@@ -6,6 +6,7 @@ import (
     "github.com/fatih/color"
     "github.com/hashicorp/go-version"
     "github.com/j3ssie/osmedeus/libs"
+    "github.com/j3ssie/osmedeus/provider"
     "github.com/j3ssie/osmedeus/utils"
     jsoniter "github.com/json-iterator/go"
     "github.com/mitchellh/go-homedir"
@@ -18,7 +19,7 @@ import (
 
 /* Mostly calling OS commands for double-check the PATH too */
 
-func UpdateMetadata(options *libs.Options) {
+func CheckUpdate(options *libs.Options) bool {
     // t.Format("02-Jan-2006")
 
     var shouldUpdate bool
@@ -44,7 +45,7 @@ func UpdateMetadata(options *libs.Options) {
         oldMetaDataContent := utils.GetFileContent(metadataFile)
         if err := jsoniter.UnmarshalFromString(oldMetaDataContent, &oldMetaData); err != nil {
             utils.ErrorF("error to parse metadata: %v", metadataFile)
-            return
+            return false
         }
     }
 
@@ -53,7 +54,7 @@ func UpdateMetadata(options *libs.Options) {
     if res.StatusCode == 200 {
         if err := jsoniter.UnmarshalFromString(res.Body, &newMetaData); err != nil {
             utils.ErrorF("error to parse metadata: %v", options.Update.MetaDataURL)
-            return
+            return false
         }
 
         utils.InforF("Writing metadata to: %v", color.HiCyanString(metadataFile))
@@ -62,7 +63,7 @@ func UpdateMetadata(options *libs.Options) {
         }
     } else {
         utils.ErrorF("error fetching metadata from: %v", options.Update.MetaDataURL)
-        return
+        return false
     }
 
     utils.DebugF(res.Body)
@@ -70,7 +71,7 @@ func UpdateMetadata(options *libs.Options) {
     v1, err := version.NewVersion(oldMetaData.CoreVersion)
     if err != nil {
         utils.ErrorF("error parsing version: %v -- %v", oldMetaData.CoreVersion, err)
-        return
+        return false
     }
 
     // get from metadata URL
@@ -78,7 +79,7 @@ func UpdateMetadata(options *libs.Options) {
     if err != nil {
         utils.ErrorF("error parsing version: %v -- %v", newMetaData.CoreVersion, err)
 
-        return
+        return false
     }
 
     // Comparison example. There is also GreaterThan, Equal, and just
@@ -110,6 +111,76 @@ func UpdateMetadata(options *libs.Options) {
         home, _ := homedir.Dir()
         fmt.Printf("📖 Run %s again to update Check out this page for more detail: %s\n", color.HiGreenString("the same install script"), color.HiGreenString("https://docs.osmedeus.org/installation/"))
         fmt.Printf("💡 If you want a fresh install please run the command: %s\n", color.HiBlueString("rm -rf %s/osmedeus-base %s/.osmedeus", home, home))
+    }
+
+    return shouldUpdate
+}
+
+func GetUpdateURL(options libs.Options) string {
+    if !options.PremiumPackage {
+        utils.InforF("Getting update url of public community package")
+        return libs.INSTALL
+    }
+    utils.InforF("💎 Getting update url of premium package")
+
+    providerConfigs, err := provider.ParseProvider(options.CloudConfigFile)
+    if err != nil {
+        utils.ErrorF("error to parse provider config: %v", err)
+        return ""
+    }
+
+    return providerConfigs.Builder.BuildRepo
+}
+
+func RunUpdate(options libs.Options) error {
+    if options.Update.UpdateURL == "" {
+        return fmt.Errorf("no update URL")
+    }
+
+    if options.Update.CleanOldData {
+        utils.InforF("Cleaning old data: %s", color.HiCyanString(options.Env.BaseFolder))
+        os.RemoveAll(options.Env.BaseFolder)
+    }
+
+    if options.PremiumPackage {
+        utils.InforF("Running update from premium package install script")
+    } else {
+        utils.InforF("Running update from: %v", color.HiCyanString(options.Update.UpdateURL))
+    }
+
+    options.Update.UpdateScript = fmt.Sprintf("/tmp/%s-update.sh", libs.BINARY)
+    cmd := fmt.Sprintf("rm -rf %s && wget --no-check-certificate -qO %s %s ", options.Update.UpdateScript, options.Update.UpdateScript, options.Update.UpdateURL)
+    _, err := utils.RunCommandWithErr(cmd)
+    if err != nil {
+        utils.ErrorF("error to run update script: %v", err)
+        return err
+    }
+
+    if !utils.FileExists(options.Update.UpdateScript) {
+        utils.ErrorF("update script doesn't exist: %v", options.Update.UpdateScript)
+        return fmt.Errorf("update script doesn't exist: %v", options.Update.UpdateScript)
+    }
+
+    if _, err := utils.RunCommandSteamOutput(fmt.Sprintf(`bash %s`, options.Update.UpdateScript)); err != nil {
+        utils.ErrorF("error to run update script: %v", err)
+        return err
+    }
+    return nil
+}
+
+func GenerateMetaData(options libs.Options) {
+    utils.InforF("Generating metadata to: %v", color.HiCyanString(options.Update.GenerateMeta))
+    t := time.Now()
+    t.Format("2006-01-02T15:04:05")
+    var updateData = libs.UpdateMetaData{
+        CoreVersion:     libs.VERSION,
+        WorkflowVersion: libs.VERSION,
+        UpdatedAt:       t.Format("2006-01-02T15:04"),
+    }
+
+    if data, ok := jsoniter.MarshalToString(updateData); ok == nil {
+        utils.InforF("Generate meta data: %v", data)
+        utils.WriteToFile(options.Update.GenerateMeta, data)
     }
 }
 

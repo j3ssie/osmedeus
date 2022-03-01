@@ -460,6 +460,35 @@ func RunCommandWithErr(command string, timeoutRaw ...string) (string, error) {
     }
 }
 
+func RunCommandSteamOutput(cmd string) (string, error) {
+    DebugF("Execute: %s", cmd)
+    command := []string{
+        "bash",
+        "-c",
+        cmd,
+    }
+    var output string
+    realCmd := exec.Command(command[0], command[1:]...)
+
+    // output command output to std too
+    cmdReader, _ := realCmd.StdoutPipe()
+    scanner := bufio.NewScanner(cmdReader)
+    go func() {
+        for scanner.Scan() {
+            out := scanner.Text()
+            fmt.Println(out)
+            output += out
+        }
+    }()
+    if err := realCmd.Start(); err != nil {
+        return output, err
+    }
+    if err := realCmd.Wait(); err != nil {
+        return output, err
+    }
+    return output, nil
+}
+
 func RunOSCommand(cmd string) (string, error) {
     DebugF("Execute: %s", cmd)
     command := []string{

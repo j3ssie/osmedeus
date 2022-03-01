@@ -2,7 +2,8 @@ package libs
 
 // Update some config path
 type Update struct {
-    UpdateURL    string
+    UpdateURL    string // url to download the update script
+    UpdateScript string
     MetaDataURL  string
     UpdateKey    string //
     UpdateType   string // git, http
@@ -11,6 +12,9 @@ type Update struct {
     UpdateVersion string
     UpdateFolder  string
     UpdateDate    string
+    CleanOldData  bool
+    GenerateMeta  string
+    ForceUpdate   bool
     IsUpdateBin   bool
     EnableUpdate  bool
     NoUpdate      bool

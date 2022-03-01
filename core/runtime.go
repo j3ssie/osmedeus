@@ -106,7 +106,10 @@ func (r *Runner) LoadScripts() string {
         if err != nil {
             validate = true
         }
-        result, _ := vm.ToValue(validate)
+        result, err := vm.ToValue(validate)
+        if err != nil {
+            return otto.Value{}
+        }
         return result
     })
 
@@ -115,7 +118,10 @@ func (r *Runner) LoadScripts() string {
         filename := call.Argument(0).String()
         utils.InforF("Showing result of: %v", color.HiCyanString(filename))
         utils.Cat(filename)
-        result, _ := vm.ToValue(true)
+        result, err := vm.ToValue(true)
+        if err != nil {
+            return otto.Value{}
+        }
         return result
     })
 
@@ -129,7 +135,7 @@ func (r *Runner) LoadScripts() string {
         return result
     })
 
-    // ExecCmd execute command command
+    // ExecCmd execute command
     vm.Set(ExecCmdWithOutput, func(call otto.FunctionCall) otto.Value {
         out := utils.RunCmdWithOutput(call.Argument(0).String())
         result, err := vm.ToValue(out)
@@ -139,7 +145,7 @@ func (r *Runner) LoadScripts() string {
         return result
     })
 
-    // ExecCmd execute command command
+    // ExecCmd execute command
     vm.Set(ExecContain, func(call otto.FunctionCall) otto.Value {
         out := utils.RunCmdWithOutput(call.Argument(0).String())
         expected := call.Argument(2).String()
@@ -282,10 +288,16 @@ func (r *Runner) LoadScripts() string {
     })
 
     vm.Set(EmptyFile, func(call otto.FunctionCall) otto.Value {
-        result, _ := vm.ToValue(utils.EmptyFile(call.Argument(0).String(), 0))
+        result, err := vm.ToValue(utils.EmptyFile(call.Argument(0).String(), 0))
+        if err != nil {
+            return otto.Value{}
+        }
         if len(call.ArgumentList) > 1 {
             num, _ := call.Argument(0).ToInteger()
-            result, _ = vm.ToValue(utils.EmptyFile(call.Argument(0).String(), int(num)))
+            result, err = vm.ToValue(utils.EmptyFile(call.Argument(0).String(), int(num)))
+            if err != nil {
+                return otto.Value{}
+            }
         }
         return result
     })

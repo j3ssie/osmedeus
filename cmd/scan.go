@@ -1,6 +1,7 @@
 package cmd
 
 import (
+    "github.com/fatih/color"
     "github.com/j3ssie/osmedeus/core"
     "github.com/j3ssie/osmedeus/libs"
     "github.com/j3ssie/osmedeus/utils"
@@ -60,6 +61,11 @@ func runScan(_ *cobra.Command, _ []string) error {
 
 func CreateRunner(j interface{}) {
     target := j.(string)
+    if core.IsRootDomain(target) && options.Scan.Flow == "general" {
+        utils.WarnF("looks like you scanning a subdomain '%s' with general flow. The result might be much less than usual", color.HiCyanString(target))
+        utils.WarnF("Better input should be root domain with TLD like '-t target.com'")
+    }
+
     runner, err := core.InitRunner(target, options)
     if err != nil {
         utils.ErrorF("Error init runner with: %s", target)

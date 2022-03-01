@@ -88,3 +88,15 @@ const (
     EmptyFile       = "EmptyFile"
     ReadLines       = "ReadLines"
 )
+
+const (
+    TotalSubdomain     = "TotalSubdomain"
+    TotalDns           = "TotalDns"
+    TotalScreenShot    = "TotalScreenShot"
+    TotalTech          = "TotalTech"
+    TotalVulnerability = "TotalVulnerability"
+    TotalArchive       = "TotalArchive"
+    TotalLink          = "TotalLink"
+    TotalDirb          = "TotalDirb"
+    CreateReport       = "CreateReport"
+)

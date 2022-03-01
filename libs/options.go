@@ -51,6 +51,7 @@ type Options struct {
     Update Update
 
     Cloud           Cloud
+    Report          Report
     CloudConfigFile string
     GitSync         bool
 
@@ -73,6 +74,15 @@ type Scan struct {
     BaseWorkspace   string
     CustomWorkspace string
     Force           bool
+}
+
+// Report sub options for report
+type Report struct {
+    CustomPreFix  string
+    PublicIP      string
+    WorkspaceFile string
+    Static        bool
+    Raw           bool
 }
 
 // Server sub options for api server

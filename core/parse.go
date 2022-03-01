@@ -294,3 +294,16 @@ func ParseTarget(raw string) map[string]string {
 
     return target
 }
+
+func IsRootDomain(raw string) bool {
+    suffix, ok := publicsuffix.PublicSuffix(raw)
+    if ok {
+        return false
+    }
+
+    input := strings.ReplaceAll(raw, fmt.Sprintf(".%s", suffix), "")
+    if strings.Count(input, ".") == 1 {
+        return true
+    }
+    return false
+}

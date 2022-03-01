@@ -38,7 +38,7 @@ func ScanUsage() string {
   osmedeus scan -T list_of_targets.txt
   
   ## Scan for CIDR with file contains CIDR with the format '1.2.3.4/24'
-  osmedeus scan -f cidr -t list-of-cidrs.txt
+  osmedeus scan -f cidr -t list-of-ciders.txt
   osmedeus scan -f cidr -t '1.2.3.4/24' # this will auto convert the single input to the file and run
   
   ## Directly run on vuln scan and directory scan on list of domains
@@ -72,9 +72,11 @@ func ScanUsage() string {
     h += "  osmedeus scan -t target.com -w workspace_name --debug\n"
     h += "  osmedeus scan -f general -t sample.com\n"
     h += "  osmedeus scan -f extensive -t sample.com -t another.com\n"
-    h += "  osmedeus scan -f gdirb -T list_of_target.txt\n"
+    h += "  cat list_of_urls.txt | osmedeus scan -f urls\n"
     h += "  osmedeus scan -m ~/.osmedeus/core/workflow/test/dirbscan.yaml -t list_of_urls.txt\n"
     h += "  osmedeus scan --wfFolder ~/custom-workflow/ -f your-custom-workflow -t list_of_urls.txt\n"
+    h += "  osmedeus scan --chunk --chunk-part 40 -c 2 -f cidr -t list-of-cidr.txt\n"
+
     return h
 }
 
@@ -126,6 +128,15 @@ func CloudUsage() string {
     return h
 }
 
+func ReportUsage() string {
+    h := color.HiCyanString("\nReport Usage:\n")
+    h += "  osmedeus report list\n"
+    h += "  osmedeus report view --raw -t target.com\n"
+    h += "  osmedeus report view --static -t target.com\n"
+    h += "  osmedeus report view --raw --static --ip <your-public-ip> -t target.com\n"
+    return h
+}
+
 // ScanHelp scan help message
 func ScanHelp(cmd *cobra.Command, _ []string) {
     fmt.Println(core.Banner())
@@ -158,6 +169,15 @@ func UtilsHelp(cmd *cobra.Command, _ []string) {
     fmt.Println(core.Banner())
     fmt.Println(cmd.UsageString())
     h := UtilsUsage()
+    fmt.Println(h)
+    printDocs()
+}
+
+// ReportHelp utils help message
+func ReportHelp(cmd *cobra.Command, _ []string) {
+    fmt.Println(core.Banner())
+    fmt.Println(cmd.UsageString())
+    h := ReportUsage()
     fmt.Println(h)
     printDocs()
 }

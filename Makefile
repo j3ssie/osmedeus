@@ -25,6 +25,7 @@ release:
 	rm -rf ./dist/osmedeus
 	cp dist/* ~/myGit/premium-osmedeus-base/dist/
 	cp dist/* ~/org-osmedeus/osmedeus-base/dist/
+	$(TARGET) update --gen dist/public.json
 run:
 	$(GO) $(GOFLAGS) run *.go
 

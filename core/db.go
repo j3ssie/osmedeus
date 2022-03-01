@@ -1,6 +1,7 @@
 package core
 
 import (
+    "github.com/fatih/color"
     "github.com/j3ssie/osmedeus/database"
     "github.com/j3ssie/osmedeus/libs"
     "github.com/j3ssie/osmedeus/utils"
@@ -15,31 +16,35 @@ import (
 func (r *Runner) LoadDBScripts() string {
     var output string
 
-    r.VM.Set("TotalSubdomain", func(call otto.FunctionCall) otto.Value {
+    r.VM.Set(TotalSubdomain, func(call otto.FunctionCall) otto.Value {
         length := utils.FileLength(call.Argument(0).String())
         r.TargetObj.TotalAssets = length
+        utils.InforF("Total subdomain found: %v", color.HiMagentaString("%v", length))
         return otto.Value{}
     })
 
-    r.VM.Set("TotalDns", func(call otto.FunctionCall) otto.Value {
+    r.VM.Set(TotalDns, func(call otto.FunctionCall) otto.Value {
         length := utils.FileLength(call.Argument(0).String())
         r.TargetObj.TotalDns = length
+        utils.InforF("Total Dns: %v", color.HiMagentaString("%v", length))
         return otto.Value{}
     })
 
-    r.VM.Set("TotalScreenShot", func(call otto.FunctionCall) otto.Value {
+    r.VM.Set(TotalScreenShot, func(call otto.FunctionCall) otto.Value {
         length := utils.FileLength(call.Argument(0).String())
         r.TargetObj.TotalScreenShot = length
+        utils.InforF("Total ScreenShot: %v", color.HiMagentaString("%v", length))
         return otto.Value{}
     })
 
-    r.VM.Set("TotalTech", func(call otto.FunctionCall) otto.Value {
+    r.VM.Set(TotalTech, func(call otto.FunctionCall) otto.Value {
         length := utils.FileLength(call.Argument(0).String())
         r.TargetObj.TotalTech = length
+        utils.InforF("Total Tech: %v", color.HiMagentaString("%v", length))
         return otto.Value{}
     })
 
-    r.VM.Set("TotalVulnerability", func(call otto.FunctionCall) otto.Value {
+    r.VM.Set(TotalVulnerability, func(call otto.FunctionCall) otto.Value {
         data := utils.ReadingFileUnique(call.Argument(0).String())
         var length int
         for _, line := range data {
@@ -48,29 +53,33 @@ func (r *Runner) LoadDBScripts() string {
             }
         }
         r.TargetObj.TotalVulnerability = length
+        utils.InforF("Total Vulnerability: %v", color.HiMagentaString("%v", length))
         return otto.Value{}
     })
 
-    r.VM.Set("TotalArchive", func(call otto.FunctionCall) otto.Value {
+    r.VM.Set(TotalArchive, func(call otto.FunctionCall) otto.Value {
         length := utils.FileLength(call.Argument(0).String())
         r.TargetObj.TotalArchive = length
+        utils.InforF("Total Archive: %v", color.HiMagentaString("%v", length))
         return otto.Value{}
     })
 
-    r.VM.Set("TotalLink", func(call otto.FunctionCall) otto.Value {
+    r.VM.Set(TotalLink, func(call otto.FunctionCall) otto.Value {
         length := utils.FileLength(call.Argument(0).String())
         r.TargetObj.TotalLink = length
+        utils.InforF("Total Link: %v", color.HiMagentaString("%v", length))
         return otto.Value{}
     })
 
-    r.VM.Set("TotalDirb", func(call otto.FunctionCall) otto.Value {
+    r.VM.Set(TotalDirb, func(call otto.FunctionCall) otto.Value {
         length := utils.FileLength(call.Argument(0).String())
         r.TargetObj.TotalDirb = length
+        utils.InforF("Total Dirb: %v", color.HiMagentaString("%v", length))
         return otto.Value{}
     })
 
     // CreateReport('report', 'subdomain')
-    r.VM.Set("CreateReport", func(call otto.FunctionCall) otto.Value {
+    r.VM.Set(CreateReport, func(call otto.FunctionCall) otto.Value {
         args := call.ArgumentList
         report := args[0].String()
         if utils.FileExists(report) {

@@ -15,13 +15,15 @@ import (
 )
 
 func init() {
-    var execCmd = &cobra.Command{
+    var versionCmd = &cobra.Command{
         Use:   "version",
         Short: "Show core version",
         Long:  core.Banner(),
         RunE:  runVersion,
     }
-    RootCmd.AddCommand(execCmd)
+    versionCmd.Flags().BoolVarP(&options.Verbose, "verbose", "V", false, "Show stat info too")
+    versionCmd.Flags().BoolVar(&options.JsonOutput, "json", false, "Output as JSON")
+    RootCmd.AddCommand(versionCmd)
 }
 
 func runVersion(_ *cobra.Command, _ []string) error {

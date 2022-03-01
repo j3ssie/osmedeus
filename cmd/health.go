@@ -199,8 +199,6 @@ func listFlows() error {
     }
     fmt.Printf("[+] Health Check Workflows: %s\n", color.GreenString("✔"))
 
-    fmt.Printf("\nChecking available workflow at: %s \n\n", color.HiBlueString(options.Env.WorkFlowsFolder))
-
     var content [][]string
     for _, flow := range flows {
         parsedFlow, err := core.ParseFlow(flow)
@@ -213,8 +211,9 @@ func listFlows() error {
         }
         content = append(content, row)
     }
+    fmt.Printf("\nFound %v available workflows at: %s \n\n", color.HiGreenString("%v", len(content)), color.HiCyanString(options.Env.WorkFlowsFolder))
 
-    table := tablewriter.NewWriter(os.Stderr)
+    table := tablewriter.NewWriter(os.Stdout)
     table.SetAutoFormatHeaders(false)
     table.SetHeader([]string{"Flow Name", "Description"})
     table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: true})

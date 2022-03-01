@@ -38,7 +38,7 @@ func init() {
     RootCmd.PersistentFlags().StringVar(&options.ConfigFile, "configFile", fmt.Sprintf("~/.%s/config.yaml", libs.BINARY), "Config File")
     RootCmd.PersistentFlags().StringVar(&options.Env.WorkspacesFolder, "wsFolder", fmt.Sprintf("~/.%s/workspaces", libs.BINARY), "Root Workspace folder")
     RootCmd.PersistentFlags().StringVar(&options.Env.WorkFlowsFolder, "wfFolder", "", fmt.Sprintf("Custom Workflow folder (default will get from '$HOME/%s-base/workflow')", libs.BINARY))
-    RootCmd.PersistentFlags().StringVar(&options.LogFile, "log", "", "Log File")
+    RootCmd.PersistentFlags().StringVar(&options.LogFile, "log", "", fmt.Sprintf("Log File (default will store in '%s')", libs.LDIR))
     RootCmd.PersistentFlags().IntVarP(&options.Concurrency, "concurrency", "c", 1, "Concurrency level (recommend to keep it as 1 on machine has RAM smaller than 2GB)")
 
     // parse target as global flag
@@ -65,7 +65,6 @@ func init() {
     RootCmd.PersistentFlags().BoolVar(&options.WildCardCheck, "ww", false, "Check for wildcard target")
     RootCmd.PersistentFlags().BoolVar(&options.DisableValidateInput, "nv", false, "Disable Validate Input")
     RootCmd.PersistentFlags().BoolVar(&options.Update.NoUpdate, "nu", false, "Disable Update options")
-    RootCmd.PersistentFlags().BoolVarP(&options.Verbose, "verbose", "V", false, "Show stat info too")
     RootCmd.PersistentFlags().BoolVarP(&options.EnableFormatInput, "format-input", "J", false, "Enable special input format")
 
     // disable options
@@ -84,7 +83,6 @@ func init() {
     RootCmd.PersistentFlags().IntVar(&options.PollingTime, "poll-timee", 100, "Number of seconds to sleep before do next sync check")
     RootCmd.PersistentFlags().BoolVar(&options.NoCdn, "no-cdn", false, "Disable CDN feature")
     RootCmd.PersistentFlags().BoolVarP(&options.EnableBackup, "backup", "b", false, "Enable Backup after done")
-    RootCmd.PersistentFlags().BoolVar(&options.JsonOutput, "json", false, "Output as JSON")
 
     // update options
     RootCmd.PersistentFlags().BoolVar(&options.Update.IsUpdateBin, "bin", false, "Update binaries too")
