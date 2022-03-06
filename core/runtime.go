@@ -20,14 +20,14 @@ func (r *Runner) InitVM() {
 func (r *Runner) ExecScript(script string) string {
     utils.DebugF("[Run-Scripts] %v", script)
     value, err := r.VM.Run(script)
-    if err != nil {
-        return ""
+    if err == nil {
+        out, nerr := value.ToString()
+        if nerr == nil {
+            return out
+        }
     }
-    out, err := value.ToString()
-    if err != nil {
-        return ""
-    }
-    return out
+
+    return ""
 }
 
 // RunOse really start the runner
@@ -54,11 +54,15 @@ func (r *Runner) RunOse(scriptName string) {
 func (r *Runner) ConditionExecScript(script string) bool {
     utils.DebugF("[Run-Scripts] %v", script)
     value, err := r.VM.Run(script)
-    out, err := value.ToBoolean()
-    if err != nil {
-        return false
+
+    if err == nil {
+        out, nerr := value.ToBoolean()
+        if nerr == nil {
+            return out
+        }
     }
-    return out
+
+    return false
 }
 
 func (r *Runner) LoadEngineScripts() {

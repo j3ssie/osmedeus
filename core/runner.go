@@ -130,7 +130,9 @@ func (r *Runner) PrepareWorkflow() {
     }
 
     if len(r.Routines) == 0 {
-        utils.WarnF("Your workflow %v doesn't exist", color.HiRedString(r.Opt.Scan.Flow))
+        if r.Opt.Scan.Flow != "cloud-distributed" {
+            utils.WarnF("Your workflow %v doesn't exist", color.HiRedString(r.Opt.Scan.Flow))
+        }
     }
 }
 

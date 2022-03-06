@@ -49,6 +49,7 @@ func init() {
     cronCmd.Flags().StringVar(&options.Cron.Command, "cmd", "", "Command to run")
 
     // add command
+    utilsCmd.PersistentFlags().BoolVar(&options.JsonOutput, "json", false, "Output as JSON")
     utilsCmd.AddCommand(cronCmd)
     utilsCmd.AddCommand(tmuxCmd)
     utilsCmd.AddCommand(psCmd)
