@@ -84,6 +84,7 @@ func InitCloud(options libs.Options, targets []string) {
                 err := selectedCloud.Scan(target)
                 if err != nil {
                     utils.ErrorF("error start scan %s", target)
+                    selectedCloud.Provider.DeleteInstance(selectedCloud.InstanceID)
                     continue
                 }
 
@@ -180,22 +181,6 @@ func SetupProvider(opt libs.Options, providerConfig provider.ConfigProvider) Clo
 
 // Prepare some variables
 func (c *CloudRunner) Prepare() {
-    //if c.Cloud.Name == "" {
-    //	c.Cloud.Name = utils.RandomString(4)
-    //}
-    //
-    //// prepare some config
-    //version := strings.ReplaceAll(strings.TrimSpace(libs.VERSION), " ", "-")
-    //SnapshotName := fmt.Sprintf("%s-base-%s", strings.TrimSpace(libs.SNAPSHOT), version)
-    //c.Cloud.Snapshot = SnapshotName
-    //
-    //// ~/.osmedeus/provider/<osmp-name>
-    //c.Cloud.ProviderFolder = path.Join(c.Opt.Env.ProviderFolder, SnapshotName)
-    //utils.MakeDir(c.Cloud.ProviderFolder)
-    //
-    //c.Cloud.ConfigFile = path.Join(c.Cloud.ProviderFolder, fmt.Sprintf("%s.yaml", c.Cloud.Provider))
-    //c.Cloud.SshKey = c.Opt.Cloud.SecretKey
-
     c.SshPrivateKey = c.Opt.Cloud.SecretKey
     c.SshPublicKey = c.Opt.Cloud.PublicKey
 
@@ -204,18 +189,4 @@ func (c *CloudRunner) Prepare() {
 
     // parse blank target to get env
     c.Target = core.ParseInput("example.com", c.Opt)
-
-    //c.Opt.Cloud.Target["api_token"] = c.Cloud.Token
-    //
-    //// override instance resources if needed
-    //if c.Opt.Cloud.Token != "" {
-    //	c.Cloud.Token = c.Opt.Cloud.Token
-    //}
-    //if c.Opt.Cloud.Size != "" {
-    //	c.Cloud.Size = c.Opt.Cloud.Size
-    //}
-    //if c.Opt.Cloud.Region != "" {
-    //	c.Cloud.Region = c.Opt.Cloud.Region
-    //}
-
 }

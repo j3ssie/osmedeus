@@ -68,7 +68,6 @@ func (c *CloudRunner) Scan(target string) error {
         return nil
     }
 
-    //err = c.DeleteInstance()
     err = c.Provider.DeleteInstance(c.InstanceID)
     if err != nil {
         utils.ErrorF("Error to delete instance")

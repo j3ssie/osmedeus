@@ -49,6 +49,7 @@ func init() {
     cloudCmd.Flags().BoolVar(&options.Cloud.BackgroundRun, "bg", false, "Send command to instance without checking if process is done or not")
     cloudCmd.Flags().BoolVar(&options.Cloud.EnableTerraform, "tf", false, "Use terraform to create cloud instance")
     cloudCmd.Flags().BoolVar(&options.Cloud.NoDelete, "no-del", false, "Don't delete instance after done")
+    cloudCmd.Flags().BoolVar(&options.Cloud.IgnoreProcess, "no-ps", false, "Disable checking process on remote machine")
     cloudCmd.Flags().IntVar(&options.Cloud.Retry, "retry", 10, "Number of retry when command is error")
     cloudCmd.SetHelpFunc(CloudHelp)
     RootCmd.AddCommand(cloudCmd)

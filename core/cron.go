@@ -9,7 +9,10 @@ import (
 
 func taskWithParams(cmd string) {
     utils.InforF("Exec: %v", color.HiMagentaString(cmd))
-    utils.RunOSCommand(cmd)
+    _, err := utils.RunCommandWithErr(cmd)
+    if err != nil {
+        utils.ErrorF("Error running command: %v", err)
+    }
 }
 
 func RunCron(cmd string, schedule int) {

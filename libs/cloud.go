@@ -35,6 +35,7 @@ type Cloud struct {
     RemoteRunList    bool
     TargetAsFile     bool
     EnableChunk      bool
+    IgnoreProcess      bool
     NumberOfParts    int
     Threads          int
 

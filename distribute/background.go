@@ -63,9 +63,22 @@ func (c *CloudRunner) IsRunning() bool {
     utils.DebugF("Checking running process at: %v", c.PublicIP)
     cmd := fmt.Sprintf("%s utils ps --json", libs.BINARY)
 
+    // ignore checking process if you're running custom command '--no-ps'
+    if c.Opt.Cloud.IgnoreProcess {
+        return true
+    }
+
     out, err := c.SSHExec(cmd)
     if err == nil && strings.Contains(out, "pid") {
         return true
+    }
+
+    // retry checking process
+    for i := 0; i < c.Opt.Cloud.Retry; i += 2 {
+        out, err := c.SSHExec(cmd)
+        if err == nil && strings.Contains(out, "pid") {
+            return true
+        }
     }
 
     utils.DebugF(out)

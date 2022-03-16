@@ -83,9 +83,11 @@ func (p *Provider) BuildImage() (err error) {
         buildContentFile = path.Join(p.Opt.Env.CloudConfigFolder, "digitalocean-build.packer")
         if !utils.FileExists(buildContentFile) {
             buildContentFile = path.Join(p.Opt.Env.CloudConfigFolder, "do-build.packer")
-        } else {
-            buildContentFile = path.Join(p.Opt.Env.CloudConfigFolder, "general-build.packer")
+            if !utils.FileExists(buildContentFile) {
+                buildContentFile = path.Join(p.Opt.Env.CloudConfigFolder, "general-build.packer")
+            }
         }
+
     case "ln", "line", "linode":
         buildContentFile = path.Join(p.Opt.Env.CloudConfigFolder, "linode-build.packer")
         if !utils.FileExists(buildContentFile) {
