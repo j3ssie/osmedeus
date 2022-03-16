@@ -27,7 +27,7 @@ func runUpdate(cmd *cobra.Command, _ []string) error {
         options.Update.MetaDataURL = meta
     }
 
-    if options.Update.GenerateMeta != ""{
+    if options.Update.GenerateMeta != "" {
         core.GenerateMetaData(options)
         return nil
     }
