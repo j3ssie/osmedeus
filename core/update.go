@@ -246,6 +246,33 @@ func Update(opt libs.Options) {
     }
 }
 
+
+func UpdateVuln(opt libs.Options)  {
+    utils.InforF("Updating Vulnerability Database only")
+
+    //// update vulnerability signatures
+    //utils.InforF("Updating Jaeles Signatures")
+    //jaelesSign := path.Join(opt.Update.UpdateFolder, "pro-signatures")
+    //if utils.DirLength(jaelesSign) > 0 {
+    //    utils.RunOSCommand(fmt.Sprintf("jaeles config reload --signDir %s", jaelesSign))
+    //    utils.Move(jaelesSign, "~/pro-signatures")
+    //} else {
+    //    os.RemoveAll(utils.NormalizePath("~/pro-signatures"))
+    //    utils.RunOSCommand(fmt.Sprintf("GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -i %s' git clone --depth=1 git@gitlab.com:j3ssie/pro-signatures ~/pro-signatures", opt.Storages["secret_key"]))
+    //    utils.RunOSCommand(fmt.Sprintf("rm -rf ~/custom-nuclei-template && GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -i %s' git clone --depth=1 git@gitlab.com:j3ssie/custom-nuclei-template.git ~/custom-nuclei-template", opt.Storages["secret_key"]))
+    //    utils.RunOSCommand("jaeles config reload --signDir ~/pro-signatures")
+    //}
+
+    // update nuclei templates
+    utils.DebugF("Updating Nuclei Templates")
+    nucleiTemplate := utils.NormalizePath("~/nuclei-templates")
+
+    if utils.DirLength(nucleiTemplate) > 0 {
+        os.RemoveAll(nucleiTemplate)
+    }
+    utils.RunOSCommand(fmt.Sprintf("git clone --depth=1 https://github.com/projectdiscovery/nuclei-templates.git %s", nucleiTemplate))
+}
+
 func UpdateBase(opt libs.Options) {
     err := DownloadUpdate(opt)
     if err != nil {

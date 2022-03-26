@@ -90,7 +90,7 @@ func runCloud(cmd *cobra.Command, _ []string) error {
 
     // @NOTE: pro-tips
     if options.Concurrency > 1 && len(options.Scan.Inputs) == 1 {
-        if utils.FileExists(options.Scan.Inputs[0]) {
+        if !utils.FileExists(options.Scan.Inputs[0]) {
             utils.WarnF("You're using %v in cloud scan but your input %v is just a single domain", color.HiMagentaString(`'-c %v'`, options.Concurrency), color.HiMagentaString(`'-t %v'`, options.Scan.Inputs[0]))
             utils.WarnF("Consider running: osmedeus cloud -c 5 -T list-of-targets.txt")
         }

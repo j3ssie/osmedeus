@@ -16,6 +16,7 @@ func init() {
     updateCmd.Flags().String("meta", "", "Custom MetaData URL")
     updateCmd.Flags().BoolVar(&options.Update.ForceUpdate, "force", false, "Force Update")
     updateCmd.Flags().BoolVar(&options.Update.CleanOldData, "clean", false, "Clean Old Data")
+    updateCmd.Flags().BoolVar(&options.Update.VulnUpdate, "vuln", false, "Update Vulnerability Database only")
     // generate update meta data
     updateCmd.Flags().StringVar(&options.Update.GenerateMeta, "gen", "", "Generate metadata for update")
     RootCmd.AddCommand(updateCmd)
@@ -29,6 +30,11 @@ func runUpdate(cmd *cobra.Command, _ []string) error {
 
     if options.Update.GenerateMeta != "" {
         core.GenerateMetaData(options)
+        return nil
+    }
+
+    if options.Update.VulnUpdate {
+        core.UpdateVuln(options)
         return nil
     }
 

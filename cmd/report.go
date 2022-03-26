@@ -17,11 +17,6 @@ func init() {
         RunE:  runReport,
     }
 
-    reportCmd.Flags().BoolVar(&options.Report.Raw, "raw", false, "Show all the file in the workspace")
-    reportCmd.Flags().StringVar(&options.Report.PublicIP, "ip", "", "Show downloadable file with the given IP address")
-    reportCmd.Flags().BoolVar(&options.Report.Static, "static", false, "Show report file with Prefix Static")
-    reportCmd.SetHelpFunc(ReportHelp)
-
     var lsCmd = &cobra.Command{
         Use:     "list",
         Aliases: []string{"ls"},
@@ -47,6 +42,12 @@ func init() {
     }
     extractCmd.Flags().StringVar(&options.Report.WorkspaceFile, "ws", "", "Workspace file to extract")
     reportCmd.AddCommand(extractCmd)
+
+    reportCmd.PersistentFlags().BoolVar(&options.Report.Raw, "raw", false, "Show all the file in the workspace")
+    reportCmd.PersistentFlags().StringVar(&options.Report.PublicIP, "ip", "", "Show downloadable file with the given IP address")
+    reportCmd.PersistentFlags().BoolVar(&options.Report.Static, "static", false, "Show report file with Prefix Static")
+
+    reportCmd.SetHelpFunc(ReportHelp)
     RootCmd.AddCommand(reportCmd)
 }
 
