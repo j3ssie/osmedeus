@@ -26,6 +26,5 @@ type Step struct {
     PConditions []string
     PScripts    []string
 
-    //Output []string
     Std string
 }

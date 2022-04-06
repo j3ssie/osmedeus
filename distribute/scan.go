@@ -228,7 +228,7 @@ func (c *CloudRunner) PreRunLocal() error {
     // really start to run pre commands
     for _, script := range c.Opt.Cloud.LocalPreRun {
         script = core.ResolveData(script, c.Target)
-        c.Runner.RunScript(script, c.Opt)
+        c.Runner.RunScript(script)
     }
     return nil
 }
@@ -240,7 +240,7 @@ func (c *CloudRunner) PostRunLocal() error {
         // for running local steps
         utils.DebugF("Running local steps")
         for _, step := range c.Opt.Cloud.LocalSteps {
-            c.Runner.RunStep(step, c.Opt)
+            c.Runner.RunStep(step)
         }
     }
 
@@ -252,7 +252,7 @@ func (c *CloudRunner) PostRunLocal() error {
     // really start to run pre commands
     for _, script := range c.Opt.Cloud.LocalPostRun {
         script = core.ResolveData(script, c.Target)
-        c.Runner.RunScript(script, c.Opt)
+        c.Runner.RunScript(script)
     }
     return nil
 }

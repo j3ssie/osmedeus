@@ -87,6 +87,7 @@ func UtilsUsage() string {
     h += "  osmedeus health cloud\n"
     h += "  osmedeus version --json \n"
     h += "  osmedeus update \n"
+    h += "  osmedeus update --vuln\n"
     h += "  osmedeus update --force --clean \n"
     h += "  osmedeus utils tmux ls \n"
     h += "  osmedeus utils tmux logs -A -l 10 \n"
@@ -134,7 +135,7 @@ func ReportUsage() string {
     h += "  osmedeus report list\n"
     h += "  osmedeus report view --raw -t target.com\n"
     h += "  osmedeus report view --static -t target.com\n"
-    h += "  osmedeus report view --raw --static --ip <your-public-ip> -t target.com\n"
+    h += "  osmedeus report view --static --ip 0 -t target.com\n"
     return h
 }
 

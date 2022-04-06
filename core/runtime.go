@@ -46,7 +46,6 @@ func (r *Runner) RunOse(scriptName string) {
     }
 
     utils.DebugF("-- Start ose:\n\n%s", scriptName)
-    scriptContent = ResolveData(scriptContent, r.Target)
     r.ExecScript(scriptContent)
     utils.DebugF("-- Done ose: %s", scriptName)
 }

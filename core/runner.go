@@ -7,10 +7,12 @@ import (
     "github.com/j3ssie/osmedeus/execution"
     "github.com/j3ssie/osmedeus/libs"
     "github.com/j3ssie/osmedeus/utils"
+    "github.com/panjf2000/ants"
     "github.com/robertkrimen/otto"
     "github.com/thoas/go-funk"
     "os"
     "strings"
+    "sync"
 )
 
 // Runner runner struct to start a job
@@ -41,15 +43,16 @@ type Runner struct {
     RuntimeFile string
 
     RoutineModules []string
+    Reports []string
     Routines       []libs.Routine
 
-    // RunTime *otto.Otto
-    VM *otto.Otto
-
+    VM        *otto.Otto
     TargetObj database.Target
     ScanObj   database.Scan
 
     Target map[string]string
+    // this is same as targets but won't change during the execution time
+    Params map[string]string
 }
 
 // InitRunner init runner
@@ -103,7 +106,6 @@ func (r *Runner) PrepareWorkflow() {
                 }
             }
         }
-
     }
 
     // generate routines
@@ -183,6 +185,93 @@ func (r *Runner) PrepareRoutine() {
     }
 }
 
+// PrepareParams prepare global params
+func (r *Runner) PrepareParams() {
+    r.Params = r.Target
+
+    // looking for more params from each module
+    for _, routine := range r.Routines {
+        for _, module := range routine.ParsedModules {
+            // params from module file
+            if len(module.Params) > 0 {
+                for _, param := range module.Params {
+                    for k, v := range param {
+                        // skip params if override: false
+                        _, exist := r.Params[k]
+                        if module.ForceParams && exist {
+                            utils.DebugF("Skip Override param: %v --> %v", v, k)
+                            continue
+                        }
+
+                        v = ResolveData(v, r.Params)
+                        if strings.HasPrefix(v, "~/") {
+                            v = utils.NormalizePath(v)
+                        }
+                        r.Params[k] = v
+                    }
+                }
+            }
+
+            // more params from -p flag
+            if len(r.Opt.Scan.Params) > 0 {
+                params := ParseParams(r.Opt.Scan.Params)
+                if len(params) > 0 {
+                    for k, v := range params {
+                        v = ResolveData(v, r.Params)
+                        r.Params[k] = v
+                    }
+                }
+            }
+        }
+    }
+
+    r.ResolveRoutine()
+
+}
+
+// ResolveRoutine resolve the module name first
+func (r *Runner) ResolveRoutine() {
+    var routines []libs.Routine
+
+    for _, rawRoutine := range r.Routines {
+
+        var routine libs.Routine
+        for _, module := range rawRoutine.ParsedModules {
+            module = ResolveReports(module, r.Params)
+
+            r.Reports = append(r.Reports, module.Report.Final...)
+            module.PreRun = ResolveSlice(module.PreRun, r.Params)
+
+            // steps
+            for i, step := range module.Steps {
+                module.Steps[i].Timeout = ResolveData(step.Timeout, r.Params)
+                module.Steps[i].Threads = ResolveData(step.Threads, r.Params)
+                module.Steps[i].Label = ResolveData(step.Label, r.Params)
+                module.Steps[i].Std = ResolveData(step.Std, r.Params)
+                module.Steps[i].Source = ResolveData(step.Source, r.Params)
+
+                module.Steps[i].Conditions = ResolveSlice(step.Conditions, r.Params)
+                module.Steps[i].Required = ResolveSlice(step.Required, r.Params)
+
+                module.Steps[i].Commands = ResolveSlice(step.Commands, r.Params)
+                module.Steps[i].Scripts = ResolveSlice(step.Scripts, r.Params)
+
+                module.Steps[i].RCommands = ResolveSlice(step.RCommands, r.Params)
+                module.Steps[i].RScripts = ResolveSlice(step.RScripts, r.Params)
+                module.Steps[i].PConditions = ResolveSlice(step.PConditions, r.Params)
+                module.Steps[i].PScripts = ResolveSlice(step.PScripts, r.Params)
+                module.Steps[i].Ose = ResolveSlice(step.Ose, r.Params)
+            }
+
+            module.PostRun = ResolveSlice(module.PostRun, r.Params)
+            routine.ParsedModules = append(routine.ParsedModules, module)
+        }
+
+        routines = append(routines, routine)
+    }
+    r.Routines = routines
+}
+
 func (r *Runner) Start() {
     err := r.Validator()
     if err != nil {
@@ -206,10 +295,13 @@ func (r *Runner) Start() {
     r.DBNewTarget()
     r.DBNewScan()
     r.StartScanNoti()
+    r.LoadEngineScripts()
+
+    r.PrepareParams()
 
     /////
     /* really start the scan here */
-    r.StartRoutine()
+    r.StartRoutines()
     /////
 
     BackupWorkspace(r.Opt)
@@ -220,35 +312,34 @@ func (r *Runner) Start() {
     utils.WriteToFile(r.DoneFile, "done")
 }
 
-// StartRoutine start the scan
-func (r *Runner) StartRoutine() {
+
+// StartRoutines start the scan
+func (r *Runner) StartRoutines() {
     for _, routine := range r.Routines {
-        for _, module := range routine.ParsedModules {
-            module = ResolveReports(module, r.Opt)
-            module.ForceParams = r.ForceParams
-            r.Opt.Module = module
-
-            // check exclude options
-            if funk.ContainsString(r.Opt.Exclude, module.Name) {
-                utils.BadBlockF(module.Name, fmt.Sprintf("Module Got Excluded"))
-                continue
-            }
-
-            rTimeout := r.Opt.Timeout
-            if module.MTimeout != "" {
-                rTimeout = ResolveData(module.MTimeout, r.Target)
-            }
-
-            if rTimeout != "" {
-                timeout := utils.CalcTimeout(rTimeout)
-                if timeout < 43200 {
-                    // run the module but with timeout
-                    r.RunModulesWithTimeout(rTimeout, module, r.Opt)
-                    continue
-                }
-            }
-
-            r.RunModule(module, r.Opt)
-        }
+        // start each section of modules
+        utils.DebugF("Start routine: %v", len(routine.ParsedModules))
+        r.RunRoutine(routine.ParsedModules)
     }
+}
+
+func (r *Runner) RunRoutine(modules []libs.Module) {
+    var wg sync.WaitGroup
+    p, _ := ants.NewPoolWithFunc(r.Opt.Concurrency*10, func(m interface{}) {
+        module := m.(libs.Module)
+        r.RunModule(module)
+        wg.Done()
+    }, ants.WithPreAlloc(true))
+    defer p.Release()
+
+    for _, module := range modules {
+        if funk.ContainsString(r.Opt.Exclude, module.Name) {
+            utils.BadBlockF(module.Name, fmt.Sprintf("Module Got Excluded"))
+            continue
+        }
+
+        p.Invoke(module)
+        wg.Add(1)
+    }
+
+    wg.Wait()
 }

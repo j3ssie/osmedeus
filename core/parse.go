@@ -4,6 +4,7 @@ import (
     "bytes"
     "fmt"
     "github.com/Jeffail/gabs/v2"
+    "github.com/fatih/color"
     "github.com/spf13/cast"
     "golang.org/x/net/publicsuffix"
     "io/ioutil"
@@ -31,9 +32,29 @@ func ResolveData(format string, data map[string]string) string {
     return buf.String()
 }
 
+// ResolveSlice resolve template from signature file
+func ResolveSlice(slice []string, data map[string]string) (resolveSlice []string) {
+    for _, s := range slice {
+        resolveSlice = append(resolveSlice, ResolveData(s, data))
+    }
+    return resolveSlice
+}
+
+// AltResolveVariable just like ResolveVariable but looking for [[.var]]
+func AltResolveVariable(format string, data map[string]string) string {
+    t := template.Must(template.New("").Delims("[[", "]]").Parse(format))
+    buf := &bytes.Buffer{}
+    err := t.Execute(buf, data)
+    if err != nil {
+        return format
+    }
+    return buf.String()
+}
+
+
 // ParseFlow parse mode file
 func ParseFlow(flowFile string) (libs.Flow, error) {
-    utils.DebugF("Parsing workflow at: %v", flowFile)
+    utils.DebugF("Parsing workflow at: %v", color.HiGreenString(flowFile))
     var flow libs.Flow
     yamlFile, err := ioutil.ReadFile(flowFile)
     if err != nil {
@@ -54,7 +75,7 @@ func ParseFlow(flowFile string) (libs.Flow, error) {
 
 // ParseModules parse module file
 func ParseModules(moduleFile string) (libs.Module, error) {
-    utils.DebugF("Parsing module at: %v", moduleFile)
+    utils.DebugF("Parsing module at: %v", color.HiCyanString(moduleFile))
 
     var module libs.Module
 
@@ -162,46 +183,6 @@ func ParseInput(raw string, options libs.Options) map[string]string {
     return ROptions
 }
 
-// MoreParams get more params from module or cli
-func MoreParams(module libs.Module, options *libs.Options) {
-    ROptions := options.Scan.ROptions
-    if len(ROptions) == 0 {
-        ROptions = make(map[string]string)
-    }
-
-    // params from module file
-    if len(module.Params) > 0 {
-        for _, param := range module.Params {
-            for k, v := range param {
-                // skip params if override: false
-                _, exist := ROptions[k]
-                if module.ForceParams && exist {
-                    utils.DebugF("Skip Override param: %v --> %v", v, k)
-                    continue
-                }
-
-                v = ResolveData(v, ROptions)
-                if strings.HasPrefix(v, "~/") {
-                    v = utils.NormalizePath(v)
-                }
-                ROptions[k] = v
-            }
-        }
-    }
-
-    // more params from -p flag
-    if len(options.Scan.Params) > 0 {
-        params := ParseParams(options.Scan.Params)
-        if len(params) > 0 {
-            for k, v := range params {
-                v = ResolveData(v, ROptions)
-                ROptions[k] = v
-            }
-        }
-    }
-
-    options.Scan.ROptions = ROptions
-}
 
 // ParseParams parse more params from cli
 func ParseParams(rawParams []string) map[string]string {

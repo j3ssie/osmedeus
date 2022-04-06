@@ -246,8 +246,7 @@ func Update(opt libs.Options) {
     }
 }
 
-
-func UpdateVuln(opt libs.Options)  {
+func UpdateVuln(opt libs.Options) {
     utils.InforF("Updating Vulnerability Database only")
 
     //// update vulnerability signatures

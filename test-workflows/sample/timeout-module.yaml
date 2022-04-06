@@ -1,18 +1,6 @@
 name: timeout-module
-# mtimeout: '{{.firstTimeout}}'
-
-params:
-  - runSlow: 'true'
+desc:
 
 steps:
-  # - conditions:
-  #     - '{{.runSlow}} == true'
-  #   commands:
-  #     - "echo '---> Slow '"
-  #   rcommands:
-  #     - "echo '<---- Reverse '"
-
-  - required:
-      - "/tmp/not-exist"
-    commands:
-      - "sleep 20 && echo '---> done sleep 20s'"
+  - commands:
+      - "echo '==> Done here <=="

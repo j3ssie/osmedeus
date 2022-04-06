@@ -15,7 +15,11 @@ func (r *Runner) LoadExternalScripts() string {
 
     // special scripts
     vm.Set(Cleaning, func(call otto.FunctionCall) otto.Value {
-        execution.Cleaning(call.Argument(0).String(), r.Opt)
+        if r.Opt.NoClean {
+            utils.InforF("Disabled Cleaning")
+            return otto.Value{}
+        }
+        execution.Cleaning(call.Argument(0).String(), r.Reports)
         return otto.Value{}
     })
 

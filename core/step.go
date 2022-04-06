@@ -22,7 +22,7 @@ func (r *Runner) RunModulesWithTimeout(timeoutRaw string, module libs.Module, op
     defer cancel()
 
     go func() {
-        r.RunModule(module, options)
+        r.RunModule(module)
         cancel()
     }()
 
@@ -37,8 +37,8 @@ func (r *Runner) RunModulesWithTimeout(timeoutRaw string, module libs.Module, op
 }
 
 // CheckResume check resume report
-func CheckResume(options libs.Options) bool {
-    for _, report := range options.Module.Report.Final {
+func CheckResume(module libs.Module) bool {
+    for _, report := range module.Report.Final {
         if !strings.Contains(report, ".osmedeus/storages") && !utils.FileExists(report) {
             return false
         }
@@ -47,26 +47,46 @@ func CheckResume(options libs.Options) bool {
 }
 
 // ResolveReports resolve real path of reports
-func ResolveReports(module libs.Module, options libs.Options) libs.Module {
+func ResolveReports(module libs.Module, params map[string]string) libs.Module {
     var final []string
     var noti []string
     var diff []string
     for _, report := range module.Report.Final {
-        final = append(final, ResolveData(report, options.Scan.ROptions))
+        final = append(final, ResolveData(report, params))
     }
 
     for _, report := range module.Report.Noti {
-        noti = append(noti, ResolveData(report, options.Scan.ROptions))
+        noti = append(noti, ResolveData(report, params))
     }
 
     for _, report := range module.Report.Diff {
-        diff = append(diff, ResolveData(report, options.Scan.ROptions))
+        diff = append(diff, ResolveData(report, params))
     }
 
     module.Report.Final = final
     module.Report.Noti = noti
     module.Report.Diff = diff
     return module
+}
+
+
+//  print all report
+func printReports(module libs.Module) {
+    var files []string
+    files = append(files, module.Report.Final...)
+    files = append(files, module.Report.Noti...)
+    files = append(files, module.Report.Diff...)
+
+    reports := funk.UniqString(files)
+    utils.BannerF("REPORT", module.Name)
+    for _, report := range reports {
+        if !utils.FileExists(report) && utils.EmptyFile(report, 0) {
+            if !utils.FolderExists(report) && utils.EmptyDir(report) {
+                continue
+            }
+        }
+        utils.BlockF("report", report)
+    }
 }
 
 // CheckRequired check if required file exist or not
@@ -77,7 +97,7 @@ func (r *Runner) CheckRequired(requires []string, options libs.Options) error {
 
     utils.DebugF("Checking require: %v", requires)
     for _, require := range requires {
-        require = ResolveData(require, options.Scan.ROptions)
+        //require = ResolveData(require, options.Scan.ROptions)
 
         if strings.Contains(require, "(") && strings.Contains(require, ")") {
             validate := r.ConditionExecScript(require)
@@ -100,14 +120,12 @@ func (r *Runner) CheckRequired(requires []string, options libs.Options) error {
 }
 
 // CheckCondition check if required file exist or not
-func (r *Runner) CheckCondition(conditions []string, options libs.Options) error {
+func (r *Runner) CheckCondition(conditions []string) error {
     if len(conditions) == 0 {
         return nil
     }
     for _, require := range conditions {
-        require = ResolveData(require, options.Scan.ROptions)
-        validate := r.ConditionExecScript(require)
-        if !validate {
+        if !r.ConditionExecScript(require) {
             return fmt.Errorf("condition not met: %s", require)
         }
     }
@@ -115,16 +133,15 @@ func (r *Runner) CheckCondition(conditions []string, options libs.Options) error
 }
 
 // RunCommands run list of commands in parallel
-func RunCommands(commands []string, std string, options libs.Options) string {
+func (r *Runner) RunCommands(commands []string, std string) string {
     var wg sync.WaitGroup
     var output string
     var err error
 
-    for _, rawCommand := range commands {
-        command := ResolveData(rawCommand, options.Scan.ROptions)
+    for _, command := range commands {
         wg.Add(1)
         // don't run too much command at once
-        go func() {
+        go func(command string) {
             defer wg.Done()
             var out string
             if std != "" {
@@ -134,13 +151,13 @@ func RunCommands(commands []string, std string, options libs.Options) string {
             }
 
             if err != nil {
-                utils.DebugF("error running command: %v", command)
+                utils.DebugF("error running command: %v -- %v", command, err)
             }
 
             if out != "" {
                 output += out
             }
-        }()
+        }(command)
     }
     wg.Wait()
 
@@ -148,23 +165,4 @@ func RunCommands(commands []string, std string, options libs.Options) string {
         utils.WriteToFile(std, output)
     }
     return output
-}
-
-//  print all report
-func printReports(options libs.Options) {
-    var files []string
-    files = append(files, options.Module.Report.Final...)
-    files = append(files, options.Module.Report.Noti...)
-    files = append(files, options.Module.Report.Diff...)
-
-    reports := funk.UniqString(files)
-    utils.BannerF("REPORT", options.Module.Name)
-    for _, report := range reports {
-        if !utils.FileExists(report) && utils.EmptyFile(report, 0) {
-            if !utils.FolderExists(report) && utils.EmptyDir(report) {
-                continue
-            }
-        }
-        utils.BlockF("report", report)
-    }
 }

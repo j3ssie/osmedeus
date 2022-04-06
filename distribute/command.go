@@ -70,7 +70,7 @@ func (c *CloudRunner) CreateUIReport() {
         }
 
         // create record on UI
-        c.Opt.Module = core.ResolveReports(parsedModule, c.Opt)
+        c.Opt.Module = core.ResolveReports(parsedModule, c.Target)
         database.DBNewReports(parsedModule, &c.Runner.TargetObj)
         return
     }
@@ -104,7 +104,7 @@ func (c *CloudRunner) CreateUIReport() {
                 continue
             }
             // create record on UI
-            c.Opt.Module = core.ResolveReports(parsedModule, c.Opt)
+            c.Opt.Module = core.ResolveReports(parsedModule, c.Target)
             database.DBNewReports(c.Opt.Module, &c.Runner.TargetObj)
         }
     }

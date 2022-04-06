@@ -44,10 +44,10 @@ func runExec(cmd *cobra.Command, _ []string) error {
     for _, t := range options.Scan.Inputs {
         // start to run scripts
         options.Scan.ROptions = core.ParseInput(t, options)
-        for _, script := range scripts {
-            script = core.ResolveData(script, options.Scan.ROptions)
+        for _, rscript := range scripts {
+            script = core.ResolveData(rscript, options.Scan.ROptions)
             utils.InforF("Script: %v", script)
-            runner.RunScript(script, options)
+            runner.RunScript(script)
         }
     }
 

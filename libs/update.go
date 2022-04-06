@@ -13,7 +13,7 @@ type Update struct {
     UpdateFolder  string
     UpdateDate    string
     CleanOldData  bool
-    VulnUpdate  bool
+    VulnUpdate    bool
     GenerateMeta  string
     ForceUpdate   bool
     IsUpdateBin   bool

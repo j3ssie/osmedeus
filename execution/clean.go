@@ -20,19 +20,9 @@ import (
     "github.com/j3ssie/osmedeus/utils"
 )
 
-// Cleaning cleaning tmp data of workspaces
-func Cleaning(folder string, options libs.Options) {
-    if options.NoClean {
-        utils.InforF("Disabled Cleaning")
-        return
-    }
+// Cleaning the execution directory
+func Cleaning(folder string, reports []string) {
     utils.DebugF("Cleaning result: %v", folder)
-    // don't remove file in report part
-    var reports []string
-    reports = append(reports, options.Module.Report.Final...)
-    reports = append(reports, options.Module.Report.Noti...)
-    reports = append(reports, options.Module.Report.Diff...)
-
     // list all the file
     items, err := filepath.Glob(fmt.Sprintf("%v/*", folder))
     if err != nil {

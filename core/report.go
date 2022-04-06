@@ -106,6 +106,10 @@ func ListSingleWorkspace(options libs.Options, target string) (content [][]strin
                     reportName := cast.ToString(report.S("report_name").Data())
                     reportPath := cast.ToString(report.S("report_path").Data())
 
+                    if !utils.FileExists(reportPath) {
+                        continue
+                    }
+
                     row := []string{
                         ws.Name(), moduleName, processReport(options, reportName), processReport(options, reportPath),
                     }

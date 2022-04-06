@@ -1,0 +1,12 @@
+name: parallel2
+desc: Run dirbscan scan on list of HTTP file
+
+steps:
+  - label: 'Start step 222'
+    commands:
+      - "sleep 5"
+      - "echo '==>>>> {{.Target}} '"
+
+  - commands:
+      - "echo 'done parallel 2222'"
+   
