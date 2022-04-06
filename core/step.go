@@ -69,7 +69,6 @@ func ResolveReports(module libs.Module, params map[string]string) libs.Module {
     return module
 }
 
-
 //  print all report
 func printReports(module libs.Module) {
     var files []string

@@ -2,7 +2,7 @@ name: parallel1
 desc: Run dirbscan scan on list of HTTP file
 
 params:
-- limit: '5000'
+  - limit: '5000'
 
 steps:
   - label: 'Start step 111'

@@ -43,7 +43,7 @@ type Runner struct {
     RuntimeFile string
 
     RoutineModules []string
-    Reports []string
+    Reports        []string
     Routines       []libs.Routine
 
     VM        *otto.Otto
@@ -311,7 +311,6 @@ func (r *Runner) Start() {
     utils.BlockF("Done", fmt.Sprintf("scan for %v -- %v", r.Input, color.HiMagentaString("%vs", r.RunningTime)))
     utils.WriteToFile(r.DoneFile, "done")
 }
-
 
 // StartRoutines start the scan
 func (r *Runner) StartRoutines() {

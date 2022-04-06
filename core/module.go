@@ -256,63 +256,10 @@ func (r *Runner) RunStepWithSource(step libs.Step) (out string, err error) {
         step.Parallel = 1
     }
 
-    // skip concurrency part
-    if step.Parallel == 1 {
-        for index, line := range data {
-            customParams := make(map[string]string)
-            customParams["line"] = line
-            customParams["line_id"] = fmt.Sprintf("%v-%v", path.Base(line), index)
-            customParams["_id_"] = fmt.Sprintf("%v", index)
-            customParams["_line_"] = execution.StripName(line)
-
-            if len(step.Commands) > 0 {
-                r.RunCommands(step.Commands, step.Std)
-            }
-
-            if len(step.Ose) > 0 {
-                for _, ose := range step.Ose {
-                    r.RunOse(ose)
-                }
-            }
-
-            if len(step.Scripts) > 0 {
-                r.RunScripts(step.Scripts)
-            }
-
-            // post scripts
-            if len(step.PConditions) > 0 || len(step.PScripts) > 0 {
-                err := r.CheckCondition(step.PConditions)
-                if err == nil {
-                    if len(step.PScripts) > 0 {
-                        r.RunScripts(step.PScripts)
-                    }
-                }
-            }
-
-        }
-
-        if step.Label != "" {
-            utils.BlockF("Done-Step", color.HiCyanString(step.Label))
-        }
-        return out, nil
-    }
-
-    /////////////
-    // run multiple steps in concurrency mode
-
-    utils.DebugF("Run step in Parallel: %v", step.Parallel)
-    var wg sync.WaitGroup
-    p, _ := ants.NewPoolWithFunc(step.Parallel, func(i interface{}) {
-        r.startStepJob(i)
-        wg.Done()
-    }, ants.WithPreAlloc(true))
-    defer p.Release()
-
-    //var mu sync.Mutex
+    // prepare the data first
+    var newGeneratedSteps []libs.Step
     for index, line := range data {
-        //mu.Lock()
         customParams := make(map[string]string)
-        //localOptions := libs.Options{}
         customParams["line"] = line
         customParams["line_id"] = fmt.Sprintf("%v-%v", path.Base(line), index)
         customParams["_id_"] = fmt.Sprintf("%v", index)
@@ -349,12 +296,39 @@ func (r *Runner) RunStepWithSource(step libs.Step) (out string, err error) {
             localStep.PScripts = append(localStep.PScripts, AltResolveVariable(script, customParams))
         }
 
+        newGeneratedSteps = append(newGeneratedSteps, localStep)
+    }
+
+    // skip concurrency part
+    if step.Parallel == 1 {
+        for _, newGeneratedStep := range newGeneratedSteps {
+            out, err = r.RunStep(newGeneratedStep)
+            if err != nil {
+                continue
+            }
+        }
+        if step.Label != "" {
+            utils.BlockF("Done-Step", color.HiCyanString(step.Label))
+        }
+    }
+
+    /////////////
+    // run multiple steps in concurrency mode
+
+    utils.DebugF("Run step in Parallel: %v", step.Parallel)
+    var wg sync.WaitGroup
+    p, _ := ants.NewPoolWithFunc(step.Parallel, func(i interface{}) {
+        r.startStepJob(i)
+        wg.Done()
+    }, ants.WithPreAlloc(true))
+    defer p.Release()
+
+    for _, newGeneratedStep := range newGeneratedSteps {
         wg.Add(1)
-        err = p.Invoke(localStep)
+        err = p.Invoke(newGeneratedStep)
         if err != nil {
             utils.ErrorF("Error in parallel: %v", err)
         }
-        //mu.Unlock()
     }
 
     wg.Wait()

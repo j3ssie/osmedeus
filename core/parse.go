@@ -51,7 +51,6 @@ func AltResolveVariable(format string, data map[string]string) string {
     return buf.String()
 }
 
-
 // ParseFlow parse mode file
 func ParseFlow(flowFile string) (libs.Flow, error) {
     utils.DebugF("Parsing workflow at: %v", color.HiGreenString(flowFile))
@@ -182,7 +181,6 @@ func ParseInput(raw string, options libs.Options) map[string]string {
 
     return ROptions
 }
-
 
 // ParseParams parse more params from cli
 func ParseParams(rawParams []string) map[string]string {
