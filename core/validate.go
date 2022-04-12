@@ -23,11 +23,11 @@ func (r *Runner) Validator() error {
     v := validator.New()
 
     // if input as a file
-    if utils.FileExists(r.Input) {
-        if !inputAsFile {
-            utils.ErrorF("input required is not a file: %v", r.Input)
-            return fmt.Errorf("input required is not a file: %v", r.Input)
-        }
+    if utils.FileExists(r.Input) && inputAsFile {
+        //if !inputAsFile {
+        //    utils.ErrorF("input required is not a file: %v", r.Input)
+        //    return fmt.Errorf("input required is not a file: %v", r.Input)
+        //}
 
         r.InputType = "file"
         inputs := utils.ReadingLines(r.Input)
@@ -60,7 +60,7 @@ func (r *Runner) Validator() error {
     }
 
     if !strings.HasPrefix(r.RequiredInput, r.InputType) {
-        return fmt.Errorf("input does not match the require time")
+        return fmt.Errorf("input does not match the require validation: inputType:%v -- requireType:%v", r.InputType, r.RequiredInput)
     }
 
     utils.InforF("Start validating input: %v -- %v", r.Input, r.InputType)
@@ -75,6 +75,8 @@ func (r *Runner) Validator() error {
         r.Input = dest
         r.Target = ParseInput(r.Input, r.Opt)
     }
+
+    utils.DebugF("validator: input:%v -- type: %v -- require:%v", r.Input, r.InputType, r.RequiredInput)
 
     return nil
 }

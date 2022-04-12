@@ -198,8 +198,8 @@ func (r *Runner) PrepareParams() {
                     for k, v := range param {
                         // skip params if override: false
                         _, exist := r.Params[k]
-                        if module.ForceParams && exist {
-                            utils.DebugF("Skip Override param: %v --> %v", v, k)
+                        if r.ForceParams && exist {
+                            utils.DebugF("Skip override param: %v --> %v", k, v)
                             continue
                         }
 
@@ -212,7 +212,7 @@ func (r *Runner) PrepareParams() {
                 }
             }
 
-            // more params from -p flag
+            // more params from -p flag which will override everything
             if len(r.Opt.Scan.Params) > 0 {
                 params := ParseParams(r.Opt.Scan.Params)
                 if len(params) > 0 {

@@ -21,10 +21,10 @@
 > NOTE that you need some essential tools like `curl, wget, git, zip` and login as **root** to start
 
 ```shell
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/osmedeus/osmedeus-base/master/install.sh)"
+bash <(curl -fsSL https://raw.githubusercontent.com/osmedeus/osmedeus-base/master/install.sh)
 ```
 
-## Build the engine from source
+## Build the engine from the source
 
 Make sure you installed `golang >= v1.17`
 
@@ -33,6 +33,12 @@ mkdir -p $GOPATH/src/github.com/j3ssie
 git clone --depth=1 https://github.com/j3ssie/osmedeus $GOPATH/src/github.com/j3ssie/osmedeus
 cd $GOPATH/src/github.com/j3ssie/osmedeus
 make build
+```
+
+or 
+
+```shell
+go install -v github.com/j3ssie/osmedeus@latest
 ```
 
 ## Usage
