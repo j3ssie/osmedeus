@@ -119,7 +119,7 @@ func (r *Runner) LoadScripts() string {
     // Cat the file to stdout
     vm.Set(Cat, func(call otto.FunctionCall) otto.Value {
         filename := call.Argument(0).String()
-        utils.InforF("Showing result of: %v", color.HiCyanString(filename))
+        utils.InforF("Showing the content of: %v", color.HiCyanString(filename))
         utils.Cat(filename)
         result, err := vm.ToValue(true)
         if err != nil {
@@ -140,8 +140,8 @@ func (r *Runner) LoadScripts() string {
 
     // ExecCmd execute command
     vm.Set(ExecCmdWithOutput, func(call otto.FunctionCall) otto.Value {
-        out := utils.RunCmdWithOutput(call.Argument(0).String())
-        result, err := vm.ToValue(out)
+        utils.RunCommandSteamOutput(call.Argument(0).String())
+        result, err := vm.ToValue(true)
         if err != nil {
             return otto.Value{}
         }

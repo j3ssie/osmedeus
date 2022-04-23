@@ -35,7 +35,7 @@ cd $GOPATH/src/github.com/j3ssie/osmedeus
 make build
 ```
 
-or 
+or
 
 ```shell
 go install -v github.com/j3ssie/osmedeus@latest

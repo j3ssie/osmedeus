@@ -57,6 +57,16 @@ func runReportList(_ *cobra.Command, _ []string) error {
 }
 
 func runReportView(_ *cobra.Command, _ []string) error {
+    if options.Report.PublicIP == "" {
+        if utils.GetOSEnv("IPAddress", "127.0.0.1") == "127.0.0.1" {
+            options.Report.PublicIP = utils.GetOSEnv("IPAddress", "127.0.0.1")
+        }
+    }
+
+    if options.Report.PublicIP == "0" || options.Report.PublicIP == "0.0.0.0" {
+        options.Report.PublicIP = getPublicIP()
+    }
+
     if len(options.Scan.Inputs) == 0 {
         core.ListWorkspaces(options)
         utils.InforF("Please select workspace to view report. Try %s", color.HiCyanString(`'osmedeus report view -t target.com'`))

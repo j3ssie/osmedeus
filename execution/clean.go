@@ -494,3 +494,42 @@ func CleanJSONHttpx(filename string, dest string) {
         utils.WriteToFile(dest, strings.Join(results, "\n"))
     }
 }
+
+// CleanFFUFJson get to get formatted report
+func CleanFFUFJson(filename string, dest string) {
+    content := utils.ReadingLines(filename)
+    if len(content) <= 0 {
+        utils.WarnF("File not found: %s", filename)
+        return
+    }
+
+    var results []string
+    for _, line := range content {
+        jsonParsed, err := gabs.ParseJSON([]byte(line))
+        if err != nil {
+            continue
+        }
+
+        resultsJson := jsonParsed.S("results")
+        if resultsJson == nil {
+            continue
+        }
+
+        for _, item := range resultsJson.Children() {
+            //.url,.status,.length,.words,.lines,.redirectlocation
+            endpoint := cast.ToString(item.S("url").Data())
+            status := cast.ToString(item.S("status").Data())
+            length := cast.ToString(item.S("length").Data())
+            words := cast.ToString(item.S("words").Data())
+            lines := cast.ToString(item.S("lines").Data())
+            redirectLocation := cast.ToString(item.S("redirectlocation").Data())
+
+            data := fmt.Sprintf("%s,%s,%s,%s,%s,%s", endpoint, status, length, words, lines, redirectLocation)
+            results = append(results, data)
+        }
+    }
+
+    if len(results) > 0 {
+        utils.WriteToFile(dest, strings.Join(results, "\n"))
+    }
+}

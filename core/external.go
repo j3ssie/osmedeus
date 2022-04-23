@@ -93,6 +93,13 @@ func (r *Runner) LoadExternalScripts() string {
         return otto.Value{}
     })
 
+    vm.Set(CleanFFUFJson, func(call otto.FunctionCall) otto.Value {
+        src := call.Argument(0).String()
+        dest := call.Argument(1).String()
+        execution.CleanFFUFJson(src, dest)
+        return otto.Value{}
+    })
+
     vm.Set(GenNucleiReport, func(call otto.FunctionCall) otto.Value {
         src := call.Argument(0).String()
         dest := call.Argument(1).String()

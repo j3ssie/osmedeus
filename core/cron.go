@@ -9,7 +9,7 @@ import (
 
 func taskWithParams(cmd string) {
     utils.InforF("Exec: %v", color.HiMagentaString(cmd))
-    _, err := utils.RunCommandWithErr(cmd)
+    _, err := utils.RunCommandSteamOutput(cmd)
     if err != nil {
         utils.ErrorF("Error running command: %v", err)
     }

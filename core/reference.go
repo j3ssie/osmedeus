@@ -39,6 +39,7 @@ const (
     CleanArjun       = "CleanArjun"
     GenNucleiReport  = "GenNucleiReport"
     CleanJSONHttpx   = "CleanJSONHttpx"
+    CleanFFUFJson    = "CleanFFUFJson"
 )
 
 const (
