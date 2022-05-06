@@ -480,7 +480,6 @@ func CleanJSONHttpx(filename string, dest string) {
         rawTechs := jsonParsed.S("technologies")
         techs := "No-Tech"
         if rawTechs != nil {
-            //var techs []string
             techs = strings.Join(cast.ToStringSlice(rawTechs.Data()), ";;")
 
         }

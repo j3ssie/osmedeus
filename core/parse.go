@@ -23,10 +23,13 @@ import (
 
 // ResolveData resolve template from signature file
 func ResolveData(format string, data map[string]string) string {
+    //utils.DebugF("ResolveData: %s", format)
     t := template.Must(template.New("").Parse(format))
+
     buf := &bytes.Buffer{}
     err := t.Execute(buf, data)
     if err != nil {
+        utils.ErrorF("Error render: %v -- %v", format, err)
         return format
     }
     return buf.String()

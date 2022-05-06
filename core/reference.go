@@ -3,31 +3,6 @@ package core
 /* File to store all the script for better reference */
 
 const (
-    SetVar   = "SetVar"
-    GetOSEnv = "GetOSEnv"
-)
-
-const (
-    RRSync         = "RRSync"
-    Clone          = "Clone"
-    FClone         = "FClone"
-    PushResult     = "PushResult"
-    PushFolder     = "PushFolder"
-    PullFolder     = "PullFolder"
-    DiffCompare    = "DiffCompare"
-    GitDiff        = "GitDiff"
-    LoopGitDiff    = "LoopGitDiff"
-    GetFileFromCDN = "GetFileFromCDN"
-    GetWSFromCDN   = "GetWSFromCDN"
-    DownloadFile   = "DownloadFile"
-    // for gitlab API only
-    CreateRepo      = "CreateRepo"
-    DeleteRepo      = "DeleteRepo"
-    DeleteRepoByPid = "DeleteRepoByPid"
-    ListProjects    = "ListProjects"
-)
-
-const (
     Cleaning         = "Cleaning"
     CleanAmass       = "CleanAmass"
     CleanRustScan    = "CleanRustScan"
@@ -63,18 +38,12 @@ const (
     ExecCmdB          = "ExecCmdB"
     ExecCmdWithOutput = "ExecCmdWithOutput"
     ExecContain       = "ExecContain"
-)
-
-const (
-    Sleep      = "Sleep"
-    Exit       = "Exit"
-    CastToInt  = "CastToInt"
-    StripSlash = "StripSlash"
-    Printf     = "Printf"
-    Cat        = "Cat"
-)
-
-const (
+    Sleep           = "Sleep"
+    Exit            = "Exit"
+    CastToInt       = "CastToInt"
+    StripSlash      = "StripSlash"
+    Printf          = "Printf"
+    Cat             = "Cat"
     SortU           = "SortU"
     SplitFile       = "SplitFile"
     Append          = "Append"
@@ -100,4 +69,29 @@ const (
     TotalLink          = "TotalLink"
     TotalDirb          = "TotalDirb"
     CreateReport       = "CreateReport"
+)
+
+const (
+    RRSync         = "RRSync"
+    Clone          = "Clone"
+    FClone         = "FClone"
+    PushResult     = "PushResult"
+    PushFolder     = "PushFolder"
+    PullFolder     = "PullFolder"
+    DiffCompare    = "DiffCompare"
+    GitDiff        = "GitDiff"
+    LoopGitDiff    = "LoopGitDiff"
+    GetFileFromCDN = "GetFileFromCDN"
+    GetWSFromCDN   = "GetWSFromCDN"
+    DownloadFile   = "DownloadFile"
+    // for gitlab API only
+    CreateRepo      = "CreateRepo"
+    DeleteRepo      = "DeleteRepo"
+    DeleteRepoByPid = "DeleteRepoByPid"
+    ListProjects    = "ListProjects"
+)
+
+const (
+    SetVar   = "SetVar"
+    GetOSEnv = "GetOSEnv"
 )
