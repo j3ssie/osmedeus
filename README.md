@@ -86,7 +86,7 @@ go install -v github.com/j3ssie/osmedeus@latest
 
 ## 💬 Community & Discussion
 
-Join Our Discord server [here](https://discord.gg/gy4SWhpaPU)
+Join Our Discord server [here](https://discord.gg/mtQG2FQsYA)
 
 ## 💎 Donation & Sponsor
 
