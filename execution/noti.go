@@ -45,7 +45,6 @@ func DiffNoti(arguments []otto.Value, options libs.Options) {
             if !utils.FileExists(filename) {
                 continue
             }
-            // SendFile(argument.String(), options)
             data := getNewContent(utils.ReadingLines(filename))
             if strings.TrimSpace(data) == "" {
                 continue
@@ -210,11 +209,11 @@ func WebHookSendAttachment(options libs.Options, messType string, messContent st
 // SendFile send file to specific channel
 func SendFile(filename string, channel string, options libs.Options) error {
     if options.Noti.SlackToken == "" || options.Noti.SlackReportChannel == "" {
-        return errors.New("Slack config improperly")
+        return fmt.Errorf("Slack config improperly")
     }
 
     if !utils.FileExists(filename) {
-        return errors.New("report file not found")
+        return fmt.Errorf("report file not found: %v", filename)
     }
 
     baseName := filepath.Base(filename)
@@ -238,6 +237,7 @@ func SendFile(filename string, channel string, options libs.Options) error {
 
 // TeleSendMess send message to telegram
 func TeleSendMess(options libs.Options, content string, channel string, wrap bool) error {
+
     if options.NoNoti {
         return fmt.Errorf("noti disabled")
     }
@@ -246,6 +246,7 @@ func TeleSendMess(options libs.Options, content string, channel string, wrap boo
         content = fmt.Sprintf("```\n%s\n```", content)
     }
     if err != nil {
+        utils.DebugF("error init telegram: %v", err)
         return err
     }
 
@@ -267,10 +268,13 @@ func TeleSendMess(options libs.Options, content string, channel string, wrap boo
         channel = options.Noti.TelegramChannel
     }
     telechannel := cast.ToInt64(channel)
-
+    utils.DebugF("send message to channel %v", channel)
     msg := tgbotapi.NewMessage(telechannel, content)
     msg.ParseMode = "markdown"
     _, err = bot.Send(msg)
+    if err != nil {
+        utils.ErrorF("error sending telegram to %v -- %v", channel, err)
+    }
     return err
 }
 
@@ -281,6 +285,7 @@ func TeleSendFile(options libs.Options, filename string, channel string) error {
     }
     bot, err := tgbotapi.NewBotAPI(options.Noti.TelegramToken)
     if err != nil {
+        utils.DebugF("error init telegram: %v", err)
         return err
     }
 
@@ -305,7 +310,12 @@ func TeleSendFile(options libs.Options, filename string, channel string) error {
 
     filename = utils.NormalizePath(filename)
     msg := tgbotapi.NewDocumentUpload(telechannel, filename)
+
+    utils.DebugF("send file %v to channel %v", filename, channel)
     _, err = bot.Send(msg)
+    if err != nil {
+        utils.DebugF("error sending telegram to %v -- %v", channel, err)
+    }
     return err
 }
 

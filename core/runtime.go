@@ -425,11 +425,17 @@ func (r *Runner) LoadNotiScripts() string {
             fileName = args[1].String()
         }
         if !utils.FileExists(fileName) {
+            utils.DebugF("File %s not found", fileName)
             return otto.Value{}
         }
 
         messContent := utils.GetFileContent(fileName)
-        execution.TeleSendMess(options, messContent, channelType, true)
+        if len(messContent) > 4000 {
+            execution.TeleSendFile(options, fileName, channelType)
+        } else {
+            execution.TeleSendMess(options, messContent, channelType, true)
+        }
+
         return otto.Value{}
     })
 

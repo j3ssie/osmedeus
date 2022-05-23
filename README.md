@@ -16,34 +16,44 @@
 
 ***
 
-## Installation
+## 🔥 What is Osmedeus?
+
+Osmedeus is a Workflow Engine for Offensive Security. It was designed to build a foundation with the capability and flexibility that allows you to build your own reconnaissance system and run it on a large number of targets.
+
+## 📖 Documentation & FAQ
+
+You can check out the documentation at [**docs.osmedeus.org**](https://docs.osmedeus.org) and the Frequently Asked Questions at [**here**](https://docs.osmedeus.org/faq) for more information.
+
+
+## 📦 Installation
 
 > NOTE that you need some essential tools like `curl, wget, git, zip` and login as **root** to start
 
-```shell
+```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/osmedeus/osmedeus-base/master/install.sh)
 ```
 
-## Build the engine from the source
+### Build the engine from the source
 
 Make sure you installed `golang >= v1.17`
 
-```shell
-mkdir -p $GOPATH/src/github.com/j3ssie
-git clone --depth=1 https://github.com/j3ssie/osmedeus $GOPATH/src/github.com/j3ssie/osmedeus
-cd $GOPATH/src/github.com/j3ssie/osmedeus
-make build
-```
-
-or
-
-```shell
+```bash
 go install -v github.com/j3ssie/osmedeus@latest
 ```
 
-## Usage
+Check out [**this page**](https://docs.osmedeus.org/installation/) for more the install on other platforms
 
-```shell
+## 🚀 Key Features of Osmedeus
+- [x] Significantly speed up your recon process
+- [x] Organize your scan results
+- [x] Efficiently to customize and optimize your recon process
+- [x] Seamlessly integrate with new public and private tools
+- [x] Easy to scale across large number of targets
+- [x] Easy to synchronize the results across many places
+
+## 💡 Usage
+
+```bash
 # Scan Usage:
   osmedeus scan -f [flowName] -t [target]
   osmedeus scan -m [modulePath] -T [targetsFile]
@@ -84,17 +94,20 @@ go install -v github.com/j3ssie/osmedeus@latest
   osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'
 ```
 
+Check out [**this page**](https://docs.osmedeus.org/installation/usage/) for full usage and the [**Practical Usage**](https://docs.osmedeus.org/installation/practical-usage/) to see how to use Osmedeus in a practical way.
+
+
 ## 💬 Community & Discussion
 
 Join Our Discord server [here](https://discord.gg/mtQG2FQsYA)
 
 ## 💎 Donation & Sponsor
 
-<p align="center">
+<h3 align="center">
  <img alt="Osmedeus" src="https://raw.githubusercontent.com/osmedeus/assets/main/premium-package.gif" />
 
  <p align="center"> Check out for a couple of <strong><a href="https://docs.osmedeus.org/donation/">donation methods here</a></strong> to get a <strong><a href="https://docs.osmedeus.org/premium/">premium package</a></strong><p>
-</p>
+</h3>
 
 ## License
 
