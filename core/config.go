@@ -436,6 +436,12 @@ func GetNotification(options *libs.Options) {
     // tokens
     options.Noti.SlackToken = tokens["slack"]
     options.Noti.TelegramToken = tokens["telegram"]
+
+    // this mean you're not setup the notification yet
+    if len(options.Noti.TelegramToken) < 20 {
+        options.NoNoti = true
+    }
+
     options.Noti.ClientName = noti["client_name"]
 
     options.Noti.SlackStatusChannel = noti["slack_status_channel"]
