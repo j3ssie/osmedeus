@@ -1,9 +1,9 @@
 package execution
 
 import (
-    "testing"
+	"testing"
 )
 
 func TestGitAuth(t *testing.T) {
-    GitAuthSample()
+	GitAuthSample()
 }

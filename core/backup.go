@@ -1,27 +1,43 @@
 package core
 
 import (
-    "fmt"
-    "github.com/j3ssie/osmedeus/libs"
-    "github.com/j3ssie/osmedeus/utils"
-    "os"
-    "path"
+	"github.com/fatih/color"
+	"github.com/j3ssie/osmedeus/execution"
+	"github.com/j3ssie/osmedeus/libs"
+	"github.com/j3ssie/osmedeus/utils"
+	"os"
+	"path"
+	"strings"
 )
 
-func BackupWorkspace(options libs.Options) {
-    if !options.EnableBackup {
-        return
-    }
+func (r *Runner) BackupWorkspace() {
+	outputDir := r.Target["Output"]
+	dest := path.Join(r.Opt.Env.BackupFolder, r.Target["Workspace"]) + ".tar.gz"
+	if utils.FileExists(dest) {
+		os.Remove(dest)
+	}
 
-    outputDir := options.Scan.ROptions["Output"]
-    dest := path.Join(options.Env.BackupFolder, options.Scan.ROptions["Workspace"]) + ".zip"
-    if utils.FileExists(dest) {
-        os.Remove(dest)
-    }
+	execution.Compress(dest, outputDir)
+	if utils.FileExists(dest) {
+		utils.GoodF("Backup workspace save at %s", color.HiMagentaString(dest))
+	}
+}
 
-    zipCommand := fmt.Sprintf("zip -9 -q -r %s %s", dest, outputDir)
-    utils.RunCmdWithOutput(zipCommand)
-    if utils.FileExists(dest) {
-        utils.GoodF("Backup workspace save at: %s", dest)
-    }
+func ExtractBackup(src string, opt libs.Options) {
+	if !utils.FileExists(src) {
+		utils.ErrorF("Backup file not found: %s", src)
+		return
+	}
+
+	target := strings.ReplaceAll(path.Base(src), ".tar.gz", "")
+	dest := opt.Report.ExtractFolder
+	if !strings.HasSuffix(dest, "/") {
+		dest += "/"
+	}
+
+	if utils.FolderExists(dest) {
+		utils.MakeDir(dest)
+	}
+	execution.Decompress(dest, src)
+	utils.GoodF("Extracting the %v to %s", color.HiCyanString(target), color.HiMagentaString(dest))
 }

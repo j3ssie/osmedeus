@@ -1,126 +1,126 @@
 package utils
 
 import (
-    "fmt"
-    "github.com/fatih/color"
-    "github.com/j3ssie/osmedeus/libs"
-    "github.com/kyokomi/emoji"
-    "github.com/sirupsen/logrus"
-    prefixed "github.com/x-cray/logrus-prefixed-formatter"
-    "io"
-    "io/ioutil"
-    "os"
-    "path/filepath"
-    "strings"
+	"fmt"
+	"github.com/fatih/color"
+	"github.com/j3ssie/osmedeus/libs"
+	"github.com/kyokomi/emoji"
+	"github.com/sirupsen/logrus"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 var logger = logrus.New()
 
 // InitLog init log
 func InitLog(options *libs.Options) {
-    mwr := io.MultiWriter(os.Stdout)
-    logDir := libs.LDIR
-    if options.LogFile == "" {
-        if !FolderExists(logDir) {
-            os.MkdirAll(logDir, 0766)
-        }
-        tmpFile, err := ioutil.TempFile(logDir, "osmedeus-*.log")
-        if err == nil {
-            options.LogFile = tmpFile.Name()
-        }
-    }
+	mwr := io.MultiWriter(os.Stdout)
+	logDir := libs.LDIR
+	if options.LogFile == "" {
+		if !FolderExists(logDir) {
+			os.MkdirAll(logDir, 0766)
+		}
+		tmpFile, err := ioutil.TempFile(logDir, "osmedeus-*.log")
+		if err == nil {
+			options.LogFile = tmpFile.Name()
+		}
+	}
 
-    logDir = filepath.Dir(options.LogFile)
-    if !FolderExists(logDir) {
-        os.MkdirAll(logDir, 0755)
-    }
+	logDir = filepath.Dir(options.LogFile)
+	if !FolderExists(logDir) {
+		os.MkdirAll(logDir, 0755)
+	}
 
-    f, err := os.OpenFile(options.LogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "error opening log file: %v\n", logDir)
-        fmt.Fprintf(os.Stderr, "💡 You might want to switch to %v first via %v command", color.HiMagentaString("root user"), color.HiCyanString("sudo su"))
-        os.Exit(-1)
-    } else {
-        mwr = io.MultiWriter(os.Stdout, f)
-    }
+	f, err := os.OpenFile(options.LogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error opening log file: %v\n", logDir)
+		fmt.Fprintf(os.Stderr, "💡 You might want to switch to %v first via %v command", color.HiMagentaString("root user"), color.HiCyanString("sudo su"))
+		os.Exit(-1)
+	} else {
+		mwr = io.MultiWriter(os.Stdout, f)
+	}
 
-    logger = &logrus.Logger{
-        Out:   mwr,
-        Level: logrus.InfoLevel,
-        Formatter: &prefixed.TextFormatter{
-            ForceColors:     true,
-            ForceFormatting: true,
-            FullTimestamp:   true,
-            TimestampFormat: "2006-01-02T15:04:05",
-        },
-    }
+	logger = &logrus.Logger{
+		Out:   mwr,
+		Level: logrus.InfoLevel,
+		Formatter: &prefixed.TextFormatter{
+			ForceColors:     true,
+			ForceFormatting: true,
+			FullTimestamp:   true,
+			TimestampFormat: "2006-01-02T15:04:05",
+		},
+	}
 
-    if options.Debug == true {
-        logger.SetLevel(logrus.DebugLevel)
-    } else if options.Verbose == true {
-        logger.SetLevel(logrus.ErrorLevel)
-    } else if options.Quite == true {
-        logger.SetOutput(ioutil.Discard)
-    }
+	if options.Debug == true {
+		logger.SetLevel(logrus.DebugLevel)
+	} else if options.Verbose == true {
+		logger.SetLevel(logrus.ErrorLevel)
+	} else if options.Quite == true {
+		logger.SetOutput(ioutil.Discard)
+	}
 }
 
 // PrintLine print seperate line
 func PrintLine() {
-    dash := color.HiWhiteString("-")
-    fmt.Println(strings.Repeat(dash, 40))
+	dash := color.HiWhiteString("-")
+	fmt.Println(strings.Repeat(dash, 40))
 }
 
 // GoodF print good message
 func GoodF(format string, args ...interface{}) {
-    good := color.HiGreenString("[+]")
-    fmt.Printf("%s %s\n", good, fmt.Sprintf(format, args...))
+	good := color.HiGreenString("[+]")
+	fmt.Printf("%s %s\n", good, fmt.Sprintf(format, args...))
 }
 
 // BannerF print info message
 func BannerF(format string, data string) {
-    banner := fmt.Sprintf("%v%v%v ", color.WhiteString("["), color.BlueString(format), color.WhiteString("]"))
-    fmt.Printf("%v%v\n", banner, color.HiGreenString(data))
+	banner := fmt.Sprintf("%v%v%v ", color.WhiteString("["), color.BlueString(format), color.WhiteString("]"))
+	fmt.Printf("%v%v\n", banner, color.HiGreenString(data))
 }
 
 // BlockF print info message
 func BlockF(name string, data string) {
-    banner := fmt.Sprintf("%v%v%v ", color.WhiteString("["), color.GreenString(name), color.WhiteString("]"))
-    fmt.Printf(fmt.Sprintf("%v%v\n", banner, data))
+	banner := fmt.Sprintf("%v%v%v ", color.WhiteString("["), color.GreenString(name), color.WhiteString("]"))
+	fmt.Printf(fmt.Sprintf("%v%v\n", banner, data))
 }
 
 // BadBlockF print info message
 func BadBlockF(name string, data string) {
-    banner := fmt.Sprintf("%v%v%v ", color.WhiteString("["), color.RedString(name), color.WhiteString("]"))
-    fmt.Printf(fmt.Sprintf("%v%v\n", banner, data))
+	banner := fmt.Sprintf("%v%v%v ", color.WhiteString("["), color.RedString(name), color.WhiteString("]"))
+	fmt.Printf(fmt.Sprintf("%v%v\n", banner, data))
 }
 
 // InforF print info message
 func InforF(format string, args ...interface{}) {
-    logger.Info(fmt.Sprintf(format, args...))
+	logger.Info(fmt.Sprintf(format, args...))
 }
 
 // ErrorF print good message
 func ErrorF(format string, args ...interface{}) {
-    logger.Error(fmt.Sprintf(format, args...))
+	logger.Error(fmt.Sprintf(format, args...))
 }
 
 // WarnF print good message
 func WarnF(format string, args ...interface{}) {
-    logger.Warning(fmt.Sprintf(format, args...))
+	logger.Warning(fmt.Sprintf(format, args...))
 }
 
 // TraceF print good message
 func TraceF(format string, args ...interface{}) {
-    logger.Trace(fmt.Sprintf(format, args...))
+	logger.Trace(fmt.Sprintf(format, args...))
 }
 
 // DebugF print debug message
 func DebugF(format string, args ...interface{}) {
-    logger.Debug(fmt.Sprintf(format, args...))
+	logger.Debug(fmt.Sprintf(format, args...))
 }
 
 // Emojif print good message
 func Emojif(e string, format string, args ...interface{}) string {
-    emj := strings.TrimSpace(emoji.Sprint(e))
-    return fmt.Sprintf("%1s %s", emj, fmt.Sprintf(format, args...))
+	emj := strings.TrimSpace(emoji.Sprint(e))
+	return fmt.Sprintf("%1s %s", emj, fmt.Sprintf(format, args...))
 }

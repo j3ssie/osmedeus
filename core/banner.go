@@ -1,18 +1,18 @@
 package core
 
 import (
-    "github.com/fatih/color"
-    "github.com/j3ssie/osmedeus/libs"
+	"github.com/fatih/color"
+	"github.com/j3ssie/osmedeus/libs"
 )
 
 // Banner print ascii banner
 func Banner() string {
-    version := color.HiWhiteString(libs.VERSION)
-    author := color.MagentaString(libs.AUTHOR)
-    //W := color.HiWhiteString(``)
-    b := color.GreenString(``)
+	version := color.HiWhiteString(libs.VERSION)
+	author := color.MagentaString(libs.AUTHOR)
+	//W := color.HiWhiteString(``)
+	b := color.GreenString(``)
 
-    b += color.GreenString(`
+	b += color.GreenString(`
             
                                         .;1tfLCL1,
                                        .,,..;i;f0G;
@@ -34,30 +34,30 @@ func Banner() string {
                                            .,::::::::,.
 	`)
 
-    //
-    //
-    //b += "\n\t" + color.GreenString(`                                      @@@@@@`)
-    //b += "\n\t" + color.GreenString(`                                    .@@'  '@@.`)
-    //b += "\n\t" + color.GreenString(`                                    :@      @:`)
-    //b += "\n\t" + color.GreenString(`                                    :@  %v:@`, W) + color.GreenString(`  @:`)
-    //b += "\n\t" + color.GreenString(`                                    :@  %v:@`, W) + color.GreenString(`  @:`)
-    //
-    //b += "\n\t" + color.GreenString(`                                    :@      @:`)
-    //b += "\n\t" + color.GreenString(`                                    '@@.  .@@'`)
-    //b += "\n\t" + color.GreenString(`                                      @@@@@@`)
-    //b += "\n\t" + color.GreenString(`                                        @@`)
-    //b += "\n\t" + color.HiCyanString(`                                     @  `) + color.GreenString(`@@`) + color.HiCyanString(`  @`)
-    //b += "\n\t" + color.HiWhiteString(`                                    +@@`) + color.GreenString(` @@ `) + color.HiWhiteString(` @@+`)
-    //b += "\n\t" + color.GreenString(`                                 @@:@#@,@@,@#@:@@`)
-    //b += "\n\t" + color.GreenString(`                                ;@+@@'#@@@@#'@@+@;`)
-    //b += "\n\t" + color.GreenString(`                                @+ #@@  @@  @@# +@`)
-    //b += "\n\t" + color.GreenString(`                               @@  @+'@@@@@@'+@  @@`)
-    //b += "\n\t" + color.GreenString(`                               @.  @   ;@@;   @  .@`)
-    //b += "\n\t" + color.BlueString(`                              #@  '@          @;  @#`)
+	//
+	//
+	//b += "\n\t" + color.GreenString(`                                      @@@@@@`)
+	//b += "\n\t" + color.GreenString(`                                    .@@'  '@@.`)
+	//b += "\n\t" + color.GreenString(`                                    :@      @:`)
+	//b += "\n\t" + color.GreenString(`                                    :@  %v:@`, W) + color.GreenString(`  @:`)
+	//b += "\n\t" + color.GreenString(`                                    :@  %v:@`, W) + color.GreenString(`  @:`)
+	//
+	//b += "\n\t" + color.GreenString(`                                    :@      @:`)
+	//b += "\n\t" + color.GreenString(`                                    '@@.  .@@'`)
+	//b += "\n\t" + color.GreenString(`                                      @@@@@@`)
+	//b += "\n\t" + color.GreenString(`                                        @@`)
+	//b += "\n\t" + color.HiCyanString(`                                     @  `) + color.GreenString(`@@`) + color.HiCyanString(`  @`)
+	//b += "\n\t" + color.HiWhiteString(`                                    +@@`) + color.GreenString(` @@ `) + color.HiWhiteString(` @@+`)
+	//b += "\n\t" + color.GreenString(`                                 @@:@#@,@@,@#@:@@`)
+	//b += "\n\t" + color.GreenString(`                                ;@+@@'#@@@@#'@@+@;`)
+	//b += "\n\t" + color.GreenString(`                                @+ #@@  @@  @@# +@`)
+	//b += "\n\t" + color.GreenString(`                               @@  @+'@@@@@@'+@  @@`)
+	//b += "\n\t" + color.GreenString(`                               @.  @   ;@@;   @  .@`)
+	//b += "\n\t" + color.BlueString(`                              #@  '@          @;  @#`)
 
-    b += "\n\n\t" + color.GreenString(`                  Osmedeus Next Generation %v`, version) + color.GreenString(` by %v`, author)
-    b += "\n\n" + color.HiCyanString(`	                    %s`, libs.DESC) + "\n"
-    b += "\n" + color.HiWhiteString(`                                            ¯\_(ツ)_/¯`) + "\n\n"
-    color.Unset()
-    return b
+	b += "\n\n\t" + color.GreenString(`                  Osmedeus Next Generation %v`, version) + color.GreenString(` by %v`, author)
+	b += "\n\n" + color.HiCyanString(`	                    %s`, libs.DESC) + "\n"
+	b += "\n" + color.HiWhiteString(`                                            ¯\_(ツ)_/¯`) + "\n\n"
+	color.Unset()
+	return b
 }

@@ -18,12 +18,13 @@
 
 ## 🔥 What is Osmedeus?
 
-Osmedeus is a Workflow Engine for Offensive Security. It was designed to build a foundation with the capability and flexibility that allows you to build your own reconnaissance system and run it on a large number of targets.
+Osmedeus is a Workflow Engine for Offensive Security. It was designed to build a foundation with the capability and
+flexibility that allows you to build your own reconnaissance system and run it on a large number of targets.
 
 ## 📖 Documentation & FAQ
 
-You can check out the documentation at [**docs.osmedeus.org**](https://docs.osmedeus.org) and the Frequently Asked Questions at [**here**](https://docs.osmedeus.org/faq) for more information.
-
+You can check out the documentation at [**docs.osmedeus.org**](https://docs.osmedeus.org) and the Frequently Asked
+Questions at [**here**](https://docs.osmedeus.org/faq) for more information.
 
 ## 📦 Installation
 
@@ -44,6 +45,7 @@ go install -v github.com/j3ssie/osmedeus@latest
 Check out [**this page**](https://docs.osmedeus.org/installation/) for more the install on other platforms
 
 ## 🚀 Key Features of Osmedeus
+
 - [x] Significantly speed up your recon process
 - [x] Organize your scan results
 - [x] Efficiently to customize and optimize your recon process
@@ -94,8 +96,8 @@ Check out [**this page**](https://docs.osmedeus.org/installation/) for more the 
   osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'
 ```
 
-Check out [**this page**](https://docs.osmedeus.org/installation/usage/) for full usage and the [**Practical Usage**](https://docs.osmedeus.org/installation/practical-usage/) to see how to use Osmedeus in a practical way.
-
+Check out [**this page**](https://docs.osmedeus.org/installation/usage/) for full usage and the [**Practical
+Usage**](https://docs.osmedeus.org/installation/practical-usage/) to see how to use Osmedeus in a practical way.
 
 ## 💬 Community & Discussion
 

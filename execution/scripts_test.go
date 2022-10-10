@@ -1,19 +1,19 @@
 package execution
 
 import (
-    "testing"
+	"testing"
 )
 
 func TestChunkFile(t *testing.T) {
-    result := ChunkFileByPart("/tmp/oo/seqtest", 3)
-    t.Log(result)
+	result := ChunkFileByPart("/tmp/oo/seqtest", 3)
+	t.Log(result)
 }
 
 func TestSort(t *testing.T) {
-    Sort("/tmp/sam")
+	Sort("/tmp/sam")
 }
 
 func TestIsWildCard(t *testing.T) {
-    IsWildCard("github.com")
-    IsWildCard("tesla.com")
+	IsWildCard("github.com")
+	IsWildCard("tesla.com")
 }

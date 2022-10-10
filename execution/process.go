@@ -1,74 +1,91 @@
 package execution
 
 import (
-    "fmt"
-    "github.com/j3ssie/osmedeus/libs"
-    gops "github.com/mitchellh/go-ps"
-    "github.com/shirou/gopsutil/process"
-    "github.com/spf13/cast"
-    "strings"
+	"fmt"
+	"github.com/fatih/color"
+	"github.com/j3ssie/osmedeus/libs"
+	gops "github.com/mitchellh/go-ps"
+	"github.com/panjf2000/ants"
+	"github.com/shirou/gopsutil/process"
+	"github.com/spf13/cast"
+	"strings"
+	"sync"
 )
 
-func ListProcess() {
-    processes, err := gops.Processes()
-    if err != nil {
-        return
-    }
+func ListAllOsmedeusProcess() (pids []int) {
+	processes, err := gops.Processes()
+	if err != nil {
+		return pids
+	}
+	var allProcess []OSProcess
 
-    for _, ps := range processes {
-        pid := ps.Pid()
-        binary := ps.Executable()
-        // should be change to osm process
-        if binary != "HotKey" {
-            continue
-        }
+	var wg sync.WaitGroup
+	p, _ := ants.NewPoolWithFunc(20, func(i interface{}) {
+		defer wg.Done()
 
-        proc, _ := process.NewProcess(cast.ToInt32(pid))
-        //spew.Dump(proc)
-        cmd, _ := proc.Cmdline()
+		ps := i.(gops.Process)
+		pid := ps.Pid()
+		proc, _ := process.NewProcess(cast.ToInt32(pid))
+		cmd, _ := proc.Cmdline()
+		if !strings.Contains(cmd, libs.BINARY) {
+			return
+		}
 
-        fmt.Printf("pid -- %v : %v \n", pid, cmd)
-        //return
-    }
+		osProcess := OSProcess{
+			PID:     pid,
+			Command: cmd,
+		}
+		fmt.Printf("pid:%v %s %v\n", color.HiCyanString("%v", osProcess.PID), color.HiMagentaString("--"), osProcess.Command)
+		allProcess = append(allProcess, osProcess)
+	}, ants.WithPreAlloc(true))
+	defer p.Release()
+
+	for _, ps := range processes {
+		wg.Add(1)
+		_ = p.Invoke(ps)
+
+	}
+	wg.Wait()
+
+	return pids
 }
 
-type OsmProcess struct {
-    PID     int    `json:"pid"`
-    Command string `json:"command"`
+type OSProcess struct {
+	PID     int    `json:"pid"`
+	Command string `json:"command"`
 }
 
-func GetOsmProcess(processName string) []OsmProcess {
-    //var out string
-    if processName == "" {
-        processName = libs.BINARY
-    }
-    var results []OsmProcess
-    processes, err := gops.Processes()
-    if err != nil {
-        return results
-    }
+func GetOsmProcess(processName string) []OSProcess {
+	if processName == "" {
+		processName = libs.BINARY
+	}
+	var results []OSProcess
+	processes, err := gops.Processes()
+	if err != nil {
+		return results
+	}
 
-    for _, ps := range processes {
-        pid := ps.Pid()
-        binary := ps.Executable()
+	for _, ps := range processes {
+		pid := ps.Pid()
+		binary := ps.Executable()
 
-        if strings.ToLower(binary) != strings.ToLower(processName) {
-            continue
-        }
+		if strings.ToLower(binary) != strings.ToLower(processName) {
+			continue
+		}
 
-        proc, _ := process.NewProcess(cast.ToInt32(pid))
-        cmd, _ := proc.Cmdline()
+		proc, _ := process.NewProcess(cast.ToInt32(pid))
+		cmd, _ := proc.Cmdline()
 
-        if strings.Contains(cmd, fmt.Sprintf("%s utils ps", libs.BINARY)) {
-            continue
-        }
+		if strings.Contains(cmd, fmt.Sprintf("%s utils ps", libs.BINARY)) {
+			continue
+		}
 
-        osmProcess := OsmProcess{
-            PID:     pid,
-            Command: cmd,
-        }
-        results = append(results, osmProcess)
-    }
+		osmProcess := OSProcess{
+			PID:     pid,
+			Command: cmd,
+		}
+		results = append(results, osmProcess)
+	}
 
-    return results
+	return results
 }

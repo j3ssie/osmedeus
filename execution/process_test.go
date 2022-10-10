@@ -1,9 +1,9 @@
 package execution
 
 import (
-    "testing"
+	"testing"
 )
 
 func TestListProcess(t *testing.T) {
-    ListProcess()
+	ListAllOsmedeusProcess()
 }
