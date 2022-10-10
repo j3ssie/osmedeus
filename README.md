@@ -1,7 +1,7 @@
 # Osmedeus Core Engine
 
 <p align="center">
-  <img alt="Osmedeus" src="https://raw.githubusercontent.com/osmedeus/assets/main/logo-transparent.png" height="140" />
+  <a href="https://www.osmedeus.org"><img alt="Osmedeus" src="https://raw.githubusercontent.com/osmedeus/assets/main/logo-transparent.png" height="140" /></a>
   <br />
   <strong>Osmedeus - A Workflow Engine for Offensive Security</strong>
 
@@ -71,6 +71,10 @@ Check out [**this page**](https://docs.osmedeus.org/installation/) for more the 
   osmedeus scan -f gdirb -T list_of_target.txt
   osmedeus scan -m ~/.osmedeus/core/workflow/test/dirbscan.yaml -t list_of_urls.txt
   osmedeus scan --wfFolder ~/custom-workflow/ -f your-custom-workflow -t list_of_urls.txt
+
+# Queue Usage:
+  osmedeus queue -Q /tmp/queue-file.txt -c 2
+  osmedeus queue --add -t example.com -Q /tmp/queue-file.txt
 
 # Provider Usage:
   osmedeus provider build
