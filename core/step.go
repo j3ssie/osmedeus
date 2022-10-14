@@ -3,13 +3,14 @@ package core
 import (
 	"context"
 	"fmt"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
 	"github.com/thoas/go-funk"
-	"strings"
-	"sync"
-	"time"
 )
 
 func (r *Runner) RunModulesWithTimeout(timeoutRaw string, module libs.Module, options libs.Options) {
@@ -69,7 +70,7 @@ func ResolveReports(module libs.Module, params map[string]string) libs.Module {
 	return module
 }
 
-//  print all report
+// print all report
 func printReports(module libs.Module) {
 	var files []string
 	files = append(files, module.Report.Final...)

@@ -1,13 +1,14 @@
 package cmd
 
 import (
+	"io"
+	"net/http"
+	"path/filepath"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/utils"
 	"github.com/spf13/cobra"
-	"io/ioutil"
-	"net/http"
-	"path/filepath"
 )
 
 func init() {
@@ -121,7 +122,7 @@ func getPublicIP() string {
 	}
 	defer req.Body.Close()
 
-	body, err := ioutil.ReadAll(req.Body)
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		return "127.0.0.1"
 	}

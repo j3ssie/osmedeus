@@ -2,14 +2,14 @@ package database
 
 import (
 	"fmt"
-	"github.com/j3ssie/osmedeus/libs"
-	"github.com/j3ssie/osmedeus/utils"
-	"gorm.io/gorm/logger"
-	"io/ioutil"
+	"io"
 	"log"
 	"time"
 
+	"github.com/j3ssie/osmedeus/libs"
+	"github.com/j3ssie/osmedeus/utils"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	// load driver
 	"gorm.io/driver/mysql"
@@ -22,7 +22,7 @@ var DB *gorm.DB
 // InitDB connect to db
 func InitDB(options libs.Options) (*gorm.DB, error) {
 	newLogger := logger.New(
-		log.New(ioutil.Discard, "\r\n", log.LstdFlags), // io writer
+		log.New(io.Discard, "\r\n", log.LstdFlags), // io writer
 		logger.Config{
 			SlowThreshold:             time.Second, // Slow SQL threshold
 			LogLevel:                  logger.Info, // Log level

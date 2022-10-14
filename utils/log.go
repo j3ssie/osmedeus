@@ -2,16 +2,16 @@ package utils
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/kyokomi/emoji"
 	"github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 var logger = logrus.New()
@@ -24,7 +24,7 @@ func InitLog(options *libs.Options) {
 		if !FolderExists(logDir) {
 			os.MkdirAll(logDir, 0766)
 		}
-		tmpFile, err := ioutil.TempFile(logDir, "osmedeus-*.log")
+		tmpFile, err := os.CreateTemp(logDir, "osmedeus-*.log")
 		if err == nil {
 			options.LogFile = tmpFile.Name()
 		}
@@ -60,7 +60,7 @@ func InitLog(options *libs.Options) {
 	} else if options.Verbose == true {
 		logger.SetLevel(logrus.ErrorLevel)
 	} else if options.Quite == true {
-		logger.SetOutput(ioutil.Discard)
+		logger.SetOutput(io.Discard)
 	}
 }
 

@@ -3,11 +3,6 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"github.com/Jeffail/gabs/v2"
-	"github.com/fatih/color"
-	"github.com/spf13/cast"
-	"golang.org/x/net/publicsuffix"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
@@ -16,9 +11,13 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/Jeffail/gabs/v2"
 	"github.com/Shopify/yaml"
+	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
+	"github.com/spf13/cast"
+	"golang.org/x/net/publicsuffix"
 )
 
 // ResolveData resolve template from signature file
@@ -58,7 +57,7 @@ func AltResolveVariable(format string, data map[string]string) string {
 func ParseFlow(flowFile string) (libs.Flow, error) {
 	utils.DebugF("Parsing workflow at: %v", color.HiGreenString(flowFile))
 	var flow libs.Flow
-	yamlFile, err := ioutil.ReadFile(flowFile)
+	yamlFile, err := os.ReadFile(flowFile)
 	if err != nil {
 		utils.ErrorF("YAML parsing err: %v -- #%v ", flowFile, err)
 		return flow, err
@@ -81,7 +80,7 @@ func ParseModules(moduleFile string) (libs.Module, error) {
 
 	var module libs.Module
 
-	yamlFile, err := ioutil.ReadFile(moduleFile)
+	yamlFile, err := os.ReadFile(moduleFile)
 	if err != nil {
 		utils.ErrorF("YAML parsing err: %v -- #%v ", moduleFile, err)
 		return module, err

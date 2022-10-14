@@ -5,9 +5,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"fmt"
-	"github.com/j3ssie/osmedeus/libs"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -16,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
 )
 
@@ -119,8 +118,8 @@ func Copy(src string, dest string) {
 	if !utils.FileExists(src) || utils.FileLength(src) <= 0 {
 		return
 	}
-	input, _ := ioutil.ReadFile(src)
-	ioutil.WriteFile(dest, input, 0644)
+	input, _ := os.ReadFile(src)
+	os.WriteFile(dest, input, 0644)
 }
 
 // Sort sort content of a file

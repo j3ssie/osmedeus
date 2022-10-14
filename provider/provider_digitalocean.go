@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"time"
 
@@ -219,7 +219,7 @@ func (p *Provider) CreateInstanceDO(name string) (dropletId int, err error) {
 	instance, res, err := client.Droplets.Create(ctx, createRequest)
 	if err != nil {
 		utils.ErrorF("error create digital ocean instance -- %v", err)
-		content, ok := ioutil.ReadAll(res.Body)
+		content, ok := io.ReadAll(res.Body)
 		if ok == nil {
 			fmt.Println(string(content))
 		}

@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/url"
 	"os"
@@ -148,7 +147,7 @@ func GetFileContent(filename string) string {
 		return result
 	}
 	defer file.Close()
-	b, err := ioutil.ReadAll(file)
+	b, err := io.ReadAll(file)
 	if err != nil {
 		return result
 	}
@@ -301,10 +300,10 @@ func FileLength(filename string) int {
 // DirLength count len of file
 func DirLength(dir string) int {
 	dir = NormalizePath(dir)
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		dir = dir + "/"
-		files, err = ioutil.ReadDir(dir)
+		files, err = os.ReadDir(dir)
 		if err == nil {
 			return len(files)
 		}
@@ -320,8 +319,8 @@ func Copy(src string, dest string) {
 	if !FileExists(src) || FileLength(src) <= 0 {
 		return
 	}
-	input, _ := ioutil.ReadFile(src)
-	ioutil.WriteFile(dest, input, 0644)
+	input, _ := os.ReadFile(src)
+	os.WriteFile(dest, input, 0644)
 }
 
 // GetTS get current timestamp and return a string
@@ -660,7 +659,7 @@ func FolderLength(dir string) int {
 	if FileExists(dir) {
 		dir = path.Dir(dir)
 	}
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return length
 	}
@@ -679,7 +678,7 @@ func ImageAsBase64(src string) string {
 
 	// Read entire JPG into byte slice.
 	reader := bufio.NewReader(f)
-	content, err := ioutil.ReadAll(reader)
+	content, err := io.ReadAll(reader)
 	if err != nil {
 		return ""
 	}
