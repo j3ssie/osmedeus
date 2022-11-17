@@ -16,12 +16,6 @@ func (r *Runner) Validator() error {
 	}
 
 	r.RequiredInput = strings.ToLower(strings.TrimSpace(r.RequiredInput))
-	//if r.RequiredInput == "file" {
-	//	if utils.FileExists(r.Input) {
-	//		return nil
-	//	}
-	//}
-
 	var inputAsFile bool
 	// cidr, cidr-file
 	if strings.HasSuffix(r.RequiredInput, "-file") || r.RequiredInput == "file" {
@@ -54,13 +48,13 @@ func (r *Runner) Validator() error {
 
 	}
 
-	utils.InforF("Start validating input: %v", color.HiCyanString("%v -- %v", r.Input, r.InputType))
 	var err error
 	r.InputType, err = validate(v, r.Input)
 	if err != nil {
 		utils.ErrorF("unrecognized input: %v", r.Input)
 		return err
 	}
+	utils.InforF("Start validating input: %v", color.HiCyanString("%v -- %v", r.Input, r.InputType))
 
 	if !strings.HasPrefix(r.RequiredInput, r.InputType) {
 		return fmt.Errorf("input does not match the require validation: inputType:%v -- requireType:%v", r.InputType, r.RequiredInput)
