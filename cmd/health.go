@@ -65,15 +65,18 @@ func runHealth(_ *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = generalCheck()
-	if err != nil {
+	if err = generalCheck(); err != nil {
 		fmt.Printf("‼️ There is might be something wrong with your setup: %v\n", err)
 		return nil
 	}
 
-	err = listFlows()
-	if err != nil {
-		fmt.Printf("‼️ There is might be something wrong with your setup: %v\n", err)
+	if err = listFlows(); err != nil {
+		fmt.Printf("‼️ There is might be something wrong with your workflow setup: %v\n", err)
+		return nil
+	}
+
+	if err = listDefaultModules(); err != nil {
+		fmt.Printf("‼️ There is might be something wrong with your workflow setup: %v\n", err)
 		return nil
 	}
 	fmt.Printf(color.GreenString("\n🦾 It’s all good. Happy Hacking 🦾\n"))
@@ -198,6 +201,9 @@ func listFlows() error {
 		return fmt.Errorf("[-] Error to list workflows: %s", options.Env.WorkFlowsFolder)
 	}
 	fmt.Printf("[+] Health Check Workflows: %s\n", color.GreenString("✔"))
+	if options.PremiumPackage {
+		fmt.Printf("💎 Making use of the premium workflow\n")
+	}
 
 	var content [][]string
 	for _, flow := range flows {
@@ -221,8 +227,44 @@ func listFlows() error {
 	table.AppendBulk(content) // Add Bulk Data
 	table.Render()
 
-	h := "\nUsage:\n"
-	h += color.HiCyanString("  osmedeus scan -f [flowName] -t [target] \n")
+	h := color.HiCyanString("\nUsage:\n")
+	h += color.HiGreenString(" osmedeus scan -f %v", color.HiMagentaString("[flowName]")) + color.HiGreenString(" -t ") + color.HiMagentaString("[target]") + "\n"
+	fmt.Printf(h)
+	return nil
+}
+
+func listDefaultModules() error {
+	defaultModule := path.Join(options.Env.WorkFlowsFolder, "default-modules")
+	modules := core.DefaultWorkflows(options)
+
+	if len(modules) == 0 {
+		return fmt.Errorf("[-] Error to list default modules: %s", defaultModule)
+	}
+
+	var content [][]string
+	for _, flow := range modules {
+		parsedModule, err := core.ParseModules(flow)
+		if err != nil {
+			utils.ErrorF("Error parsing flow: %v", flow)
+			continue
+		}
+		row := []string{
+			parsedModule.Name, parsedModule.Desc,
+		}
+		content = append(content, row)
+	}
+	fmt.Printf("\nFound %v default modules at: %s \n\n", color.HiGreenString("%v", len(content)), color.HiCyanString(defaultModule))
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetAutoFormatHeaders(false)
+	table.SetHeader([]string{"Module Name", "Description"})
+	table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: true})
+	table.SetColWidth(120)
+	table.AppendBulk(content) // Add Bulk Data
+	table.Render()
+
+	h := color.HiCyanString("\nModule Usage:\n")
+	h += color.HiGreenString(" osmedeus scan -m %v", color.HiMagentaString("[moduleName]")) + color.HiGreenString(" -t ") + color.HiMagentaString("[target]") + "\n\n"
 	fmt.Printf(h)
 	return nil
 }

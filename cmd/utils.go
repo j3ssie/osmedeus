@@ -13,10 +13,11 @@ import (
 
 func init() {
 	var utilsCmd = &cobra.Command{
-		Use:   "utils",
-		Short: "Utils to get some information from the system",
-		Long:  core.Banner(),
-		RunE:  runProvider,
+		Use:     "utils",
+		Aliases: []string{"u", "util"},
+		Short:   "Utils to get some information from the system",
+		Long:    core.Banner(),
+		RunE:    runUtils,
 	}
 
 	var psCmd = &cobra.Command{
@@ -51,13 +52,28 @@ func init() {
 	cronCmd.Flags().BoolVar(&options.Cron.Forever, "for", false, "Keep running forever right after the command done")
 	cronCmd.Flags().StringVar(&options.Cron.Command, "cmd", "", "Command to run")
 
+	var workflowCmd = &cobra.Command{
+		Use:     "workflow",
+		Aliases: []string{"wf", "wl", "workflows", "wfs", "work", "works"},
+		Short:   "Listing all available workflows",
+		Long:    core.Banner(),
+		RunE:    runWorkflow,
+	}
+
 	// add command
 	utilsCmd.PersistentFlags().BoolVar(&options.JsonOutput, "json", false, "Output as JSON")
 	utilsCmd.AddCommand(cronCmd)
 	utilsCmd.AddCommand(tmuxCmd)
 	utilsCmd.AddCommand(psCmd)
+	utilsCmd.AddCommand(workflowCmd)
 	utilsCmd.SetHelpFunc(UtilsHelp)
 	RootCmd.AddCommand(utilsCmd)
+	RootCmd.AddCommand(workflowCmd)
+}
+
+func runUtils(_ *cobra.Command, _ []string) error {
+	fmt.Println(UtilsUsage())
+	return nil
 }
 
 func runPs(cmd *cobra.Command, _ []string) error {
@@ -120,5 +136,12 @@ func runCron(_ *cobra.Command, _ []string) error {
 		options.Cron.Schedule = -1
 	}
 	core.RunCron(options.Cron.Command, options.Cron.Schedule)
+	return nil
+}
+
+func runWorkflow(_ *cobra.Command, _ []string) error {
+	listFlows()
+	fmt.Printf("\n------------------------------------------------------------\n")
+	listDefaultModules()
 	return nil
 }

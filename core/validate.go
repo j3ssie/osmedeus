@@ -15,17 +15,22 @@ func (r *Runner) Validator() error {
 		return nil
 	}
 
-	// cidr, cidr-file
 	r.RequiredInput = strings.ToLower(strings.TrimSpace(r.RequiredInput))
+	//if r.RequiredInput == "file" {
+	//	if utils.FileExists(r.Input) {
+	//		return nil
+	//	}
+	//}
+
 	var inputAsFile bool
-	if strings.HasSuffix(r.RequiredInput, "-file") {
+	// cidr, cidr-file
+	if strings.HasSuffix(r.RequiredInput, "-file") || r.RequiredInput == "file" {
 		inputAsFile = true
 	}
 	v := validator.New()
 
 	// if input as a file
 	if utils.FileExists(r.Input) && inputAsFile {
-
 		r.InputType = "file"
 		inputs := utils.ReadingLines(r.Input)
 
@@ -49,6 +54,7 @@ func (r *Runner) Validator() error {
 
 	}
 
+	utils.InforF("Start validating input: %v", color.HiCyanString("%v -- %v", r.Input, r.InputType))
 	var err error
 	r.InputType, err = validate(v, r.Input)
 	if err != nil {
@@ -60,7 +66,6 @@ func (r *Runner) Validator() error {
 		return fmt.Errorf("input does not match the require validation: inputType:%v -- requireType:%v", r.InputType, r.RequiredInput)
 	}
 
-	utils.InforF("Start validating input: %v", color.HiCyanString("%v -- %v", r.Input, r.InputType))
 	if inputAsFile {
 		utils.MakeDir(libs.TEMP)
 		dest := path.Join(libs.TEMP, fmt.Sprintf("%v-%v", utils.StripPath(r.Input), utils.RandomString(4)))
@@ -74,13 +79,16 @@ func (r *Runner) Validator() error {
 	}
 
 	utils.DebugF("validator: input:%v -- type: %v -- require:%v", r.Input, r.InputType, r.RequiredInput)
-
 	return nil
 }
 
 func validate(v *validator.Validate, raw string) (string, error) {
 	var err error
 	var inputType string
+
+	if utils.FileExists(raw) {
+		inputType = "file"
+	}
 
 	err = v.Var(raw, "required,url")
 	if err == nil {
@@ -115,9 +123,13 @@ func validate(v *validator.Validate, raw string) (string, error) {
 	err = v.Var(raw, "required,uri")
 	if err == nil {
 		inputType = "url"
-		if strings.HasPrefix(raw, "https://github.com") || strings.HasPrefix(raw, "https://gitlab.com") || strings.HasPrefix(raw, "git@") {
+		if strings.HasPrefix(raw, "https://github.com") || strings.HasPrefix(raw, "https://gitlab.com") {
 			inputType = "git-url"
 		}
+	}
+
+	if strings.HasPrefix(raw, "git@") {
+		inputType = "git-url"
 	}
 
 	if inputType == "" {

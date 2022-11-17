@@ -97,6 +97,7 @@ func UtilsUsage() string {
 	h += "  osmedeus utils ps --proc 'jaeles' \n"
 	h += "  osmedeus utils cron --cmd 'osmdeus scan -t example.com' --sch 60\n"
 	h += "  osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'\n"
+	h += "  osmedeus utils workflow\n"
 	return h
 }
 

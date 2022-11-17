@@ -148,6 +148,7 @@ func (r *Runner) PrepareModule() {
 		r.RoutinePath = rawModule
 		r.Opt.Module, err = ParseModules(module)
 		if err != nil || r.Opt.Module.Name == "" {
+			utils.WarnF("Your module %v doesn't exist", color.HiRedString(r.Opt.Scan.Modules[0]))
 			continue
 		}
 		if r.Opt.Module.NoDB {

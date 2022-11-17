@@ -28,6 +28,15 @@ func TestValidator(t *testing.T) {
 
 	runner.Input = "1.2.3.4/24"
 	runner.Validator()
+
+	runner.Input = "https://github.com/j3ssie/osmedeus"
+	runner.Validator()
+	fmt.Printf("==> runner.InputType --> %v:%v -- %s\n\n", runner.RequiredInput, runner.InputType, runner.Input)
+
+	runner.Input = "git@github.com:j3ssie/osmedeus.git"
+	runner.Validator()
+	fmt.Printf("==> runner.InputType --> %v:%v -- %s\n\n", runner.RequiredInput, runner.InputType, runner.Input)
+
 	//
 	////raw := "tcp://git@gitlab.com:j3ssie/osmd-assets"
 	//raw := "git@gitlab.com/j3ssie/osmd-assets"

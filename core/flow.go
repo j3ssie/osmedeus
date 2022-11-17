@@ -116,7 +116,19 @@ func singleSelectModule(moduleName string, modules []string) (selectedModules []
 	return selectedModules
 }
 
-// DirectSelectModule select module from ~/.osmedeus/core/workflow/plugins/
+// DefaultWorkflows select module from ~/.osmedeus/core/workflow/plugins/
+func DefaultWorkflows(options libs.Options) []string {
+	defaultModule := path.Join(options.Env.WorkFlowsFolder, "default-modules")
+	modePath := path.Join(defaultModule, "/*.yaml")
+	results, err := filepath.Glob(modePath)
+	if err != nil {
+		utils.ErrorF("No default module found in %v", defaultModule)
+		return []string{}
+	}
+	return results
+}
+
+// DirectSelectModule select module from ~/osmedeus-base/workflow/default-modules
 func DirectSelectModule(options libs.Options, moduleName string) string {
 	// got absolutely path
 	if utils.FileExists(moduleName) {

@@ -38,8 +38,10 @@ func (r *Runner) RunModule(module libs.Module) {
 	r.DBNewReports(module)
 
 	// pre-run
-	utils.InforF("Running prepare scripts for module %v", color.CyanString(module.Name))
-	r.RunScripts(module.PreRun)
+	if len(module.PreRun) > 0 {
+		utils.InforF("Running prepare scripts for module %v", color.CyanString(module.Name))
+		r.RunScripts(module.PreRun)
+	}
 
 	// main part
 	utils.BlockF(module.Name, "Start run main steps")
@@ -49,8 +51,10 @@ func (r *Runner) RunModule(module libs.Module) {
 	}
 
 	// post-run
-	utils.InforF("Running prepare scripts for module %v", color.CyanString(module.Name))
-	r.RunScripts(module.PostRun)
+	if len(module.PostRun) > 0 {
+		utils.InforF("Running conclude scripts for module %v", color.CyanString(module.Name))
+		r.RunScripts(module.PostRun)
+	}
 
 	// print the reports file
 	utils.PrintLine()

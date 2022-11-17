@@ -91,13 +91,19 @@ Check out [**this page**](https://docs.osmedeus.org/installation/) for more the 
 
 # Utilities Usage:
   osmedeus health
+  osmedeus health git
+  osmedeus health cloud
   osmedeus version --json
+  osmedeus update
+  osmedeus update --vuln
+  osmedeus update --force --clean
   osmedeus utils tmux ls
   osmedeus utils tmux logs -A -l 10
   osmedeus utils ps
   osmedeus utils ps --proc 'jaeles'
   osmedeus utils cron --cmd 'osmdeus scan -t example.com' --sch 60
   osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'
+  osmedeus utils workflow
 ```
 
 Check out [**this page**](https://docs.osmedeus.org/installation/usage/) for full usage and the [**Practical
