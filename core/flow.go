@@ -11,6 +11,22 @@ import (
 	"github.com/j3ssie/osmedeus/libs"
 )
 
+func ListAllFlowName(options libs.Options) (result []string) {
+	rawWorkflows := ListModules(options)
+	for _, item := range rawWorkflows {
+		result = append(result, strings.ReplaceAll(filepath.Base(item), ".yaml", ""))
+	}
+	return result
+}
+
+func ListModuleName(options libs.Options) (result []string) {
+	rawResult := DefaultWorkflows(options)
+	for _, item := range rawResult {
+		result = append(result, strings.ReplaceAll(filepath.Base(item), ".yaml", ""))
+	}
+	return result
+}
+
 // ListFlow list all available mode
 func ListFlow(options libs.Options) (result []string) {
 	modePath := path.Join(options.Env.WorkFlowsFolder, "/*.yaml")

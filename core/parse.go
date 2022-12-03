@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Jeffail/gabs/v2"
 	"github.com/fatih/color"
+	"github.com/flosch/pongo2/v6"
 	"github.com/spf13/cast"
 	"golang.org/x/net/publicsuffix"
 	"io/ioutil"
@@ -23,7 +24,29 @@ import (
 
 // ResolveData resolve template from signature file
 func ResolveData(format string, data map[string]string) string {
-	//utils.DebugF("ResolveData: %s", format)
+	// for backward compatibility because new template using `{{variable}}` instead of `{{.variable}}`
+	if strings.Contains(format, "{{.") {
+		return OldResolveData(format, data)
+	}
+
+	variable := make(map[string]interface{})
+	for k, v := range data {
+		variable[k] = v
+	}
+	if tpl, err := pongo2.FromString(format); err == nil {
+
+		out, ok := tpl.Execute(variable)
+
+		if ok == nil {
+			return out
+		}
+		utils.ErrorF("Error when resolve template: %v", ok)
+	}
+	return format
+}
+
+// OldResolveData resolve template from signature file
+func OldResolveData(format string, data map[string]string) string {
 	t := template.Must(template.New("").Parse(format))
 
 	buf := &bytes.Buffer{}
@@ -92,8 +115,8 @@ func ParseModules(moduleFile string) (libs.Module, error) {
 		return module, err
 	}
 	module.ModulePath = moduleFile
-	if module.Usage != "" && strings.Contains(module.Usage, "{{.this_file}}") {
-		module.Usage = strings.ReplaceAll(module.Usage, "{{.this_file}}", moduleFile)
+	if module.Usage != "" && strings.Contains(module.Usage, "{{this_file}}") {
+		module.Usage = strings.ReplaceAll(module.Usage, "{{this_file}}", moduleFile)
 	}
 	return module, err
 }
@@ -138,6 +161,13 @@ func ParseInput(raw string, options libs.Options) map[string]string {
 	if err == nil {
 		ROptions["CWD"] = dir
 	}
+
+	// default threads variables
+	ROptions["Threads"] = cast.ToString(options.Threads)
+	ROptions["threads"] = cast.ToString(options.Threads)
+	ROptions["thread"] = cast.ToString(options.Threads)
+	ROptions["baseThreads"] = cast.ToString(options.Threads)
+
 	ROptions["Version"] = libs.VERSION
 	ROptions["WSCDN"] = options.Cdn.WSURL
 	ROptions["CDN"] = options.Cdn.URL
@@ -285,7 +315,7 @@ func IsRootDomain(raw string) bool {
 	}
 
 	input := strings.ReplaceAll(raw, fmt.Sprintf(".%s", suffix), "")
-	if strings.Count(input, ".") == 1 {
+	if strings.Count(input, ".") == 1 && strings.Count(input, "/") == 0 {
 		return true
 	}
 	return false

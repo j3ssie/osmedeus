@@ -7,4 +7,4 @@ params:
 steps:
   # get data from cdn
   - scripts:
-      - ImportIPRange("{{.testData}}/{{.Workspace}}/ipspace/ipspace-summary.txt")
+      - ImportIPRange("{{testData}}/{{Workspace}}/ipspace/ipspace-summary.txt")

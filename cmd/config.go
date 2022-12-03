@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/database"
 	"github.com/j3ssie/osmedeus/execution"
 	"os"
@@ -15,7 +16,7 @@ import (
 func init() {
 	var configCmd = &cobra.Command{
 		Use:   "config",
-		Short: "Do some config stuff",
+		Short: "Do some configuration from CLI",
 		Long:  core.Banner(),
 		RunE:  runConfig,
 	}
@@ -26,7 +27,6 @@ func init() {
 	configCmd.Flags().String("user", "", "Username")
 	configCmd.Flags().String("pass", "", "Password")
 	configCmd.Flags().StringP("workspace", "w", "", "Name of workspace")
-
 	configCmd.SetHelpFunc(ConfigHelp)
 	RootCmd.AddCommand(configCmd)
 }
@@ -34,7 +34,6 @@ func init() {
 func runConfig(cmd *cobra.Command, args []string) error {
 	sort.Strings(args)
 	action, _ := cmd.Flags().GetString("action")
-	//pluginsRepo, _ := cmd.Flags().GetString("pluginsRepo")
 	workspace, _ := cmd.Flags().GetString("workspace")
 	DBInit()
 
@@ -57,16 +56,14 @@ func runConfig(cmd *cobra.Command, args []string) error {
 		break
 
 	case "reload":
-		core.ReloadConfig(options)
+		core.ReloadConfig(&options)
 		break
 
-	case "delete":
+	case "delete", "del":
 		options.Scan.Input = workspace
 		options.Scan.ROptions = core.ParseInput(options.Scan.Input, options)
 		utils.InforF("Delete Workspace: %v", options.Scan.ROptions["Workspace"])
 		os.RemoveAll(options.Scan.ROptions["Output"])
-		//ws := database.SelectScan(options.Scan.ROptions["Workspace"])
-		//database.DeleteScan(int(ws.ID))
 		break
 
 	case "pull":
@@ -75,6 +72,9 @@ func runConfig(cmd *cobra.Command, args []string) error {
 		}
 		break
 
+	case "set":
+		core.SetTactic(&options)
+		break
 	case "update":
 		core.Update(options)
 		break
@@ -82,6 +82,9 @@ func runConfig(cmd *cobra.Command, args []string) error {
 	case "clean", "cl", "c":
 		database.ClearDB()
 		break
+	default:
+		utils.ErrorF("Unknown action: %v", color.HiRedString(action))
+		fmt.Println(ConfigUsage())
 	}
 
 	return nil

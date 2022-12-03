@@ -8,5 +8,5 @@ steps:
   - source: '/tmp/ott/source.txt'
     threads: '100'
     commands:
-      - "echo '---> {{.line}} '"
-      - "sleep 1 && echo '---> done {{.line}}'"
+      - "echo '---> {{line}} '"
+      - "sleep 1 && echo '---> done {{line}}'"

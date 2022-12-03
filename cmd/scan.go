@@ -59,7 +59,7 @@ func runScan(_ *cobra.Command, _ []string) error {
 
 func CreateRunner(j interface{}) {
 	target := j.(string)
-	if core.IsRootDomain(target) && options.Scan.Flow == "general" {
+	if core.IsRootDomain(target) && options.Scan.Flow == "general" && len(options.Scan.Modules) == 0 {
 		utils.WarnF("looks like you scanning a subdomain '%s' with general flow. The result might be much less than usual", color.HiCyanString(target))
 		utils.WarnF("Better input should be root domain with TLD like '-t target.com'")
 	}

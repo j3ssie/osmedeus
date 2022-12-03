@@ -6,6 +6,10 @@ type Options struct {
 	LogFile     string
 	Concurrency int
 
+	// default threads hold for running module
+	Tactics string
+	Threads int
+
 	Timeout           string
 	EnableFormatInput bool
 	Verbose           bool
@@ -51,6 +55,7 @@ type Options struct {
 	Cdn    Cdn
 	Update Update
 
+	ThreadsHold     ThreadsHold
 	Cloud           Cloud
 	Report          Report
 	CloudConfigFile string
@@ -74,7 +79,14 @@ type Scan struct {
 
 	BaseWorkspace   string
 	CustomWorkspace string
+	SuffixName      string
 	Force           bool
+}
+
+type ThreadsHold struct {
+	Default    int
+	Aggressive int
+	Gently     int
 }
 
 // Report sub options for report

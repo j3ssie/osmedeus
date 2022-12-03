@@ -7,8 +7,8 @@ params:
   - repo: "test-module"
 
 local_pre_run:
-  - 'RRSync("root@{{.RemoteIP}}", "/tmp/sam/", "/tmp/sam/")'
-  - ExecCmd('echo --> {{.repo}}')
+  - 'RRSync("root@{{RemoteIP}}", "/tmp/sam/", "/tmp/sam/")'
+  - ExecCmd('echo --> {{repo}}')
 
 routines:
   - modules:

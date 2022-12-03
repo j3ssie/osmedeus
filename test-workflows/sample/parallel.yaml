@@ -7,8 +7,8 @@ params:
 steps:
   - label: 'Start step 111'
     commands:
-      - "echo '---> {{.Target}} '"
-      - "seq {{.limit}} > /tmp/source.txt"
+      - "echo '---> {{Target}} '"
+      - "seq {{limit}} > /tmp/source.txt"
 
   - source: '/tmp/source.txt'
     threads: '200'

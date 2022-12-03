@@ -32,7 +32,7 @@ func StartServer(options libs.Options) {
 	}
 
 	if options.Server.NoAuthen {
-		fmt.Fprintf(os.Stderr, "[Critical] You're running the server with %v\n", color.RedString("NO AUTHENTICATION"))
+		fmt.Fprintf(os.Stderr, color.RedString("[Critical] You're running the server with %v\n", color.HiYellowString("NO AUTHENTICATION")))
 	}
 
 	app := fiber.New(fiber.Config{
@@ -66,6 +66,7 @@ func StartServer(options libs.Options) {
 
 	if enableSSL {
 		utils.GoodF("Web UI available at: https://%v/ui/", options.Server.Bind)
+		utils.GoodF("Static Content available at: %v", color.HiMagentaString("https://%v/%s/workspaces/", options.Server.Bind, Opt.Server.StaticPrefix))
 		log.Fatal(app.Listener(ln))
 	} else {
 		utils.GoodF("Web UI available at: http://%v/ui/", options.Server.Bind)

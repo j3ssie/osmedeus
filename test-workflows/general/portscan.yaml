@@ -7,4 +7,4 @@ params:
 steps:
   # get data from cdn
   - scripts:
-      - ImportPortJson("{{.testData}}/{{.Workspace}}/portscan/portscan-json.txt")
+      - ImportPortJson("{{testData}}/{{Workspace}}/portscan/portscan-json.txt")

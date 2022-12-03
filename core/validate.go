@@ -62,9 +62,13 @@ func (r *Runner) Validator() error {
 
 	if inputAsFile {
 		utils.MakeDir(libs.TEMP)
-		dest := path.Join(libs.TEMP, fmt.Sprintf("%v-%v", utils.StripPath(r.Input), utils.RandomString(4)))
+		suffix := utils.RandomString(4)
+		if r.Opt.Scan.SuffixName != "" {
+			suffix = r.Opt.Scan.SuffixName + "-" + utils.RandomString(4)
+		}
+		dest := path.Join(libs.TEMP, fmt.Sprintf("%v-%v", utils.StripPath(r.Input), suffix))
 		if r.Opt.Scan.CustomWorkspace != "" {
-			dest = path.Join(libs.TEMP, fmt.Sprintf("%v-%v", utils.StripPath(r.Opt.Scan.CustomWorkspace), utils.RandomString(4)))
+			dest = path.Join(libs.TEMP, fmt.Sprintf("%v-%v", utils.StripPath(r.Opt.Scan.CustomWorkspace), suffix))
 		}
 		utils.WriteToFile(dest, r.Input)
 		utils.InforF("Convert input to a file: %v", dest)

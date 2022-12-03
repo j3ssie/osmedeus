@@ -51,6 +51,9 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&options.Scan.Flow, "flow", "f", "general", "Flow name for running (default: general)")
 	RootCmd.PersistentFlags().StringVarP(&options.Scan.CustomWorkspace, "workspace", "w", "", "Name of workspace (default is same as target)")
 	RootCmd.PersistentFlags().StringSliceVarP(&options.Scan.Params, "params", "p", []string{}, "Custom params -p='foo=bar' (Multiple -p flags are accepted)")
+	RootCmd.PersistentFlags().StringVar(&options.Scan.SuffixName, "suffix", "", "Suffix string for file converted (default: randomly)")
+	RootCmd.PersistentFlags().IntVarP(&options.Threads, "threads-hold", "B", 0, "Threads hold for each module (default: number of CPUs)")
+	RootCmd.PersistentFlags().StringVar(&options.Tactics, "tactic", "default", "Choosing the tactic for running workflow from [default aggressive gently]")
 
 	// cloud flags
 	RootCmd.PersistentFlags().BoolVar(&options.Cloud.EnableChunk, "chunk", false, "Enable chunk mode")
@@ -60,7 +63,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&options.Cloud.Size, "size", "", "Override Size of cloud provider (default will get from 'cloud/provider.yaml')")
 	RootCmd.PersistentFlags().StringVar(&options.Cloud.Region, "region", "", "Override Region of cloud provider (default will get from 'cloud/provider.yaml')")
 	RootCmd.PersistentFlags().StringVar(&options.Cloud.Token, "token", "", "Override token of cloud provider (default will get from 'cloud/provider.yaml')")
-	RootCmd.PersistentFlags().StringVar(&options.Cloud.TokensFile, "token-file", "", "Override token of cloud provider (default will get from 'cloud/provider.yaml')")
+	RootCmd.PersistentFlags().StringVar(&options.Cloud.TokensFile, "token-file", "", "File contains list token of cloud providers")
 	RootCmd.PersistentFlags().StringVar(&options.Cloud.Provider, "provider", "", "Provider config file (default will get from 'cloud/provider.yaml')")
 	RootCmd.PersistentFlags().BoolVar(&options.Cloud.ReBuildBaseImage, "rebuild", false, "Forced to rebuild the images event though the version didn't change")
 
@@ -113,7 +116,7 @@ func initConfig() {
 		utils.ErrorF("config file does not writable: %v", options.ConfigFile)
 		utils.BlockF("fatal", "Make sure you are login as 'root user' if your installation done via root user")
 	}
-	core.LoadConfig(&options)
+	core.ParsingConfig(&options)
 
 	// parse inputs
 	if options.Scan.InputList != "" {

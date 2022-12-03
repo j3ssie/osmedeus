@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/libs"
@@ -47,7 +48,7 @@ func ScanUsage() string {
   osmedeus scan -f vuln-and-dirb -t list-of-domains.txt
   
   ## Use a custom wordlist
-  osmedeus scan -t sample.com -p 'wordlists={{.Data}}/wordlists/content/big.txt' -p 'fthreads=40'
+  osmedeus scan -t sample.com -p 'wordlists={{Data}}/wordlists/content/big.txt'
   
   ## Get target from a stdin and start the scan with 2 concurrency
   cat list_of_targets.txt | osmedeus scan -c 2
@@ -67,18 +68,20 @@ func ScanUsage() string {
 	h += "  osmedeus scan -f /path/to/flow.yaml -t [target] \n"
 	h += "  osmedeus scan -m /path/to/module.yaml -t [target] --params 'port=9200'\n"
 	h += "  osmedeus scan -m /path/to/module.yaml -t [target] -l /tmp/log.log\n"
+	h += "  osmedeus scan --tactic aggressive -m module -t [target] \n"
 	h += "  cat targets | osmedeus scan -f sample\n"
 
 	h += color.HiCyanString("\nPractical Scan Usage:\n")
 	h += "  osmedeus scan -T list_of_targets.txt -W custom_workspaces\n"
 	h += "  osmedeus scan -t target.com -w workspace_name --debug\n"
 	h += "  osmedeus scan -f general -t sample.com\n"
+	h += "  osmedeus scan --tactic aggressive -f general -t sample.com\n"
 	h += "  osmedeus scan -f extensive -t sample.com -t another.com\n"
 	h += "  cat list_of_urls.txt | osmedeus scan -f urls\n"
+	h += "  osmedeus scan --threads-hold=30 -f cidr -t 1.2.3.4/24\n"
 	h += "  osmedeus scan -m ~/.osmedeus/core/workflow/test/dirbscan.yaml -t list_of_urls.txt\n"
 	h += "  osmedeus scan --wfFolder ~/custom-workflow/ -f your-custom-workflow -t list_of_urls.txt\n"
 	h += "  osmedeus scan --chunk --chunk-part 40 -c 2 -f cidr -t list-of-cidr.txt\n"
-
 	return h
 }
 
@@ -98,6 +101,7 @@ func UtilsUsage() string {
 	h += "  osmedeus utils cron --cmd 'osmdeus scan -t example.com' --sch 60\n"
 	h += "  osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'\n"
 	h += "  osmedeus utils workflow\n"
+	h += "  osmedeus config set --threads-hold=10\n"
 	return h
 }
 
@@ -110,6 +114,7 @@ func ConfigUsage() string {
 	h += "  osmedeus config clean \n"
 	h += "  osmedeus config delete -t woskapce \n"
 	h += "  osmedeus config delete -w workspace_name \n"
+	h += "  osmedeus config set --threads-hold=10 \n"
 	return h
 }
 

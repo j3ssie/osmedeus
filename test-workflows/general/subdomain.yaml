@@ -7,4 +7,4 @@ params:
 steps:
   # get data from cdn
   - scripts:
-      - ImportSubdomain("{{.testData}}/{{.Workspace}}/subdomain/final-{{.Workspace}}.txt")
+      - ImportSubdomain("{{testData}}/{{Workspace}}/subdomain/final-{{Workspace}}.txt")

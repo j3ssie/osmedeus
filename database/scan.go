@@ -27,7 +27,7 @@ func DBNewScan(inputObj *Scan) {
 
 	tx := DB.Create(&inputObj)
 	if tx.Error != nil {
-		utils.ErrorF("error creating target -- %v", tx.Error)
+		utils.ErrorF("error creating new scan -- %v", tx.Error)
 	}
 	utils.DebugF("[DB] Creating new scan with ID: %v", inputObj.ID)
 }
@@ -57,10 +57,10 @@ func DBUpdateTarget(inputObj *Target) {
 		return
 	}
 
-	err := DB.Create(&inputObj).Error
-	if err != nil {
-		utils.ErrorF("error creating target -- %v", err)
-	}
+	DB.Create(&inputObj)
+	//if err != nil {
+	//	utils.ErrorF("error creating target -- %v", err)
+	//}
 	utils.DebugF("[DB] Creating new target with ID: %v -- %v", inputObj.InputName, inputObj.ID)
 }
 

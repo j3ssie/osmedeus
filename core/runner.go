@@ -71,6 +71,8 @@ func InitRunner(input string, opt libs.Options) (Runner, error) {
 
 // PrepareWorkflow prepare workflow file
 func (r *Runner) PrepareWorkflow() {
+	allFlows := ListAllFlowName(r.Opt)
+
 	r.RoutineType = "flow"
 	var err error
 	flows := SelectFlow(r.Opt.Scan.Flow, r.Opt)
@@ -134,12 +136,15 @@ func (r *Runner) PrepareWorkflow() {
 	if len(r.Routines) == 0 {
 		if r.Opt.Scan.Flow != "cloud-distributed" {
 			utils.WarnF("Your workflow %v doesn't exist", color.HiRedString(r.Opt.Scan.Flow))
+			utils.WarnF("Please select one of these flow: %v", color.HiMagentaString(strings.Join(allFlows, ", ")))
 		}
 	}
 }
 
 func (r *Runner) PrepareModule() {
+	allModules := ListModuleName(r.Opt)
 	r.RoutineType = "module"
+
 	var err error
 	for _, rawModule := range r.Opt.Scan.Modules {
 		var routine libs.Routine
@@ -149,6 +154,7 @@ func (r *Runner) PrepareModule() {
 		r.Opt.Module, err = ParseModules(module)
 		if err != nil || r.Opt.Module.Name == "" {
 			utils.WarnF("Your module %v doesn't exist", color.HiRedString(r.Opt.Scan.Modules[0]))
+			utils.WarnF("Please select one of these module: %v", color.HiMagentaString(strings.Join(allModules, ", ")))
 			continue
 		}
 		if r.Opt.Module.NoDB {
@@ -280,6 +286,7 @@ func (r *Runner) Start() {
 		utils.InforF("Adding %v flag if you want to disable input validate", color.HiCyanString(`'--nv'`))
 		return
 	}
+	utils.InforF("Running %s tactic with baseline threads hold as %s ", color.YellowString(r.Opt.Tactics), color.HiMagentaString("%v", r.Opt.Threads))
 
 	r.Opt.Scan.ROptions = r.Target
 	// prepare some metadata files
@@ -288,7 +295,7 @@ func (r *Runner) Start() {
 	r.RuntimeFile = r.Target["Output"] + "/runtime"
 	os.Remove(r.DoneFile)
 
-	utils.InforF("Running the routine %v on %v", color.CyanString(r.RoutineName), color.CyanString(r.Input))
+	utils.InforF("Running the routine %v on %v", color.HiYellowString(r.RoutineName), color.CyanString(r.Input))
 	utils.InforF("Detailed runtime file can be found on %v", color.CyanString(r.RuntimeFile))
 	execution.TeleSendMess(r.Opt, fmt.Sprintf("**%s** -- Start new scan: **%s** -- **%s**", r.Opt.Noti.ClientName, r.Opt.Scan.Flow, r.Target["Workspace"]), "#status", false)
 

@@ -5,7 +5,7 @@ steps:
   - label: 'Start step 222'
     commands:
       - "sleep 5"
-      - "echo '==>>>> {{.Target}} '"
+      - "echo '==>>>> {{Target}} '"
 
   - commands:
       - "echo 'done parallel 2222'"

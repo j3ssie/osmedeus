@@ -27,9 +27,9 @@ func init() {
 
 func runHealth(_ *cobra.Command, args []string) error {
 	if options.PremiumPackage {
-		fmt.Printf("💠 Osmedeus %s: Run diagnostics to check if everything okay\n", libs.VERSION)
+		fmt.Printf("💠 Osmedeus Premium %s: Run diagnostics to ensure that everything is in arrange.\n", libs.VERSION)
 	} else {
-		fmt.Printf("🚀 Osmedeus %s: Run diagnostics to check if everything okay\n", libs.VERSION)
+		fmt.Printf("🚀 Osmedeus %s: Run diagnostics to ensure that everything is in arrange.\n", libs.VERSION)
 	}
 
 	sort.Strings(args)
@@ -148,17 +148,17 @@ func generalCheck() error {
 
 	// check core programs
 	var err error
-	_, err = utils.RunCommandWithErr("jaeles -h")
-	if err != nil {
+	if _, err = utils.RunCommandWithErr("jaeles -h"); err != nil {
 		color.Red("[-] Core program setup incorrectly")
 		return fmt.Errorf("error checking core programs: %v", "jaeles")
-
 	}
-	_, err = utils.RunCommandWithErr("amass -h")
-	if err != nil {
+	if _, err = utils.RunCommandWithErr("timeout --help"); err != nil {
+		color.Red("[-] Core program setup incorrectly")
+		return fmt.Errorf("error checking core programs: %v", "timeout")
+	}
+	if _, err = utils.RunCommandWithErr("amass -h"); err != nil {
 		color.Red("[-] Core program setup incorrectly")
 		return fmt.Errorf("error checking core programs: %v", "amass")
-
 	}
 	_, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "httprobe")))
 	if err != nil {
@@ -212,6 +212,11 @@ func listFlows() error {
 			utils.ErrorF("Error parsing flow: %v", flow)
 			continue
 		}
+
+		if parsedFlow.SkipIndexed {
+			continue
+		}
+
 		row := []string{
 			parsedFlow.Name, parsedFlow.Desc,
 		}

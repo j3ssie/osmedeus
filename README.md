@@ -42,7 +42,8 @@ Make sure you installed `golang >= v1.17`
 go install -v github.com/j3ssie/osmedeus@latest
 ```
 
-Check out [**this page**](https://docs.osmedeus.org/installation/) for more the install on other platforms
+Check out [**this page**](https://docs.osmedeus.org/installation/) for more the install on other platforms and [**docker
+image**](https://docs.osmedeus.org/installation/using-docker/).
 
 ## 🚀 Key Features of Osmedeus
 
@@ -66,9 +67,8 @@ Check out [**this page**](https://docs.osmedeus.org/installation/) for more the 
 
 # Practical Scan Usage:
   osmedeus scan -T list_of_targets.txt -W custom_workspaces
-  osmedeus scan -t target.com -w workspace_name --debug
+  osmedeus scan --tactic aggressive -f general -t sample.com
   osmedeus scan -f general -t www.sample.com
-  osmedeus scan -f gdirb -T list_of_target.txt
   osmedeus scan -m ~/.osmedeus/core/workflow/test/dirbscan.yaml -t list_of_urls.txt
   osmedeus scan --wfFolder ~/custom-workflow/ -f your-custom-workflow -t list_of_urls.txt
 
@@ -90,13 +90,16 @@ Check out [**this page**](https://docs.osmedeus.org/installation/) for more the 
   osmedeus cloud --chunk -c 10 -f [flowName] -t [targetsFile]
 
 # Utilities Usage:
+  ## Health check utility
   osmedeus health
   osmedeus health git
   osmedeus health cloud
   osmedeus version --json
+  ## Update utility
   osmedeus update
   osmedeus update --vuln
   osmedeus update --force --clean
+  ## Other utilities
   osmedeus utils tmux ls
   osmedeus utils tmux logs -A -l 10
   osmedeus utils ps
@@ -104,6 +107,7 @@ Check out [**this page**](https://docs.osmedeus.org/installation/) for more the 
   osmedeus utils cron --cmd 'osmdeus scan -t example.com' --sch 60
   osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'
   osmedeus utils workflow
+  osmedeus config set --threads-hold=10
 ```
 
 Check out [**this page**](https://docs.osmedeus.org/installation/usage/) for full usage and the [**Practical

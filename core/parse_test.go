@@ -2,6 +2,8 @@ package core
 
 import (
 	"fmt"
+	"github.com/flosch/pongo2/v6"
+	"runtime"
 	"testing"
 )
 
@@ -42,5 +44,28 @@ func TestParseTarget(t *testing.T) {
 	fmt.Println(result)
 	if len(result) == 0 {
 		t.Errorf("Error RunMasscan")
+	}
+}
+
+func TestRenderTemplate(t *testing.T) {
+	formatString := "Hello {{name}}! \n"
+	formatString += "--> Express: {{ 2 * cpu }} \n"
+	formatString += "--> Bool: {{ Skip }} \n"
+	target := map[string]any{
+		"name": "World",
+		"num":  "2",
+		"cpu":  runtime.NumCPU(),
+		"Skip": true,
+	}
+	fmt.Println(target)
+
+	if tpl, err := pongo2.FromString(formatString); err == nil {
+		// Now you can render the template with the given
+		// pongo2.Context how often you want to.
+		out, err := tpl.Execute(target)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(out) // Output: Hello Florian!
 	}
 }

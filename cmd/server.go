@@ -21,7 +21,7 @@ func init() {
 	serverCmd.Flags().BoolVar(&options.Server.DisableSSL, "disable-ssl", false, "Disable workspaces directory listing")
 	serverCmd.Flags().BoolVar(&options.Server.DisableWorkspaceListing, "disable-listing", false, "Disable workspaces directtory listing")
 	serverCmd.Flags().BoolVar(&options.Server.PreFork, "prefork", false, "Enable Prefork mode for the api server")
-	serverCmd.Flags().BoolVar(&options.Server.NoAuthen, "no-auth", false, "Disable authentication for the api server")
+	serverCmd.Flags().BoolVarP(&options.Server.NoAuthen, "no-auth", "A", false, "Disable authentication for the api server")
 	RootCmd.AddCommand(serverCmd)
 }
 

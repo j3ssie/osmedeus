@@ -12,6 +12,7 @@ type Routine struct {
 // Flow struct to define specific field for a mode
 type Flow struct {
 	NoDB        bool `yaml:"nodb"`
+	SkipIndexed bool `yaml:"skip-indexed"`
 	ForceParams bool `yaml:"force-params"`
 	Input       string
 	Validator   string // domain, cidr, ip or domain-file, cidr-file and so on

@@ -7,4 +7,4 @@ params:
 steps:
   # get data from cdn
   - scripts:
-      - ImportCred("{{.testData}}/{{.Workspace}}/new-intel-cred.txt")
+      - ImportCred("{{testData}}/{{Workspace}}/new-intel-cred.txt")

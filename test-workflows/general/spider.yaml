@@ -7,4 +7,4 @@ params:
 steps:
   # get data from cdn
   - scripts:
-      - ImportLinks("{{.testData}}/{{.Workspace}}/linkfinding/links-json.txt")
+      - ImportLinks("{{testData}}/{{Workspace}}/linkfinding/links-json.txt")

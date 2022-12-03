@@ -7,4 +7,4 @@ params:
 steps:
   # get data from cdn
   - scripts:
-      - ImportCloudBrute("{{.testData}}/{{.Workspace}}/clouds-data.txt")
+      - ImportCloudBrute("{{testData}}/{{Workspace}}/clouds-data.txt")

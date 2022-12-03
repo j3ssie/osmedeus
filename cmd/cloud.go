@@ -2,6 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"path"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/distribute"
@@ -10,9 +14,6 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	"io"
-	"os"
-	"path"
 )
 
 func init() {
@@ -35,9 +36,9 @@ func init() {
 	cloudCmd.Flags().StringVar(&options.Cloud.LocalSyncFolder, "rfolder", fmt.Sprintf("/root/.%s/workspaces/", libs.BINARY), "Remote Folder to sync back to local")
 
 	// commands on cloud
-	cloudCmd.Flags().IntVar(&options.Cloud.Threads, "threads", 1, "Concurrency level on remote cloud")
+	cloudCmd.Flags().IntVar(&options.Cloud.Threads, "cloud-threads", 1, "Concurrency level on remote cloud")
 	cloudCmd.Flags().StringVar(&options.Cloud.Extra, "extra", "", "append raw command after the command builder")
-	cloudCmd.Flags().StringVar(&options.Cloud.RawCommand, "cmd", "", "specific raw command and override everything (eg: --cmd 'curl {{.Target}}')")
+	cloudCmd.Flags().StringVar(&options.Cloud.RawCommand, "cmd", "", "specific raw command and override everything (eg: --cmd 'curl {{Target}}')")
 	cloudCmd.Flags().StringVar(&options.Cloud.CloudWait, "wait", "30m", "time to wait before next queue check")
 	cloudCmd.Flags().StringVar(&options.Cloud.ClearTime, "clear", "10m", "time to wait before next clear check")
 	cloudCmd.Flags().StringVar(&options.Cloud.TempTarget, "tempTargets", "/tmp/osm-tmp-inputs/", "Temp Folder to store targets file")

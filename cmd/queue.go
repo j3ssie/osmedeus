@@ -2,14 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"path"
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/spf13/cobra"
-	"path"
-	"strings"
 )
 
 func init() {
@@ -67,7 +68,7 @@ func addInput() {
 		return
 	}
 
-	// osmedeus queue --add -t /tmp/cidr --cmd "osmedeus -t {{.Input}} -m recon -w"
+	// osmedeus queue --add -t /tmp/cidr --cmd "osmedeus -t {{Input}} -m recon -w"
 	for _, target := range options.Scan.Inputs {
 		queueInput := libs.InputFormat{
 			Input:       target,
