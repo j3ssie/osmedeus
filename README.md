@@ -61,7 +61,7 @@ image**](https://docs.osmedeus.org/installation/using-docker/).
   osmedeus scan -f [flowName] -t [target]
   osmedeus scan -m [modulePath] -T [targetsFile]
   osmedeus scan -f /path/to/flow.yaml -t [target]
-  osmedeus scan -m /path/to/module.yaml -t [target] --params 'port=9200'
+  osmedeus scan --threads-hold=30 -f cidr -t 1.2.3.4/24
   osmedeus scan -m /path/to/module.yaml -t [target] -l /tmp/log.log
   cat targets | osmedeus scan -f sample
 
