@@ -34,9 +34,7 @@ func ResolveData(format string, data map[string]string) string {
 		variable[k] = v
 	}
 	if tpl, err := pongo2.FromString(format); err == nil {
-
 		out, ok := tpl.Execute(variable)
-
 		if ok == nil {
 			return out
 		}

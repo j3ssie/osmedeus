@@ -2,10 +2,9 @@ package execution
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
+	"github.com/flosch/pongo2/v6"
 	"github.com/spf13/cast"
-	"html/template"
 	"net/url"
 	"os"
 	"path"
@@ -416,38 +415,30 @@ func GenNucleiReport(opt libs.Options, src string, dest string, templateFile str
 		return
 	}
 
-	data := struct {
-		Vulnerabilities []Vulnerability
-		CurrentDay      string
-		Version         string
-		Title           string
-		Src             string
-	}{
-		Title:           "Nuclei Summary Report",
-		Vulnerabilities: vulns,
-		CurrentDay:      utils.GetCurrentDay(),
-		Version:         libs.VERSION,
-		Src:             path.Base(src),
-	}
-
 	// read template file
 	tmpl := utils.GetFileContent(templateFile)
-	if tmpl == "" {
+	if strings.TrimSpace(tmpl) == "" {
 		utils.WarnF("empty template data: %v", templateFile)
 		return
 	}
 
-	t := template.Must(template.New("").Parse(tmpl))
-	buf := &bytes.Buffer{}
-	err := t.Execute(buf, data)
+	variable := make(map[string]interface{})
+	variable["Title"] = "Nuclei Summary Report"
+	variable["Vulnerabilities"] = vulns
+	variable["CurrentDay"] = utils.GetCurrentDay()
+	variable["Version"] = libs.VERSION
+	variable["Src"] = filepath.Base(src)
+
+	tpl, err := pongo2.FromString(tmpl)
 	if err != nil {
 		utils.WarnF("error render data: %v", err)
 		return
 	}
-	result := buf.String()
-
-	utils.DebugF("Writing Nuclei HTML report to: %v", dest)
-	utils.WriteToFile(dest, result)
+	out, ok := tpl.Execute(variable)
+	if ok == nil {
+		utils.DebugF("Writing Nuclei HTML report to: %v", dest)
+		utils.WriteToFile(dest, out)
+	}
 }
 
 // CleanJSONHttpx get to get formatted report
