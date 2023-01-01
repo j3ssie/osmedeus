@@ -2,23 +2,30 @@ package provider
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/cenkalti/backoff/v4"
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
 	"github.com/spf13/cast"
-	"strings"
-	"time"
 )
 
 type Provider struct {
 	ProviderName  string
 	Token         string
 	RedactedToken string
+	// for aws only
+	AccessKeyId       string
+	SecretKey         string
+	SecurityGroupID   string
+	SecurityGroupName string
 
 	Instances     []Instance
 	InstanceLimit int
 	Available     bool
+	HealthCheck   bool
 
 	// for create snapshot
 	SnapshotID    string
@@ -77,6 +84,14 @@ func InitProvider(providerName string, token string) (Provider, error) {
 	var provider Provider
 	provider.ProviderName = providerName
 	provider.Token = token
+
+	if providerName == "aws" {
+		// token should be 'AccessKeyId,SecretKey'
+		provider.AccessKeyId = strings.TrimSpace(strings.Split(token, ",")[0])
+		provider.SecretKey = strings.TrimSpace(strings.Split(token, ",")[1])
+		provider.Token = token
+	}
+
 	provider.InitClient()
 	return provider, nil
 }
@@ -86,6 +101,14 @@ func InitProviderWithConfig(opt libs.Options, providerConfig ConfigProvider) (Pr
 	var provider Provider
 	provider.ProviderName = providerConfig.Provider
 	provider.Token = providerConfig.Token
+
+	// for aws only
+	provider.AccessKeyId = providerConfig.AccessKeyId
+	provider.SecretKey = providerConfig.SecretKey
+	if provider.AccessKeyId != "" {
+		provider.Token = provider.AccessKeyId + "," + provider.SecretKey
+	}
+
 	provider.ProviderConfig = providerConfig
 	provider.Opt = opt
 
@@ -98,7 +121,7 @@ func InitProviderWithConfig(opt libs.Options, providerConfig ConfigProvider) (Pr
 }
 
 func (p *Provider) InitClient() (err error) {
-	if p.Token == "" {
+	if p.Token == "" && p.AccessKeyId == "" {
 		utils.ErrorF("empty or invalid token: %v", p.Token)
 		return fmt.Errorf("empty or invalid token")
 	}
@@ -111,14 +134,30 @@ func (p *Provider) InitClient() (err error) {
 	switch p.ProviderName {
 	case "do", "digitalocean":
 		p.ClientDO()
-		err = p.AccountDO()
 	case "ln", "line", "linode":
 		p.ClientLinode()
-		err = p.AccountLN()
+	case "aw", "aws", "asw":
+		p.ClientAWS()
 	default:
 		p.ClientDO()
+	}
+
+	// skip balance check if health check
+	if p.HealthCheck {
+		return nil
+	}
+
+	switch p.ProviderName {
+	case "do", "digitalocean":
+		err = p.AccountDO()
+	case "ln", "line", "linode":
+		err = p.AccountLN()
+	case "aw", "aws", "asw":
+		err = p.AccountAWS()
+	default:
 		err = p.AccountDO()
 	}
+
 	return err
 }
 
@@ -157,20 +196,18 @@ func (p *Provider) Prepare() {
 	switch p.ProviderName {
 	case "do", "digitalocean":
 		p.DefaultDO()
-		p.Action(GetSSHKey)
-		p.Action(ListImage)
 	case "ln", "line", "linode":
 		p.DefaultLinode()
-		p.Action(GetSSHKey)
-		p.Action(ListImage)
+	case "aw", "aws", "asw":
+		p.DefaultAWS()
 	default:
 		p.DefaultDO()
-		p.Action(GetSSHKey)
-		p.Action(ListImage)
 	}
 
+	p.Action(GetSSHKey)
+	p.Action(ListImage)
 	if p.SSHKeyID != "" {
-		utils.InforF("Found SSH Key ID: %v", p.SSHKeyID)
+		utils.InforF("Found SSH Key ID: %v", color.HiBlueString(p.SSHKeyID))
 	}
 }
 
@@ -192,9 +229,9 @@ func (p *Provider) Action(actionName string, params ...interface{}) error {
 		case RunBuild:
 			err = p.RunBuild()
 		case GetInstanceInfo:
-			err = p.GetInstanceInfo(cast.ToInt(param))
+			err = p.GetInstanceInfo(param)
 		case BootInstance:
-			err = p.BootInstance(cast.ToInt(param))
+			err = p.BootInstance(param)
 		case CreateInstance:
 			err = p.CreateInstance(cast.ToString(param))
 		default:

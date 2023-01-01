@@ -2,11 +2,10 @@ package libs
 
 // Cdn credentials for other client
 type Cdn struct {
-	URL    string
-	WSURL  string
-	Prefix string
-	Index  string
-	Auth   string
+	Bucket      string
+	Region      string
+	SecretKey   string
+	AccessKeyId string
 }
 
 // Git credentials for other client

@@ -2,11 +2,13 @@ package provider
 
 import (
 	"fmt"
-	"github.com/j3ssie/osmedeus/libs"
-	"github.com/j3ssie/osmedeus/utils"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/fatih/color"
+	"github.com/j3ssie/osmedeus/libs"
+	"github.com/j3ssie/osmedeus/utils"
 )
 
 func (p *Provider) PrePareBuildData() {
@@ -16,6 +18,10 @@ func (p *Provider) PrePareBuildData() {
 	data := make(map[string]string)
 	data["snapshot_name"] = p.SnapshotName
 	data["api_token"] = p.Token
+	// for aws only
+	data["access_key"] = p.AccessKeyId
+	data["secret_key"] = p.SecretKey
+	data["source_ami"] = p.ProviderConfig.DefaultImage
 
 	// c.Cloud.ProviderFolder --> ~/.osmedeus/provider/<osmp-name>-v4.x-randomstring
 	p.ProviderConfig.ProviderFolder = path.Join(p.Opt.Env.ProviderFolder, fmt.Sprintf("%s-%s", p.SnapshotName, utils.RandomString(6)))
@@ -108,7 +114,7 @@ func (p *Provider) BuildImage() (err error) {
 	buildFile := path.Join(p.ProviderConfig.ProviderFolder, "build.json")
 	p.ProviderConfig.BuildFile = buildFile
 	utils.WriteToFile(buildFile, buildContent)
-	utils.InforF("Write build provision of %s to: %s", p.ProviderName, buildFile)
+	utils.InforF("Write build provision of %s to: %s", color.HiYellowString(p.ProviderName), color.HiCyanString(buildFile))
 
 	// actually run building
 	err = p.Action(RunBuild)
@@ -134,10 +140,10 @@ func (p *Provider) RunBuild() error {
 		utils.ErrorF(out)
 		return err
 	}
-	utils.InforF("Config looks good at: %s", p.ProviderConfig.BuildFile)
+	utils.InforF("The Packer file appears to be functioning properly: %s", color.HiCyanString(p.ProviderConfig.BuildFile))
 
 	// really start to build stuff here
-	utils.GoodF("Start packer build for: %s", p.ProviderConfig.BuildFile)
+	utils.GoodF("Start packer build for: %s", color.HiCyanString(p.ProviderConfig.BuildFile))
 	cmd = fmt.Sprintf("%s build %s", packerBinary, p.ProviderConfig.BuildFile)
 	out, _ = utils.RunCommandWithErr(cmd)
 

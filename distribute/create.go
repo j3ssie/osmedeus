@@ -2,10 +2,12 @@ package distribute
 
 import (
 	"fmt"
-	"github.com/j3ssie/osmedeus/core"
-	"github.com/j3ssie/osmedeus/utils"
 	"path"
 	"strings"
+
+	"github.com/fatih/color"
+	"github.com/j3ssie/osmedeus/core"
+	"github.com/j3ssie/osmedeus/utils"
 )
 
 func (c *CloudRunner) CreateInstance(target string) error {
@@ -68,7 +70,7 @@ func (c *CloudRunner) CreateInstance(target string) error {
 	}
 
 	/* Really start to run command to create instance here */
-	err := c.Provider.CreateInstanceF(c.InstanceName)
+	err := c.Provider.CreateInstance(c.InstanceName)
 
 	// @TODO: naming in linode might need another check for length
 	if err != nil {
@@ -94,8 +96,8 @@ func (c *CloudRunner) CreateInstance(target string) error {
 	c.PublicIP = c.Provider.CreatedInstance.IPAddress
 
 	c.InstanceID = c.Provider.CreatedInstance.InstanceID
-	c.DestInstance = fmt.Sprintf("root@%s", c.PublicIP)
-	utils.InforF("Creating instance: %s -- %v", c.InstanceName, c.PublicIP)
+	c.DestInstance = fmt.Sprintf("%s@%s", c.SSHUser, c.PublicIP)
+	utils.InforF("Instance created: %s -- %s -- %v", color.HiCyanString(c.InstanceName), color.HiCyanString(c.InstanceID), color.HiCyanString(c.PublicIP))
 	c.Target["CIP"] = c.PublicIP
 	c.Target["RemoteIP"] = c.PublicIP
 

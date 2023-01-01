@@ -2,11 +2,13 @@ package core
 
 import (
 	"fmt"
-	"github.com/j3ssie/osmedeus/utils"
-	"github.com/thoas/go-funk"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/fatih/color"
+	"github.com/j3ssie/osmedeus/utils"
+	"github.com/thoas/go-funk"
 
 	"github.com/j3ssie/osmedeus/libs"
 )
@@ -118,7 +120,7 @@ func SelectModules(moduleNames []string, options libs.Options) []string {
 	}
 	selectedModules = funk.UniqString(selectedModules)
 
-	utils.DebugF("Select module name %v: %v", moduleNames, selectedModules)
+	utils.DebugF("Select module name %v: %v", color.HiCyanString("%v", moduleNames), selectedModules)
 	return selectedModules
 }
 

@@ -2,11 +2,14 @@ package distribute
 
 import (
 	"fmt"
+	"strings"
+	"sync"
+
 	"github.com/j3ssie/osmedeus/database"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/provider"
 	"github.com/j3ssie/osmedeus/utils"
-	"strings"
+	"github.com/panjf2000/ants"
 )
 
 func CheckingCloudInstance(opt libs.Options) {
@@ -21,11 +24,14 @@ func CheckingCloudInstance(opt libs.Options) {
 		return
 	}
 
-	utils.InforF("Checking health of %v cloud instances", len(instances))
-	for _, instance := range instances {
+	var wg sync.WaitGroup
+	p, _ := ants.NewPoolWithFunc(opt.Concurrency*5, func(i interface{}) {
+		// really start to scan
+		instance := i.(database.CloudInstance)
+
 		providerObj, err := provider.InitProvider(instance.Provider, instance.Token)
 		if err != nil {
-			continue
+			return
 		}
 
 		cloud := CloudRunner{
@@ -35,9 +41,33 @@ func CheckingCloudInstance(opt libs.Options) {
 		cloud.Prepare()
 		cloud.PublicIP = instance.IPAddress
 		cloud.InstanceID = instance.InstanceID
-
 		cloud.HealthCheck()
+
+		wg.Done()
+	}, ants.WithPreAlloc(true))
+	defer p.Release()
+
+	utils.InforF("Checking health of %v cloud instances", len(instances))
+	for _, instance := range instances {
+		// providerObj, err := provider.InitProvider(instance.Provider, instance.Token)
+		// if err != nil {
+		// 	continue
+		// }
+
+		// cloud := CloudRunner{
+		// 	Opt:      opt,
+		// 	Provider: providerObj,
+		// }
+		// cloud.Prepare()
+		// cloud.PublicIP = instance.IPAddress
+		// cloud.InstanceID = instance.InstanceID
+		// cloud.HealthCheck()
+
+		wg.Add(1)
+		_ = p.Invoke(instance)
 	}
+	wg.Wait()
+
 }
 
 func (c *CloudRunner) HealthCheck() bool {

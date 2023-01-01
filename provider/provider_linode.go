@@ -4,17 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/j3ssie/osmedeus/libs"
-	"github.com/j3ssie/osmedeus/utils"
-	"github.com/linode/linodego"
-	//"github.com/linode/linodego/pkg/errors"
-	"github.com/spf13/cast"
-	"golang.org/x/oauth2"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/fatih/color"
+	"github.com/j3ssie/osmedeus/libs"
+	"github.com/j3ssie/osmedeus/utils"
+	"github.com/linode/linodego"
+	"github.com/spf13/cast"
+	"golang.org/x/oauth2"
 )
 
 // DefaultLinode set some default data for DO provider
@@ -52,13 +52,16 @@ func (p *Provider) ClientLinode() error {
 	return nil
 }
 
-func (p *Provider) AccountLN() error {
+func (p *Provider) ConvertClientLinode() linodego.Client {
 	client, ok := p.Client.(linodego.Client)
 	if !ok {
-		err := fmt.Errorf("error convert client")
-		utils.ErrorF("%v", err)
-		return err
+		utils.ErrorF("error converting linode session %v", ok)
 	}
+	return client
+}
+
+func (p *Provider) AccountLN() error {
+	client := p.ConvertClientLinode()
 	ctx := context.TODO()
 	account, err := client.GetAccount(ctx)
 	if err != nil {
@@ -66,13 +69,6 @@ func (p *Provider) AccountLN() error {
 	}
 	utils.InforF("Account Billing Information: BalanceUninvoiced: %v -- AccountBalance: %v", color.HiRedString("%v", account.BalanceUninvoiced), color.HiGreenString("%v", account.Balance))
 
-	//accountSett, err := client.GetAccountSettings(ctx)
-	//if err != nil {
-	//	//err := fmt.Errorf("error convert client")
-	//	utils.ErrorF("%v", err)
-	//	return err
-	//}
-	//if err != nil && accountSett.NetworkHelper == false {
 	helper := false
 	opt := linodego.AccountSettingsUpdateOptions{
 		NetworkHelper: &helper,
@@ -94,10 +90,7 @@ func (p *Provider) AccountLN() error {
 
 // LinodeTest list all instances
 func (p *Provider) LinodeTest() error {
-	linodeClient, ok := p.Client.(linodego.Client)
-	if !ok {
-		return fmt.Errorf("error convert client")
-	}
+	linodeClient := p.ConvertClientLinode()
 
 	res, err := linodeClient.GetInstance(context.Background(), 4090913)
 	if err != nil {
@@ -109,10 +102,7 @@ func (p *Provider) LinodeTest() error {
 }
 
 func (p *Provider) ListInstanceLN() error {
-	client, ok := p.Client.(linodego.Client)
-	if !ok {
-		return fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientLinode()
 
 	opt := &linodego.ListOptions{
 		PageOptions: nil,
@@ -155,10 +145,7 @@ func (p *Provider) ListInstanceLN() error {
 }
 
 func (p *Provider) GetSSHKeyLN() error {
-	client, ok := p.Client.(linodego.Client)
-	if !ok {
-		return fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientLinode()
 	ctx := context.TODO()
 	opt := &linodego.ListOptions{
 		PageOptions: nil,
@@ -197,10 +184,7 @@ func (p *Provider) GetSSHKeyLN() error {
 }
 
 func (p *Provider) ListSnapshotLN() error {
-	client, ok := p.Client.(linodego.Client)
-	if !ok {
-		return fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientLinode()
 	ctx := context.TODO()
 	opt := &linodego.ListOptions{
 		//PageOptions: linodego.PageOptions{
@@ -244,10 +228,7 @@ func (p *Provider) LinodeDiskMap() {
 }
 
 func (p *Provider) CreateInstanceLN(name string) (dropletId int, err error) {
-	client, ok := p.Client.(linodego.Client)
-	if !ok {
-		return 0, fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientLinode()
 
 	ctx := context.TODO()
 	booted := false
@@ -263,7 +244,6 @@ func (p *Provider) CreateInstanceLN(name string) (dropletId int, err error) {
 		RootPass: utils.RandomString(10),
 		AuthorizedKeys: []string{
 			p.SSHPublicKey,
-			"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC/oKuLLgmqcGK8lf9D2GPZqSXzvE9QqsSPmHdWOybOIYkUzAioG97vcTy6iBiuoRDqRwxeTt7JE/IncfdEc8e7ofa5IoGg5Xx65G1tw/V2rY2yux/IQYV10GVfPlV4Un04z7Vx7oFGcgIcJRxTlyoVPrSCTM1cepp5hAW8eqyF7mJZU/5cWCJMRK7F3CX3p6Li1y0f4dOcMuGvZePQUt4P1ntkrKVijxihiJ0nEfSINee2oKTNM0ZIpoxTmmMIBksMK9Ayl4jgxMf5kPoMQHJM+kTg6IFcarYvKdG2qizqDbjgiORG+2AgWaiAmJb+uik0cNi+gyMNanrxL979yUsj root@j3ssie",
 		},
 		//AuthorizedUsers: []string{"root"},
 		Image: p.SnapshotID,
@@ -294,10 +274,7 @@ func (p *Provider) CreateInstanceLN(name string) (dropletId int, err error) {
 }
 
 func (p *Provider) BootInstanceLN(dropletId int) error {
-	client, ok := p.Client.(linodego.Client)
-	if !ok {
-		return fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientLinode()
 
 	ctx := context.TODO()
 	err := client.BootInstance(ctx, dropletId, 0)
@@ -305,12 +282,8 @@ func (p *Provider) BootInstanceLN(dropletId int) error {
 }
 
 func (p *Provider) MountDiskLN(dropletId int) error {
-	client, ok := p.Client.(linodego.Client)
-	if !ok {
-		return fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientLinode()
 	utils.InforF("Mounting disk: %v", dropletId)
-	//err := client.BootInstance(ctx, dropletId, 0)
 	ctx := context.TODO()
 
 	disk, err := client.CreateInstanceDisk(ctx, dropletId, linodego.InstanceDiskCreateOptions{
@@ -337,10 +310,7 @@ func (p *Provider) MountDiskLN(dropletId int) error {
 
 func (p *Provider) InstanceInfoLN(id int) (Instance, error) {
 	var parsedInstance Instance
-	client, ok := p.Client.(linodego.Client)
-	if !ok {
-		return parsedInstance, fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientLinode()
 
 	instance, err := client.GetInstance(context.TODO(), id)
 	if err != nil {
@@ -374,10 +344,7 @@ func (p *Provider) InstanceInfoLN(id int) (Instance, error) {
 }
 
 func (p *Provider) DeleteInstanceLN(id string) error {
-	client, ok := p.Client.(linodego.Client)
-	if !ok {
-		return fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientLinode()
 
 	ctx := context.TODO()
 	err := client.DeleteInstance(ctx, cast.ToInt(id))
@@ -390,10 +357,7 @@ func (p *Provider) DeleteInstanceLN(id string) error {
 }
 
 func (p *Provider) DeleteSnapShotLN(id string) error {
-	client, ok := p.Client.(linodego.Client)
-	if !ok {
-		return fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientLinode()
 
 	ctx := context.TODO()
 	err := client.DeleteImage(ctx, id)

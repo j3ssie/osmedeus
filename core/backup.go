@@ -1,14 +1,19 @@
 package core
 
 import (
+	"os"
+	"path"
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/execution"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
-	"os"
-	"path"
-	"strings"
 )
+
+// in workflow file
+// Compress('{{Backup}}/{{Workspace}}.tar.gz', '{{Output}}')
+// Decompress('{{Output}}', '{{Backup}}/{{Workspace}}.tar.gz')
 
 func (r *Runner) BackupWorkspace() {
 	outputDir := r.Target["Output"]
@@ -30,7 +35,7 @@ func ExtractBackup(src string, opt libs.Options) {
 	}
 
 	target := strings.ReplaceAll(path.Base(src), ".tar.gz", "")
-	dest := opt.Report.ExtractFolder
+	dest := path.Join(opt.Report.ExtractFolder, target)
 	if !strings.HasSuffix(dest, "/") {
 		dest += "/"
 	}

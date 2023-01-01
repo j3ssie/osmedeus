@@ -2,10 +2,12 @@ package distribute
 
 import (
 	"fmt"
-	"github.com/j3ssie/osmedeus/libs"
-	"github.com/j3ssie/osmedeus/utils"
 	"path"
 	"strings"
+
+	"github.com/j3ssie/osmedeus/libs"
+	"github.com/j3ssie/osmedeus/utils"
+	"github.com/spf13/cast"
 )
 
 // CommandBuilder build core command from API
@@ -18,6 +20,10 @@ func CommandBuilder(options libs.Options) string {
 
 	if options.Update.EnableUpdate {
 		binary += " --update"
+	}
+
+	if options.Threads > 0 {
+		binary += " --threads-hold " + cast.ToString(options.Threads)
 	}
 
 	if options.ScanID != "" {

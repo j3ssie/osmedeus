@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"strings"
+	"sync"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/libs"
@@ -9,14 +12,12 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	"strings"
-	"sync"
 )
 
 func init() {
 	var scanCmd = &cobra.Command{
 		Use:   "scan",
-		Short: "Do Scan based on predefined flow",
+		Short: "Conduct a scan following a predetermined flow/module",
 		Long:  core.Banner(),
 		RunE:  runScan,
 	}

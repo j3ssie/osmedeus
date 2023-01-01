@@ -5,7 +5,6 @@ import (
 	"bufio"
 	"compress/gzip"
 	"fmt"
-	"github.com/j3ssie/osmedeus/libs"
 	"io"
 	"io/ioutil"
 	"os"
@@ -15,6 +14,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/j3ssie/osmedeus/libs"
 
 	"github.com/j3ssie/osmedeus/utils"
 )
@@ -162,7 +163,7 @@ func Compress(dest string, src string) {
 		utils.DebugF("Folder is empty or not found: %s", src)
 		return
 	}
-	cmd := fmt.Sprintf("tar --use-compress-program='gzip -9' -cf %s %s", dest, strings.TrimRight(src, "/"))
+	cmd := fmt.Sprintf("tar --use-compress-program='gzip -9' -C %s -cf %s .", strings.TrimRight(src, "/"), dest)
 	utils.RunCmdWithOutput(cmd)
 }
 
@@ -172,7 +173,7 @@ func Decompress(dest string, src string) {
 		utils.DebugF("File not found: %s", src)
 		return
 	}
-
+	utils.MakeDir(dest)
 	cmd := fmt.Sprintf("tar -xf %s -C %s", src, dest)
 	utils.RunCmdWithOutput(cmd)
 }

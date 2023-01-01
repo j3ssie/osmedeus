@@ -67,27 +67,35 @@ image**](https://docs.osmedeus.org/installation/using-docker/).
 
 # Practical Scan Usage:
   osmedeus scan -T list_of_targets.txt -W custom_workspaces
+  osmedeus scan -t target.com -w workspace_name --debug
+  osmedeus scan -f general -t sample.com
   osmedeus scan --tactic aggressive -f general -t sample.com
-  osmedeus scan -f general -t www.sample.com
+  osmedeus scan -f extensive -t sample.com -t another.com
+  cat list_of_urls.txt | osmedeus scan -f urls
+  osmedeus scan --threads-hold=30 -f cidr -t 1.2.3.4/24
   osmedeus scan -m ~/.osmedeus/core/workflow/test/dirbscan.yaml -t list_of_urls.txt
   osmedeus scan --wfFolder ~/custom-workflow/ -f your-custom-workflow -t list_of_urls.txt
+  osmedeus scan --chunk --chunk-part 40 -c 2 -f cidr -t list-of-cidr.txt
 
 # Queue Usage:
   osmedeus queue -Q /tmp/queue-file.txt -c 2
   osmedeus queue --add -t example.com -Q /tmp/queue-file.txt
 
 # Provider Usage:
-  osmedeus provider build
+  osmedeus provider wizard
+  osmedeus provider validate
   osmedeus provider build --token xxx --rebuild --ic
   osmedeus provider create --name 'sample'
   osmedeus provider health --debug
+  osmedeus provider list
+  osmedeus provider delete --id 34317111 --id 34317112
 
 # Cloud Usage:
   osmedeus cloud -f [flowName] -t [target]
   osmedeus cloud -m [modulePath] -t [target]
-  osmedeus cloud -c 10 -f [flowName] -T [targetsFile]
-  osmedeus cloud --token xxx -G -c 10 -f [flowName] -T [targetsFile]
-  osmedeus cloud --chunk -c 10 -f [flowName] -t [targetsFile]
+  osmedeus cloud -c 5 -f [flowName] -T [targetsFile]
+  osmedeus cloud --token xxx -c 5 -f [flowName] -T [targetsFile]
+  osmedeus cloud --chunk -c 5 -f [flowName] -t [targetsFile]
 
 # Utilities Usage:
   ## Health check utility

@@ -8,7 +8,6 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
-	"github.com/flosch/pongo2/v6"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -107,11 +106,11 @@ func StrToInt(data string) int {
 }
 
 // GetOSEnv get environment variable
-func GetOSEnv(name string, alt string) string {
+func GetOSEnv(name string, defaultValue string) string {
 	variable, ok := os.LookupEnv(name)
 	if !ok {
-		if alt != "" {
-			return alt
+		if defaultValue != "" {
+			return defaultValue
 		}
 		return name
 	}
@@ -882,8 +881,8 @@ func IsWritable(filename string) (isWritable bool, err error) {
 	return
 }
 
-// OldRenderText resolve template from signature file
-func OldRenderText(format string, data map[string]string) string {
+// RenderText resolve template from signature file
+func RenderText(format string, data map[string]string) string {
 	t := template.Must(template.New("").Parse(format))
 	buf := &bytes.Buffer{}
 	err := t.Execute(buf, data)
@@ -891,25 +890,4 @@ func OldRenderText(format string, data map[string]string) string {
 		return format
 	}
 	return buf.String()
-}
-
-// RenderText resolve template from signature file
-func RenderText(format string, data map[string]string) string {
-	// for backward compatibility because new template using `{{variable}}` instead of `{{.variable}}`
-	if strings.Contains(format, "{{.") {
-		return OldRenderText(format, data)
-	}
-
-	variable := make(map[string]interface{})
-	for k, v := range data {
-		variable[k] = v
-	}
-	if tpl, err := pongo2.FromString(format); err == nil {
-		out, ok := tpl.Execute(variable)
-		if ok == nil {
-			return out
-		}
-		ErrorF("Error when resolve template: %v", ok)
-	}
-	return format
 }

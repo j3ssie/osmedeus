@@ -2,9 +2,12 @@ package provider
 
 import (
 	"fmt"
-	"github.com/cenkalti/backoff/v4"
-	"github.com/j3ssie/osmedeus/utils"
 	"strings"
+
+	"github.com/cenkalti/backoff/v4"
+	"github.com/fatih/color"
+	"github.com/j3ssie/osmedeus/utils"
+	"github.com/spf13/cast"
 )
 
 const (
@@ -27,6 +30,8 @@ func (p *Provider) GetSSHKey() (err error) {
 		err = p.GetSSHKeyDO()
 	case "ln", "line", "linode":
 		err = p.GetSSHKeyLN()
+	case "aw", "aws", "asw":
+		err = p.GetSSHKeyAWS()
 	default:
 		err = p.GetSSHKeyDO()
 	}
@@ -39,6 +44,8 @@ func (p *Provider) ListInstance() (err error) {
 		err = p.ListInstanceDO()
 	case "ln", "line", "linode":
 		err = p.ListInstanceLN()
+	case "aw", "aws", "asw":
+		err = p.ListInstanceAWS()
 	default:
 		err = p.ListInstanceDO()
 	}
@@ -51,6 +58,8 @@ func (p *Provider) ListSnapShot() (err error) {
 		err = p.ListSnapshotDO()
 	case "ln", "line", "linode":
 		err = p.ListSnapshotLN()
+	case "aw", "aws", "asw":
+		err = p.ListSnapshotAWS()
 	default:
 		err = p.ListSnapshotDO()
 	}
@@ -58,7 +67,7 @@ func (p *Provider) ListSnapShot() (err error) {
 }
 
 func (p *Provider) CreateInstance(name string) (err error) {
-	var id int
+	var id interface{}
 	operation := func() error {
 		switch p.ProviderName {
 		case "do", "digitalocean":
@@ -68,6 +77,13 @@ func (p *Provider) CreateInstance(name string) (err error) {
 			}
 		case "ln", "line", "linode":
 			id, err = p.CreateInstanceLN(name)
+			if err == nil {
+				err = p.Action(BootInstance, id)
+				err = p.Action(GetInstanceInfo, id)
+			}
+
+		case "aw", "aws", "asw":
+			id, err = p.CreateInstanceAWS(name)
 			if err == nil {
 				err = p.Action(BootInstance, id)
 				err = p.Action(GetInstanceInfo, id)
@@ -88,36 +104,38 @@ func (p *Provider) CreateInstance(name string) (err error) {
 	return nil
 }
 
-func (p *Provider) CreateInstanceF(name string) (err error) {
-	var id int
-	switch p.ProviderName {
-	case "do", "digitalocean":
-		id, err = p.CreateInstanceDO(name)
-		if err == nil {
-			err = p.Action(GetInstanceInfo, id)
-		}
-	case "ln", "line", "linode":
-		id, err = p.CreateInstanceLN(name)
-		if err == nil {
-			err = p.Action(BootInstance, id)
-			err = p.Action(GetInstanceInfo, id)
-		}
-	default:
-		id, err = p.CreateInstanceDO(name)
-		if err == nil {
-			err = p.Action(GetInstanceInfo, id)
-		}
-	}
-	return err
-}
+// func (p *Provider) CreateInstanceF(name string) (err error) {
+// 	var id int
+// 	switch p.ProviderName {
+// 	case "do", "digitalocean":
+// 		id, err = p.CreateInstanceDO(name)
+// 		if err == nil {
+// 			err = p.Action(GetInstanceInfo, id)
+// 		}
+// 	case "ln", "line", "linode":
+// 		id, err = p.CreateInstanceLN(name)
+// 		if err == nil {
+// 			err = p.Action(BootInstance, id)
+// 			err = p.Action(GetInstanceInfo, id)
+// 		}
+// 	default:
+// 		id, err = p.CreateInstanceDO(name)
+// 		if err == nil {
+// 			err = p.Action(GetInstanceInfo, id)
+// 		}
+// 	}
+// 	return err
+// }
 
-func (p *Provider) BootInstance(id int) (err error) {
+func (p *Provider) BootInstance(id interface{}) (err error) {
 	switch p.ProviderName {
 	case "do", "digitalocean":
 	case "ln", "line", "linode":
-		err = p.BootInstanceLN(id)
+		err = p.BootInstanceLN(cast.ToInt(id))
+	case "aw", "aws", "asw":
+		// err = p.AllowRootAccessAWS(cast.ToString(id))
 	default:
-		err = p.BootInstanceLN(id)
+		err = p.BootInstanceLN(cast.ToInt(id))
 	}
 	if err != nil {
 		utils.WarnF("error booting instance: %v", id)
@@ -126,20 +144,23 @@ func (p *Provider) BootInstance(id int) (err error) {
 	return nil
 }
 
-func (p *Provider) GetInstanceInfo(id int) (err error) {
+func (p *Provider) GetInstanceInfo(id interface{}) (err error) {
 	var instance Instance
 	switch p.ProviderName {
 	case "do", "digitalocean":
-		instance, err = p.InstanceInfoDO(id)
+		instance, err = p.InstanceInfoDO(cast.ToInt(id))
 	case "ln", "line", "linode":
-		instance, err = p.InstanceInfoLN(id)
+		instance, err = p.InstanceInfoLN(cast.ToInt(id))
+	case "aw", "aws", "asw":
+		instance, err = p.InstanceInfoAWS(cast.ToString(id))
 	default:
-		instance, err = p.InstanceInfoDO(id)
+		instance, err = p.InstanceInfoDO(cast.ToInt(id))
 	}
 	if err != nil {
-		utils.WarnF("error getting public IP of instance: %v", instance.InstanceID)
+		utils.WarnF("error getting public IP of instance: %v", color.HiBlueString("%v", id))
 		return err
 	}
+	p.Instances = append(p.Instances, instance)
 	return nil
 }
 
@@ -150,6 +171,8 @@ func (p *Provider) DeleteInstance(id string) (err error) {
 		err = p.DeleteInstanceDO(id)
 	case "ln", "line", "linode":
 		err = p.DeleteInstanceLN(id)
+	case "aw", "aws", "asw":
+		err = p.DeleteInstanceAWS(id)
 	default:
 		err = p.DeleteInstanceDO(id)
 	}
@@ -163,6 +186,8 @@ func (p *Provider) DeleteOldSnapshot() (err error) {
 			err = p.DeleteSnapShotDO(id)
 		case "ln", "line", "linode":
 			err = p.DeleteSnapShotLN(id)
+		case "aw", "aws", "asw":
+			err = p.DeleteImageAWS(id)
 		default:
 			err = p.DeleteSnapShotDO(id)
 		}

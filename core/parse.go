@@ -3,11 +3,6 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"github.com/Jeffail/gabs/v2"
-	"github.com/fatih/color"
-	"github.com/flosch/pongo2/v6"
-	"github.com/spf13/cast"
-	"golang.org/x/net/publicsuffix"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -16,6 +11,12 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/Jeffail/gabs/v2"
+	"github.com/fatih/color"
+	"github.com/flosch/pongo2/v6"
+	"github.com/spf13/cast"
+	"golang.org/x/net/publicsuffix"
 
 	"github.com/Shopify/yaml"
 	"github.com/j3ssie/osmedeus/libs"
@@ -167,8 +168,7 @@ func ParseInput(raw string, options libs.Options) map[string]string {
 	ROptions["baseThreads"] = cast.ToString(options.Threads)
 
 	ROptions["Version"] = libs.VERSION
-	ROptions["WSCDN"] = options.Cdn.WSURL
-	ROptions["CDN"] = options.Cdn.URL
+	ROptions["Bucket"] = options.Cdn.Bucket
 	ROptions["Date"] = time.Now().Format("2006-01-02")
 	ROptions["TS"] = utils.GetCurrentDay()
 
@@ -178,13 +178,13 @@ func ParseInput(raw string, options libs.Options) map[string]string {
 	ROptions["Plugins"] = options.Env.BinariesFolder
 	ROptions["Binaries"] = options.Env.BinariesFolder
 
+	ROptions["Backup"] = options.Env.BackupFolder
 	ROptions["Data"] = options.Env.DataFolder
 	ROptions["Workflow"] = options.Env.WorkFlowsFolder
 	ROptions["Scripts"] = options.Env.WorkFlowsFolder
 	ROptions["Cloud"] = options.Env.CloudConfigFolder
 
 	// ~/.osmedeus/clouds
-	//ROptions["CWorkspaces"] = options.Env.CloudDataFolder
 	ROptions["Workspaces"] = options.Env.WorkspacesFolder
 	if options.Scan.BaseWorkspace != "" {
 		ROptions["Workspaces"] = options.Scan.BaseWorkspace

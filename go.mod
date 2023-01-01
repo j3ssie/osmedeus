@@ -6,17 +6,18 @@ require (
 	github.com/Jeffail/gabs/v2 v2.6.1
 	github.com/Shopify/yaml v2.1.0+incompatible
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
+	github.com/aws/aws-sdk-go v1.44.162
 	github.com/cenkalti/backoff/v4 v4.2.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/digitalocean/godo v1.90.0
+	github.com/digitalocean/godo v1.93.0
 	github.com/fatih/color v1.13.0
 	github.com/flosch/pongo2/v6 v6.0.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible
-	github.com/gofiber/fiber/v2 v2.40.0
+	github.com/gofiber/fiber/v2 v2.40.1
 	github.com/gofiber/jwt/v2 v2.2.7
 	github.com/hashicorp/go-version v1.6.0
 	github.com/jasonlvhit/gocron v0.0.1
@@ -29,26 +30,26 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/panjf2000/ants v1.3.0
 	github.com/parnurzeal/gorequest v0.2.16
-	github.com/robertkrimen/otto v0.0.0-20221025135307-511d75fba9f8
+	github.com/robertkrimen/otto v0.2.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/sirupsen/logrus v1.9.0
-	github.com/slack-go/slack v0.11.4
+	github.com/slack-go/slack v0.12.0
 	github.com/spf13/cast v1.5.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.14.0
-	github.com/swaggo/swag v1.8.7
+	github.com/swaggo/swag v1.8.9
 	github.com/thoas/go-funk v0.9.2
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
-	github.com/xanzy/go-gitlab v0.75.0
-	golang.org/x/crypto v0.3.0
-	golang.org/x/net v0.2.0
-	golang.org/x/oauth2 v0.2.0
-	golang.org/x/term v0.2.0
-	golang.org/x/text v0.4.0
-	gorm.io/datatypes v1.0.7
+	github.com/xanzy/go-gitlab v0.77.0
+	golang.org/x/crypto v0.4.0
+	golang.org/x/net v0.4.0
+	golang.org/x/oauth2 v0.3.0
+	golang.org/x/term v0.3.0
+	golang.org/x/text v0.5.0
+	gorm.io/datatypes v1.1.0
 	gorm.io/driver/mysql v1.4.4
 	gorm.io/driver/sqlite v1.4.3
-	gorm.io/gorm v1.24.1
+	gorm.io/gorm v1.24.2
 )
 
 require (
@@ -64,7 +65,7 @@ require (
 	github.com/go-openapi/swag v0.19.15 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
-	github.com/go-sql-driver/mysql v1.6.0 // indirect
+	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.0.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
@@ -75,6 +76,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
@@ -104,7 +106,7 @@ require (
 	github.com/valyala/fasthttp v1.41.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	golang.org/x/sys v0.2.0 // indirect
+	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

@@ -1,0 +1,8 @@
+name: s3-cdn
+
+steps:
+  - scripts:
+      - "ExecCmd('mkdir -p /tmp/ott/')"
+      - "ExecCmd('seq 10 > /tmp/ott/source.txt')"
+      - "UploadToS3('/tmp/ott/on-s3.txt')"
+      - "DownloadFromS3('/tmp/ott/on-s3.txt', '/tmp/on-local-s3.txt')"

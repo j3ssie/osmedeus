@@ -32,11 +32,16 @@ func (p *Provider) ClientDO() {
 	p.Client = client
 }
 
-func (p *Provider) AccountDO() error {
+func (p *Provider) ConvertClientDO() *godo.Client {
 	client, ok := p.Client.(*godo.Client)
 	if !ok {
-		return fmt.Errorf("error convert client")
+		utils.ErrorF("error converting digital ocean session %v", ok)
 	}
+	return client
+}
+
+func (p *Provider) AccountDO() error {
+	client := p.ConvertClientDO()
 	ctx := context.TODO()
 
 	account, _, err := client.Account.Get(ctx)
@@ -55,10 +60,7 @@ func (p *Provider) AccountDO() error {
 }
 
 func (p *Provider) ListInstanceDO() error {
-	client, ok := p.Client.(*godo.Client)
-	if !ok {
-		return fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientDO()
 
 	ctx := context.TODO()
 	opt := &godo.ListOptions{
@@ -106,14 +108,10 @@ func (p *Provider) ListInstanceDO() error {
 	}
 
 	return nil
-
 }
 
 func (p *Provider) GetSSHKeyDO() error {
-	client, ok := p.Client.(*godo.Client)
-	if !ok {
-		return fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientDO()
 
 	ctx := context.TODO()
 	opt := &godo.ListOptions{
@@ -126,9 +124,7 @@ func (p *Provider) GetSSHKeyDO() error {
 		return fmt.Errorf("error listing ssh key -- %v", err)
 	}
 
-	//utils.DebugF("Looking for key: %v", p.SSHPublicKey)
 	for _, key := range keys {
-		//utils.DebugF("SSH Key: %v -- %v", key.ID, key.PublicKey)
 		if strings.TrimSpace(key.PublicKey) == strings.TrimSpace(p.SSHPublicKey) {
 			p.SSHKeyID = cast.ToString(key.ID)
 			p.SSHKeyFound = true
@@ -157,11 +153,7 @@ func (p *Provider) GetSSHKeyDO() error {
 }
 
 func (p *Provider) ListSnapshotDO() error {
-	client, ok := p.Client.(*godo.Client)
-	if !ok {
-		utils.ErrorF("error convert client")
-		return fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientDO()
 
 	ctx := context.TODO()
 	opt := &godo.ListOptions{
@@ -183,7 +175,7 @@ func (p *Provider) ListSnapshotDO() error {
 		}
 
 		if strings.TrimSpace(name) == strings.TrimSpace(p.SnapshotName) {
-			utils.InforF("Found base image snapshot with ID: %s", id)
+			utils.InforF("Found base image snapshot with ID: %s", color.HiBlueString(id))
 			p.SnapshotID = id
 			p.SnapshotName = name
 			p.SnapshotFound = true
@@ -195,11 +187,7 @@ func (p *Provider) ListSnapshotDO() error {
 }
 
 func (p *Provider) CreateInstanceDO(name string) (dropletId int, err error) {
-	client, ok := p.Client.(*godo.Client)
-	if !ok {
-		utils.ErrorF("error convert client")
-		return dropletId, fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientDO()
 
 	ctx := context.TODO()
 	createRequest := &godo.DropletCreateRequest{
@@ -228,21 +216,19 @@ func (p *Provider) CreateInstanceDO(name string) (dropletId int, err error) {
 
 	// get droplet IP info
 	dropletId = instance.ID
-	time.Sleep(60 * time.Second)
+	utils.DebugF("Created instance %v", color.HiBlueString("%v", instance.ID))
+	utils.DebugF("Waiting for the instance %v to be ready...", color.HiBlueString("%v", instance.ID))
+	time.Sleep(100 * time.Second)
 	return dropletId, nil
 }
 
 func (p *Provider) InstanceInfoDO(id int) (Instance, error) {
 	var parsedInstance Instance
-	client, ok := p.Client.(*godo.Client)
-	if !ok {
-		utils.ErrorF("error convert client")
-		return parsedInstance, fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientDO()
 	ctx := context.TODO()
 	instance, _, err := client.Droplets.Get(ctx, id)
 	if err != nil {
-		return parsedInstance, fmt.Errorf("error get instance info")
+		return parsedInstance, fmt.Errorf("error get instance info:")
 	}
 
 	ipAddress, err := instance.PublicIPv4()
@@ -266,33 +252,25 @@ func (p *Provider) InstanceInfoDO(id int) (Instance, error) {
 		ProviderName: "do",
 	}
 	p.CreatedInstance = parsedInstance
-	utils.DebugF("Created instance ID: %v -- %v -- %v", p.CreatedInstance.InstanceID, p.CreatedInstance.InstanceName, p.CreatedInstance.IPAddress)
+	utils.DebugF("Successfully Created Instance: %v -- %v -- %v", p.CreatedInstance.InstanceID, p.CreatedInstance.InstanceName, p.CreatedInstance.IPAddress)
 
 	return parsedInstance, nil
 }
 
 func (p *Provider) DeleteInstanceDO(id string) error {
-	client, ok := p.Client.(*godo.Client)
-	if !ok {
-		utils.ErrorF("error convert client")
-		return fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientDO()
 	ctx := context.TODO()
 	_, err := client.Droplets.Delete(ctx, cast.ToInt(id))
 	if err != nil {
 		utils.ErrorF("error delete instance -- %v", err)
 		return fmt.Errorf("error delete instance")
 	}
-	utils.InforF("Deleted instance ID: %v", color.HiRedString(id))
+	utils.InforF("Successfully Deleted instance ID: %v", color.HiRedString(id))
 	return nil
 }
 
 func (p *Provider) DeleteSnapShotDO(id string) error {
-	client, ok := p.Client.(*godo.Client)
-	if !ok {
-		utils.ErrorF("error convert client")
-		return fmt.Errorf("error convert client")
-	}
+	client := p.ConvertClientDO()
 	ctx := context.TODO()
 
 	_, err := client.Snapshots.Delete(ctx, id)

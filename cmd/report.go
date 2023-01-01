@@ -1,13 +1,16 @@
 package cmd
 
 import (
+	"io/ioutil"
+	"net/http"
+	"path"
+	"path/filepath"
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/utils"
 	"github.com/spf13/cobra"
-	"io/ioutil"
-	"net/http"
-	"path/filepath"
 )
 
 func init() {
@@ -92,8 +95,11 @@ func runReportExtract(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	for _, target := range options.Scan.Inputs {
-		core.ExtractBackup(target, options)
+	for _, input := range options.Scan.Inputs {
+		core.ExtractBackup(input, options)
+
+		target := strings.ReplaceAll(path.Base(input), ".tar.gz", "")
+		core.ListSingleWorkspace(options, target)
 	}
 
 	return nil

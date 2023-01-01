@@ -2,14 +2,15 @@ package distribute
 
 import (
 	"fmt"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/provider"
 	"github.com/j3ssie/osmedeus/utils"
-	"path"
-	"strings"
-	"time"
 )
 
 func (c *CloudRunner) PrepareInput() {
@@ -55,8 +56,7 @@ func (c *CloudRunner) StartScan() error {
 		return fmt.Errorf("error to start the scan")
 	}
 
-	utils.InforF("Create UI report for %s: %s", c.DestInstance, color.HiCyanString(c.Opt.Cloud.RawCommand))
-	//database.ScanDone(c.Opt, c.Target["Workspace"])
+	utils.DebugF("Create UI report for %s: %s", c.DestInstance, color.HiCyanString(c.Opt.Cloud.RawCommand))
 	c.Runner.DBDoneScan()
 	c.CreateUIReport()
 	return nil
@@ -93,10 +93,10 @@ func (c *CloudRunner) RunScan() error {
 		utils.ErrorF(out)
 		return fmt.Errorf("error running command on %v", c.DestInstance)
 	}
-	utils.InforF("Start to run %v -- %v", c.DestInstance, c.Opt.Cloud.RawCommand)
+	utils.InforF("Start to run the scan %v with command %v", color.HiYellowString(c.DestInstance), color.HiCyanString(c.Opt.Cloud.RawCommand))
 
 	// wait a bit for process really start
-	time.Sleep(60)
+	time.Sleep(60 * time.Second)
 	if !c.IsRunning() {
 		// @TODO: update DB cloud table for panic detected
 		c.DBErrorCloudScan()
@@ -110,8 +110,8 @@ func (c *CloudRunner) CheckingDone() error {
 	if c.Opt.Cloud.NoDelete {
 		return nil
 	}
-	utils.InforF("Checking scan process at: %s", c.PublicIP)
-	dest := fmt.Sprintf("/root/.%s/workspaces/%s/done", libs.BINARY, c.Target["Workspace"])
+	utils.InforF("Checking scan process at: %s", color.HiBlueString(c.PublicIP))
+	dest := fmt.Sprintf("%s/.%s/workspaces/%s/done", c.BasePath, libs.BINARY, c.Target["Workspace"])
 	cmd := fmt.Sprintf("file %s", dest)
 	out, _ := c.SSHExec(cmd)
 
@@ -125,7 +125,7 @@ func (c *CloudRunner) CheckingDone() error {
 		time.Sleep(time.Duration(waitTime) * time.Second)
 		out, _ = c.SSHExec(cmd)
 		if strings.Contains(out, "ASCII text") || strings.Contains(out, "JSON data") {
-			utils.InforF("The scan is done at: %s", c.PublicIP)
+			utils.InforF("The scan is done at: %s", color.HiBlueString(c.PublicIP))
 			return nil
 		}
 
@@ -152,7 +152,7 @@ func (c *CloudRunner) CheckingDone() error {
 
 func (c *CloudRunner) SyncResult() error {
 	target := c.Opt.Cloud.Input
-	utils.InforF("Sync back of %v from %v", target, c.DestInstance)
+	utils.InforF("Sync back the data of taget %v from %v", color.HiCyanString(target), color.HiYellowString(c.DestInstance))
 	// on vps machine
 	src := c.Opt.Cloud.LocalSyncFolder
 
@@ -192,7 +192,7 @@ func (c *CloudRunner) CopyTarget() error {
 
 func (c *CloudRunner) CopyWorkflow() error {
 	utils.DebugF("Sync workflow of %s to %s", c.Opt.Env.WorkFlowsFolder, c.DestInstance)
-	destWorkflow := "/root/osmedeus-base/workflow/"
+	destWorkflow := fmt.Sprintf("%v/osmedeus-base/workflow/", c.BasePath)
 	if c.Opt.Cloud.RemoteWorkflowFolder != "" {
 		destWorkflow = c.Opt.Cloud.RemoteWorkflowFolder
 	}

@@ -2,17 +2,18 @@ package core
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+
 	"github.com/Jeffail/gabs/v2"
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cast"
-	"io/ioutil"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
 )
 
 func ListWorkspaces(options libs.Options) (content [][]string) {
@@ -57,7 +58,7 @@ func ListWorkspaces(options libs.Options) (content [][]string) {
 			}
 
 			row := []string{
-				path.Base(ws.Name()), status, flowName, progress, wsFolder,
+				path.Base(color.HiMagentaString(ws.Name())), status, flowName, progress, wsFolder,
 			}
 			content = append(content, row)
 		}
@@ -72,6 +73,9 @@ func ListWorkspaces(options libs.Options) (content [][]string) {
 	table.Render()
 
 	fmt.Println(color.HiGreenString("📁 Total Workspaces: ") + color.HiMagentaString("%v", len(content)))
+	usage := color.HiWhiteString("💡 How to view report:") + color.HiGreenString(" osmedeus view -t %v", color.HiMagentaString("[targetName]"))
+	fmt.Println(usage)
+
 	return content
 }
 
@@ -82,21 +86,33 @@ func ListSingleWorkspace(options libs.Options, target string) (content [][]strin
 		return content
 	}
 
-	header := []string{"Workspace Name", "Module", "Report Name", "Report Path"}
-
+	header := []string{"Module", "Report Name", "Report Path"}
 	for _, ws := range workspaces {
 		if !ws.IsDir() {
 			continue
 		}
+		// compare target name with workspace name
 		if target != path.Base(ws.Name()) {
 			continue
 		}
 		wsFolder := path.Join(utils.NormalizePath(options.Env.WorkspacesFolder), ws.Name())
 
 		runtimeFile := path.Join(wsFolder, "runtime")
+		// only listing file that in report part
 		if utils.FileExists(runtimeFile) && !options.Report.Raw {
 			utils.InforF("Reading information from: %v", runtimeFile)
 			runtimeContent := utils.GetFileContent(runtimeFile)
+
+			isImported := false
+			if !strings.Contains(runtimeContent, options.Env.WorkspacesFolder) {
+				isImported = true
+			}
+			if strings.Contains(runtimeContent, "/root/.osmedeus/workspaces") {
+				runtimeContent = strings.ReplaceAll(runtimeContent, "/root/.osmedeus/workspaces", options.Env.WorkspacesFolder)
+			}
+
+			row := []string{"==> Workspace Name", color.HiGreenString(ws.Name()), color.HiGreenString(wsFolder)}
+			content = append(content, row)
 
 			if jsonParsed, ok := gabs.ParseJSON([]byte(runtimeContent)); ok == nil {
 				reports := jsonParsed.S("target", "reports").Children()
@@ -107,39 +123,54 @@ func ListSingleWorkspace(options libs.Options, target string) (content [][]strin
 					reportPath := cast.ToString(report.S("report_path").Data())
 
 					if !utils.FileExists(reportPath) {
+						// /root/.osmedeus/workspaces
 						continue
 					}
 
 					row := []string{
-						ws.Name(), moduleName, processReport(options, reportName), processReport(options, reportPath),
+						moduleName, processReport(options, reportName), processReport(options, reportPath),
 					}
-
 					content = append(content, row)
 				}
+				sep := []string{"==> --------", color.HiGreenString("----------"), color.HiGreenString("-----------")}
+				content = append(content, sep)
+
+				if len(content) <= 2 && isImported {
+					utils.WarnF("Workspace folder not found in runtime file, you might extract it from different machine that being run on different user")
+					utils.WarnF("💡 If you still have problem, please view it as raw format: %s", color.HiGreenString("osmedeus view -t %s --raw", target))
+				}
+
 			}
 			continue
 		}
 
-		header = []string{"Workspace Name", "Report Name", "Report Path"}
+		// --raw flag: list all avaliable file
+		header = []string{"Report Name", "Report Path"}
 		if options.Report.Static {
-			header = []string{"Workspace Name", "Report Name", "Report URL"}
+			header = []string{"Report Name", "Report URL"}
 		}
+		row := []string{"==> Workspace Name", color.HiGreenString(ws.Name())}
+		content = append(content, row)
+
 		filepath.Walk(wsFolder, func(reportPath string, _ os.FileInfo, err error) error {
 			reportName := path.Base(reportPath)
-			row := []string{
-				ws.Name(), processReport(options, reportName), processReport(options, reportPath),
-			}
+			row := []string{processReport(options, reportName), processReport(options, reportPath)}
 			content = append(content, row)
 			return nil
 		})
+
+		sep := []string{"==> --------", color.HiGreenString("-----------")}
+		content = append(content, sep)
+
 	}
 
 	table := tablewriter.NewWriter(os.Stderr)
-	table.SetAutoFormatHeaders(false)
+	table.SetAutoFormatHeaders(true)
 	table.SetHeader(header)
 	table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: true})
 	table.SetColWidth(120)
 	table.AppendBulk(content)
+	table.SetHeaderLine(true)
 	table.Render()
 
 	return content

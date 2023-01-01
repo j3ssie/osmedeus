@@ -1,9 +1,10 @@
 package provider
 
 import (
+	"io/ioutil"
+
 	"github.com/Shopify/yaml"
 	"github.com/j3ssie/osmedeus/utils"
-	"io/ioutil"
 )
 
 // ConfigProviders cloud config file
@@ -21,8 +22,12 @@ type Builder struct {
 
 type ConfigProvider struct {
 	// core part
-	Name         string `yaml:"name"`
-	Token        string `yaml:"token"`
+	Name  string `yaml:"name"`
+	Token string `yaml:"token"`
+
+	SecretKey   string `yaml:"secret_key"`
+	AccessKeyId string `yaml:"access_key"`
+
 	Provider     string `yaml:"provider"`
 	DefaultImage string `yaml:"default_image"`
 	Size         string `yaml:"size"`

@@ -2,11 +2,12 @@ package core
 
 import (
 	"fmt"
+	"path"
+	"time"
+
 	"github.com/j3ssie/osmedeus/execution"
 	"github.com/j3ssie/osmedeus/utils"
 	"github.com/robertkrimen/otto"
-	"path"
-	"time"
 )
 
 func (r *Runner) LoadExternalScripts() string {
@@ -189,22 +190,46 @@ func (r *Runner) LoadGitScripts() string {
 		return otto.Value{}
 	})
 
-	vm.Set(GetFileFromCDN, func(call otto.FunctionCall) otto.Value {
+	/* --- CDN S3 Bucket --- */
+
+	// UploadToS3("/tmp/src", "xxx/xxx") or UploadToS3("/tmp/src", "your-cdn.s3.ap-southeast-1.amazonaws.com")
+	vm.Set(UploadToS3, func(call otto.FunctionCall) otto.Value {
 		args := call.ArgumentList
+		bucket := ""
 		src := args[0].String()
-		output := args[1].String()
-		execution.GetFileFromCDN(options, src, output)
+		if len(args) > 1 {
+			bucket = args[1].String()
+		}
+
+		// if bucket is empty, use the default one
+		if bucket == "" {
+			bucket = options.Cdn.Bucket
+		}
+
+		execution.UploadToS3(options, src, bucket)
 		return otto.Value{}
 	})
 
-	vm.Set(GetWSFromCDN, func(call otto.FunctionCall) otto.Value {
+	// DownloadFromS3("xxx", "/tmp/dest")
+	vm.Set(DownloadFromS3, func(call otto.FunctionCall) otto.Value {
 		args := call.ArgumentList
+		bucket := ""
 		src := args[0].String()
-		output := args[1].String()
-		execution.GetWSFromCDN(options, src, output)
+		dest := args[1].String()
+		if len(args) > 2 {
+			bucket = args[2].String()
+		}
+
+		// if bucket is empty, use the default one
+		if bucket == "" {
+			bucket = options.Cdn.Bucket
+		}
+
+		execution.DownloadFromS3(options, src, dest, bucket)
 		return otto.Value{}
 	})
 
+	// DownloadFile("https://xxx.com", "/tmp/dest")
 	vm.Set(DownloadFile, func(call otto.FunctionCall) otto.Value {
 		args := call.ArgumentList
 		src := args[0].String()
@@ -212,6 +237,9 @@ func (r *Runner) LoadGitScripts() string {
 		execution.DownloadFile(options, src, output)
 		return otto.Value{}
 	})
+
+	/* --- end CDN S3 Bucket --- */
+
 	/* --- Gitlab API --- */
 
 	// CreateRepo("repo-name")
@@ -254,6 +282,8 @@ func (r *Runner) LoadGitScripts() string {
 		execution.ListProjects(0, options)
 		return otto.Value{}
 	})
+
+	/* --- end Gitlab API --- */
 
 	return output
 }

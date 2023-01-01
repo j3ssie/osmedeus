@@ -3,6 +3,10 @@ package distribute
 import (
 	"bufio"
 	"fmt"
+	"os"
+	"strings"
+	"syscall"
+
 	"github.com/Shopify/yaml"
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/libs"
@@ -10,13 +14,10 @@ import (
 	"github.com/j3ssie/osmedeus/utils"
 	"github.com/olekukonko/tablewriter"
 	"golang.org/x/term"
-	"os"
-	"strings"
-	"syscall"
 )
 
 func InitCloudSetup(opt libs.Options) {
-	var supportedProvider = []string{"digitalocean", "linode"}
+	var supportedProvider = []string{"aws", "digitalocean", "linode"}
 	fmt.Println("🔮 Start cloud setup wizard 🔮")
 	fmt.Println("Currently only these providers are supported: ", color.HiYellowString("%v", supportedProvider))
 
@@ -131,15 +132,38 @@ func generateProvider() provider.ConfigProvider {
 			Limit:        0,
 		}
 		fmt.Printf("==> provider selected: %s\n", color.HiBlueString("linode"))
+	case "aw", "asw", "aws":
+		configProvider = provider.ConfigProvider{
+			AccessKeyId:  "",
+			SecretKey:    "",
+			Provider:     "aws",
+			DefaultImage: "ami-0ee39036464b9a87e",
+			Size:         "t2.medium",
+			Region:       "ap-southeast-1",
+			Limit:        0,
+		}
+		fmt.Printf("==> provider selected: %s\n", color.HiBlueString("aws"))
 
 	default:
 		configProvider.Provider = "digitalocean"
 		fmt.Printf("==> provider selected: %s\n", color.HiBlueString("digitalocean"))
-
 	}
 
-	configProvider.Token = credentials()
-	configProvider.Name = fmt.Sprintf("digitalocean-%s", utils.RandomString(6))
+	if configProvider.Provider == "aws" {
+		configProvider.AccessKeyId = credentials("AWS AccessKeyId")
+		fmt.Println()
+		configProvider.SecretKey = credentials("AWS SecretKey")
+		fmt.Println()
+	} else {
+		configProvider.Token = credentials("API Token")
+	}
+
+	configProvider.Name = fmt.Sprintf("%s-%s", configProvider.Provider, utils.RandomString(6))
+
+	if configProvider.Provider == "aws" {
+		fmt.Printf("💡 Choose your image carefully because it related to region.\n")
+		fmt.Printf("💡 Refer for this link for more information: " + color.HiCyanString("https://wiki.debian.org/Cloud/AmazonEC2Image/Buster"))
+	}
 	configProvider.DefaultImage = StringPrompt("\n🌀 Choose "+color.HiGreenString("base image")+" for building Osmedeus Image?", configProvider.DefaultImage)
 	configProvider.Size = StringPrompt("🌀 Choose "+color.HiGreenString("instance type")+" for running the scan?", configProvider.Size)
 	configProvider.Region = StringPrompt("🌀 Choose "+color.HiGreenString("instance region")+" for running the scan?", configProvider.Region)
@@ -147,8 +171,8 @@ func generateProvider() provider.ConfigProvider {
 	return configProvider
 }
 
-func credentials() string {
-	fmt.Printf("🌀 Enter your %s? ", color.HiGreenString("API token"))
+func credentials(name string) string {
+	fmt.Printf("🔑 Enter your %s? ", color.HiGreenString(name))
 	var token string
 	for {
 		byteToken, err := term.ReadPassword(int(syscall.Stdin))
@@ -157,11 +181,10 @@ func credentials() string {
 			break
 		}
 		utils.WarnF("Looks like your token is invalid. Please try again: %v", token)
-
 	}
 
 	redactedToken := token[:5] + "***" + token[len(token)-5:]
-	fmt.Printf("Your token has been saved: %v", color.HiBlueString(redactedToken))
+	fmt.Printf("Your data has been saved: %v", color.HiBlueString(redactedToken))
 	return token
 }
 

@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"sync"
+
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/distribute"
 	"github.com/j3ssie/osmedeus/provider"
@@ -9,16 +12,15 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/panjf2000/ants"
 	"github.com/spf13/cobra"
-	"os"
-	"sync"
 )
 
 func init() {
 	var providerCmd = &cobra.Command{
-		Use:   "provider",
-		Short: "Cloud utils for Distributed Mode",
-		Long:  core.Banner(),
-		RunE:  runProvider,
+		Use:     "provider",
+		Aliases: []string{"provide", "pro"},
+		Short:   "Cloud utils for Distributed Mode",
+		Long:    core.Banner(),
+		RunE:    runProvider,
 	}
 
 	providerCmd.PersistentFlags().StringVar(&options.Cloud.RawCommand, "cmd", "", "raw command")
@@ -40,42 +42,46 @@ func init() {
 	providerWizard.PersistentFlags().BoolVar(&options.Cloud.AddNewProvider, "add", false, "Open wizard to add new provider only")
 
 	var providerBuild = &cobra.Command{
-		Use:   "build",
-		Short: "Build snapshot image",
-		Long:  core.Banner(),
-		RunE:  runProviderBuild,
+		Use:     "build",
+		Aliases: []string{"buil"},
+		Short:   "Build snapshot image",
+		Long:    core.Banner(),
+		RunE:    runProviderBuild,
 	}
 	var providerCreate = &cobra.Command{
-		Use:   "create",
-		Short: "Create cloud instance based on image",
-		Long:  core.Banner(),
-		RunE:  runProviderCreate,
+		Use:     "create",
+		Aliases: []string{"cre"},
+		Short:   "Create cloud instance based on image",
+		Long:    core.Banner(),
+		RunE:    runProviderCreate,
 	}
 
 	var providerHealth = &cobra.Command{
-		Use:   "health",
-		Short: "Run a health check on running cloud instances",
-		Long:  core.Banner(),
-		RunE:  runCloudHealth,
+		Use:     "health",
+		Aliases: []string{"heal"},
+		Short:   "Run a health check on running cloud instances",
+		Long:    core.Banner(),
+		RunE:    runCloudHealth,
 	}
 
 	var providerValidate = &cobra.Command{
-		Use:   "validate",
-		Short: "Run validate of the existing cloud configs",
-		Long:  core.Banner(),
-		RunE:  runProviderValidate,
+		Use:     "validate",
+		Aliases: []string{"val"},
+		Short:   "Run validate of the existing cloud configs",
+		Long:    core.Banner(),
+		RunE:    runProviderValidate,
 	}
 	var providerList = &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Short:   "List all instances",
+		Short:   "List all running instances",
 		Long:    core.Banner(),
 		RunE:    runProviderListing,
 	}
 	var providerDel = &cobra.Command{
 		Use:     "delete",
 		Aliases: []string{"del"},
-		Short:   "Delete instances",
+		Short:   "Delete instances by id",
 		Long:    core.Banner(),
 		RunE:    runProviderDelete,
 	}

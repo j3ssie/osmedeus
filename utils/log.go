@@ -2,16 +2,17 @@ package utils
 
 import (
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/j3ssie/osmedeus/libs"
-	"github.com/kyokomi/emoji"
-	"github.com/sirupsen/logrus"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/fatih/color"
+	"github.com/j3ssie/osmedeus/libs"
+	"github.com/kyokomi/emoji"
+	"github.com/sirupsen/logrus"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 var logger = logrus.New()
@@ -22,24 +23,26 @@ func InitLog(options *libs.Options) {
 	logDir := libs.LDIR
 	if options.LogFile == "" {
 		if !FolderExists(logDir) {
-			os.MkdirAll(logDir, 0766)
+			os.MkdirAll(logDir, 0777)
 		}
 		tmpFile, err := ioutil.TempFile(logDir, "osmedeus-*.log")
 		if err == nil {
+			options.LogFile = tmpFile.Name()
+		} else {
+			tmpFile, _ := ioutil.TempFile("/tmp/", "osmedeus-*.log")
 			options.LogFile = tmpFile.Name()
 		}
 	}
 
 	logDir = filepath.Dir(options.LogFile)
 	if !FolderExists(logDir) {
-		os.MkdirAll(logDir, 0755)
+		os.MkdirAll(logDir, 0777)
 	}
 
 	f, err := os.OpenFile(options.LogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error opening log file: %v\n", logDir)
+		fmt.Fprintf(os.Stderr, "error opening log file: %v\n", options.LogFile)
 		fmt.Fprintf(os.Stderr, "💡 You might want to switch to %v first via %v command", color.HiMagentaString("root user"), color.HiCyanString("sudo su"))
-		os.Exit(-1)
 	} else {
 		mwr = io.MultiWriter(os.Stdout, f)
 	}

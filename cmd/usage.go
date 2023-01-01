@@ -91,9 +91,13 @@ func UtilsUsage() string {
 	h += "  osmedeus health git\n"
 	h += "  osmedeus health cloud\n"
 	h += "  osmedeus version --json \n"
+
+	h += color.HiBlackString("  ## Update utilities\n")
 	h += "  osmedeus update \n"
 	h += "  osmedeus update --vuln\n"
 	h += "  osmedeus update --force --clean \n"
+
+	h += color.HiBlackString("  ## Other utilities\n")
 	h += "  osmedeus utils tmux ls \n"
 	h += "  osmedeus utils tmux logs -A -l 10 \n"
 	h += "  osmedeus utils ps \n"
@@ -146,9 +150,9 @@ func CloudUsage() string {
 	h += color.HiCyanString("\nCloud Usage:\n")
 	h += "  osmedeus cloud -f [flowName] -t [target] \n"
 	h += "  osmedeus cloud -m [modulePath] -t [target] \n"
-	h += "  osmedeus cloud -c 10 -f [flowName] -T [targetsFile] \n"
-	h += "  osmedeus cloud --token xxx -G -c 10 -f [flowName] -T [targetsFile] \n"
-	h += "  osmedeus cloud --chunk -c 10 -f [flowName] -t [targetsFile] \n"
+	h += "  osmedeus cloud -c 5 -f [flowName] -T [targetsFile] \n"
+	h += "  osmedeus cloud --token xxx -c 5 -f [flowName] -T [targetsFile] \n"
+	h += "  osmedeus cloud --chunk -c 5 -f [flowName] -t [targetsFile] \n"
 
 	return h
 }

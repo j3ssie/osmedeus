@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/utils"
 
 	"golang.org/x/crypto/ssh"
@@ -23,7 +24,7 @@ func (c *CloudRunner) SSHExec(command string) (string, error) {
 		return "", err
 	}
 
-	utils.DebugF("Running command on %s: %s", c.PublicIP, command)
+	utils.DebugF("Running command on %s: %s", color.HiBlueString(c.PublicIP), color.HiGreenString(command))
 	out, err := client.Cmd(command).Output()
 	if err != nil {
 		utils.ErrorF("err run command: %v", err)
@@ -34,13 +35,13 @@ func (c *CloudRunner) SSHExec(command string) (string, error) {
 
 func (c *CloudRunner) InitSSHClient() (*Client, error) {
 	host := fmt.Sprintf("%s:%s", c.PublicIP, "22")
-	utils.DebugF("Connecting to %v with key %v", host, c.SshPrivateKey)
-	client, err := DialWithKeyString(host, "root", c.Opt.Cloud.SecretKeyContent)
+	dest := color.HiCyanString("%s@%s", c.SSHUser, host)
+	utils.DebugF("Connecting to %v with key %v", dest, c.SshPrivateKey)
+	client, err := DialWithKeyString(host, c.SSHUser, c.Opt.Cloud.SecretKeyContent)
 	if err != nil {
 		utils.ErrorF("err connect to %v -- %v", host, err)
 		for i := 0; i < c.Opt.Cloud.Retry; i++ {
-			client, err = DialWithKeyString(host, "root", c.Opt.Cloud.SecretKeyContent)
-			//client, err = DialWithKey(host, "root", c.SshPrivateKey)
+			client, err = DialWithKeyString(host, c.SSHUser, c.Opt.Cloud.SecretKeyContent)
 			if err != nil {
 				time.Sleep(time.Duration(30*(i+1)) * time.Second)
 				continue

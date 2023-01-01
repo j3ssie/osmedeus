@@ -1,15 +1,18 @@
 package distribute
 
 import (
+	"fmt"
+	"os"
+	"strings"
+	"sync"
+
+	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/database"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/provider"
 	"github.com/j3ssie/osmedeus/utils"
 	"github.com/panjf2000/ants"
-	"os"
-	"strings"
-	"sync"
 )
 
 type CloudRunner struct {
@@ -28,6 +31,8 @@ type CloudRunner struct {
 	DestInstance  string
 	SshPublicKey  string
 	SshPrivateKey string
+	SSHUser       string
+	BasePath      string
 
 	InstanceID   string
 	InstanceName string
@@ -78,7 +83,9 @@ func InitCloud(options libs.Options, targets []string) {
 				//}
 
 				target = PrepareTarget(target, options)
-				utils.BlockF("start-scan", utils.CleanPath(target))
+				if !options.Cloud.OnlyCreateDroplet {
+					utils.BlockF("start-scan", utils.CleanPath(target))
+				}
 
 				// really start to run scan here
 				err := selectedCloud.Scan(target)
@@ -88,8 +95,10 @@ func InitCloud(options libs.Options, targets []string) {
 					continue
 				}
 
-				utils.BlockF("done-scan", utils.CleanPath(target))
-				utils.InforF("--------------------------------")
+				if !options.Cloud.OnlyCreateDroplet {
+					utils.BlockF("done-scan", utils.CleanPath(target))
+					utils.InforF("--------------------------------")
+				}
 				isDone = true
 			}
 			break
@@ -117,7 +126,7 @@ func GetClouds(options libs.Options) []CloudRunner {
 
 	// parse config from cloud/config.yaml file
 	providerConfigs, err := provider.ParseProvider(options.CloudConfigFile)
-	utils.DebugF("Parsing cloud config from: %s", options.CloudConfigFile)
+	utils.DebugF("Parsing cloud config from: %s", color.HiCyanString(options.CloudConfigFile))
 	if err != nil {
 		return cloudInfos
 	}
@@ -147,7 +156,7 @@ func GetClouds(options libs.Options) []CloudRunner {
 		cloudInfos = append(cloudInfos, cloudInfo)
 	}
 
-	utils.InforF("Number of cloud provider prepared in queue: %v", len(cloudInfos))
+	utils.InforF("Number of cloud providers ready in queue: %v", color.HiMagentaString("%v", len(cloudInfos)))
 	return cloudInfos
 }
 
@@ -162,6 +171,14 @@ func SetupProvider(opt libs.Options, providerConfig provider.ConfigProvider) Clo
 		return cloudRunner
 	}
 	cloudRunner.Provider = providerCloud
+
+	// custom user for aws
+	if cloudRunner.Provider.ProviderName == "aws" {
+		cloudRunner.SSHUser = "admin"
+	}
+	if cloudRunner.SSHUser != "root" {
+		cloudRunner.BasePath = fmt.Sprintf("/home/%s", cloudRunner.SSHUser)
+	}
 
 	if opt.Cloud.IgnoreSetup {
 		return cloudRunner
@@ -183,6 +200,8 @@ func SetupProvider(opt libs.Options, providerConfig provider.ConfigProvider) Clo
 func (c *CloudRunner) Prepare() {
 	c.SshPrivateKey = c.Opt.Cloud.SecretKey
 	c.SshPublicKey = c.Opt.Cloud.PublicKey
+	c.SSHUser = "root"
+	c.BasePath = "/root"
 
 	// make sure the permission of private key is right
 	os.Chmod(utils.NormalizePath(c.SshPrivateKey), 0600)

@@ -1,8 +1,9 @@
 package provider
 
 import (
-	"github.com/davecgh/go-spew/spew"
 	"testing"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 var sampleToken = "d17ab13b0a3fccafefc932b9db95be45464339073100423336045977c0924491"
@@ -82,4 +83,13 @@ func TestProviderLN(t *testing.T) {
 	provider.DeleteInstance("29530163")
 	//provider.AccountLN()
 	spew.Dump(provider.Instances)
+}
+
+func TestProviderAccountAWS(t *testing.T) {
+	provider, err := InitProvider("aws", sampleToken)
+	if err != nil {
+		t.Errorf("error ")
+	}
+
+	provider.AccountDO()
 }
