@@ -54,7 +54,12 @@ func init() {
 	cloudCmd.Flags().IntVar(&options.Cloud.Retry, "retry", 10, "Number of retry when command is error")
 	cloudCmd.SetHelpFunc(CloudHelp)
 	RootCmd.AddCommand(cloudCmd)
-
+	cloudCmd.PreRun = func(cmd *cobra.Command, args []string) {
+		if options.FullHelp {
+			cmd.Help()
+			os.Exit(0)
+		}
+	}
 }
 
 func runCloud(cmd *cobra.Command, _ []string) error {

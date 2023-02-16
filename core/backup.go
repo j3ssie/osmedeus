@@ -16,6 +16,7 @@ import (
 // Decompress('{{Output}}', '{{Backup}}/{{Workspace}}.tar.gz')
 
 func (r *Runner) BackupWorkspace() {
+	utils.InforF("Backing up the workspace: %v", r.Target["Workspace"])
 	outputDir := r.Target["Output"]
 	dest := path.Join(r.Opt.Env.BackupFolder, r.Target["Workspace"]) + ".tar.gz"
 	if utils.FileExists(dest) {

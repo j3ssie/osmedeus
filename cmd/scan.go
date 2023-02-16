@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"os"
 	"strings"
 	"sync"
 
@@ -24,6 +25,12 @@ func init() {
 
 	scanCmd.SetHelpFunc(ScanHelp)
 	RootCmd.AddCommand(scanCmd)
+	scanCmd.PreRun = func(cmd *cobra.Command, args []string) {
+		if options.FullHelp {
+			cmd.Help()
+			os.Exit(0)
+		}
+	}
 }
 
 func runScan(_ *cobra.Command, _ []string) error {

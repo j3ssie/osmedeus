@@ -3,9 +3,10 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"github.com/j3ssie/osmedeus/database"
 	"os"
 	"strings"
+
+	"github.com/j3ssie/osmedeus/database"
 
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/libs"
@@ -19,7 +20,7 @@ var options = libs.Options{}
 //var DB *gorm.DB
 
 var RootCmd = &cobra.Command{
-	Use:   fmt.Sprintf("%s", libs.BINARY),
+	Use:   libs.BINARY,
 	Short: fmt.Sprintf("%s - %s", libs.BINARY, libs.DESC),
 	Long:  core.Banner(),
 }
@@ -72,6 +73,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVarP(&options.Resume, "resume", "R", false, "Enable Resume mode to skip modules that have already been finished")
 	RootCmd.PersistentFlags().BoolVar(&options.Debug, "debug", false, "Enable Debug output")
 	RootCmd.PersistentFlags().BoolVarP(&options.Quite, "quite", "q", false, "Show only essential information")
+	RootCmd.PersistentFlags().BoolVar(&options.FullHelp, "hh", false, "Show full help message")
 	RootCmd.PersistentFlags().BoolVar(&options.WildCardCheck, "ww", false, "Check for wildcard target")
 	RootCmd.PersistentFlags().BoolVar(&options.DisableValidateInput, "nv", false, "Disable Validate Input")
 	RootCmd.PersistentFlags().BoolVar(&options.Update.NoUpdate, "nu", false, "Disable Update options")
@@ -101,6 +103,12 @@ func init() {
 
 	RootCmd.SetHelpFunc(RootHelp)
 	cobra.OnInitialize(initConfig)
+	RootCmd.PreRun = func(cmd *cobra.Command, args []string) {
+		if options.FullHelp {
+			cmd.Help()
+			os.Exit(0)
+		}
+	}
 }
 
 // initConfig reads in config file and ENV variables if set.

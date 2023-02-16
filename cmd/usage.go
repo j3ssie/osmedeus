@@ -17,7 +17,6 @@ func RootUsage() {
 	h += QueueUsage()
 	h += ReportUsage()
 	h += UtilsUsage()
-
 	fmt.Println(h)
 }
 
@@ -33,10 +32,14 @@ func ScanUsage() string {
   ## Start a general scan but exclude some of the module
   osmedeus scan -t sample.com -x screenshot -x spider
   
+  ## Initiate the scan using a speed option other than the default setting.
+  osmedeus scan -f vuln --tactic gently -t sample.com
+  osmedeus scan --threads-hold=10 -t sample.com
+  
   ## Start a simple scan with other flow
   osmedeus scan -f vuln -t sample.com
   osmedeus scan -f extensive -t sample.com -t another.com
-  
+
   ## Scan list of targets
   osmedeus scan -T list_of_targets.txt
   
@@ -55,6 +58,9 @@ func ScanUsage() string {
 
   ## Start the scan with your custom workflow folder
   osmedeus scan --wfFolder ~/custom-workflow/ -f your-custom-workflow -t sample.com
+
+  ## Start a normal scan and backup entire workflow folder to the backup folder
+  osmedeus scan --backup -f domains -t list-of-subdomains.txt
 
   ## Start the scan with chunk inputs to review the output way more much faster
   osmedeus scan --chunk --chunk-parts 20 -f cidr -t list-of-100-cidr.txt
@@ -78,7 +84,7 @@ func ScanUsage() string {
 	h += "  osmedeus scan --tactic aggressive -f general -t sample.com\n"
 	h += "  osmedeus scan -f extensive -t sample.com -t another.com\n"
 	h += "  cat list_of_urls.txt | osmedeus scan -f urls\n"
-	h += "  osmedeus scan --threads-hold=30 -f cidr -t 1.2.3.4/24\n"
+	h += "  osmedeus scan --threads-hold=15 -f cidr -t 1.2.3.4/24\n"
 	h += "  osmedeus scan -m ~/.osmedeus/core/workflow/test/dirbscan.yaml -t list_of_urls.txt\n"
 	h += "  osmedeus scan --wfFolder ~/custom-workflow/ -f your-custom-workflow -t list_of_urls.txt\n"
 	h += "  osmedeus scan --chunk --chunk-part 40 -c 2 -f cidr -t list-of-cidr.txt\n"
@@ -134,7 +140,7 @@ func QueueHelp(cmd *cobra.Command, _ []string) {
 	fmt.Println(cmd.UsageString())
 	h := QueueUsage()
 	fmt.Println(h)
-	printDocs()
+	printDocs(cmd)
 }
 
 func CloudUsage() string {
@@ -171,56 +177,76 @@ func ReportUsage() string {
 // ScanHelp scan help message
 func ScanHelp(cmd *cobra.Command, _ []string) {
 	fmt.Println(core.Banner())
-	fmt.Println(cmd.UsageString())
+	if options.FullHelp {
+		fmt.Println(cmd.UsageString())
+	}
 	h := ScanUsage()
 	fmt.Println(h)
-	printDocs()
+	printDocs(cmd)
 }
 
 // CloudHelp scan help message
 func CloudHelp(cmd *cobra.Command, _ []string) {
 	fmt.Println(core.Banner())
-	fmt.Println(cmd.UsageString())
+	if options.FullHelp {
+		fmt.Println(cmd.UsageString())
+	}
 	h := CloudUsage()
 	fmt.Println(h)
-	printDocs()
+	printDocs(cmd)
 }
 
 // ConfigHelp config help message
 func ConfigHelp(cmd *cobra.Command, _ []string) {
 	fmt.Println(core.Banner())
-	fmt.Println(cmd.UsageString())
+	if options.FullHelp {
+		fmt.Println(cmd.UsageString())
+	}
 	h := ConfigUsage()
+
 	fmt.Println(h)
-	printDocs()
+	printDocs(cmd)
 }
 
 // UtilsHelp utils help message
 func UtilsHelp(cmd *cobra.Command, _ []string) {
 	fmt.Println(core.Banner())
-	fmt.Println(cmd.UsageString())
+	if options.FullHelp {
+		fmt.Println(cmd.UsageString())
+	}
 	h := UtilsUsage()
 	fmt.Println(h)
-	printDocs()
+	printDocs(cmd)
 }
 
 // ReportHelp utils help message
 func ReportHelp(cmd *cobra.Command, _ []string) {
 	fmt.Println(core.Banner())
-	fmt.Println(cmd.UsageString())
+	if options.FullHelp {
+		fmt.Println(cmd.UsageString())
+	}
 	h := ReportUsage()
 	fmt.Println(h)
-	printDocs()
+	printDocs(cmd)
 }
 
 // RootHelp print help message
 func RootHelp(cmd *cobra.Command, _ []string) {
 	fmt.Println(core.Banner())
-	fmt.Println(cmd.UsageString())
+	if options.FullHelp {
+		fmt.Println(cmd.UsageString())
+	}
 	RootUsage()
-	printDocs()
+	printDocs(cmd)
 }
 
-func printDocs() {
+func printDocs(cmd *cobra.Command) {
+	if !options.FullHelp {
+		if cmd.Use == libs.BINARY {
+			fmt.Printf("💡 For full help message, please run: %s\n", color.GreenString("osmedeus --hh"))
+		} else {
+			fmt.Printf("💡 For full help message, please run: %s or %s\n", color.GreenString("osmedeus --hh"), color.GreenString("osmedeus "+cmd.Use+" --hh"))
+		}
+	}
 	fmt.Printf("📖 Documentation can be found here: %s\n", color.GreenString(libs.DOCS))
 }

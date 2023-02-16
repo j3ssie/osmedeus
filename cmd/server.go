@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/server"
@@ -23,6 +24,12 @@ func init() {
 	serverCmd.Flags().BoolVar(&options.Server.PreFork, "prefork", false, "Enable Prefork mode for the api server")
 	serverCmd.Flags().BoolVarP(&options.Server.NoAuthen, "no-auth", "A", false, "Disable authentication for the api server")
 	RootCmd.AddCommand(serverCmd)
+	serverCmd.PreRun = func(cmd *cobra.Command, args []string) {
+		if options.FullHelp {
+			cmd.Help()
+			os.Exit(0)
+		}
+	}
 }
 
 func runServer(cmd *cobra.Command, _ []string) error {

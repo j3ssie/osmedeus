@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/execution"
@@ -69,6 +71,13 @@ func init() {
 	utilsCmd.SetHelpFunc(UtilsHelp)
 	RootCmd.AddCommand(utilsCmd)
 	RootCmd.AddCommand(workflowCmd)
+
+	utilsCmd.PreRun = func(cmd *cobra.Command, args []string) {
+		if options.FullHelp {
+			cmd.Help()
+			os.Exit(0)
+		}
+	}
 }
 
 func runUtils(_ *cobra.Command, _ []string) error {

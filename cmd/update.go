@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/utils"
 	"github.com/spf13/cobra"
@@ -20,6 +22,12 @@ func init() {
 	// generate update meta data
 	updateCmd.Flags().StringVar(&options.Update.GenerateMeta, "gen", "", "Generate metadata for update")
 	RootCmd.AddCommand(updateCmd)
+	updateCmd.PreRun = func(cmd *cobra.Command, args []string) {
+		if options.FullHelp {
+			cmd.Help()
+			os.Exit(0)
+		}
+	}
 }
 
 func runUpdate(cmd *cobra.Command, _ []string) error {

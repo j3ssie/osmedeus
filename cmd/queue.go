@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"strings"
 
@@ -27,6 +28,12 @@ func init() {
 	queueCmd.PersistentFlags().StringVar(&options.Queue.RawCommand, "cmd", "", "Raw Command to run")
 	queueCmd.SetHelpFunc(QueueHelp)
 	RootCmd.AddCommand(queueCmd)
+	queueCmd.PreRun = func(cmd *cobra.Command, args []string) {
+		if options.FullHelp {
+			cmd.Help()
+			os.Exit(0)
+		}
+	}
 }
 
 func runQueue(_ *cobra.Command, _ []string) error {

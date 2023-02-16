@@ -2,6 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path"
+	"sort"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/execution"
@@ -9,9 +13,6 @@ import (
 	"github.com/j3ssie/osmedeus/utils"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"os"
-	"path"
-	"sort"
 )
 
 func init() {
@@ -23,6 +24,12 @@ func init() {
 		RunE:    runHealth,
 	}
 	RootCmd.AddCommand(healthCmd)
+	healthCmd.PreRun = func(cmd *cobra.Command, args []string) {
+		if options.FullHelp {
+			cmd.Help()
+			os.Exit(0)
+		}
+	}
 }
 
 func runHealth(_ *cobra.Command, args []string) error {
@@ -79,7 +86,7 @@ func runHealth(_ *cobra.Command, args []string) error {
 		fmt.Printf("‼️ There is might be something wrong with your workflow setup: %v\n", err)
 		return nil
 	}
-	fmt.Printf(color.GreenString("\n🦾 It’s all good. Happy Hacking 🦾\n"))
+	fmt.Printf(color.GreenString("\n🦾 Everything is in order. Happy Hacking 🦾\n"))
 	return nil
 }
 

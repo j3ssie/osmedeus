@@ -94,6 +94,12 @@ func init() {
 	providerCmd.AddCommand(providerBuild)
 	providerCmd.SetHelpFunc(CloudHelp)
 	RootCmd.AddCommand(providerCmd)
+	providerCmd.PreRun = func(cmd *cobra.Command, args []string) {
+		if options.FullHelp {
+			cmd.Help()
+			os.Exit(0)
+		}
+	}
 }
 
 func runCloudHealth(_ *cobra.Command, _ []string) error {

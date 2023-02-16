@@ -98,9 +98,10 @@ type Scan struct {
 // CloudInstance store cloud scan information to check
 type CloudInstance struct {
 	Model
-
-	Token    string `gorm:"type:varchar(255)" json:"token"`
-	Provider string `gorm:"type:varchar(255)" json:"provider"`
+	Token       string `gorm:"type:varchar(255)" json:"token"`
+	AccessKeyId string `gorm:"type:varchar(255)" json:"access_key_id"`
+	SecretKey   string `gorm:"type:varchar(255)" json:"secret_key"`
+	Provider    string `gorm:"type:varchar(255)" json:"provider"`
 
 	InputName  string `gorm:"type:varchar(255)" json:"input_name"`
 	IPAddress  string `gorm:"type:varchar(255)" json:"ip_address"`

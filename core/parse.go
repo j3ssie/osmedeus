@@ -169,8 +169,11 @@ func ParseInput(raw string, options libs.Options) map[string]string {
 
 	ROptions["Version"] = libs.VERSION
 	ROptions["Bucket"] = options.Cdn.Bucket
-	ROptions["Date"] = time.Now().Format("2006-01-02")
-	ROptions["TS"] = utils.GetCurrentDay()
+
+	ROptions["Today"] = time.Now().Format("2006-01-02")
+	ROptions["Date"] = time.Now().Format("2006-01-02T15:04:05")
+	ROptions["TimeStamp"] = utils.GetTS()
+	ROptions["TS"] = time.Now().Format("2006-01-02") + "|" + utils.GetTS()
 
 	/* --- start to load default Env --- */
 	// ~/osmedeus-base
@@ -184,7 +187,6 @@ func ParseInput(raw string, options libs.Options) map[string]string {
 	ROptions["Scripts"] = options.Env.WorkFlowsFolder
 	ROptions["Cloud"] = options.Env.CloudConfigFolder
 
-	// ~/.osmedeus/clouds
 	ROptions["Workspaces"] = options.Env.WorkspacesFolder
 	if options.Scan.BaseWorkspace != "" {
 		ROptions["Workspaces"] = options.Scan.BaseWorkspace

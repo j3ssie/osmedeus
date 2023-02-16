@@ -2,12 +2,13 @@ package core
 
 import (
 	"fmt"
+	"path"
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/go-playground/validator/v10"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
-	"path"
-	"strings"
 )
 
 func (r *Runner) Validator() error {
@@ -54,7 +55,7 @@ func (r *Runner) Validator() error {
 		utils.ErrorF("unrecognized input: %v", r.Input)
 		return err
 	}
-	utils.InforF("Start validating input: %v", color.HiCyanString("%v -- %v", r.Input, r.InputType))
+	utils.InforF("Start validating input: %v -- %v", color.HiCyanString(r.Input), color.HiCyanString(r.InputType))
 
 	if !strings.HasPrefix(r.RequiredInput, r.InputType) {
 		return fmt.Errorf("input does not match the require validation: inputType:%v -- requireType:%v", r.InputType, r.RequiredInput)

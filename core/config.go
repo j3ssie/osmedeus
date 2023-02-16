@@ -47,7 +47,7 @@ func InitConfig(options *libs.Options) error {
 
 	if !utils.FileExists(options.ConfigFile) {
 		// Some default config if config file doesn't exist
-		secret := utils.GenHash(utils.RandomString(8) + utils.GetTS())
+		secret := utils.GenHash(utils.RandomString(8) + utils.GetTS())[:32] // only 32 char
 		prefix := secret[len(secret)-20 : len(secret)-1]
 
 		v.SetDefault("Server", map[string]string{

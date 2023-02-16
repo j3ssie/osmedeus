@@ -3,6 +3,7 @@ package cmd
 import (
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -54,6 +55,12 @@ func init() {
 	reportCmd.PersistentFlags().BoolVar(&options.Report.Static, "static", false, "Show report file with Prefix Static")
 	reportCmd.SetHelpFunc(ReportHelp)
 	RootCmd.AddCommand(reportCmd)
+	reportCmd.PreRun = func(cmd *cobra.Command, args []string) {
+		if options.FullHelp {
+			cmd.Help()
+			os.Exit(0)
+		}
+	}
 }
 
 func runReportList(_ *cobra.Command, _ []string) error {

@@ -13,6 +13,7 @@ type Options struct {
 	Timeout           string
 	EnableFormatInput bool
 	Verbose           bool
+	FullHelp          bool
 
 	// some disable options
 	NoNoti               bool
