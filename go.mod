@@ -42,10 +42,10 @@ require (
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	github.com/xanzy/go-gitlab v0.77.0
 	golang.org/x/crypto v0.5.0
-	golang.org/x/net v0.5.0
+	golang.org/x/net v0.7.0
 	golang.org/x/oauth2 v0.3.0
-	golang.org/x/term v0.4.0
-	golang.org/x/text v0.6.0
+	golang.org/x/term v0.5.0
+	golang.org/x/text v0.7.0
 	gorm.io/datatypes v1.1.0
 	gorm.io/driver/mysql v1.4.4
 	gorm.io/driver/sqlite v1.4.3
@@ -67,7 +67,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.0.0 // indirect
-	github.com/golang-module/dongle v0.2.5 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
@@ -101,14 +100,13 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
-	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.41.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	golang.org/x/sys v0.4.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
