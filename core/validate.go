@@ -33,8 +33,13 @@ func (r *Runner) Validator() error {
 			if strings.TrimSpace(input) == "" {
 				continue
 			}
+			// no more validation if it's file 'validator: file'
+			if r.RequiredInput == "file" {
+				continue
+			}
 
 			inputType, err := validate(v, input)
+			// fmt.Println("r.RequiredInput, inputType", r.RequiredInput, inputType)
 			if err == nil {
 				// really validate thing
 				if !strings.HasPrefix(r.RequiredInput, inputType) {

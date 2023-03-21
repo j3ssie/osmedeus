@@ -1,16 +1,17 @@
 package core
 
 import (
+	"os"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/database"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/robertkrimen/otto"
-	"github.com/spf13/cast"
-	"os"
-	"path"
-	"strings"
 )
 
 func (r *Runner) LoadDBScripts() string {
@@ -78,26 +79,21 @@ func (r *Runner) LoadDBScripts() string {
 		return otto.Value{}
 	})
 
-	// CreateReport('report', 'subdomain')
 	r.VM.Set(CreateReport, func(call otto.FunctionCall) otto.Value {
 		args := call.ArgumentList
-		report := args[0].String()
-		if utils.FileExists(report) {
+		reportPath := args[0].String()
+		if utils.FileExists(reportPath) {
 			return otto.Value{}
 		}
 		moduleName := "inline"
 		if len(args) > 1 {
 			moduleName = args[1].String()
 		}
-
-		reportObj := database.Report{
-			ReportName:  path.Base(report),
-			Module:      moduleName,
-			ReportPath:  report,
-			ReportType:  "",
-			TargetRefer: r.TargetObj.ID,
+		reportItem := database.Report{
+			ReportPath: reportPath,
+			Module:     moduleName,
 		}
-		database.NewReport(&reportObj)
+		r.TargetObj.Reports = append(r.TargetObj.Reports, reportItem)
 		return otto.Value{}
 	})
 
@@ -105,38 +101,19 @@ func (r *Runner) LoadDBScripts() string {
 }
 
 func (r *Runner) DBNewTarget() {
-	if r.Opt.NoDB {
-		return
-	}
-
-	//// this is just sample org
-	//org := database.Org{
-	//	Name: "Sample Org",
-	//	Desc: "Sample Desc",
-	//	//Targets: nil,
-	//}
-	//database.NewOrg(&org)
-
 	r.TargetObj = database.Target{
 		InputName: r.Input,
 		Workspace: r.Workspace,
 		InputType: r.InputType,
-		//OrgRefer:  org.ID,
 	}
-	database.DBUpdateTarget(&r.TargetObj)
+
+	r.DBRuntimeUpdate()
 }
 
 func (r *Runner) DBNewScan() {
-	if r.Opt.NoDB {
-		return
-	}
-
 	r.ScanObj = database.Scan{
 		TaskType: r.RoutineType,
 		TaskName: path.Base(r.RoutineName),
-
-		// this should be user id as uuid
-		//UID: r.RunnerSource,
 
 		TotalSteps: r.TotalSteps,
 		InputName:  r.Input,
@@ -148,18 +125,23 @@ func (r *Runner) DBNewScan() {
 		IsRunning:  true,
 		IsDone:     false,
 		IsPrepared: true,
-	}
-
-	if r.Opt.ScanID != "" {
-		utils.InforF("Continue scanning on scan id: %v", r.Opt.ScanID)
-		r.ScanObj.ID = cast.ToUint(r.Opt.ScanID)
+		IsStarted:  true,
 	}
 
 	if r.RunnerType == "cloud" {
 		r.ScanObj.IsCloud = true
 	}
 
-	database.DBNewScan(&r.ScanObj)
+	if r.Opt.Scan.RemoteCall {
+		r.ScanObj.IsCloud = true
+	}
+
+	r.ScanObj.CreatedAt = time.Now()
+
+	if runtimeData, err := jsoniter.MarshalToString(r.ScanObj); err == nil {
+		utils.WriteToFile(r.RuntimeFile, runtimeData)
+	}
+
 }
 
 func (r *Runner) DBUpdateScan() {
@@ -174,16 +156,11 @@ func (r *Runner) DBUpdateScan() {
 	} else {
 		r.ScanObj.IsRunning = true
 		r.ScanObj.IsDone = false
+
 	}
 
-	utils.DebugF("[DB] Done module %v with %v/%v steps ", r.CurrentModule, r.DoneStep, r.TotalSteps)
-	database.DBUpdateScan(&r.ScanObj)
-
-	r.ScanObj.Target = r.TargetObj
-	runtimeData, err := jsoniter.MarshalToString(r.ScanObj)
-	if err == nil {
-		utils.WriteToFile(r.RuntimeFile, runtimeData)
-	}
+	utils.DebugF("[DB] Finished %v steps in the %v module", color.HiCyanString("%v/%v", r.DoneStep, r.TotalSteps), r.CurrentModule)
+	r.DBRuntimeUpdate()
 }
 
 func (r *Runner) DBDoneScan() {
@@ -193,41 +170,49 @@ func (r *Runner) DBDoneScan() {
 	r.ScanObj.DoneStep = r.TotalSteps
 	r.ScanObj.IsDone = true
 	r.ScanObj.IsRunning = false
+	r.ScanObj.IsStarted = false
+	r.ScanObj.UpdatedAt = time.Now()
 
-	utils.DebugF("[DB] Done the scan: %v -- %v", r.ScanObj.InputName, r.ScanObj.TaskName)
-	database.DBUpdateScan(&r.ScanObj)
+	utils.DebugF("[DB] The scan has been completed: %v -- %v", color.HiCyanString(r.ScanObj.InputName), color.HiCyanString(r.ScanObj.TaskName))
+	if runtimeData, err := jsoniter.MarshalToString(r.ScanObj); err == nil {
+		utils.WriteToFile(r.DoneFile, runtimeData)
+	}
 }
 
-func (r *Runner) DBUpdateTarget() {
-	database.DBUpdateTarget(&r.TargetObj)
+func (r *Runner) DBRuntimeUpdate() {
+	r.ScanObj.UpdatedAt = time.Now()
+	r.ScanObj.Target = r.TargetObj
+	if runtimeData, err := jsoniter.MarshalToString(r.ScanObj); err == nil {
+		utils.WriteToFile(r.RuntimeFile, runtimeData)
+	}
 }
 
 func (r *Runner) DBNewReports(module libs.Module) {
-	if r.Opt.NoDB {
-		return
-	}
-
 	r.ScanObj.CurrentModule = r.CurrentModule
 	r.ScanObj.RunningTime = r.RunningTime
-	database.DBUpdateScan(&r.ScanObj)
 
 	var reports []string
 	reports = append(reports, module.Report.Final...)
 	reports = append(reports, module.Report.Noti...)
 	reports = append(reports, module.Report.Diff...)
 
-	utils.DebugF("Updating reports")
+	utils.DebugF("Updating %v report records", len(reports))
 	for _, report := range reports {
-		reportObj := database.Report{
-			ReportName:  path.Base(report),
-			ModulePath:  module.ModulePath,
-			Module:      module.Name,
-			ReportPath:  report,
-			ReportType:  "",
-			TargetRefer: r.TargetObj.ID,
+		reportType := "text"
+		if strings.HasSuffix(report, ".html") {
+			reportType = "html"
 		}
 
-		database.NewReport(&reportObj)
+		reportObj := database.Report{
+			ReportName: path.Base(report),
+			ModulePath: module.ModulePath,
+			Module:     module.Name,
+			ReportPath: report,
+			ReportType: reportType,
+		}
+
 		r.TargetObj.Reports = append(r.TargetObj.Reports, reportObj)
+
 	}
+	r.ScanObj.Target = r.TargetObj
 }

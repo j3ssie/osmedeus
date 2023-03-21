@@ -2,6 +2,12 @@ package core
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/cenkalti/backoff/v4"
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-version"
@@ -10,11 +16,6 @@ import (
 	"github.com/j3ssie/osmedeus/utils"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/mitchellh/go-homedir"
-	"os"
-	"os/exec"
-	"path"
-	"strings"
-	"time"
 )
 
 /* Mostly calling OS commands for double-check the PATH too */
@@ -292,7 +293,6 @@ func UpdateBase(opt libs.Options) {
 	utils.Move(path.Join(opt.Update.UpdateFolder, "workflow"), opt.Env.WorkFlowsFolder)
 	utils.Move(path.Join(opt.Update.UpdateFolder, "ose"), opt.Env.OseFolder)
 	utils.Move(path.Join(opt.Update.UpdateFolder, "ui"), opt.Env.UIFolder)
-	utils.Move(path.Join(opt.Update.UpdateFolder, "scripts"), opt.Env.ScriptsFolder)
 
 	utils.Move(path.Join(opt.Update.UpdateFolder, "clouds"), opt.Env.CloudConfigFolder)
 	os.Chmod(opt.Cloud.SecretKey, 0600)

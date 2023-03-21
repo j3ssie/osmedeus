@@ -21,6 +21,11 @@ import (
 func (p *Provider) DefaultLinode() {
 	p.Region = "us-east"
 	p.Size = "g6-standard-1"
+	p.SSHUser = p.ProviderConfig.Username
+
+	if p.ProviderConfig.Username != "" {
+		p.SSHUser = "root"
+	}
 	if p.ProviderConfig.Region != "" {
 		p.Region = p.ProviderConfig.Region
 	}
@@ -67,8 +72,9 @@ func (p *Provider) AccountLN() error {
 	if err != nil {
 		return fmt.Errorf("error getting account information")
 	}
-	utils.InforF("Account Billing Information: BalanceUninvoiced: %v -- AccountBalance: %v", color.HiRedString("%v", account.BalanceUninvoiced), color.HiGreenString("%v", account.Balance))
-
+	if !p.IsBackgroundCheck {
+		utils.InforF("Account Billing Information: BalanceUninvoiced: %v -- AccountBalance: %v", color.HiRedString("%v", account.BalanceUninvoiced), color.HiGreenString("%v", account.Balance))
+	}
 	helper := false
 	opt := linodego.AccountSettingsUpdateOptions{
 		NetworkHelper: &helper,
@@ -187,11 +193,6 @@ func (p *Provider) ListSnapshotLN() error {
 	client := p.ConvertClientLinode()
 	ctx := context.TODO()
 	opt := &linodego.ListOptions{
-		//PageOptions: linodego.PageOptions{
-		//	Page:    0,
-		//	Pages:   0,
-		//	Results: 0,
-		//},
 		PageOptions: nil,
 		Filter:      "",
 	}
@@ -238,10 +239,11 @@ func (p *Provider) CreateInstanceLN(name string) (dropletId int, err error) {
 	}
 
 	createRequest := linodego.InstanceCreateOptions{
-		Region:   p.Region,
-		Type:     p.Size,
-		Label:    name,
-		RootPass: utils.RandomString(10),
+		Region: p.Region,
+		Type:   p.Size,
+		Label:  name,
+		// RootPass: utils.RandomString(10),
+		RootPass: GeneratePassword(16),
 		AuthorizedKeys: []string{
 			p.SSHPublicKey,
 		},

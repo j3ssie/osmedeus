@@ -6,8 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/j3ssie/osmedeus/database"
-
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
@@ -15,10 +13,6 @@ import (
 )
 
 var options = libs.Options{}
-
-// DB database variables
-//var DB *gorm.DB
-
 var RootCmd = &cobra.Command{
 	Use:   libs.BINARY,
 	Short: fmt.Sprintf("%s - %s", libs.BINARY, libs.DESC),
@@ -34,20 +28,21 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.PersistentFlags().StringVar(&options.Env.RootFolder, "rootFolder", fmt.Sprintf("~/.%s/", libs.BINARY), "Root Folder to store Result")
+	RootCmd.PersistentFlags().StringVar(&options.Env.RootFolder, "rootFolder", fmt.Sprintf("~/.%s/", libs.BINARY), "The main folder where all configurations are stored")
 	RootCmd.PersistentFlags().StringVar(&options.Env.BaseFolder, "baseFolder", fmt.Sprintf("~/%s-base/", libs.BINARY), "Base Folder which is store data, binaries and workflows")
-	RootCmd.PersistentFlags().StringVar(&options.ConfigFile, "configFile", fmt.Sprintf("~/.%s/config.yaml", libs.BINARY), "Config File")
-	RootCmd.PersistentFlags().StringVar(&options.Env.DataFolder, "dataFolder", fmt.Sprintf("~/%s-base/data", libs.BINARY), "Root Workspace folder")
-	RootCmd.PersistentFlags().StringVar(&options.Env.WorkspacesFolder, "wsFolder", fmt.Sprintf("~/.%s/workspaces", libs.BINARY), "Root Workspace folder")
+	RootCmd.PersistentFlags().StringVar(&options.Env.DataFolder, "dataFolder", fmt.Sprintf("~/%s-base/data", libs.BINARY), "Data folder which is store wordlists, payloads, etc")
 	RootCmd.PersistentFlags().StringVar(&options.Env.WorkFlowsFolder, "wfFolder", "", fmt.Sprintf("Custom Workflow folder (default will get from '$HOME/%s-base/workflow')", libs.BINARY))
-	RootCmd.PersistentFlags().StringVar(&options.LogFile, "log", "", fmt.Sprintf("Log File (default will store in '%s')", libs.LDIR))
-	RootCmd.PersistentFlags().IntVarP(&options.Concurrency, "concurrency", "c", 1, "Concurrency level (recommend to keep it as 1 on machine has RAM smaller than 2GB)")
+	RootCmd.PersistentFlags().StringVar(&options.ConfigFile, "configFile", fmt.Sprintf("~/.%s/config.yaml", libs.BINARY), "Main configurations file")
+
+	// Workspace folder
+	RootCmd.PersistentFlags().StringVarP(&options.Env.WorkspacesFolder, "wsFolder", "W", fmt.Sprintf("~/workspaces-%s", libs.BINARY), "The main data folder within the workspaces where all scan results are stored")
 
 	// parse target as global flag
-	RootCmd.PersistentFlags().StringSliceVarP(&options.Scan.Inputs, "target", "t", []string{}, "Target to running")
+	RootCmd.PersistentFlags().StringSliceVarP(&options.Scan.Inputs, "target", "t", []string{}, "The target you want to run/execute")
 	RootCmd.PersistentFlags().StringVarP(&options.Scan.InputList, "targets", "T", "", "List of target as a file")
 
 	// Scan command
+	RootCmd.PersistentFlags().IntVarP(&options.Concurrency, "concurrency", "c", 1, "Concurrency level (recommend to keep it as 1 on machine has RAM smaller than 2GB)")
 	RootCmd.PersistentFlags().StringSliceVarP(&options.Scan.Modules, "module", "m", []string{}, "Target to running")
 	RootCmd.PersistentFlags().StringVarP(&options.Scan.Flow, "flow", "f", "general", "Flow name for running (default: general)")
 	RootCmd.PersistentFlags().StringVarP(&options.Scan.CustomWorkspace, "workspace", "w", "", "Name of workspace (default is same as target)")
@@ -69,6 +64,7 @@ func init() {
 	RootCmd.PersistentFlags().BoolVar(&options.Cloud.ReBuildBaseImage, "rebuild", false, "Forced to rebuild the images event though the version didn't change")
 
 	// mics option
+	RootCmd.PersistentFlags().StringVar(&options.LogFile, "log", "", fmt.Sprintf("Log File (default will store in '%s')", libs.LDIR))
 	RootCmd.PersistentFlags().StringVarP(&options.ScanID, "sid", "s", "", "Scan ID to continue the scan without create new scan record")
 	RootCmd.PersistentFlags().BoolVarP(&options.Resume, "resume", "R", false, "Enable Resume mode to skip modules that have already been finished")
 	RootCmd.PersistentFlags().BoolVar(&options.Debug, "debug", false, "Enable Debug output")
@@ -142,20 +138,6 @@ func initConfig() {
 			if err := sc.Err(); err == nil && target != "" {
 				options.Scan.Inputs = append(options.Scan.Inputs, target)
 			}
-		}
-	}
-}
-
-// DBInit init database connection
-func DBInit() {
-	//var err error
-	_, err := database.InitDB(options)
-	if err != nil {
-		// simple retry
-		_, err = database.InitDB(options)
-		if err != nil {
-			fmt.Printf("[panic] Can't connect to DB at %v\n", options.Server.DBPath)
-			os.Exit(-1)
 		}
 	}
 }

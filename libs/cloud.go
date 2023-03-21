@@ -8,7 +8,6 @@ type Cloud struct {
 	BackgroundRun      bool
 	OnlyCreateDroplet  bool
 	OnlyCreateInstance bool
-	NoDelete           bool
 	EnablePrivateIP    bool
 
 	EnableSyncWorkflow   bool
@@ -58,9 +57,12 @@ type Cloud struct {
 	PublicKey   string
 	BuildRepo   string
 	Binary      string
-	CloudWait   string
 	Retry       int
 	UnzipResult bool
+
+	// for health check
+	ForEverHealthCheck bool
+	NoDelete           bool
 
 	// raw command here
 	Extra      string

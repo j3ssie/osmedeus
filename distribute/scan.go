@@ -48,17 +48,16 @@ func (c *CloudRunner) PrepareInput() {
 
 func (c *CloudRunner) StartScan() error {
 	c.DBNewTarget()
-	c.DBNewScanLocal()
-	c.DBNewCloudInstance()
+	// c.DBNewScanLocal()
+	// c.DBNewCloudInstance()
 
 	err := c.RunScan()
 	if err != nil {
 		return fmt.Errorf("error to start the scan")
 	}
 
-	utils.DebugF("Create UI report for %s: %s", c.DestInstance, color.HiCyanString(c.Opt.Cloud.RawCommand))
-	c.Runner.DBDoneScan()
-	c.CreateUIReport()
+	// utils.DebugF("Create UI report for %s: %s", c.DestInstance, color.HiCyanString(c.Opt.Cloud.RawCommand))
+	// c.Runner.DBDoneScan()
 	return nil
 }
 
@@ -73,12 +72,14 @@ func (c *CloudRunner) RunScan() error {
 		c.Opt.Cloud.RawCommand = CommandBuilder(c.Opt)
 	}
 	c.Opt.Cloud.RawCommand = core.ResolveData(c.Opt.Cloud.RawCommand, c.Target)
+	c.RawCommand = c.Opt.Cloud.RawCommand
 
 	// init tmux session
 	out, err := c.SSHExec("tmux new-session -d -t main")
 
 	// boot the instance again if it still didn't up
 	if err != nil && strings.Contains(err.Error(), "time out") {
+		time.Sleep(60 * time.Second)
 		c.Provider.Action(provider.BootInstance, c.InstanceID)
 		out, err = c.SSHExec("tmux new-session -d -t main")
 	}
@@ -89,29 +90,33 @@ func (c *CloudRunner) RunScan() error {
 
 	// still error then it must be something wrong
 	if err != nil {
-		utils.ErrorF("some error happen with %v", c.DestInstance)
-		utils.ErrorF(out)
-		return fmt.Errorf("error running command on %v", c.DestInstance)
+		utils.ErrorF("An error occurred with %v", color.HiYellowString(c.DestInstance))
+		utils.ErrorF("error log: %v", out)
+		return fmt.Errorf("error running command on %v", color.HiYellowString(c.DestInstance))
 	}
 	utils.InforF("Start to run the scan %v with command %v", color.HiYellowString(c.DestInstance), color.HiCyanString(c.Opt.Cloud.RawCommand))
 
 	// wait a bit for process really start
 	time.Sleep(60 * time.Second)
 	if !c.IsRunning() {
-		// @TODO: update DB cloud table for panic detected
-		c.DBErrorCloudScan()
-		return fmt.Errorf("error start to run the scan")
+		return fmt.Errorf("Failed to initiate the scan on %v", color.HiYellowString(c.DestInstance))
 	}
 
+	c.WriteInstanceConfig()
 	return nil
 }
 
 func (c *CloudRunner) CheckingDone() error {
 	if c.Opt.Cloud.NoDelete {
+		time.Sleep(60 * time.Second)
 		return nil
 	}
 	utils.InforF("Checking scan process at: %s", color.HiBlueString(c.PublicIP))
-	dest := fmt.Sprintf("%s/.%s/workspaces/%s/done", c.BasePath, libs.BINARY, c.Target["Workspace"])
+
+	// dest := fmt.Sprintf("%s/.%s/workspaces/%s/done", c.BasePath, libs.BINARY, c.Target["Workspace"])
+	// @NOTE: this is new workspaces folder
+	dest := fmt.Sprintf("%s/workspaces-%s/%s/done", c.BasePath, libs.BINARY, c.Target["Workspace"])
+
 	cmd := fmt.Sprintf("file %s", dest)
 	out, _ := c.SSHExec(cmd)
 
@@ -130,17 +135,14 @@ func (c *CloudRunner) CheckingDone() error {
 		}
 
 		if !c.IsRunning() {
-			c.DBErrorCloudScan()
 			return fmt.Errorf("no process running at %v", c.PublicIP)
 		}
 
 		// check if we have panic or not
 		if c.IsPanic() {
-			c.DBErrorCloudScan()
 			return fmt.Errorf("panic detected at %v", c.PublicIP)
 		}
 
-		// @NOTE: should be disabled in enterprise version
 		if counter%50 == 0 {
 			c.SyncResult()
 		}
@@ -152,7 +154,14 @@ func (c *CloudRunner) CheckingDone() error {
 
 func (c *CloudRunner) SyncResult() error {
 	target := c.Opt.Cloud.Input
-	utils.InforF("Sync back the data of taget %v from %v", color.HiCyanString(target), color.HiYellowString(c.DestInstance))
+	if !c.Provider.IsBackgroundCheck {
+		utils.InforF("Sync back the data of taget %v from %v", color.HiCyanString(target), color.HiYellowString(c.DestInstance))
+	}
+
+	if c.Opt.Cloud.LocalSyncFolder == "" {
+		c.Opt.Cloud.LocalSyncFolder = fmt.Sprintf("%s/workspaces-%s/", c.BasePath, libs.BINARY)
+	}
+
 	// on vps machine
 	src := c.Opt.Cloud.LocalSyncFolder
 
@@ -176,7 +185,7 @@ func (c *CloudRunner) CopyTarget() error {
 
 	dest := c.Target["Target"]
 	if !utils.FileExists(dest) && !utils.FolderExists(dest) {
-		utils.DebugF("target is not a file: %s", target)
+		utils.DebugF("target is not a file: %s", dest)
 		return nil
 	}
 
@@ -192,12 +201,12 @@ func (c *CloudRunner) CopyTarget() error {
 
 func (c *CloudRunner) CopyWorkflow() error {
 	utils.DebugF("Sync workflow of %s to %s", c.Opt.Env.WorkFlowsFolder, c.DestInstance)
-	destWorkflow := fmt.Sprintf("%v/osmedeus-base/workflow/", c.BasePath)
+	destWorkflow := fmt.Sprintf("%v/osmedeus-base/", c.BasePath)
 	if c.Opt.Cloud.RemoteWorkflowFolder != "" {
 		destWorkflow = c.Opt.Cloud.RemoteWorkflowFolder
 	}
 
-	c.SSHExec(fmt.Sprintf("rm -rf %s && mkdir -p %s", destWorkflow, destWorkflow))
+	// c.SSHExec(fmt.Sprintf("rm -rf %s && mkdir -p %s", destWorkflow, destWorkflow))
 	cmd := fmt.Sprintf("rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i %s' -avzr --progress %s %s:%s", c.SshPrivateKey, c.Opt.Env.WorkFlowsFolder, c.DestInstance, destWorkflow)
 	c.RetryCommandWithExpectString(cmd, `bytes/sec`)
 	return nil

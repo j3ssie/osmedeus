@@ -2,6 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
@@ -9,9 +13,6 @@ import (
 	"github.com/mackerelio/go-osstat/cpu"
 	"github.com/mackerelio/go-osstat/memory"
 	"github.com/spf13/cobra"
-	"os"
-	"strings"
-	"time"
 )
 
 func init() {

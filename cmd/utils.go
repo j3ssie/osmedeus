@@ -29,7 +29,7 @@ func init() {
 		RunE:  runPs,
 	}
 	psCmd.Flags().StringSlice("proc", []string{}, "Process name")
-	psCmd.Flags().Bool("kill", false, "Kill the process")
+	psCmd.Flags().Bool("kill", false, "Kill the all processes")
 	psCmd.Flags().Bool("osm", false, "Osmedeus related process only")
 
 	var tmuxCmd = &cobra.Command{
@@ -94,7 +94,7 @@ func runPs(cmd *cobra.Command, _ []string) error {
 		pids := execution.ListAllOsmedeusProcess()
 		for _, pid := range pids {
 			if killProcess {
-				utils.RunOSCommand(fmt.Sprintf("kill -9 %d", pid))
+				utils.RunOSCommand(fmt.Sprintf("kill -9 %v", pid))
 			}
 		}
 		return nil

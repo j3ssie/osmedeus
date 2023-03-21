@@ -18,7 +18,11 @@ import (
 func (p *Provider) DefaultDO() {
 	p.Region = "sfo3"
 	p.Size = "s-2vcpu-4gb"
+	p.SSHUser = p.ProviderConfig.Username
 
+	if p.ProviderConfig.Username != "" {
+		p.SSHUser = "root"
+	}
 	if p.ProviderConfig.Region != "" {
 		p.Region = p.ProviderConfig.Region
 	}
@@ -54,7 +58,10 @@ func (p *Provider) AccountDO() error {
 	if err != nil {
 		return fmt.Errorf("error getting account information")
 	}
-	utils.InforF("Account Billing Information: MonthToDateBalance: %v -- AccountBalance: %v", strings.TrimLeft(color.HiRedString(bill.MonthToDateBalance), "-"), color.HiGreenString(bill.AccountBalance))
+
+	if !p.IsBackgroundCheck {
+		utils.InforF("Account Billing Information: MonthToDateBalance: %v -- AccountBalance: %v", strings.TrimLeft(color.HiRedString(bill.MonthToDateBalance), "-"), color.HiGreenString(bill.AccountBalance))
+	}
 
 	return nil
 }
@@ -168,7 +175,6 @@ func (p *Provider) ListSnapshotDO() error {
 	for _, instance := range snapshots {
 		name := instance.Name
 		id := cast.ToString(instance.ID)
-		//uuid := instance.
 
 		if strings.HasPrefix(name, libs.SNAPSHOT) {
 			p.OldSnapShotID = append(p.OldSnapShotID, id)

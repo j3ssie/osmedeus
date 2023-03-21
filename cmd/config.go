@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/j3ssie/osmedeus/database"
-	"github.com/j3ssie/osmedeus/execution"
 	"os"
 	"sort"
+
+	"github.com/fatih/color"
+	"github.com/j3ssie/osmedeus/execution"
 
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/utils"
@@ -35,7 +35,6 @@ func runConfig(cmd *cobra.Command, args []string) error {
 	sort.Strings(args)
 	action, _ := cmd.Flags().GetString("action")
 	workspace, _ := cmd.Flags().GetString("workspace")
-	DBInit()
 
 	// backward compatible
 	if action == "" && len(args) > 0 {
@@ -51,7 +50,6 @@ func runConfig(cmd *cobra.Command, args []string) error {
 	case "cred":
 		username, _ := cmd.Flags().GetString("user")
 		password, _ := cmd.Flags().GetString("pass")
-		//database.CreateUser(username, password)
 		utils.GoodF("Create new credentials %v:%v \n", username, password)
 		break
 
@@ -80,7 +78,6 @@ func runConfig(cmd *cobra.Command, args []string) error {
 		break
 
 	case "clean", "cl", "c":
-		database.ClearDB()
 		break
 	default:
 		utils.ErrorF("Unknown action: %v", color.HiRedString(action))

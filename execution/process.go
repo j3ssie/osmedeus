@@ -2,14 +2,15 @@ package execution
 
 import (
 	"fmt"
+	"strings"
+	"sync"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/libs"
 	gops "github.com/mitchellh/go-ps"
 	"github.com/panjf2000/ants"
 	"github.com/shirou/gopsutil/process"
 	"github.com/spf13/cast"
-	"strings"
-	"sync"
 )
 
 func ListAllOsmedeusProcess() (pids []int) {
@@ -37,6 +38,7 @@ func ListAllOsmedeusProcess() (pids []int) {
 		}
 		fmt.Printf("pid:%v %s %v\n", color.HiCyanString("%v", osProcess.PID), color.HiMagentaString("--"), osProcess.Command)
 		allProcess = append(allProcess, osProcess)
+		pids = append(pids, osProcess.PID)
 	}, ants.WithPreAlloc(true))
 	defer p.Release()
 

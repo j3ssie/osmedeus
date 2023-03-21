@@ -66,7 +66,7 @@ func ListWorkspaces(options libs.Options) (content [][]string) {
 
 	table := tablewriter.NewWriter(os.Stderr)
 	table.SetAutoFormatHeaders(false)
-	table.SetHeader([]string{"Workspace Name", "Flow", "Status", "Progress", "Workspace Path"})
+	table.SetHeader([]string{"Workspace Name", "Status", "Routine", "Progress", "Workspace Path"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: true})
 	table.SetColWidth(120)
 	table.AppendBulk(content)

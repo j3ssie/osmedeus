@@ -20,9 +20,10 @@ import (
 func (c *CloudRunner) SSHExec(command string) (string, error) {
 	client, err := c.InitSSHClient()
 	if err != nil {
-		utils.ErrorF("error to init ssh to %s", c.PublicIP)
+		utils.ErrorF("Failed to initialize SSH connection to %v", color.HiYellowString(c.PublicIP))
 		return "", err
 	}
+	defer client.Close()
 
 	utils.DebugF("Running command on %s: %s", color.HiBlueString(c.PublicIP), color.HiGreenString(command))
 	out, err := client.Cmd(command).Output()
@@ -30,6 +31,7 @@ func (c *CloudRunner) SSHExec(command string) (string, error) {
 		utils.ErrorF("err run command: %v", err)
 		return "", err
 	}
+
 	return string(out), nil
 }
 

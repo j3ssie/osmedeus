@@ -1,11 +1,11 @@
 package distribute
 
 import (
-	"github.com/j3ssie/osmedeus/core"
-	"github.com/j3ssie/osmedeus/database"
-	"github.com/j3ssie/osmedeus/utils"
 	"strings"
 	"time"
+
+	"github.com/j3ssie/osmedeus/core"
+	"github.com/j3ssie/osmedeus/utils"
 )
 
 func (c *CloudRunner) CloudMoreParams() {
@@ -59,8 +59,6 @@ func (c *CloudRunner) CreateUIReport() {
 		return
 	}
 
-	//utils.DebugF("Creating UI reports")
-
 	// take from -m flag
 	if c.Opt.Cloud.Module != "" {
 		module := core.DirectSelectModule(c.Opt, c.Opt.Cloud.Module)
@@ -71,7 +69,8 @@ func (c *CloudRunner) CreateUIReport() {
 
 		// create record on UI
 		c.Opt.Module = core.ResolveReports(parsedModule, c.Target)
-		database.DBNewReports(parsedModule, &c.Runner.TargetObj)
+		// @TODO: add the report file to the runtime JSON file
+		// database.DBNewReports(parsedModule, &c.Runner.TargetObj)
 		return
 	}
 
@@ -95,9 +94,6 @@ func (c *CloudRunner) CreateUIReport() {
 
 		modules := core.SelectModules(rawModules.Modules, c.Opt)
 
-		//var routine libs.Routine
-		//routine.ModeName = parsedFlow.Name
-
 		for _, module := range modules {
 			parsedModule, err := core.ParseModules(module)
 			if err != nil || parsedModule.Desc == "" {
@@ -105,7 +101,8 @@ func (c *CloudRunner) CreateUIReport() {
 			}
 			// create record on UI
 			c.Opt.Module = core.ResolveReports(parsedModule, c.Target)
-			database.DBNewReports(c.Opt.Module, &c.Runner.TargetObj)
+			// @TODO: add the report runtime JSON file
+			// database.DBNewReports(c.Opt.Module, &c.Runner.TargetObj)
 		}
 	}
 }

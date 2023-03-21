@@ -39,6 +39,11 @@ func InitConfig(options *libs.Options) error {
 		os.Exit(-1)
 	}
 
+	options.Env.WorkspacesFolder = utils.NormalizePath(options.Env.WorkspacesFolder)
+	if !utils.FolderExists(options.Env.WorkspacesFolder) {
+		utils.MakeDir(options.Env.WorkspacesFolder)
+	}
+
 	// init config
 	options.ConfigFile = utils.NormalizePath(options.ConfigFile)
 	v = viper.New()
@@ -86,12 +91,16 @@ func InitConfig(options *libs.Options) error {
 		v.SetDefault("Environments", map[string]string{
 			// RootFolder --> ~/.osmedeus/
 			"storages":        path.Join(RootFolder, "storages"),
-			"workspaces":      path.Join(RootFolder, "workspaces"),
 			"backups":         path.Join(RootFolder, "backups"),
 			"provider_config": path.Join(RootFolder, "provider"),
+			"instances":       path.Join(RootFolder, "instances"),
 
-			// this update casually
+			// store all the result
+			"workspaces": options.Env.WorkspacesFolder,
+
+			// this update occasionally
 			// BaseFolder --> ~/osmedeus-base/
+
 			"workflows":    path.Join(BaseFolder, "workflow"),
 			"binaries":     path.Join(BaseFolder, "binaries"),
 			"data":         path.Join(BaseFolder, "data"),
@@ -222,17 +231,20 @@ func ParsingConfig(options *libs.Options) {
 func GetEnv(options *libs.Options) {
 	envs := v.GetStringMapString("Environments")
 
-	// config
 	options.Env.BinariesFolder = utils.NormalizePath(envs["binaries"])
 	utils.MakeDir(options.Env.BinariesFolder)
+
+	if options.Env.WorkFlowsFolder != "" {
+		options.Env.WorkFlowsFolder = utils.NormalizePath(options.Env.WorkFlowsFolder)
+	}
 
 	options.Env.DataFolder = utils.NormalizePath(envs["data"])
 	utils.MakeDir(options.Env.DataFolder)
 	// ose folder
 	options.Env.OseFolder = path.Join(options.Env.BaseFolder, "ose")
 	utils.MakeDir(options.Env.DataFolder)
-
-	options.Env.ScriptsFolder = path.Join(options.Env.BaseFolder, "scripts")
+	options.Env.BackupFolder = utils.NormalizePath(envs["backups"])
+	utils.MakeDir(options.Env.BackupFolder)
 	options.Env.UIFolder = path.Join(options.Env.BaseFolder, "ui")
 
 	// local data
@@ -240,11 +252,6 @@ func GetEnv(options *libs.Options) {
 	utils.MakeDir(options.Env.StoragesFolder)
 	options.Env.WorkspacesFolder = utils.NormalizePath(envs["workspaces"])
 	utils.MakeDir(options.Env.WorkspacesFolder)
-
-	// get workflow folder
-	if options.Env.WorkFlowsFolder != "" {
-		options.Env.WorkFlowsFolder = utils.NormalizePath(options.Env.WorkFlowsFolder)
-	}
 
 	customWorkflow := utils.GetOSEnv("CUSTOM_OSM_WORKFLOW", "CUSTOM_OSM_WORKFLOW")
 	if customWorkflow != "CUSTOM_OSM_WORKFLOW" && options.Env.WorkFlowsFolder == "" {
@@ -256,31 +263,26 @@ func GetEnv(options *libs.Options) {
 	}
 
 	// @NOTE: well of course you can rebuild the core engine binary to bypass this check
-	// but the premium package is more about custom workflow + wordlists + tools
-	// see more about it here: https://docs.osmedeus.org/faq/#premium-package-related-questions and  https://docs.osmedeus.org/premium/
+	// However, the premium package primarily focuses on exclusive workflow and specialized wordlists.
+	// see more about it here: https://docs.osmedeus.org/faq/#premium-package-related-questions
+	// and https://docs.osmedeus.org/premium/
 	if utils.FileExists(path.Join(options.Env.WorkFlowsFolder, "premium.md")) {
 		options.PremiumPackage = true
 	}
-
-	// backup data
-	options.Env.BackupFolder = utils.NormalizePath(envs["backups"])
-	utils.MakeDir(options.Env.BackupFolder)
 
 	// cloud stuff
 
 	// ~/.osmedeus/providers/
 	options.Env.ProviderFolder = utils.NormalizePath(envs["provider_config"])
+	options.Env.InstancesFolder = utils.NormalizePath(envs["instances"])
+	if options.Env.InstancesFolder == "" {
+		options.Env.InstancesFolder = utils.NormalizePath(path.Join(options.Env.RootFolder, "instances"))
+	}
 	utils.MakeDir(options.Env.ProviderFolder)
+	utils.MakeDir(options.Env.InstancesFolder)
+
 	// ~/osmedeus-base/clouds/
 	options.Env.CloudConfigFolder = utils.NormalizePath(envs["cloud_config"])
-
-	//update := v.GetStringMapString("Update")
-	//options.Update.UpdateURL = update["update_url"]
-	//options.Update.UpdateType = update["update_type"]
-	//options.Update.UpdateDate = update["update_date"]
-	//options.Update.UpdateKey = update["update_key"]
-	//options.Update.MetaDataURL = update["update_meta"]
-	//UpdateMetadata(*options)
 }
 
 // SetupOpt get storage repos

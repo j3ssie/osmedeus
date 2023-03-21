@@ -34,7 +34,6 @@ func init() {
 }
 
 func runScan(_ *cobra.Command, _ []string) error {
-	DBInit()
 	utils.GoodF("%v %v by %v", cases.Title(language.Und, cases.NoLower).String(libs.BINARY), libs.VERSION, color.HiMagentaString(libs.AUTHOR))
 	utils.InforF("Storing the log file to: %v", color.CyanString(options.LogFile))
 

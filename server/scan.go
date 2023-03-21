@@ -2,9 +2,7 @@ package server
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/j3ssie/osmedeus/database"
 	"github.com/j3ssie/osmedeus/utils"
-	"github.com/spf13/cast"
 )
 
 // TaskData data required in json form
@@ -65,7 +63,6 @@ func NewScan(c *fiber.Ctx) error {
 		})
 	}
 
-	CreatePreparedScan(&taskData)
 	taskData.Command = CommandBuilder(&taskData)
 	// get workspace if we didn't have one
 	if taskData.Workspace == "" {
@@ -106,7 +103,6 @@ func NewScanCloud(c *fiber.Ctx) error {
 		})
 	}
 
-	CreatePreparedScan(&taskData)
 	taskData.Command = CommandBuilder(&taskData)
 	// get workspace if we didn't have one
 	if taskData.Workspace == "" {
@@ -131,15 +127,4 @@ func NewScanCloud(c *fiber.Ctx) error {
 		Type:    "new-scan",
 		Message: "New Scan Imported",
 	})
-}
-
-func CreatePreparedScan(taskData *TaskData) {
-	scanObj := database.Scan{
-		InputName:  taskData.Target,
-		TaskName:   taskData.WorkFlow,
-		IsRunning:  false,
-		IsPrepared: false,
-	}
-	database.DBNewScan(&scanObj)
-	taskData.ScanID = cast.ToString(scanObj.ID)
 }

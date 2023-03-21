@@ -32,7 +32,7 @@ func (r *Runner) RunModule(module libs.Module) {
 
 	r.CurrentModule = module.Name
 	timeStart := time.Now()
-	utils.BannerF("Module-Started", fmt.Sprintf("%v - %v", module.Name, module.Desc))
+	utils.BlockF("Module-Started", fmt.Sprintf("%v - %v", module.Name, module.Desc))
 
 	// create report record first because I don't want to wait for them to show up in UI until the module done
 	r.DBNewReports(module)
@@ -44,7 +44,7 @@ func (r *Runner) RunModule(module libs.Module) {
 	}
 
 	// main part
-	utils.BlockF(module.Name, "Start run main steps")
+	// utils.BlockF(module.Name, "Begin executing primary tasks")
 	err := r.RunSteps(module.Steps)
 	if err != nil {
 		utils.BadBlockF(module.Name, fmt.Sprintf("got exit call"))
@@ -60,16 +60,12 @@ func (r *Runner) RunModule(module libs.Module) {
 	utils.PrintLine()
 	printReports(module)
 
-	// create report record first because we don't want to wait it show up in UI until the module done
-	r.DBNewReports(module)
-
 	// estimate time
 	elapsedTime := time.Since(timeStart).Seconds()
 	utils.BlockF("Module-Ended", fmt.Sprintf("Elapsed Time for the module %v in %v", color.HiCyanString(module.Name), color.HiMagentaString("%vs", elapsedTime)))
 	r.RunningTime += cast.ToInt(elapsedTime)
 	utils.PrintLine()
 	r.DBUpdateScan()
-	r.DBUpdateTarget()
 }
 
 // RunScripts run list of scripts
@@ -145,7 +141,7 @@ func (r *Runner) RunSteps(steps []libs.Step) error {
 
 		stepOut, _ = r.RunStep(step)
 		if strings.Contains(stepOut, "exit") {
-			return fmt.Errorf("got exit call")
+			return fmt.Errorf("got an exit call")
 		}
 	}
 	return nil
@@ -175,7 +171,7 @@ func (r *Runner) RunStepWithTimeout(timeout int, step libs.Step) (out string, er
 func (r *Runner) RunStep(step libs.Step) (string, error) {
 	var output string
 	if step.Label != "" {
-		utils.BlockF("Start-Step", color.HiCyanString(step.Label))
+		utils.BlockF("Step", fmt.Sprintf("Initiating Step %v", color.HiGreenString(step.Label)))
 	}
 
 	// checking required file
@@ -239,7 +235,8 @@ func (r *Runner) RunStep(step libs.Step) (string, error) {
 		}
 	}
 	if step.Label != "" {
-		utils.BlockF("Done-Step", color.HiCyanString(step.Label))
+		utils.BlockF("Step", fmt.Sprintf("The step %v has been completed", color.HiGreenString(step.Label)))
+
 	}
 	return output, nil
 
@@ -248,7 +245,7 @@ func (r *Runner) RunStep(step libs.Step) (string, error) {
 // RunStepWithSource really run a step
 func (r *Runner) RunStepWithSource(step libs.Step) (out string, err error) {
 	////// Start to run step but in loop mode
-	utils.DebugF("Run step with Source: %v", step.Source)
+	utils.DebugF("Running the step using the source file: %v", step.Source)
 	data := utils.ReadingLines(step.Source)
 	if len(data) <= 0 {
 		return out, fmt.Errorf("missing source")
@@ -312,14 +309,14 @@ func (r *Runner) RunStepWithSource(step libs.Step) (out string, err error) {
 			}
 		}
 		if step.Label != "" {
-			utils.BlockF("Done-Step", color.HiCyanString(step.Label))
+			utils.BlockF("Step", fmt.Sprintf("The step %v has been completed", color.HiGreenString(step.Label)))
 		}
 	}
 
 	/////////////
 	// run multiple steps in concurrency mode
 
-	utils.DebugF("Run step in Parallel: %v", step.Parallel)
+	utils.DebugF("Running the step in parallel: %v", step.Parallel)
 	var wg sync.WaitGroup
 	p, _ := ants.NewPoolWithFunc(step.Parallel, func(i interface{}) {
 		r.startStepJob(i)
@@ -337,7 +334,7 @@ func (r *Runner) RunStepWithSource(step libs.Step) (out string, err error) {
 
 	wg.Wait()
 	if step.Label != "" {
-		utils.BlockF("Done-Step", color.HiCyanString(step.Label))
+		utils.BlockF("Step", fmt.Sprintf("The step %v has been completed", color.HiGreenString(step.Label)))
 	}
 	return out, nil
 }

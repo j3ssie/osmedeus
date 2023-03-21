@@ -101,6 +101,7 @@ func generateProvider() provider.ConfigProvider {
 		DefaultImage: "debian-10-x64",
 		Size:         "s-2vcpu-4gb",
 		Region:       "sfo3",
+		Username:     "root",
 		Limit:        0,
 	}
 
@@ -129,7 +130,9 @@ func generateProvider() provider.ConfigProvider {
 			DefaultImage: "linode/debian10",
 			Size:         "g6-standard-1",
 			Region:       "us-east",
-			Limit:        0,
+			Username:     "root",
+
+			Limit: 0,
 		}
 		fmt.Printf("==> provider selected: %s\n", color.HiBlueString("linode"))
 	case "aw", "asw", "aws":
@@ -140,6 +143,7 @@ func generateProvider() provider.ConfigProvider {
 			DefaultImage: "ami-0ee39036464b9a87e",
 			Size:         "t2.medium",
 			Region:       "ap-southeast-1",
+			Username:     "admin",
 			Limit:        0,
 		}
 		fmt.Printf("==> provider selected: %s\n", color.HiBlueString("aws"))

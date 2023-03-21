@@ -2,13 +2,14 @@ package core
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/execution"
 	"github.com/j3ssie/osmedeus/utils"
 	"github.com/robertkrimen/otto"
 	"github.com/spf13/cast"
-	"strings"
-	"time"
 )
 
 // InitVM init scripting engine
@@ -67,7 +68,7 @@ func (r *Runner) ConditionExecScript(script string) bool {
 func (r *Runner) LoadEngineScripts() {
 	r.LoadScripts()
 	r.LoadDBScripts()
-	r.LoadImportScripts()
+	// r.LoadImportScripts()
 	r.LoadExternalScripts()
 	r.LoadGitScripts()
 	r.LoadNotiScripts()

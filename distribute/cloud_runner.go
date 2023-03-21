@@ -8,7 +8,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/core"
-	"github.com/j3ssie/osmedeus/database"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/provider"
 	"github.com/j3ssie/osmedeus/utils"
@@ -16,30 +15,30 @@ import (
 )
 
 type CloudRunner struct {
-	ProviderName string
-	Opt          libs.Options
-	Provider     provider.Provider
+	Opt      libs.Options `json:"-"`
+	Provider provider.Provider
 
 	// for storing in local DB
-	TaskName      string
-	TaskType      string
-	Input         string
-	CloudInstance database.CloudInstance
+	TaskName     string `json:"task_name"`
+	TaskType     string `json:"task_type"`
+	Input        string `json:"input"`
+	RawCommand   string `json:"raw_command"`
+	InstanceFile string `json:"instance_file"`
 
 	// core entry point
-	PublicIP      string
-	DestInstance  string
-	SshPublicKey  string
+	PublicIP      string `json:"public_ip"`
+	DestInstance  string `json:"dest_instance"`
+	SshPublicKey  string `json:"ssh_public_key"`
 	SshPrivateKey string
 	SSHUser       string
 	BasePath      string
 
-	InstanceID   string
-	InstanceName string
+	InstanceID   string `json:"instance_id"`
+	InstanceName string `json:"instance_name"`
+	IsError      bool   `json:"is_error"`
 
-	Available bool
-	Target    map[string]string
-	Runner    core.Runner
+	Target map[string]string `json:"-"`
+	Runner core.Runner       `json:"-"`
 }
 
 // InitCloud init cloud runner obj
@@ -72,31 +71,23 @@ func InitCloud(options libs.Options, targets []string) {
 					selectedCloud = cloudInfo
 				}
 
-				//// got the valid cloud with token here
-				//if selectedCloud.ProviderName != "linode" {
-				//	if !selectedCloud.Usage() {
-				//		utils.ErrorF("Current cloud reach limit usage: %v", selectedCloud.Cloud.Name)
-				//		timeout := utils.CalcTimeout(options.Cloud.CloudWait)
-				//		time.Sleep(time.Duration(timeout) * time.Second)
-				//		continue
-				//	}
-				//}
-
 				target = PrepareTarget(target, options)
 				if !options.Cloud.OnlyCreateDroplet {
-					utils.BlockF("start-scan", utils.CleanPath(target))
+					utils.InforF("Initiating the scanning process of %v", color.HiMagentaString(utils.CleanPath(target)))
 				}
 
 				// really start to run scan here
 				err := selectedCloud.Scan(target)
 				if err != nil {
-					utils.ErrorF("error start scan %s", target)
-					selectedCloud.Provider.DeleteInstance(selectedCloud.InstanceID)
+					utils.ErrorF("error start scan %s", color.HiCyanString(target))
+					if ok := selectedCloud.Provider.DeleteInstance(selectedCloud.InstanceID); ok == nil {
+						selectedCloud.DeleteInstanceConfig()
+					}
 					continue
 				}
 
 				if !options.Cloud.OnlyCreateDroplet {
-					utils.BlockF("done-scan", utils.CleanPath(target))
+					utils.InforF("Completed scanning %v", color.HiCyanString(utils.CleanPath(target)))
 					utils.InforF("--------------------------------")
 				}
 				isDone = true
@@ -114,19 +105,14 @@ func InitCloud(options libs.Options, targets []string) {
 	}
 	wg.Wait()
 
-	// return the cloud back
 }
 
 // GetClouds prepare clouds object in config file
 func GetClouds(options libs.Options) []CloudRunner {
 	var cloudInfos []CloudRunner
 
-	// ~/osmedeus-plugins/cloud/provider.yaml
-	//cloudConfigFile := path.Join(options.Env.CloudConfigFolder, "provider.yaml")
-
 	// parse config from cloud/provider.yaml file
 	providerConfigs, err := provider.ParseProvider(options.CloudConfigFile)
-	// utils.DebugF("Parsing cloud config from: %s", color.HiCyanString(options.CloudConfigFile))
 	if err != nil {
 		return cloudInfos
 	}
@@ -172,10 +158,11 @@ func SetupProvider(opt libs.Options, providerConfig provider.ConfigProvider) Clo
 	}
 	cloudRunner.Provider = providerCloud
 
-	// custom user for aws
-	if cloudRunner.Provider.ProviderName == "aws" {
-		cloudRunner.SSHUser = "admin"
+	cloudRunner.SSHUser = cloudRunner.Provider.SSHUser
+	if cloudRunner.SSHUser == "" {
+		cloudRunner.SSHUser = "root"
 	}
+
 	if cloudRunner.SSHUser != "root" {
 		cloudRunner.BasePath = fmt.Sprintf("/home/%s", cloudRunner.SSHUser)
 	}

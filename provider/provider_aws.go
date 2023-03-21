@@ -25,9 +25,11 @@ func (p *Provider) DefaultAWS() {
 	p.Region = "ap-southeast-1"
 	p.Size = "t2.medium"
 	p.SecurityGroupName = "osmp-allow-root-access"
-	//p.Image = "ami-073770dc3242b2a06"
-	//p.Type = "aws-ebs"
+	p.SSHUser = p.ProviderConfig.Username
 
+	if p.ProviderConfig.Username != "" {
+		p.SSHUser = "admin"
+	}
 	if p.ProviderConfig.Region != "" {
 		p.Region = p.ProviderConfig.Region
 	}
@@ -87,7 +89,10 @@ func (p *Provider) AccountAWS() error {
 
 	// Print the total cost for the previous month
 	cost := *result.ResultsByTime[0].Total["UnblendedCost"].Amount
-	utils.InforF("The total cost of AWS services for the this month was %s", color.HiRedString("$"+cost))
+
+	if !p.IsBackgroundCheck {
+		utils.InforF("The total cost of AWS services for the this month was %s", color.HiRedString("$"+cost))
+	}
 	return nil
 }
 

@@ -2,12 +2,16 @@ package distribute
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/core"
+	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
+	"github.com/jinzhu/copier"
+	jsoniter "github.com/json-iterator/go"
 )
 
 func (c *CloudRunner) CreateInstance(target string) error {
@@ -72,7 +76,7 @@ func (c *CloudRunner) CreateInstance(target string) error {
 	/* Really start to run command to create instance here */
 	err := c.Provider.CreateInstance(c.InstanceName)
 
-	// @TODO: naming in linode might need another check for length
+	// fix the naming in linode might need another check for length
 	if err != nil {
 		// check if account reach limit first
 		if strings.Contains(err.Error(), "Account Limit reached") {
@@ -101,6 +105,49 @@ func (c *CloudRunner) CreateInstance(target string) error {
 	c.Target["CIP"] = c.PublicIP
 	c.Target["RemoteIP"] = c.PublicIP
 
+	// create the JSON file for the instance
+	c.WriteInstanceConfig()
 	return nil
 
+}
+
+func (c *CloudRunner) DeleteInstanceConfig() {
+	utils.DebugF("Deleting instance config %v", color.HiCyanString(c.InstanceFile))
+	os.Remove(c.InstanceFile)
+}
+
+func (c *CloudRunner) WriteInstanceConfig() error {
+	instanceFile := c.Opt.Env.InstancesFolder + "/" + c.InstanceName + "-" + c.PublicIP + ".json"
+	c.InstanceFile = instanceFile
+	utils.DebugF("Writing instance config to %v", color.HiCyanString(instanceFile))
+
+	var instanceObj CloudRunner
+	copier.Copy(&instanceObj, &c)
+	instanceObj.Runner = core.Runner{}
+	instanceObj.Opt = libs.Options{}
+
+	if data, err := jsoniter.MarshalToString(instanceObj); err == nil {
+		utils.WriteToFile(instanceFile, data)
+	}
+
+	return nil
+}
+
+func (c *CloudRunner) ErrorWriteInstanceConfig() error {
+	instanceFile := c.Opt.Env.InstancesFolder + "/" + c.InstanceName + "-" + c.PublicIP + ".json"
+	c.InstanceFile = instanceFile
+	utils.DebugF("Writing instance config to %v", color.HiCyanString(instanceFile))
+
+	var instanceObj CloudRunner
+	copier.Copy(&instanceObj, &c)
+
+	instanceObj.IsError = true
+	instanceObj.Runner = core.Runner{}
+	instanceObj.Opt = libs.Options{}
+
+	if data, err := jsoniter.MarshalToString(instanceObj); err == nil {
+		utils.WriteToFile(instanceFile, data)
+	}
+
+	return nil
 }

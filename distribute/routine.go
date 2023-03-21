@@ -2,6 +2,8 @@ package distribute
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
@@ -15,6 +17,7 @@ func (c *CloudRunner) Scan(target string) error {
 	}
 
 	if c.Opt.Cloud.OnlyCreateDroplet {
+		utils.DebugF("Only create instance, skip the scan")
 		return nil
 	}
 
@@ -50,10 +53,15 @@ func (c *CloudRunner) Scan(target string) error {
 
 	// check if done file created in instance or not
 	c.CheckingDone()
-	c.DBDoneCloudScan()
 
 	if !c.Opt.Cloud.DisableLocalSync {
 		err = c.SyncResult()
+		// sync result to one more time if it's not done yet
+		if c.Opt.Cloud.NoDelete {
+			time.Sleep(100 * time.Second)
+			err = c.SyncResult()
+		}
+
 		if err != nil {
 			utils.ErrorF("Error to sync result to instance")
 			return err
@@ -63,8 +71,15 @@ func (c *CloudRunner) Scan(target string) error {
 	// post run after scan done
 	c.PostRunLocal()
 
+	if c.Opt.Cloud.CopyWorkspaceToGit {
+		utils.InforF("Coping workspace to git storages")
+		baseCmd := fmt.Sprintf("%s scan --nn -f sync -t {{.Workspace}}", libs.BINARY)
+		cmd := core.ResolveData(baseCmd, c.Target)
+		utils.RunCommandWithErr(cmd)
+	}
+
 	if c.Opt.Cloud.NoDelete {
-		utils.DebugF("Disable copy result and Delete instance when run command in background")
+		utils.DebugF("Skipping delete instance")
 		return nil
 	}
 
@@ -73,13 +88,7 @@ func (c *CloudRunner) Scan(target string) error {
 		utils.ErrorF("Error to delete instance")
 		return err
 	}
-
-	if c.Opt.Cloud.CopyWorkspaceToGit {
-		utils.InforF("Coping workspace to git storages")
-		baseCmd := fmt.Sprintf("%s scan --nn -f sync -t {{.Workspace}}", libs.BINARY)
-		cmd := core.ResolveData(baseCmd, c.Target)
-		utils.RunCommandWithErr(cmd)
-	}
+	c.DeleteInstanceConfig()
 
 	return nil
 }

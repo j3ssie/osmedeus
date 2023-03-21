@@ -12,7 +12,7 @@ import (
 
 // CommandBuilder build core command from API
 func CommandBuilder(options libs.Options) string {
-	binary := libs.BINARY
+	binary := libs.BINARY + " --from-remote"
 
 	if options.Debug {
 		binary += " --debug"
@@ -78,7 +78,7 @@ func CommandBuilder(options libs.Options) string {
 	// mean general scan
 	if taskData.Module == "" {
 		command = fmt.Sprintf("%v scan %v -t %v %v%v%v%v%v", binary, workflow, taskData.Input, concurrency, timeout, workspace, params, extra)
-		if taskData.InputsFile != "" {
+		if options.Cloud.TargetAsFile {
 			command = fmt.Sprintf("%v scan %v -T %v %v%v%v%v%v", binary, workflow, taskData.InputsFile, concurrency, timeout, workspace, params, extra)
 		}
 		command = strings.TrimSpace(command)
@@ -87,8 +87,8 @@ func CommandBuilder(options libs.Options) string {
 	}
 
 	command = fmt.Sprintf("%v scan %v -t %v %v%v%v%v%v", binary, plugin, taskData.Input, concurrency, timeout, workspace, params, extra)
-	if taskData.InputsFile != "" {
-		command = fmt.Sprintf("%v scan %v -t %v %v%v%v%v%v", binary, plugin, taskData.InputsFile, concurrency, timeout, workspace, params, extra)
+	if options.Cloud.TargetAsFile {
+		command = fmt.Sprintf("%v scan %v -T %v %v%v%v%v%v", binary, plugin, taskData.InputsFile, concurrency, timeout, workspace, params, extra)
 	}
 	command = strings.TrimSpace(command)
 

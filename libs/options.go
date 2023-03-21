@@ -82,6 +82,8 @@ type Scan struct {
 	CustomWorkspace string
 	SuffixName      string
 	Force           bool
+	// this is true when calling from cloud scan
+	RemoteCall bool
 }
 
 type ThreadsHold struct {
@@ -145,7 +147,7 @@ type Storage struct {
 type Environment struct {
 	RootFolder       string // ~/.osmedeus
 	StoragesFolder   string // ~/.osmedeus/storages/
-	WorkspacesFolder string // ~/.osmedeus/workspaces/
+	WorkspacesFolder string // ~/workspaces-osmedeus/
 
 	// Base one
 	BaseFolder      string // ~/osmedeus-base
@@ -157,6 +159,7 @@ type Environment struct {
 	// cloud stuff
 	CloudConfigFolder string // ~/osmedeus-base/clouds/
 	ProviderFolder    string // ~/.osmedeus/providers/
+	InstancesFolder   string // ~/.osmedeus/instances/
 	BackupFolder      string
 
 	// Mics

@@ -173,7 +173,7 @@ func ParseInput(raw string, options libs.Options) map[string]string {
 	ROptions["Today"] = time.Now().Format("2006-01-02")
 	ROptions["Date"] = time.Now().Format("2006-01-02T15:04:05")
 	ROptions["TimeStamp"] = utils.GetTS()
-	ROptions["TS"] = time.Now().Format("2006-01-02") + "|" + utils.GetTS()
+	ROptions["TS"] = time.Now().Format("2006-01-02") + "T" + utils.GetTS()
 
 	/* --- start to load default Env --- */
 	// ~/osmedeus-base

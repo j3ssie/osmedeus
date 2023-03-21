@@ -22,7 +22,7 @@ type Provider struct {
 	SecurityGroupID   string
 	SecurityGroupName string
 
-	Instances     []Instance
+	Instances     []Instance `json:"-"`
 	InstanceLimit int
 	Available     bool
 	HealthCheck   bool
@@ -30,30 +30,32 @@ type Provider struct {
 	// for create snapshot
 	SnapshotID    string
 	SnapshotName  string
-	OldSnapShotID []string
+	OldSnapShotID []string `json:"-"`
 	SnapshotFound bool
 	SSHKeyFound   bool
 	SSHPublicKey  string
 	SSHPrivateKey string
 	SSHKeyID      string
+	SSHUser       string
 
 	// for create
-	CreatedInstance Instance
+	CreatedInstance Instance `json:"-"`
 	Region          string
 	Size            string
 	SSHKeyName      string
 
 	// mics
-	SwapSizeMap map[string]int
+	SwapSizeMap       map[string]int `json:"-"`
+	IsBackgroundCheck bool
 
 	// for building
-	ProviderConfig ConfigProvider
-	Opt            libs.Options
+	ProviderConfig ConfigProvider `json:"-"`
+	Opt            libs.Options   `json:"-"`
 
 	// for retry
-	BackOff *backoff.ExponentialBackOff
+	BackOff *backoff.ExponentialBackOff `json:"-"`
 	// client of vendor
-	Client interface{}
+	Client interface{} `json:"-"`
 }
 
 type Instance struct {
@@ -127,7 +129,9 @@ func (p *Provider) InitClient() (err error) {
 	}
 	if len(p.Token) > 5 {
 		p.RedactedToken = p.Token[:5] + "***" + p.Token[len(p.Token)-5:len(p.Token)]
-		utils.InforF("Init %v provider with token: %v", color.HiYellowString(p.ProviderName), color.HiCyanString(p.RedactedToken))
+		if !p.IsBackgroundCheck {
+			utils.InforF("Init %v provider with token: %v", color.HiYellowString(p.ProviderName), color.HiCyanString(p.RedactedToken))
+		}
 	}
 
 	p.Available = true

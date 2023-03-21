@@ -2,6 +2,8 @@ package provider
 
 import (
 	"io/ioutil"
+	"math/rand"
+	"time"
 
 	"github.com/Shopify/yaml"
 	"github.com/j3ssie/osmedeus/utils"
@@ -20,6 +22,7 @@ type Builder struct {
 	SecretKey string `yaml:"secret_key"`
 }
 
+// ConfigProvider cloud config file for each provider from ~/osmedeus-base/cloud/provider.yaml
 type ConfigProvider struct {
 	// core part
 	Name  string `yaml:"name"`
@@ -33,6 +36,7 @@ type ConfigProvider struct {
 	Size         string `yaml:"size"`
 	Region       string `yaml:"region"`
 	Limit        int    `yaml:"limit"`
+	Username     string `yaml:"username"`
 
 	// BaseImage     string `yaml:"base"`
 	RedactedToken string `yaml:"-"`
@@ -56,7 +60,7 @@ type ConfigProvider struct {
 	RawCommand   string `yaml:"-"`
 }
 
-// ParseProvider parse cloud file
+// ParseProvider parse cloud file from ~/osmedeus-base/cloud/provider.yaml
 func ParseProvider(cloudFile string) (ConfigProviders, error) {
 	var clouds ConfigProviders
 	cloudFile = utils.NormalizePath(cloudFile)
@@ -73,4 +77,51 @@ func ParseProvider(cloudFile string) (ConfigProviders, error) {
 	}
 
 	return clouds, nil
+}
+
+// mics function
+
+const (
+	lowerChars  = "abcdefghijklmnopqrstuvwxyz"
+	upperChars  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	numberChars = "0123456789"
+	symbolChars = "!@#$%^&*()+-=[]{}<>?~"
+)
+
+func GeneratePassword(length int) string {
+	rand.Seed(time.Now().UnixNano())
+
+	var passwordChars []byte
+
+	// Add at least one of each character type
+	passwordChars = append(passwordChars, randomChar(lowerChars))
+	passwordChars = append(passwordChars, randomChar(upperChars))
+	passwordChars = append(passwordChars, randomChar(numberChars))
+	passwordChars = append(passwordChars, randomChar(symbolChars))
+
+	// Add remaining characters randomly
+	for i := len(passwordChars); i < length; i++ {
+		charType := rand.Intn(4) // 0 for lower, 1 for upper, 2 for number, 3 for symbol
+		switch charType {
+		case 0:
+			passwordChars = append(passwordChars, randomChar(lowerChars))
+		case 1:
+			passwordChars = append(passwordChars, randomChar(upperChars))
+		case 2:
+			passwordChars = append(passwordChars, randomChar(numberChars))
+		case 3:
+			passwordChars = append(passwordChars, randomChar(symbolChars))
+		}
+	}
+
+	// Shuffle the characters randomly
+	rand.Shuffle(len(passwordChars), func(i, j int) {
+		passwordChars[i], passwordChars[j] = passwordChars[j], passwordChars[i]
+	})
+
+	return string(passwordChars)
+}
+
+func randomChar(charset string) byte {
+	return charset[rand.Intn(len(charset))]
 }

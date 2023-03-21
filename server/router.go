@@ -3,36 +3,32 @@ package server
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/j3ssie/osmedeus/database"
-	"github.com/j3ssie/osmedeus/libs"
-	"github.com/j3ssie/osmedeus/utils"
-	"gorm.io/gorm"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"path"
 
+	"github.com/fatih/color"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	jwtware "github.com/gofiber/jwt/v2"
+	"github.com/j3ssie/osmedeus/libs"
+	"github.com/j3ssie/osmedeus/utils"
+
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
-var DB *gorm.DB
+// var DB *gorm.DB
 var Opt libs.Options
 
 func StartServer(options libs.Options) {
 	Opt = options
 	var err error
-	DB, err = database.InitDB(options)
-	if err != nil {
-		return
-	}
 
 	if options.Server.NoAuthen {
-		fmt.Fprintf(os.Stderr, color.RedString("[Critical] You're running the server with %v\n", color.HiYellowString("NO AUTHENTICATION")))
+		fmt.Fprintf(os.Stderr, color.RedString("[Critical] The server is currently being executed %v mechanism enabled.\n", color.HiYellowString("WITHOUT ANY AUTHENTICATION")))
 	}
 
 	app := fiber.New(fiber.Config{
@@ -65,7 +61,7 @@ func StartServer(options libs.Options) {
 	}
 
 	if enableSSL {
-		utils.GoodF("Web UI available at: https://%v/ui/", options.Server.Bind)
+		utils.GoodF("Web UI available at: %v ", color.HiMagentaString("https://%v/ui/", options.Server.Bind))
 		utils.GoodF("Static Content available at: %v", color.HiMagentaString("https://%v/%s/workspaces/", options.Server.Bind, Opt.Server.StaticPrefix))
 		log.Fatal(app.Listener(ln))
 	} else {
@@ -104,23 +100,39 @@ func SetupRoutes(app *fiber.App) {
 	//}))
 
 	app.Get("/ping", Ping)
+	api := app.Group("/api", logger.New())
+	api.Post("/login", Login)
 
-	// Auth
-	//api := api.Group("/auth/osmp")
-	app.Post("/auth/login", Login)
+	// disable JWT Middleware when -A is set
+	if !Opt.Server.NoAuthen {
+		app.Use(jwtware.New(jwtware.Config{
+			SigningKey:     []byte(Opt.Server.JWTSecret),
+			Filter:         nil,
+			SuccessHandler: nil,
+			ErrorHandler:   jwtError,
+			SigningKeys:    nil,
+			SigningMethod:  "",
+			ContextKey:     "",
+			Claims:         nil,
+			TokenLookup:    "",
+			AuthScheme:     "Osmedeus",
+		}))
+	}
 
 	// Middleware
-	api := app.Group("/api", logger.New())
 	osmp := api.Group("/osmp")
-	osmp.Get("/health", Protected(), Health)
-	osmp.Get("/workspaces", Protected(), Workspace)
-	osmp.Get("/workspace/:wsname/", Protected(), WorkspaceDetail)
-	osmp.Delete("/delete/:wsname/", Protected(), DeleteWorkspace)
-	osmp.Get("/scans", Protected(), Scan)
-	osmp.Get("/ps", Protected(), Process)
-	osmp.Get("/raw", Protected(), RawWorkspace)
-	osmp.Get("/flows", Protected(), ListFlows)
-	osmp.Get("/help", Protected(), HelperMessage)
+	osmp.Get("/health", Health)
+
+	// core API e.g: /api/osmp/workspaces
+	osmp.Get("/workspaces", ListWorkspaces)
+	osmp.Get("/workspace/:wsname/", WorkspaceDetail)
+	osmp.Get("/scans", ListAllScan)
+	osmp.Delete("/delete/:wsname/", DeleteWorkspace)
+
+	osmp.Get("/ps", Process)
+	osmp.Get("/raw", RawWorkspace)
+	osmp.Get("/flows", ListFlows)
+	osmp.Get("/help", HelperMessage)
 
 	//api.Use(basicauth.New(basicauth.Config{
 	//	Users: map[string]string{
@@ -133,23 +145,7 @@ func SetupRoutes(app *fiber.App) {
 	//}))
 	//
 
-	//// beautify data for API
-	//api.Get("/v1/target", GetTarget)
-	////api.Get("/v1/scan", GetScan)
-	////api.Get("/v1/asset", GetAsset)
-	////api.Get("/v1/asset/detail", GetAssetDetail)
-	//////api.Get("/v1/links", GetAsset)
-	////
-	//api.Get("/v1/:wsname/", WorkspaceDetail)
-	//api.Get("/v1/noti", GetNoti)
-	//api.Get("/v1/http", GetHTTP)
-	//api.Get("/v1/ipspace", GetIPRange)
-	//api.Get("/v1/cloudbrute", GetCloudBrute)
-	//api.Get("/v1/credentials", GetCredential)
-	//osmp.Get("/v1/scan", GetAssets)
-
 	// execute endpoints
-	osmp.Post("/execute", Protected(), NewScan)
-	osmp.Post("/upload", Protected(), Upload)
-
+	osmp.Post("/execute", NewScan)
+	osmp.Post("/upload", Upload)
 }

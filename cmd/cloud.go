@@ -19,7 +19,7 @@ import (
 func init() {
 	var cloudCmd = &cobra.Command{
 		Use:   "cloud",
-		Short: "Run scan in Distributed Cloud mode",
+		Short: "Perform a scan using the distributed cloud mode",
 		Long:  core.Banner(),
 		RunE:  runCloud,
 	}
@@ -33,13 +33,12 @@ func init() {
 	// chunk inputs
 	cloudCmd.Flags().BoolVar(&options.Cloud.EnablePrivateIP, "privateIP", false, "Enable Private IP")
 	cloudCmd.Flags().BoolVar(&options.Cloud.TargetAsFile, "as-file", false, "Run target as file (use -T targets.txt file instead of -t targets.txt at cloud instance)")
-	cloudCmd.Flags().StringVar(&options.Cloud.LocalSyncFolder, "rfolder", fmt.Sprintf("/root/.%s/workspaces/", libs.BINARY), "Remote Folder to sync back to local")
+	cloudCmd.Flags().StringVar(&options.Cloud.LocalSyncFolder, "rfolder", "", "Remote Folder to sync back to local")
 
 	// commands on cloud
 	cloudCmd.Flags().IntVar(&options.Cloud.Threads, "cloud-threads", 1, "Concurrency level on remote cloud")
 	cloudCmd.Flags().StringVar(&options.Cloud.Extra, "extra", "", "append raw command after the command builder")
 	cloudCmd.Flags().StringVar(&options.Cloud.RawCommand, "cmd", "", "specific raw command and override everything (eg: --cmd 'curl {{Target}}')")
-	cloudCmd.Flags().StringVar(&options.Cloud.CloudWait, "wait", "30m", "time to wait before next queue check")
 	cloudCmd.Flags().StringVar(&options.Cloud.ClearTime, "clear", "10m", "time to wait before next clear check")
 	cloudCmd.Flags().StringVar(&options.Cloud.TempTarget, "tempTargets", "/tmp/osm-tmp-inputs/", "Temp Folder to store targets file")
 
@@ -49,8 +48,9 @@ func init() {
 	cloudCmd.Flags().BoolVarP(&options.Cloud.DisableLocalSync, "no-lsync", "z", false, "Disable sync back data to local machine")
 	cloudCmd.Flags().BoolVar(&options.Cloud.BackgroundRun, "bg", false, "Send command to instance without checking if process is done or not")
 	cloudCmd.Flags().BoolVar(&options.Cloud.EnableTerraform, "tf", false, "Use terraform to create cloud instance")
-	cloudCmd.Flags().BoolVar(&options.Cloud.NoDelete, "no-del", false, "Don't delete instance after done")
+	cloudCmd.Flags().BoolVar(&options.Cloud.NoDelete, "no-del", false, "Don't delete instance after done (you can run 'osmedeus provider health' to clean up later)")
 	cloudCmd.Flags().BoolVar(&options.Cloud.IgnoreProcess, "no-ps", false, "Disable checking process on remote machine")
+	cloudCmd.Flags().BoolVar(&options.Scan.RemoteCall, "from-remote", false, "Invocation from a remote machine")
 	cloudCmd.Flags().IntVar(&options.Cloud.Retry, "retry", 10, "Number of retry when command is error")
 	cloudCmd.SetHelpFunc(CloudHelp)
 	RootCmd.AddCommand(cloudCmd)
@@ -63,7 +63,7 @@ func init() {
 }
 
 func runCloud(cmd *cobra.Command, _ []string) error {
-	DBInit()
+	// DBInit()
 	utils.GoodF("%v %v by %v", cases.Title(language.Und, cases.NoLower).String(libs.BINARY), libs.VERSION, color.HiMagentaString(libs.AUTHOR))
 	utils.InforF("Storing the log file to: %v", color.CyanString(options.LogFile))
 

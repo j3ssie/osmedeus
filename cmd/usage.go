@@ -107,6 +107,8 @@ func UtilsUsage() string {
 	h += "  osmedeus utils tmux ls \n"
 	h += "  osmedeus utils tmux logs -A -l 10 \n"
 	h += "  osmedeus utils ps \n"
+	h += "  osmedeus utils ps --osm \n"
+	h += "  osmedeus utils ps --osm --kill \n"
 	h += "  osmedeus utils ps --proc 'jaeles' \n"
 	h += "  osmedeus utils cron --cmd 'osmdeus scan -t example.com' --sch 60\n"
 	h += "  osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'\n"
@@ -135,26 +137,21 @@ func QueueUsage() string {
 	return h
 }
 
-func QueueHelp(cmd *cobra.Command, _ []string) {
-	fmt.Println(core.Banner())
-	fmt.Println(cmd.UsageString())
-	h := QueueUsage()
-	fmt.Println(h)
-	printDocs(cmd)
-}
-
 func CloudUsage() string {
 	h := color.HiCyanString("\nProvider Usage:\n")
 	h += "  osmedeus provider wizard \n"
 	h += "  osmedeus provider validate \n"
 	h += "  osmedeus provider build --token xxx --rebuild --ic\n"
-	h += "  osmedeus provider create --name 'sample' \n"
+
 	h += "  osmedeus provider health --debug \n"
-	h += "  osmedeus provider list \n"
+	h += "  osmedeus provider health --for \n"
+	h += "  osmedeus provider create --name 'sample' \n"
 	h += "  osmedeus provider delete --id 34317111 --id 34317112 \n"
+	h += "  osmedeus provider list \n"
 
 	h += color.HiCyanString("\nCloud Usage:\n")
 	h += "  osmedeus cloud -f [flowName] -t [target] \n"
+	h += "  osmedeus cloud -f [flowName] -T [targetFile] --no-del\n"
 	h += "  osmedeus cloud -m [modulePath] -t [target] \n"
 	h += "  osmedeus cloud -c 5 -f [flowName] -T [targetsFile] \n"
 	h += "  osmedeus cloud --token xxx -c 5 -f [flowName] -T [targetsFile] \n"
@@ -174,6 +171,22 @@ func ReportUsage() string {
 	return h
 }
 
+func ServerUsage() string {
+	h := color.HiCyanString("\nServer Usage:\n")
+	h += "  osmedeus server --port 5000\n"
+	h += "  osmedeus server --disable-ssl\n"
+	h += "  osmedeus server -A --disable-ssl\n"
+	return h
+}
+
+func QueueHelp(cmd *cobra.Command, _ []string) {
+	fmt.Println(core.Banner())
+	fmt.Println(cmd.UsageString())
+	h := QueueUsage()
+	fmt.Println(h)
+	printDocs(cmd)
+}
+
 // ScanHelp scan help message
 func ScanHelp(cmd *cobra.Command, _ []string) {
 	fmt.Println(core.Banner())
@@ -187,6 +200,17 @@ func ScanHelp(cmd *cobra.Command, _ []string) {
 
 // CloudHelp scan help message
 func CloudHelp(cmd *cobra.Command, _ []string) {
+	fmt.Println(core.Banner())
+	if options.FullHelp {
+		fmt.Println(cmd.UsageString())
+	}
+	h := CloudUsage()
+	fmt.Println(h)
+	printDocs(cmd)
+}
+
+// ServerHelp scan help message
+func ServerHelp(cmd *cobra.Command, _ []string) {
 	fmt.Println(core.Banner())
 	if options.FullHelp {
 		fmt.Println(cmd.UsageString())
@@ -214,7 +238,7 @@ func UtilsHelp(cmd *cobra.Command, _ []string) {
 	if options.FullHelp {
 		fmt.Println(cmd.UsageString())
 	}
-	h := UtilsUsage()
+	h := ServerUsage()
 	fmt.Println(h)
 	printDocs(cmd)
 }

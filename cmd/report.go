@@ -112,7 +112,7 @@ func runReportExtract(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func runReport(_ *cobra.Command, _ []string) error {
+func runReport(_ *cobra.Command, args []string) error {
 	if options.Report.PublicIP == "" {
 		if utils.GetOSEnv("IPAddress", "127.0.0.1") == "127.0.0.1" {
 			options.Report.PublicIP = utils.GetOSEnv("IPAddress", "127.0.0.1")
@@ -121,6 +121,10 @@ func runReport(_ *cobra.Command, _ []string) error {
 
 	if options.Report.PublicIP == "0" || options.Report.PublicIP == "0.0.0.0" {
 		options.Report.PublicIP = getPublicIP()
+	}
+
+	if len(args) == 0 {
+		core.ListWorkspaces(options)
 	}
 
 	return nil

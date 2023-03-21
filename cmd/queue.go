@@ -37,8 +37,6 @@ func init() {
 }
 
 func runQueue(_ *cobra.Command, _ []string) error {
-	DBInit()
-
 	options.Queue.QueueFile = utils.NormalizePath(options.Queue.QueueFile)
 	options.Queue.QueueFolder = path.Dir(options.Queue.QueueFile)
 	if !utils.FolderExists(options.Queue.QueueFolder) {

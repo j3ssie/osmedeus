@@ -1,12 +1,20 @@
 name: loop-step
 
+report:
+  final:
+    - "/tmp/ott/source.txt"
+
 steps:
   - scripts:
       - "ExecCmd('mkdir -p /tmp/ott/')"
-      - "ExecCmd('seq 50000 > /tmp/ott/source.txt')"
+      - "ExecCmd('seq 4 > /tmp/ott/source.txt')"
 
   - source: '/tmp/ott/source.txt'
-    threads: '100'
+    threads: '2'
     commands:
       - "echo '---> {{line}} '"
       - "sleep 1 && echo '---> done {{line}}'"
+
+  - scripts:
+      - "ExecCmd('sleep 3')"
+      - "ExecCmd('echo '<======')"

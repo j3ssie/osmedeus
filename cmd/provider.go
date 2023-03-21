@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/j3ssie/osmedeus/core"
 	"github.com/j3ssie/osmedeus/distribute"
@@ -24,13 +25,14 @@ func init() {
 	}
 
 	providerCmd.PersistentFlags().StringVar(&options.Cloud.RawCommand, "cmd", "", "raw command")
-	providerCmd.PersistentFlags().StringVar(&options.Cloud.CloudWait, "wait", "30m", "timeout to wait before next queue check")
 	providerCmd.PersistentFlags().BoolVar(&options.Cloud.CheckingLimit, "check", false, "Only check for limit of config")
 	providerCmd.PersistentFlags().StringVar(&options.Cloud.InstanceName, "name", "", "override instance name")
 	providerCmd.PersistentFlags().BoolVar(&options.Cloud.BackgroundRun, "bg", false, "Send command to instance and run it in background")
 	providerCmd.PersistentFlags().BoolVar(&options.Cloud.IgnoreConfigFile, "ic", false, "Ignore token in the config file")
-	providerCmd.PersistentFlags().IntVar(&options.Cloud.Retry, "retry", 8, "Number of retry when command is error")
+	providerCmd.PersistentFlags().IntVar(&options.Cloud.Retry, "retry", 10, "Number of retry when command is error")
 	providerCmd.PersistentFlags().StringSlice("id", []string{}, "Instance IDs that will be delete")
+	providerCmd.Flags().StringVar(&options.Cloud.ClearTime, "clear", "10m", "time to wait before next clear check")
+	providerCmd.PersistentFlags().BoolVar(&options.Cloud.ForEverHealthCheck, "for", false, "Continuesly running the health check forever")
 
 	var providerWizard = &cobra.Command{
 		Use:     "wizard",
@@ -58,8 +60,8 @@ func init() {
 
 	var providerHealth = &cobra.Command{
 		Use:     "health",
-		Aliases: []string{"heal"},
-		Short:   "Run a health check on running cloud instances",
+		Aliases: []string{"hea", "heal", "health", "healht"},
+		Short:   "Conduct a health assessment on cloud instances that are currently operational",
 		Long:    core.Banner(),
 		RunE:    runCloudHealth,
 	}
@@ -85,6 +87,13 @@ func init() {
 		Long:    core.Banner(),
 		RunE:    runProviderDelete,
 	}
+	var providerClear = &cobra.Command{
+		Use:     "clear",
+		Aliases: []string{"clea", "clr"},
+		Short:   "Clear all instances in the instances folders",
+		Long:    core.Banner(),
+		RunE:    runProviderClear,
+	}
 	providerCmd.AddCommand(providerWizard)
 	providerCmd.AddCommand(providerList)
 	providerCmd.AddCommand(providerDel)
@@ -92,6 +101,7 @@ func init() {
 	providerCmd.AddCommand(providerHealth)
 	providerCmd.AddCommand(providerCreate)
 	providerCmd.AddCommand(providerBuild)
+	providerCmd.AddCommand(providerClear)
 	providerCmd.SetHelpFunc(CloudHelp)
 	RootCmd.AddCommand(providerCmd)
 	providerCmd.PreRun = func(cmd *cobra.Command, args []string) {
@@ -103,20 +113,30 @@ func init() {
 }
 
 func runCloudHealth(_ *cobra.Command, _ []string) error {
-	DBInit()
 	distribute.CheckingCloudInstance(options)
+	if options.Cloud.ForEverHealthCheck {
+		for {
+			distribute.CheckingCloudInstance(options)
+			waitTime := utils.CalcTimeout(options.Cloud.ClearTime)
+			time.Sleep(time.Duration(waitTime) * time.Second)
+		}
+	}
+
+	return nil
+}
+
+func runProviderClear(_ *cobra.Command, _ []string) error {
+	distribute.ClearAllInstances(options)
 	return nil
 }
 
 func runCloudInit(_ *cobra.Command, _ []string) error {
-	DBInit()
 	// interactive mode to show config file here
 	distribute.InitCloudSetup(options)
 	return nil
 }
 
 func runProvider(_ *cobra.Command, args []string) error {
-	DBInit()
 	if len(args) == 0 {
 		fmt.Println(CloudUsage())
 	}

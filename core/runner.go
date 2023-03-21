@@ -2,6 +2,10 @@ package core
 
 import (
 	"fmt"
+	"os"
+	"strings"
+	"sync"
+
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/database"
 	"github.com/j3ssie/osmedeus/execution"
@@ -10,9 +14,6 @@ import (
 	"github.com/panjf2000/ants"
 	"github.com/robertkrimen/otto"
 	"github.com/thoas/go-funk"
-	"os"
-	"strings"
-	"sync"
 )
 
 // Runner runner struct to start a job
@@ -286,7 +287,7 @@ func (r *Runner) Start() {
 		utils.InforF("Adding %v flag if you want to disable input validate", color.HiCyanString(`'--nv'`))
 		return
 	}
-	utils.InforF("Running %s tactic with baseline threads hold as %s ", color.YellowString(r.Opt.Tactics), color.HiMagentaString("%v", r.Opt.Threads))
+	utils.InforF("Running %s tactic with baseline threads hold as %s", color.YellowString(r.Opt.Tactics), color.HiMagentaString("%v", r.Opt.Threads))
 
 	r.Opt.Scan.ROptions = r.Target
 	// prepare some metadata files
@@ -297,11 +298,10 @@ func (r *Runner) Start() {
 
 	utils.InforF("Running the routine %v on %v", color.HiYellowString(r.RoutineName), color.CyanString(r.Input))
 	utils.InforF("Detailed runtime file can be found on %v", color.CyanString(r.RuntimeFile))
-	execution.TeleSendMess(r.Opt, fmt.Sprintf("**%s** -- Start new scan: **%s** -- **%s**", r.Opt.Noti.ClientName, r.Opt.Scan.Flow, r.Target["Workspace"]), "#status", false)
+	execution.TeleSendMess(r.Opt, fmt.Sprintf("%s -- Start new scan: %s -- %s", r.Opt.Noti.ClientName, r.Opt.Scan.Flow, r.Target["Workspace"]), "#status", false)
 
 	r.DBNewTarget()
 	r.DBNewScan()
-	r.StartScanNoti()
 	r.LoadEngineScripts()
 
 	r.PrepareParams()
@@ -311,12 +311,8 @@ func (r *Runner) Start() {
 	r.StartRoutines()
 	/////
 
-	//BackupWorkspace(r.Opt)
 	r.DBDoneScan()
-	r.ScanDoneNoti()
-
-	utils.BlockF("Done", fmt.Sprintf("scan for %v -- %v", r.Input, color.HiMagentaString("%vs", r.RunningTime)))
-	utils.WriteToFile(r.DoneFile, "done")
+	utils.BlockF("Finished", fmt.Sprintf("The scan for %v was completed within %v", color.HiCyanString(r.Input), color.HiMagentaString("%vs", r.RunningTime)))
 
 	if r.Opt.EnableBackup {
 		r.BackupWorkspace()
@@ -327,7 +323,6 @@ func (r *Runner) Start() {
 func (r *Runner) StartRoutines() {
 	for _, routine := range r.Routines {
 		// start each section of modules
-		utils.DebugF("Start routine: %v", len(routine.ParsedModules))
 		r.RunRoutine(routine.ParsedModules)
 	}
 }
