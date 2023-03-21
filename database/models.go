@@ -94,24 +94,3 @@ type Report struct {
 	WorkspaceName string `gorm:"type:varchar(255)" json:"workspace_name"`
 	ReportType    string `gorm:"type:varchar(255);default:'text'" json:"report_type"`
 }
-
-// // CloudInstance store cloud scan information to check
-// type CloudInstance struct {
-// 	Model
-// 	InstanceName string `gorm:"type:varchar(255)" json:"instance_name"`
-// 	Token        string `gorm:"type:varchar(255)" json:"token"`
-// 	AccessKeyId  string `gorm:"type:varchar(255)" json:"access_key_id"`
-// 	SecretKey    string `gorm:"type:varchar(255)" json:"secret_key"`
-// 	Provider     string `gorm:"type:varchar(255)" json:"provider"`
-
-// 	InputName  string `gorm:"type:varchar(255)" json:"input_name"`
-// 	IPAddress  string `gorm:"type:varchar(255)" json:"ip_address"`
-// 	InstanceID string `gorm:"type:varchar(255)" json:"instance_id"`
-// 	SnapShotID string `gorm:"type:varchar(255)" json:"snap_shot_id"`
-
-// 	// running / deleted / preparing
-// 	Status  string `gorm:"type:varchar(255)" json:"status"`
-// 	IsError bool   `json:"is_error"`
-
-// 	IsChunk bool `json:"is_chunk"`
-// }

@@ -39,7 +39,6 @@ func RawWorkspace(c *fiber.Ctx) error {
 func ListFlows(c *fiber.Ctx) error {
 	flows := core.ListFlow(Opt)
 	if len(flows) == 0 {
-		//color.Red("Error to list workflows: %s", options.Env.WorkFlowsFolder)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Can't list workflow",
 		})
