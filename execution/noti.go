@@ -12,7 +12,7 @@ import (
 
 	"github.com/spf13/cast"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
 	"github.com/robertkrimen/otto"
@@ -310,7 +310,8 @@ func TeleSendFile(options libs.Options, filename string, channel string) error {
 	telechannel := cast.ToInt64(channel)
 
 	filename = utils.NormalizePath(filename)
-	msg := tgbotapi.NewDocumentUpload(telechannel, filename)
+
+	msg := tgbotapi.NewDocument(telechannel, tgbotapi.FilePath(filename))
 	utils.DebugF("send file %v to channel %v", filename, channel)
 	_, err = bot.Send(msg)
 	if err != nil {
