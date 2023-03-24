@@ -80,6 +80,9 @@ func InitCloud(options libs.Options, targets []string) {
 				err := selectedCloud.Scan(target)
 				if err != nil {
 					utils.ErrorF("error start scan %s", color.HiCyanString(target))
+					if options.Cloud.NoDelete {
+						continue
+					}
 					if ok := selectedCloud.Provider.DeleteInstance(selectedCloud.InstanceID); ok == nil {
 						selectedCloud.DeleteInstanceConfig()
 					}

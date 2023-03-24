@@ -53,6 +53,7 @@ func init() {
 
 	// cloud flags
 	RootCmd.PersistentFlags().BoolVar(&options.Cloud.EnableChunk, "chunk", false, "Enable chunk mode")
+	RootCmd.PersistentFlags().BoolVar(&options.Scan.RemoteCall, "from-remote", false, "Invocation from a remote machine")
 	RootCmd.PersistentFlags().IntVarP(&options.Cloud.NumberOfParts, "chunk-parts", "P", 0, "Number of chunks file to split (default: equal with concurrency)")
 	RootCmd.PersistentFlags().StringVar(&options.Cloud.ChunkInputs, "chunkFolder", "/tmp/chunk-inputs/", "Temp Folder to store chunk inputs")
 	RootCmd.PersistentFlags().StringVar(&options.Timeout, "timeout", "", "Global timeout for each step (e.g: 60s, 30m, 2h)")
