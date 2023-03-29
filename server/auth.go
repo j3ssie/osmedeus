@@ -26,6 +26,12 @@ func Login(c *fiber.Ctx) error {
 	dbUser := Opt.Client.Username
 	dbPass := Opt.Client.Password
 
+	// auto pass if -A is specify
+	if Opt.Server.NoAuthen {
+		user = dbUser
+		pass = dbPass
+	}
+
 	// Throws Unauthorized error
 	if dbUser != user || dbPass != pass {
 		return c.SendStatus(fiber.StatusUnauthorized)

@@ -49,6 +49,13 @@ func WorkspaceDetail(c *fiber.Ctx) error {
 	reports := make(map[string][]string)
 
 	for _, report := range rawReports {
+		// replace the home folder first
+		if strings.Contains(report.ReportPath, workspace.Target.Workspace) {
+			// /root/workspaces-osmedeus/
+			homeFolder := strings.Split(report.ReportPath, workspace.Target.Workspace)[0]
+			report.ReportPath = strings.ReplaceAll(report.ReportPath, homeFolder, Opt.Env.WorkspacesFolder+"/")
+		}
+
 		if utils.FileLength(report.ReportPath) == 0 {
 			if utils.FolderExists(report.ReportPath) && utils.FolderLength(report.ReportPath) == 0 {
 				continue

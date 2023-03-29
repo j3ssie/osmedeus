@@ -50,6 +50,15 @@ func init() {
 	extractCmd.Flags().StringVar(&options.Report.ExtractFolder, "dest", "", "Destination folder to extract data to")
 	reportCmd.AddCommand(extractCmd)
 
+	var compressCmd = &cobra.Command{
+		Use:     "compress",
+		Aliases: []string{"com", "compr", "compres", "c"},
+		Short:   "Create a backup of the selected workspace",
+		Long:    core.Banner(),
+		RunE:    runReportCompress,
+	}
+	reportCmd.AddCommand(compressCmd)
+
 	reportCmd.PersistentFlags().BoolVar(&options.Report.Raw, "raw", false, "Show all the file in the workspace")
 	reportCmd.PersistentFlags().StringVar(&options.Report.PublicIP, "ip", "", "Show downloadable file with the given IP address")
 	reportCmd.PersistentFlags().BoolVar(&options.Report.Static, "static", false, "Show report file with Prefix Static")
@@ -109,6 +118,13 @@ func runReportExtract(_ *cobra.Command, _ []string) error {
 		core.ListSingleWorkspace(options, target)
 	}
 
+	return nil
+}
+
+func runReportCompress(_ *cobra.Command, _ []string) error {
+	for _, target := range options.Scan.Inputs {
+		core.CompressWorkspace(target, options)
+	}
 	return nil
 }
 

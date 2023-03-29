@@ -29,6 +29,25 @@ func (r *Runner) BackupWorkspace() {
 	}
 }
 
+func CompressWorkspace(target string, opt libs.Options) {
+	utils.InforF("Backing up the workspace: %v", color.HiCyanString(target))
+	outputDir := path.Join(opt.Env.WorkspacesFolder, target)
+	if utils.FolderLength(outputDir) == 0 {
+		utils.ErrorF("Workspace is empty: %s", outputDir)
+		return
+	}
+
+	dest := path.Join(opt.Env.BackupFolder, target) + ".tar.gz"
+	if utils.FileExists(dest) {
+		os.Remove(dest)
+	}
+
+	execution.Compress(dest, outputDir)
+	if utils.FileExists(dest) {
+		utils.InforF("The workspace has been backed up and saved in %s", color.HiMagentaString(dest))
+	}
+}
+
 func ExtractBackup(src string, opt libs.Options) {
 	if !utils.FileExists(src) {
 		utils.ErrorF("Backup file not found: %s", src)

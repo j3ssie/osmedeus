@@ -107,6 +107,16 @@ func ListSingleWorkspace(options libs.Options, target string) (content [][]strin
 			if !strings.Contains(runtimeContent, options.Env.WorkspacesFolder) {
 				isImported = true
 			}
+
+			// replace the workspace folder if it doesn't exist
+			if !strings.Contains(runtimeContent, options.Env.WorkspacesFolder) {
+				homeFolder := "/root/.osmedeus/workspaces/"
+				if strings.Contains(runtimeContent, "/root/workspaces-osmedeus/") {
+					homeFolder = "/root/workspaces-osmedeus/"
+				}
+				runtimeContent = strings.ReplaceAll(runtimeContent, homeFolder, options.Env.WorkspacesFolder+"/")
+			}
+
 			if strings.Contains(runtimeContent, "/root/.osmedeus/workspaces") {
 				runtimeContent = strings.ReplaceAll(runtimeContent, "/root/.osmedeus/workspaces", options.Env.WorkspacesFolder)
 			}

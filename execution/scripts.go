@@ -159,8 +159,8 @@ func Unique(filename string) {
 
 // Compress sort content of a file
 func Compress(dest string, src string) {
-	if utils.FolderLength(src) > 1 {
-		utils.DebugF("Folder is empty or not found: %s", src)
+	if utils.FolderLength(src) < 1 {
+		utils.DebugF("Source folder is empty or not found: %s", src)
 		return
 	}
 	cmd := fmt.Sprintf("tar --use-compress-program='gzip -9' -C %s -cf %s .", strings.TrimRight(src, "/"), dest)

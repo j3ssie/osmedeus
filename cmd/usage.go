@@ -165,6 +165,7 @@ func ReportUsage() string {
 	h += "  osmedeus report list\n"
 	h += "  osmedeus report extract -t target.com.tar.gz\n"
 	h += "  osmedeus report extract -t target.com.tar.gz --dest .\n"
+	h += "  osmedeus report compress -t target.com\n"
 	h += "  osmedeus report view --raw -t target.com\n"
 	h += "  osmedeus report view --static -t target.com\n"
 	h += "  osmedeus report view --static --ip 0 -t target.com\n"

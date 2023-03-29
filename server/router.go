@@ -121,6 +121,7 @@ func SetupRoutes(app *fiber.App) {
 
 	// Middleware
 	osmp := api.Group("/osmp")
+	// /api/osmp/health
 	osmp.Get("/health", Health)
 
 	// core API e.g: /api/osmp/workspaces

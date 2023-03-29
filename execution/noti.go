@@ -243,6 +243,7 @@ func TeleSendMess(options libs.Options, content string, channel string, wrap boo
 		return fmt.Errorf("noti disabled")
 	}
 	bot, err := tgbotapi.NewBotAPI(options.Noti.TelegramToken)
+	content = tgbotapi.EscapeText(tgbotapi.ModeMarkdown, content)
 	if wrap {
 		content = fmt.Sprintf("```\n%s\n```", content)
 	}
