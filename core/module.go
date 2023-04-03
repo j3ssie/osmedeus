@@ -234,10 +234,6 @@ func (r *Runner) RunStep(step libs.Step) (string, error) {
 			}
 		}
 	}
-	if step.Label != "" {
-		utils.BlockF("Step", fmt.Sprintf("The step %v has been completed", color.HiGreenString(step.Label)))
-
-	}
 	return output, nil
 
 }
@@ -308,9 +304,6 @@ func (r *Runner) RunStepWithSource(step libs.Step) (out string, err error) {
 				continue
 			}
 		}
-		if step.Label != "" {
-			utils.BlockF("Step", fmt.Sprintf("The step %v has been completed", color.HiGreenString(step.Label)))
-		}
 	}
 
 	/////////////
@@ -333,9 +326,6 @@ func (r *Runner) RunStepWithSource(step libs.Step) (out string, err error) {
 	}
 
 	wg.Wait()
-	if step.Label != "" {
-		utils.BlockF("Step", fmt.Sprintf("The step %v has been completed", color.HiGreenString(step.Label)))
-	}
 	return out, nil
 }
 
