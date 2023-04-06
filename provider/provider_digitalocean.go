@@ -79,7 +79,7 @@ func (p *Provider) ListInstanceDO() error {
 	if err != nil {
 		return fmt.Errorf("error getting digital ocean instance")
 	}
-	utils.InforF("found %v instances", len(droplets))
+	utils.DebugF("found %v instances", len(droplets))
 
 	for _, instance := range droplets {
 		ipAddress, ok := instance.PublicIPv4()
@@ -181,7 +181,7 @@ func (p *Provider) ListSnapshotDO() error {
 		}
 
 		if strings.TrimSpace(name) == strings.TrimSpace(p.SnapshotName) {
-			utils.InforF("Found base image snapshot with ID: %s", color.HiBlueString(id))
+			utils.DebugF("Found base image snapshot with ID: %s", color.HiBlueString(id))
 			p.SnapshotID = id
 			p.SnapshotName = name
 			p.SnapshotFound = true

@@ -195,12 +195,16 @@ func runProviderValidate(_ *cobra.Command, _ []string) error {
 }
 
 func runProviderListing(_ *cobra.Command, _ []string) error {
+	options.Cloud.BackgroundRun = true
+	utils.InforF("Listing all instances in the cloud provider(s) ...")
 	cloudRunners := distribute.GetClouds(options)
 	cloudListing(cloudRunners)
 	return nil
 }
 
 func runProviderDelete(cmd *cobra.Command, _ []string) error {
+	options.Cloud.OnlyCreateDroplet = true
+	options.Cloud.BackgroundRun = true
 	cloudRunners := distribute.GetClouds(options)
 	InstanceIDs, _ := cmd.Flags().GetStringSlice("id")
 

@@ -209,7 +209,7 @@ func (p *Provider) ListSnapshotLN() error {
 		}
 
 		if strings.TrimSpace(name) == strings.TrimSpace(p.SnapshotName) {
-			utils.InforF("Found base image snapshot with ID: %s", id)
+			utils.DebugF("Found base image snapshot with ID: %s", id)
 			p.SnapshotID = id
 			p.SnapshotName = name
 			p.SnapshotFound = true

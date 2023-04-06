@@ -113,6 +113,9 @@ func InitProviderWithConfig(opt libs.Options, providerConfig ConfigProvider) (Pr
 
 	provider.ProviderConfig = providerConfig
 	provider.Opt = opt
+	if opt.Cloud.BackgroundRun {
+		provider.IsBackgroundCheck = true
+	}
 
 	if err := provider.InitClient(); err != nil {
 		return provider, fmt.Errorf("unable to validate token: %v", provider.Token)
@@ -210,8 +213,11 @@ func (p *Provider) Prepare() {
 
 	p.Action(GetSSHKey)
 	p.Action(ListImage)
+
 	if p.SSHKeyID != "" {
-		utils.InforF("Found SSH Key ID: %v", color.HiBlueString(p.SSHKeyID))
+		if !p.IsBackgroundCheck {
+			utils.InforF("Found SSH Key ID: %v", color.HiBlueString(p.SSHKeyID))
+		}
 	}
 }
 
@@ -221,7 +227,11 @@ func (p *Provider) Action(actionName string, params ...interface{}) error {
 	if len(params) > 0 {
 		param = params[0]
 	}
-	utils.InforF("[%v] running action: %v", p.ProviderName, color.HiBlueString(actionName))
+
+	if !p.IsBackgroundCheck {
+		utils.InforF("[%v] running action: %v", p.ProviderName, color.HiBlueString(actionName))
+	}
+
 	operation := func() error {
 		switch actionName {
 		case GetSSHKey:

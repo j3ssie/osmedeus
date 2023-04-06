@@ -176,7 +176,7 @@ func (p *Provider) ListSnapshotAWS() error {
 		}
 
 		if strings.TrimSpace(*item.Name) == strings.TrimSpace(p.SnapshotName) {
-			utils.InforF("Found base image snapshot with ID: %s", color.HiBlueString(*item.ImageId))
+			utils.DebugF("Found base image snapshot with ID: %s", color.HiBlueString(*item.ImageId))
 			p.SnapshotID = *item.ImageId
 			p.SnapshotName = *item.Name
 			p.SnapshotFound = true

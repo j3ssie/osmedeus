@@ -63,6 +63,10 @@ func (p *Provider) ListSnapShot() (err error) {
 	default:
 		err = p.ListSnapshotDO()
 	}
+
+	if !p.IsBackgroundCheck {
+		utils.InforF("Found base image snapshot with ID: %v", color.HiCyanString(p.SnapshotID))
+	}
 	return err
 }
 
