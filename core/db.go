@@ -176,6 +176,7 @@ func (r *Runner) DBDoneScan() {
 	utils.DebugF("[DB] The scan has been completed: %v -- %v", color.HiCyanString(r.ScanObj.InputName), color.HiCyanString(r.ScanObj.TaskName))
 	if runtimeData, err := jsoniter.MarshalToString(r.ScanObj); err == nil {
 		utils.WriteToFile(r.DoneFile, runtimeData)
+		utils.WriteToFile(r.RuntimeFile, runtimeData)
 	}
 }
 

@@ -216,7 +216,7 @@ func ServerHelp(cmd *cobra.Command, _ []string) {
 	if options.FullHelp {
 		fmt.Println(cmd.UsageString())
 	}
-	h := CloudUsage()
+	h := ServerUsage()
 	fmt.Println(h)
 	printDocs(cmd)
 }

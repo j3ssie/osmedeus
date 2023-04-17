@@ -73,7 +73,7 @@ func ListWorkspaces(options libs.Options) (content [][]string) {
 	table.Render()
 
 	fmt.Println(color.HiGreenString("📁 Total Workspaces: ") + color.HiMagentaString("%v", len(content)))
-	usage := color.HiWhiteString("💡 How to view report:") + color.HiGreenString(" osmedeus view -t %v", color.HiMagentaString("[targetName]"))
+	usage := color.HiWhiteString("💡 How to view report:") + color.HiGreenString(" osmedeus report view -t %v", color.HiMagentaString("[targetName]"))
 	fmt.Println(usage)
 
 	return content
