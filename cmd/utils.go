@@ -152,5 +152,6 @@ func runWorkflow(_ *cobra.Command, _ []string) error {
 	listFlows()
 	fmt.Printf("\n------------------------------------------------------------\n")
 	listDefaultModules()
+	fmt.Printf("💡 For full help message, please run: %s or %s\n", color.GreenString("osmedeus --hh"), color.GreenString("osmedeus scan --hh"))
 	return nil
 }

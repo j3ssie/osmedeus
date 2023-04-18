@@ -20,54 +20,63 @@ func RootUsage() {
 	fmt.Println(h)
 }
 
-func ScanUsage() string {
+func ScanExmaples() string {
 	h := color.HiCyanString("Example Scan Commands:")
-	h += `
-  ## Start a simple scan with default 'general' flow
-  osmedeus scan -t sample.com
-  
-  ## Start a scan directly with a module with inputs as a list of http domains like this https://sub.example.com
-  osmedeus scan -m ~/osmedeus-base/workflow/direct-module/dirbscan.yaml -t http-file.txt
+	h += color.HiBlueString("\n  ## Start a simple scan with default 'general' flow\n")
+	h += "  osmedeus scan -t sample.com\n"
 
-  ## Start a general scan but exclude some of the module
-  osmedeus scan -t sample.com -x screenshot -x spider
-  
-  ## Initiate the scan using a speed option other than the default setting.
-  osmedeus scan -f vuln --tactic gently -t sample.com
-  osmedeus scan --threads-hold=10 -t sample.com
-  
-  ## Start a simple scan with other flow
-  osmedeus scan -f vuln -t sample.com
-  osmedeus scan -f extensive -t sample.com -t another.com
+	h += color.HiBlueString("\n  ## Start a general scan but exclude some of the module\n")
+	h += "  osmedeus scan -t sample.com -x screenshot -x spider\n"
 
-  ## Scan list of targets
-  osmedeus scan -T list_of_targets.txt
-  
-  ## Scan for CIDR with file contains CIDR with the format '1.2.3.4/24'
-  osmedeus scan -f cidr -t list-of-ciders.txt
-  osmedeus scan -f cidr -t '1.2.3.4/24' # this will auto convert the single input to the file and run
-  
-  ## Directly run on vuln scan and directory scan on list of domains
-  osmedeus scan -f vuln-and-dirb -t list-of-domains.txt
-  
-  ## Use a custom wordlist
-  osmedeus scan -t sample.com -p 'wordlists={{Data}}/wordlists/content/big.txt'
-  
-  ## Get target from a stdin and start the scan with 2 concurrency
-  cat list_of_targets.txt | osmedeus scan -c 2
+	h += color.HiBlueString("\n  ## Start a scan directly with a module with inputs as a list of http domains like this https://sub.example.com\n")
+	h += "  osmedeus scan -m content-discovery -t http-file.txt\n"
 
-  ## Start the scan with your custom workflow folder
-  osmedeus scan --wfFolder ~/custom-workflow/ -f your-custom-workflow -t sample.com
+	h += color.HiBlueString("\n  ## Initiate the scan using a speed option other than the default setting\n")
+	h += "  osmedeus scan -f vuln --tactic gently -t sample.com\n"
+	h += "  osmedeus scan --threads-hold=10 -t sample.com\n"
 
-  ## Start a normal scan and backup entire workflow folder to the backup folder
-  osmedeus scan --backup -f domains -t list-of-subdomains.txt
+	h += color.HiBlueString("\n  ## Start a simple scan with other flow\n")
+	h += "  osmedeus scan -f vuln -t sample.com\n"
+	h += "  osmedeus scan -f extensive -t sample.com -t another.com\n"
+	h += "  osmedeus scan -f urls -t list-of-urls.txt\n"
 
-  ## Start the scan with chunk inputs to review the output way more much faster
-  osmedeus scan --chunk --chunk-parts 20 -f cidr -t list-of-100-cidr.txt
+	h += color.HiBlueString("\n  ## Scan list of targets\n")
+	h += "  osmedeus scan -T list_of_targets.txt\n"
+	h += "  osmedeus scan -f vuln -T list-of-targets.txt\n"
 
-  ## Continuously run the scan on a target right after it finished
-  osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'
-            `
+	h += color.HiBlueString("\n  ## Performing static vulnerability scan and secret scan on a git repo\n")
+	h += "  osmedeus scan -m repo-scan -t https://github.com/j3ssie/sample-repo\n"
+	h += "  osmedeus scan -m repo-scan -T list-of-repo.txt\n"
+
+	h += color.HiBlueString("\n  ## Scan for CIDR with file contains CIDR with the format '1.2.3.4/24'\n")
+	h += "  osmedeus scan -f cidr -t list-of-ciders.txt\n"
+	h += "  osmedeus scan -f cidr -t '1.2.3.4/24' # this will auto convert the single input to the file and run\n"
+
+	h += color.HiBlueString("\n  ## Directly run on vuln scan and directory scan on list of domains\n")
+	h += "  osmedeus scan -f domains -t list-of-domains.txt\n"
+	h += "  osmedeus scan -f vuln-and-dirb -t list-of-domains.txt\n"
+
+	h += color.HiBlueString("\n  ## Use a custom wordlist\n")
+	h += "  osmedeus scan -t sample.com -p 'wordlists={{Data}}/wordlists/content/big.txt'\n"
+
+	h += color.HiBlueString("\n  ## Use a custom wordlist\n")
+	h += "  cat list_of_targets.txt | osmedeus scan -c 2\n"
+
+	h += color.HiBlueString("\n  ## Start a normal scan and backup entire workflow folder to the backup folder\n")
+	h += "  osmedeus scan --backup -f domains -t list-of-subdomains.txt\n"
+
+	h += color.HiBlueString("\n  ## Start the scan with chunk inputs to review the output way more much faster\n")
+	h += "  osmedeus scan --chunk --chunk-parts 20 -f cidr -t list-of-100-cidr.txt\n"
+
+	h += color.HiBlueString("\n  ## Continuously run the scan on a target right after it finished\n")
+	h += "  osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'\n"
+
+	h += "\n"
+	return h
+}
+
+func ScanUsage() string {
+	h := ScanExmaples()
 	h += color.HiCyanString("\nScan Usage:\n")
 	h += "  osmedeus scan -f [flowName] -t [target] \n"
 	h += "  osmedeus scan -m [modulePath] -T [targetsFile] \n"
@@ -239,7 +248,7 @@ func UtilsHelp(cmd *cobra.Command, _ []string) {
 	if options.FullHelp {
 		fmt.Println(cmd.UsageString())
 	}
-	h := ServerUsage()
+	h := UtilsUsage()
 	fmt.Println(h)
 	printDocs(cmd)
 }

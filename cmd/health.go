@@ -155,10 +155,10 @@ func generalCheck() error {
 
 	// check core programs
 	var err error
-	if _, err = utils.RunCommandWithErr("jaeles -h"); err != nil {
-		color.Red("[-] Core program setup incorrectly")
-		return fmt.Errorf("error checking core programs: %v", "jaeles")
-	}
+	// if _, err = utils.RunCommandWithErr("jaeles -h"); err != nil {
+	// 	color.Red("[-] Core program setup incorrectly")
+	// 	return fmt.Errorf("error checking core programs: %v", "jaeles")
+	// }
 	if _, err = utils.RunCommandWithErr("timeout --help"); err != nil {
 		color.Red("[-] Core program setup incorrectly")
 		return fmt.Errorf("error checking core programs: %v", "timeout")
@@ -176,9 +176,9 @@ func generalCheck() error {
 
 	// Check core signatures
 	okVuln := false
-	if utils.DirLength("~/.jaeles/base-signatures/") > 0 || utils.DirLength("~/pro-signatures/") > 0 {
-		okVuln = true
-	}
+	// if utils.DirLength("~/.jaeles/base-signatures/") > 0 || utils.DirLength("~/pro-signatures/") > 0 {
+	// 	okVuln = true
+	// }
 
 	if utils.DirLength("~/nuclei-templates") > 0 {
 		okVuln = true
