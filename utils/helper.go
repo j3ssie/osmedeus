@@ -634,12 +634,13 @@ func CleanPath(raw string) string {
 		base = filepath.Base(raw)
 	}
 
-	if strings.Count(raw, "/") > 2 {
-		out = raw[strings.LastIndex(raw, "/")+1:]
+	if strings.Count(base, "/") > 2 {
+		base = base[strings.LastIndex(base, "/")+1:]
 	}
 
 	out = strings.ReplaceAll(base, "/", "_")
 	out = strings.ReplaceAll(out, ":", "_")
+	// DebugF("CleanPath: %s -- %s", raw, out)
 	return out
 }
 
