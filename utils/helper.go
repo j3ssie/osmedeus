@@ -627,12 +627,18 @@ func CountLines(filename string) int {
 
 // CleanPath get environment variable
 func CleanPath(raw string) string {
+	var out string
 	raw = NormalizePath(raw)
 	base := raw
 	if FileExists(base) {
 		base = filepath.Base(raw)
 	}
-	out := strings.ReplaceAll(base, "/", "_")
+
+	if strings.Count(raw, "/") > 2 {
+		out = raw[strings.LastIndex(raw, "/")+1:]
+	}
+
+	out = strings.ReplaceAll(base, "/", "_")
 	out = strings.ReplaceAll(out, ":", "_")
 	return out
 }
