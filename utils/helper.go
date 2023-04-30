@@ -636,6 +636,14 @@ func CleanPath(raw string) string {
 
 	if strings.Count(base, "/") > 2 {
 		base = base[strings.LastIndex(base, "/")+1:]
+		if strings.TrimSpace(base) == "" {
+			domain, err := GetDomain(raw)
+			if err == nil {
+				base = domain
+			} else {
+				base = RandomString(8)
+			}
+		}
 	}
 
 	out = strings.ReplaceAll(base, "/", "_")

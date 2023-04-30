@@ -34,6 +34,7 @@ func ScanExmaples() string {
 	h += color.HiBlueString("\n  ## Initiate the scan using a speed option other than the default setting\n")
 	h += "  osmedeus scan -f vuln --tactic gently -t sample.com\n"
 	h += "  osmedeus scan --threads-hold=10 -t sample.com\n"
+	h += "  osmedeus scan -B 5 -t sample.com\n"
 
 	h += color.HiBlueString("\n  ## Start a simple scan with other flow\n")
 	h += "  osmedeus scan -f vuln -t sample.com\n"
@@ -70,6 +71,9 @@ func ScanExmaples() string {
 
 	h += color.HiBlueString("\n  ## Continuously run the scan on a target right after it finished\n")
 	h += "  osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'\n"
+
+	h += color.HiBlueString("\n  ## Backing up all workspaces\n")
+	h += "  ls ~/workspaces-osmedeus | osmedeus report compress\n"
 
 	h += "\n"
 	return h
