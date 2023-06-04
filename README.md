@@ -57,12 +57,69 @@ image**](https://docs.osmedeus.org/installation/using-docker/).
 ## 💡 Usage
 
 ```bash
+# Example Scan Commands:
+  ## Start a simple scan with default 'general' flow
+  osmedeus scan -t sample.com
+
+  ## Start a general scan but exclude some of the module
+  osmedeus scan -t sample.com -x screenshot -x spider
+
+  ## Start a scan directly with a module with inputs as a list of http domains like this https://sub.example.com
+  osmedeus scan -m content-discovery -t http-file.txt
+
+  ## Initiate the scan using a speed option other than the default setting
+  osmedeus scan -f vuln --tactic gently -t sample.com
+  osmedeus scan --threads-hold=10 -t sample.com
+  osmedeus scan -B 5 -t sample.com
+
+  ## Start a simple scan with other flow
+  osmedeus scan -f vuln -t sample.com
+  osmedeus scan -f extensive -t sample.com -t another.com
+  osmedeus scan -f urls -t list-of-urls.txt
+
+  ## Scan list of targets
+  osmedeus scan -T list_of_targets.txt
+  osmedeus scan -f vuln -T list-of-targets.txt
+
+  ## Performing static vulnerability scan and secret scan on a git repo
+  osmedeus scan -m repo-scan -t https://github.com/j3ssie/sample-repo
+  osmedeus scan -m repo-scan -t /tmp/source-code-folder
+  osmedeus scan -m repo-scan -T list-of-repo.txt
+
+  ## Scan for CIDR with file contains CIDR with the format '1.2.3.4/24'
+  osmedeus scan -f cidr -t list-of-ciders.txt
+  osmedeus scan -f cidr -t '1.2.3.4/24' # this will auto convert the single input to the file and run
+
+  ## Directly run on vuln scan and directory scan on list of domains
+  osmedeus scan -f domains -t list-of-domains.txt
+  osmedeus scan -f vuln-and-dirb -t list-of-domains.txt
+
+  ## Use a custom wordlist
+  osmedeus scan -t sample.com -p 'wordlists={{Data}}/wordlists/content/big.txt'
+
+  ## Use a custom wordlist
+  cat list_of_targets.txt | osmedeus scan -c 2
+
+  ## Start a normal scan and backup entire workflow folder to the backup folder
+  osmedeus scan --backup -f domains -t list-of-subdomains.txt
+
+  ## Start the scan with chunk inputs to review the output way more much faster
+  osmedeus scan --chunk --chunk-parts 20 -f cidr -t list-of-100-cidr.txt
+
+  ## Continuously run the scan on a target right after it finished
+  osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'
+
+  ## Backing up all workspaces
+  ls ~/workspaces-osmedeus | osmedeus report compress
+
+
 # Scan Usage:
   osmedeus scan -f [flowName] -t [target]
   osmedeus scan -m [modulePath] -T [targetsFile]
   osmedeus scan -f /path/to/flow.yaml -t [target]
-  osmedeus scan --threads-hold=30 -f cidr -t 1.2.3.4/24
+  osmedeus scan -m /path/to/module.yaml -t [target] --params 'port=9200'
   osmedeus scan -m /path/to/module.yaml -t [target] -l /tmp/log.log
+  osmedeus scan --tactic aggressive -m module -t [target]
   cat targets | osmedeus scan -f sample
 
 # Practical Scan Usage:
@@ -72,54 +129,16 @@ image**](https://docs.osmedeus.org/installation/using-docker/).
   osmedeus scan --tactic aggressive -f general -t sample.com
   osmedeus scan -f extensive -t sample.com -t another.com
   cat list_of_urls.txt | osmedeus scan -f urls
-  osmedeus scan --threads-hold=30 -f cidr -t 1.2.3.4/24
+  osmedeus scan --threads-hold=15 -f cidr -t 1.2.3.4/24
   osmedeus scan -m ~/.osmedeus/core/workflow/test/dirbscan.yaml -t list_of_urls.txt
   osmedeus scan --wfFolder ~/custom-workflow/ -f your-custom-workflow -t list_of_urls.txt
   osmedeus scan --chunk --chunk-part 40 -c 2 -f cidr -t list-of-cidr.txt
 
-# Queue Usage:
-  osmedeus queue -Q /tmp/queue-file.txt -c 2
-  osmedeus queue --add -t example.com -Q /tmp/queue-file.txt
-
-# Provider Usage:
-  osmedeus provider wizard
-  osmedeus provider validate
-  osmedeus provider build --token xxx --rebuild --ic
-  osmedeus provider create --name 'sample'
-  osmedeus provider health --debug
-  osmedeus provider list
-  osmedeus provider delete --id 34317111 --id 34317112
-
-# Cloud Usage:
-  osmedeus cloud -f [flowName] -t [target]
-  osmedeus cloud -m [modulePath] -t [target]
-  osmedeus cloud -c 5 -f [flowName] -T [targetsFile]
-  osmedeus cloud --token xxx -c 5 -f [flowName] -T [targetsFile]
-  osmedeus cloud --chunk -c 5 -f [flowName] -t [targetsFile]
-
-# Utilities Usage:
-  ## Health check utility
-  osmedeus health
-  osmedeus health git
-  osmedeus health cloud
-  osmedeus version --json
-  ## Update utility
-  osmedeus update
-  osmedeus update --vuln
-  osmedeus update --force --clean
-  ## Other utilities
-  osmedeus utils tmux ls
-  osmedeus utils tmux logs -A -l 10
-  osmedeus utils ps
-  osmedeus utils ps --proc 'jaeles'
-  osmedeus utils cron --cmd 'osmdeus scan -t example.com' --sch 60
-  osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'
-  osmedeus utils workflow
-  osmedeus config set --threads-hold=10
+💡 For full help message, please run: osmedeus --hh or osmedeus scan --hh
+📖 Documentation can be found here: https://docs.osmedeus.org
 ```
 
-Check out [**this page**](https://docs.osmedeus.org/installation/usage/) for full usage and the [**Practical
-Usage**](https://docs.osmedeus.org/installation/practical-usage/) to see how to use Osmedeus in a practical way.
+Check out [**this page**](https://docs.osmedeus.org/installation/usage/) for full usage and the [**Practical Usage**](https://docs.osmedeus.org/installation/practical-usage/) to see how to use Osmedeus in a practical way.
 
 ## 💬 Community & Discussion
 

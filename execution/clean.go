@@ -3,14 +3,15 @@ package execution
 import (
 	"bufio"
 	"fmt"
-	"github.com/flosch/pongo2/v6"
-	"github.com/spf13/cast"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/flosch/pongo2/v6"
+	"github.com/spf13/cast"
 
 	"github.com/thoas/go-funk"
 
@@ -383,6 +384,7 @@ func GenNucleiReport(opt libs.Options, src string, dest string, templateFile str
 	}
 	content := utils.ReadingLines(src)
 	var vulns []Vulnerability
+
 	for index, line := range content {
 		if strings.TrimSpace(line) == "" {
 			continue

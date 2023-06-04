@@ -47,6 +47,7 @@ func ScanExmaples() string {
 
 	h += color.HiBlueString("\n  ## Performing static vulnerability scan and secret scan on a git repo\n")
 	h += "  osmedeus scan -m repo-scan -t https://github.com/j3ssie/sample-repo\n"
+	h += "  osmedeus scan -m repo-scan -t /tmp/source-code-folder\n"
 	h += "  osmedeus scan -m repo-scan -T list-of-repo.txt\n"
 
 	h += color.HiBlueString("\n  ## Scan for CIDR with file contains CIDR with the format '1.2.3.4/24'\n")
