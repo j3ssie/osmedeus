@@ -35,7 +35,9 @@ func (r *Runner) RunModule(module libs.Module) {
 	utils.BlockF("Module-Started", fmt.Sprintf("%v - %v", module.Name, module.Desc))
 
 	// create report record first because I don't want to wait for them to show up in UI until the module done
-	r.DBNewReports(module)
+	if !r.Opt.NoDB {
+		r.DBNewReports(module)
+	}
 
 	// pre-run
 	if len(module.PreRun) > 0 {
@@ -65,7 +67,9 @@ func (r *Runner) RunModule(module libs.Module) {
 	utils.BlockF("Module-Ended", fmt.Sprintf("Elapsed Time for the module %v in %v", color.HiCyanString(module.Name), color.HiMagentaString("%vs", elapsedTime)))
 	r.RunningTime += cast.ToInt(elapsedTime)
 	utils.PrintLine()
-	r.DBUpdateScan()
+	if !r.Opt.NoDB {
+		r.DBUpdateScan()
+	}
 }
 
 // RunScripts run list of scripts
