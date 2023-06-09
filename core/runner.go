@@ -300,8 +300,10 @@ func (r *Runner) Start() {
 	utils.InforF("Detailed runtime file can be found on %v", color.CyanString(r.RuntimeFile))
 	execution.TeleSendMess(r.Opt, fmt.Sprintf("%s -- Start new scan: %s -- %s", r.Opt.Noti.ClientName, r.Opt.Scan.Flow, r.Target["Workspace"]), "#status", false)
 
-	r.DBNewTarget()
-	r.DBNewScan()
+	if !r.Opt.NoDB {
+		r.DBNewTarget()
+		r.DBNewScan()
+	}
 	r.LoadEngineScripts()
 
 	r.PrepareParams()
@@ -311,7 +313,11 @@ func (r *Runner) Start() {
 	r.StartRoutines()
 	/////
 
-	r.DBDoneScan()
+	if !r.Opt.NoDB {
+		r.DBDoneScan()
+	} else {
+		utils.WarnF("%v not Updated, remove -D option to update", color.HiRedString("DB"))
+	}
 	utils.BlockF("Finished", fmt.Sprintf("The scan for %v was completed within %v", color.HiCyanString(r.Input), color.HiMagentaString("%vs", r.RunningTime)))
 
 	if r.Opt.EnableBackup {
