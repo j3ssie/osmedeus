@@ -19,12 +19,6 @@ func init() {
 	execCmd.Flags().String("script", "", "Scripts to run (Multiple -s flags are accepted)")
 	execCmd.Flags().StringP("scriptFile", "S", "", "File contain list of scripts")
 	RootCmd.AddCommand(execCmd)
-	execCmd.PreRun = func(cmd *cobra.Command, args []string) {
-		if options.FullHelp {
-			cmd.Help()
-			os.Exit(0)
-		}
-	}
 }
 
 func runExec(cmd *cobra.Command, _ []string) error {

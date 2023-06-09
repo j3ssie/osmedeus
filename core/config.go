@@ -174,9 +174,9 @@ func InitConfig(options *libs.Options) error {
 		})
 
 		v.SetDefault("Tactic", map[string]any{
-			"default":    runtime.NumCPU(), // 2,4,8,16
-			"aggressive": runtime.NumCPU() * 4,
-			"gently":     int(runtime.NumCPU() + 1/2),
+			"default":    runtime.NumCPU() * 8, // 8,16,32,64
+			"aggressive": runtime.NumCPU() * 16,
+			"gently":     runtime.NumCPU() * 2,
 		})
 
 		v.SetDefault("Mics", map[string]string{

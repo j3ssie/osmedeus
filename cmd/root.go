@@ -79,7 +79,6 @@ func init() {
 	// disable options
 	RootCmd.PersistentFlags().BoolVar(&options.NoNoti, "nn", false, "No notification")
 	RootCmd.PersistentFlags().BoolVar(&options.NoBanner, "nb", false, "No banner")
-	RootCmd.PersistentFlags().BoolVarP(&options.NoDB, "no-db", "D", false, "No store DB record")
 	RootCmd.PersistentFlags().BoolVarP(&options.NoGit, "no-git", "N", false, "No git storage")
 	RootCmd.PersistentFlags().BoolVarP(&options.NoClean, "no-clean", "C", false, "No clean junk output")
 	RootCmd.PersistentFlags().StringSliceVarP(&options.Exclude, "exclude", "x", []string{}, "Exclude module name (Multiple -x flags are accepted)")

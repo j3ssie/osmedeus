@@ -10,7 +10,7 @@ steps:
       - "ExecCmd('seq 4 > /tmp/ott/source.txt')"
 
   - source: '/tmp/ott/source.txt'
-    threads: '2'
+    threads: '{{ 9 / 2 }}'
     commands:
       - "echo '---> {{line}} '"
       - "sleep 1 && echo '---> done {{line}}'"
