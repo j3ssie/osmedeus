@@ -304,28 +304,28 @@ func (r *Runner) RunStepWithSource(step libs.Step) (out string, err error) {
 				continue
 			}
 		}
-	}
+	} else {
+		/////////////
+		// run multiple steps in concurrency mode
 
-	/////////////
-	// run multiple steps in concurrency mode
+		utils.DebugF("Running the step in parallel: %v", step.Parallel)
+		var wg sync.WaitGroup
+		p, _ := ants.NewPoolWithFunc(step.Parallel, func(i interface{}) {
+			r.startStepJob(i)
+			wg.Done()
+		}, ants.WithPreAlloc(true))
+		defer p.Release()
 
-	utils.DebugF("Running the step in parallel: %v", step.Parallel)
-	var wg sync.WaitGroup
-	p, _ := ants.NewPoolWithFunc(step.Parallel, func(i interface{}) {
-		r.startStepJob(i)
-		wg.Done()
-	}, ants.WithPreAlloc(true))
-	defer p.Release()
-
-	for _, newGeneratedStep := range newGeneratedSteps {
-		wg.Add(1)
-		err = p.Invoke(newGeneratedStep)
-		if err != nil {
-			utils.ErrorF("Error in parallel: %v", err)
+		for _, newGeneratedStep := range newGeneratedSteps {
+			wg.Add(1)
+			err = p.Invoke(newGeneratedStep)
+			if err != nil {
+				utils.ErrorF("Error in parallel: %v", err)
+			}
 		}
-	}
 
-	wg.Wait()
+		wg.Wait()
+	}
 	return out, nil
 }
 
