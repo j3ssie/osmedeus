@@ -31,6 +31,9 @@ type Scan struct {
 	TaskPath string `gorm:"type:varchar(255)" json:"task_path"`
 	TaskType string `gorm:"type:varchar(255);default:'flow'" json:"task_type"`
 
+	MarkDownSunmmary string `gorm:"type:varchar(255)" json:"markdown_summary"`
+	MarkDownReport   string `gorm:"type:varchar(255)" json:"markdown_report"`
+
 	RunningTime   int    `json:"running_time"` // as seconds
 	CurrentModule string `gorm:"type:varchar(255)" json:"current_module"`
 	DoneStep      int    `json:"done_step"`

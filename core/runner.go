@@ -40,8 +40,9 @@ type Runner struct {
 	RunningTime   int
 	CurrentModule string
 
-	DoneFile    string
-	RuntimeFile string
+	DoneFile        string
+	RuntimeFile     string
+	WorkspaceFolder string
 
 	RoutineModules []string
 	Reports        []string
@@ -294,6 +295,7 @@ func (r *Runner) Start() {
 	utils.MakeDir(r.Target["Output"])
 	r.DoneFile = r.Target["Output"] + "/done"
 	r.RuntimeFile = r.Target["Output"] + "/runtime"
+	r.WorkspaceFolder = r.Target["Output"]
 	os.Remove(r.DoneFile)
 
 	utils.InforF("Running the routine %v on %v", color.HiYellowString(r.RoutineName), color.CyanString(r.Input))

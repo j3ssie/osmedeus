@@ -117,6 +117,10 @@ func UtilsUsage() string {
 	h += "  osmedeus update --vuln\n"
 	h += "  osmedeus update --force --clean \n"
 
+	h += color.HiBlackString("  ## Workflow utilities\n")
+	h += "  osmedeus workflow list \n"
+	h += "  osmedeus workflow view -f general\n"
+
 	h += color.HiBlackString("  ## Other utilities\n")
 	h += "  osmedeus utils tmux ls \n"
 	h += "  osmedeus utils tmux logs -A -l 10 \n"
@@ -126,7 +130,6 @@ func UtilsUsage() string {
 	h += "  osmedeus utils ps --proc 'jaeles' \n"
 	h += "  osmedeus utils cron --cmd 'osmdeus scan -t example.com' --sch 60\n"
 	h += "  osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'\n"
-	h += "  osmedeus utils workflow\n"
 	h += "  osmedeus config set --threads-hold=10\n"
 	return h
 }

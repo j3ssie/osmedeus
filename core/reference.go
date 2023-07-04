@@ -91,9 +91,10 @@ const (
 )
 
 const (
-	UploadToS3     = "UploadToS3"
-	DownloadFromS3 = "DownloadFromS3"
-	DownloadFile   = "DownloadFile"
+	UploadToS3        = "UploadToS3"
+	DownloadFromS3    = "DownloadFromS3"
+	DownloadFile      = "DownloadFile"
+	GenMarkdownReport = "GenMarkdownReport"
 )
 
 const (

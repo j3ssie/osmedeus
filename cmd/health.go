@@ -227,6 +227,7 @@ func listFlows() error {
 		row := []string{
 			parsedFlow.Name, parsedFlow.Desc,
 		}
+
 		content = append(content, row)
 	}
 	fmt.Printf("\nFound %v available workflows at: %s \n\n", color.HiGreenString("%v", len(content)), color.HiCyanString(options.Env.WorkFlowsFolder))

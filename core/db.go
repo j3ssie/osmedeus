@@ -119,6 +119,9 @@ func (r *Runner) DBNewScan() {
 		InputName:  r.Input,
 		InputType:  r.InputType,
 
+		MarkDownSunmmary: path.Join(r.WorkspaceFolder, "summary.md"),
+		MarkDownReport:   path.Join(r.WorkspaceFolder, "summary.html"),
+
 		LogFile:    r.Opt.LogFile,
 		Target:     r.TargetObj,
 		ProcessID:  os.Getpid(),
@@ -177,6 +180,13 @@ func (r *Runner) DBDoneScan() {
 	if runtimeData, err := jsoniter.MarshalToString(r.ScanObj); err == nil {
 		utils.WriteToFile(r.DoneFile, runtimeData)
 		utils.WriteToFile(r.RuntimeFile, runtimeData)
+	}
+
+	if utils.FileExists(r.ScanObj.MarkDownReport) {
+		utils.InforF("Markdown summary has been generated at: %v", color.GreenString(r.ScanObj.MarkDownReport))
+	}
+	if utils.FileExists(r.ScanObj.MarkDownSunmmary) {
+		utils.InforF("HTML summary has been generated at: %v", color.GreenString(r.ScanObj.MarkDownSunmmary))
 	}
 }
 

@@ -171,6 +171,7 @@ func ParseInput(raw string, options libs.Options) map[string]string {
 	ROptions["Bucket"] = options.Cdn.Bucket
 
 	ROptions["Today"] = time.Now().Format("2006-01-02")
+	ROptions["CurrentDay"] = time.Now().Format("2006-01-02T15:04:05")
 	ROptions["Date"] = time.Now().Format("2006-01-02T15:04:05")
 	ROptions["TimeStamp"] = utils.GetTS()
 	ROptions["TS"] = time.Now().Format("2006-01-02") + "T" + utils.GetTS()

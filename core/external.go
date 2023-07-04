@@ -285,5 +285,14 @@ func (r *Runner) LoadGitScripts() string {
 
 	/* --- end Gitlab API --- */
 
+	// GenMarkdownReport("markdown.md", "output.html")
+	vm.Set(GenMarkdownReport, func(call otto.FunctionCall) otto.Value {
+		args := call.ArgumentList
+		markdownFile := args[0].String()
+		outputHTML := args[1].String()
+		r.GenMarkdownReport(markdownFile, outputHTML)
+		return otto.Value{}
+	})
+
 	return output
 }

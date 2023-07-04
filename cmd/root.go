@@ -75,12 +75,15 @@ func init() {
 	RootCmd.PersistentFlags().BoolVar(&options.DisableValidateInput, "nv", false, "Disable Validate Input")
 	RootCmd.PersistentFlags().BoolVar(&options.Update.NoUpdate, "nu", false, "Disable Update options")
 	RootCmd.PersistentFlags().BoolVarP(&options.EnableFormatInput, "format-input", "J", false, "Enable special input format")
+	RootCmd.PersistentFlags().IntVar(&options.MDCodeBlockLimit, "block-size", 10000, "Size limit for code block tags to before it's automatic truncation")
 
 	// disable options
 	RootCmd.PersistentFlags().BoolVar(&options.NoNoti, "nn", false, "No notification")
 	RootCmd.PersistentFlags().BoolVar(&options.NoBanner, "nb", false, "No banner")
 	RootCmd.PersistentFlags().BoolVarP(&options.NoGit, "no-git", "N", false, "No git storage")
 	RootCmd.PersistentFlags().BoolVarP(&options.NoClean, "no-clean", "C", false, "No clean junk output")
+	RootCmd.PersistentFlags().BoolVar(&options.NoPreRun, "no-prerun", false, "Disable pre run scripts")
+	RootCmd.PersistentFlags().BoolVar(&options.NoPostRun, "no-postrun", false, "Disable post run scripts")
 	RootCmd.PersistentFlags().StringSliceVarP(&options.Exclude, "exclude", "x", []string{}, "Exclude module name (Multiple -x flags are accepted)")
 	RootCmd.PersistentFlags().BoolVarP(&options.CustomGit, "git", "g", false, "Use custom Git repo")
 

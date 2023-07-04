@@ -16,6 +16,8 @@ type Options struct {
 	FullHelp          bool
 
 	// some disable options
+	NoPostRun            bool
+	NoPreRun             bool
 	NoNoti               bool
 	NoBanner             bool
 	NoGit                bool
@@ -24,21 +26,22 @@ type Options struct {
 	NoCdn                bool
 	DisableValidateInput bool
 
-	PremiumPackage  bool
-	Resume          bool
-	Quite           bool
-	Force           bool
-	WildCardCheck   bool
-	Debug           bool
-	EnableDeStorage bool
-	PID             int
-	SyncTimes       int
-	PollingTime     int
-	Exclude         []string
-	Params          []string
-	CustomGit       bool
-	EnableBackup    bool
-	JsonOutput      bool
+	PremiumPackage   bool
+	Resume           bool
+	Quite            bool
+	Force            bool
+	WildCardCheck    bool
+	Debug            bool
+	EnableDeStorage  bool
+	PID              int
+	SyncTimes        int
+	PollingTime      int
+	MDCodeBlockLimit int
+	Exclude          []string
+	Params           []string
+	CustomGit        bool
+	EnableBackup     bool
+	JsonOutput       bool
 
 	Client Client
 	Queue  Queue

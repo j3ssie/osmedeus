@@ -1,0 +1,15 @@
+name: markdown-generate
+desc: HTML report generator based on markdown template
+
+# go run main.go scan -m test-workflows/test-module/markdown-generate.yaml --debug -t target.io
+
+report:
+  final:
+    - "{{Output}}/subdomain/final-{{Workspace}}.txt"
+    - "{{Output}}/vuln/active/{{Workspace}}-report.html"
+    - "{{Output}}/vuln/active/jaeles-summary.txt"
+
+steps:
+  - scripts:
+      - GenMarkdownReport("{{Data}}/markdown/general-template.md", "{{Output}}/summary.html")
+      - GenMarkdownReport("{{Data}}/markdown/simple-template.md", "{{Output}}/simple.html")

@@ -38,7 +38,7 @@ func (r *Runner) RunModule(module libs.Module) {
 	r.DBNewReports(module)
 
 	// pre-run
-	if len(module.PreRun) > 0 {
+	if len(module.PreRun) > 0 && r.Opt.NoPreRun == false {
 		utils.InforF("Running prepare scripts for module %v", color.CyanString(module.Name))
 		r.RunScripts(module.PreRun)
 	}
@@ -51,7 +51,7 @@ func (r *Runner) RunModule(module libs.Module) {
 	}
 
 	// post-run
-	if len(module.PostRun) > 0 {
+	if len(module.PostRun) > 0 && r.Opt.NoPostRun == false {
 		utils.InforF("Running conclude scripts for module %v", color.CyanString(module.Name))
 		r.RunScripts(module.PostRun)
 	}

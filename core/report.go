@@ -100,7 +100,7 @@ func ListSingleWorkspace(options libs.Options, target string) (content [][]strin
 		runtimeFile := path.Join(wsFolder, "runtime")
 		// only listing file that in report part
 		if utils.FileExists(runtimeFile) && !options.Report.Raw {
-			utils.InforF("Reading information from: %v", runtimeFile)
+			utils.InforF("Reading runtime information from: %v", runtimeFile)
 			runtimeContent := utils.GetFileContent(runtimeFile)
 
 			isImported := false
@@ -140,8 +140,21 @@ func ListSingleWorkspace(options libs.Options, target string) (content [][]strin
 					row := []string{
 						moduleName, processReport(options, reportName), processReport(options, reportPath),
 					}
+
 					content = append(content, row)
 				}
+
+				markDownSunmmary := cast.ToString(jsonParsed.S("markdown_summary").Data())
+				if utils.FileExists(markDownSunmmary) {
+					row := []string{"==> Markdown Summary", path.Base(markDownSunmmary), color.HiGreenString(markDownSunmmary)}
+					content = append(content, row)
+				}
+				markDownReport := cast.ToString(jsonParsed.S("markdown_report").Data())
+				if utils.FileExists(markDownReport) {
+					row := []string{"==> Markdown HTML Summary", path.Base(markDownReport), color.HiGreenString(markDownReport)}
+					content = append(content, row)
+				}
+
 				sep := []string{"==> --------", color.HiGreenString("----------"), color.HiGreenString("-----------")}
 				content = append(content, sep)
 
@@ -169,7 +182,7 @@ func ListSingleWorkspace(options libs.Options, target string) (content [][]strin
 			return nil
 		})
 
-		sep := []string{"==> --------", color.HiGreenString("-----------")}
+		sep := []string{"<== --------", color.HiGreenString("-----------")}
 		content = append(content, sep)
 
 	}
