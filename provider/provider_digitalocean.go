@@ -204,8 +204,13 @@ func (p *Provider) CreateInstanceDO(name string) (dropletId int, err error) {
 			ID: cast.ToInt(p.SnapshotID),
 			//Slug: "ubuntu-16-04-x64",
 		},
+		// SSHKeys: []godo.DropletCreateSSHKey{
+		// 	godo.DropletCreateSSHKey{ID: cast.ToInt(p.SSHKeyID)},
+		// },
+		// Tags: []string{libs.SNAPSHOT},
+
 		SSHKeys: []godo.DropletCreateSSHKey{
-			godo.DropletCreateSSHKey{ID: cast.ToInt(p.SSHKeyID)},
+			{ID: cast.ToInt(p.SSHKeyID)},
 		},
 		Tags: []string{libs.SNAPSHOT},
 	}

@@ -19,7 +19,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
+
+	//"syscall"
 	"text/template"
 	"time"
 
@@ -876,19 +877,8 @@ func IsWritable(filename string) (isWritable bool, err error) {
 		return
 	}
 
-	// Check if the user bit is enabled in file permission
-	if info.Mode().Perm()&(1<<(uint(7))) == 0 {
-		return
-	}
-
-	var stat syscall.Stat_t
-	if err = syscall.Stat(filename, &stat); err != nil {
-		return
-	}
-
-	err = nil
-	if uint32(os.Geteuid()) != stat.Uid {
-		isWritable = false
+	// Check if the user write bit is enabled in file permission
+	if info.Mode().Perm()&0200 == 0 {
 		return
 	}
 
