@@ -1,4 +1,4 @@
-module github.com/j3ssie/osmedeus
+module github.com/5w33t50ny4/osmedeus
 
 go 1.20
 
