@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/j3ssie/osmedeus/libs"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"time"
@@ -61,7 +61,7 @@ func SendGET(cred string, url string) (res Response) {
 	}
 
 	defer resp.Body.Close()
-	resbody, err := ioutil.ReadAll(resp.Body)
+	resbody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return res
 	}
@@ -85,7 +85,7 @@ func SendPOST(cred string, url string, body string) (res Response) {
 		return res
 	}
 	defer resp.Body.Close()
-	resbody, err := ioutil.ReadAll(resp.Body)
+	resbody, err := io.ReadAll(resp.Body)
 
 	if err != nil {
 		return res
@@ -110,7 +110,7 @@ func SendPUT(cred string, url string, body string) (res Response) {
 		return res
 	}
 	defer resp.Body.Close()
-	resbody, err := ioutil.ReadAll(resp.Body)
+	resbody, err := io.ReadAll(resp.Body)
 
 	if err != nil {
 		return res

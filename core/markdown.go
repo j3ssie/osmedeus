@@ -4,7 +4,6 @@ import (
 	"path"
 
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
@@ -173,7 +172,7 @@ func MarkDownToHTML(options libs.Options, target string, markdownFile string, ou
 	var input []byte
 	var err error
 
-	if input, err = ioutil.ReadFile(markdownFile); err != nil {
+	if input, err = os.ReadFile(markdownFile); err != nil {
 		utils.ErrorF("Error reading %s: %v", markdownFile, err)
 		return err
 	}
@@ -209,7 +208,7 @@ func MarkDownToHTML(options libs.Options, target string, markdownFile string, ou
 	output = markdown.ToHTML(input, parser, renderer)
 	// html := bluemonday.UGCPolicy().SanitizeBytes(output) // skip the sanitization as we prefer more beautiful output
 
-	cssContent, err := ioutil.ReadFile(css)
+	cssContent, err := os.ReadFile(css)
 	if err != nil {
 		return err
 	}

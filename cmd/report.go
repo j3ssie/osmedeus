@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -154,7 +154,7 @@ func getPublicIP() string {
 	}
 	defer req.Body.Close()
 
-	body, err := ioutil.ReadAll(req.Body)
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		return "127.0.0.1"
 	}
