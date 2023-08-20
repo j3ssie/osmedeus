@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -50,7 +50,7 @@ func BuildClient(token string, retry int) *resty.Client {
 
 	// disable log when retry
 	logger := logrus.New()
-	logger.Out = ioutil.Discard
+	logger.Out = io.Discard
 
 	client := resty.New()
 	client.SetLogger(logger)

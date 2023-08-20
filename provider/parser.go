@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"io/ioutil"
+	"os"
 	"math/rand"
 	"time"
 
@@ -65,7 +65,7 @@ func ParseProvider(cloudFile string) (ConfigProviders, error) {
 	var clouds ConfigProviders
 	cloudFile = utils.NormalizePath(cloudFile)
 
-	yamlFile, err := ioutil.ReadFile(cloudFile)
+	yamlFile, err := os.ReadFile(cloudFile)
 	if err != nil {
 		utils.ErrorF("YAML parsing err #%v ", err)
 		return clouds, err

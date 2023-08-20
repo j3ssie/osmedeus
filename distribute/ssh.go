@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -109,7 +108,7 @@ func DialWithKeyString(addr, user, keyContent string) (*Client, error) {
 
 // DialWithKey starts a client connection to the given SSH server with key authmethod.
 func DialWithKey(addr, user, keyfile string) (*Client, error) {
-	key, err := ioutil.ReadFile(keyfile)
+	key, err := os.ReadFile(keyfile)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +131,7 @@ func DialWithKey(addr, user, keyfile string) (*Client, error) {
 
 // DialWithKeyWithPassphrase same as DialWithKey but with a passphrase to decrypt the private key
 func DialWithKeyWithPassphrase(addr, user, keyfile string, passphrase string) (*Client, error) {
-	key, err := ioutil.ReadFile(keyfile)
+	key, err := os.ReadFile(keyfile)
 	if err != nil {
 		return nil, err
 	}

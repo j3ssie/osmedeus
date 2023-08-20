@@ -2,7 +2,6 @@ package distribute
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -22,7 +21,7 @@ func GetAllInstances(opt libs.Options) (instances []CloudRunner) {
 	utils.InforF("Getting all instances from %s", opt.Env.InstancesFolder)
 
 	// Read all entries in the directory
-	entries, err := ioutil.ReadDir(opt.Env.InstancesFolder)
+	entries, err := os.ReadDir(opt.Env.InstancesFolder)
 	if err != nil {
 		utils.ErrorF("error reading instances folder: %v", err)
 		return instances

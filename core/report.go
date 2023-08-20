@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -17,7 +16,7 @@ import (
 )
 
 func ListWorkspaces(options libs.Options) (content [][]string) {
-	workspaces, err := ioutil.ReadDir(utils.NormalizePath(options.Env.WorkspacesFolder))
+	workspaces, err := os.ReadDir(utils.NormalizePath(options.Env.WorkspacesFolder))
 	if err != nil {
 		utils.ErrorF("Error reading workspaces folder: %s", err)
 		return content
@@ -80,7 +79,7 @@ func ListWorkspaces(options libs.Options) (content [][]string) {
 }
 
 func ListSingleWorkspace(options libs.Options, target string) (content [][]string) {
-	workspaces, err := ioutil.ReadDir(utils.NormalizePath(options.Env.WorkspacesFolder))
+	workspaces, err := os.ReadDir(utils.NormalizePath(options.Env.WorkspacesFolder))
 	if err != nil {
 		utils.ErrorF("Error reading workspaces folder: %s", err)
 		return content

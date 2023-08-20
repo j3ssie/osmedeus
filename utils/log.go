@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,11 +24,11 @@ func InitLog(options *libs.Options) {
 		if !FolderExists(logDir) {
 			os.MkdirAll(logDir, 0777)
 		}
-		tmpFile, err := ioutil.TempFile(logDir, "osmedeus-*.log")
+		tmpFile, err := os.CreateTemp(logDir, "osmedeus-*.log")
 		if err == nil {
 			options.LogFile = tmpFile.Name()
 		} else {
-			tmpFile, _ := ioutil.TempFile("/tmp/", "osmedeus-*.log")
+			tmpFile, _ := os.CreateTemp("/tmp/", "osmedeus-*.log")
 			options.LogFile = tmpFile.Name()
 		}
 	}
@@ -63,7 +62,7 @@ func InitLog(options *libs.Options) {
 	} else if options.Verbose == true {
 		logger.SetLevel(logrus.ErrorLevel)
 	} else if options.Quite == true {
-		logger.SetOutput(ioutil.Discard)
+		logger.SetOutput(io.Discard)
 	}
 }
 
