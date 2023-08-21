@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -10,9 +11,12 @@ import (
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/mackerelio/go-osstat/cpu"
-	"github.com/mackerelio/go-osstat/memory"
+
+	//"github.com/mackerelio/go-osstat/cpu"
+	//"github.com/mackerelio/go-osstat/memory"
 	"github.com/spf13/cobra"
+	//"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
 )
 
 func init() {
@@ -111,31 +115,62 @@ type ServerStatData struct {
 }
 
 // GetStat get stat data
+// func GetStat() ServerStatData {
+// 	var stat ServerStatData
+
+// 	before, err := cpu.Get()
+// 	if err != nil {
+// 		return stat
+// 	}
+// 	time.Sleep(time.Duration(1) * time.Second)
+// 	after, err := cpu.Get()
+// 	if err != nil {
+// 		return stat
+// 	}
+// 	total := float64(after.Total - before.Total)
+// 	stat.CPU.User = float64(after.User-before.User) / total * 100
+// 	stat.CPU.System = float64(after.System-before.System) / total * 100
+// 	stat.CPU.Idle = float64(after.Idle-before.Idle) / total * 100
+// 	// memory part
+// 	memory, err := memory.Get()
+// 	if err != nil {
+// 		return stat
+// 	}
+// 	stat.Mem.Total = float64(memory.Total+memory.SwapTotal) / (1024 * 1024 * 1024)
+// 	stat.Mem.Used = float64(memory.Used+memory.SwapUsed) / (1024 * 1024 * 1024)
+// 	stat.Mem.Used = float64(memory.Used+memory.SwapUsed) / (1024 * 1024 * 1024)
+// 	stat.Mem.Cached = float64(memory.Cached) / (1024 * 1024 * 1024)
+// 	stat.Mem.Free = float64(memory.Free+memory.SwapFree) / (1024 * 1024 * 1024)
+// 	return stat
+// }
+
+// GetStat gets stat data
 func GetStat() ServerStatData {
 	var stat ServerStatData
 
-	before, err := cpu.Get()
-	if err != nil {
-		return stat
-	}
+	var before runtime.MemStats
+	runtime.ReadMemStats(&before)
+
 	time.Sleep(time.Duration(1) * time.Second)
-	after, err := cpu.Get()
+
+	var after runtime.MemStats
+	runtime.ReadMemStats(&after)
+
+	totalAlloc := float64(after.TotalAlloc - before.TotalAlloc)
+	sys := float64(after.Sys - before.Sys)
+	stat.CPU.User = totalAlloc / sys * 100
+	stat.CPU.System = sys / sys * 100
+	stat.CPU.Idle = 100 - stat.CPU.User - stat.CPU.System
+
+	// Memory part
+	memory, err := mem.VirtualMemory()
 	if err != nil {
 		return stat
 	}
-	total := float64(after.Total - before.Total)
-	stat.CPU.User = float64(after.User-before.User) / total * 100
-	stat.CPU.System = float64(after.System-before.System) / total * 100
-	stat.CPU.Idle = float64(after.Idle-before.Idle) / total * 100
-	// memory part
-	memory, err := memory.Get()
-	if err != nil {
-		return stat
-	}
-	stat.Mem.Total = float64(memory.Total+memory.SwapTotal) / (1024 * 1024 * 1024)
-	stat.Mem.Used = float64(memory.Used+memory.SwapUsed) / (1024 * 1024 * 1024)
-	stat.Mem.Used = float64(memory.Used+memory.SwapUsed) / (1024 * 1024 * 1024)
+	stat.Mem.Total = float64(memory.Total) / (1024 * 1024 * 1024)
+	stat.Mem.Used = float64(memory.Used) / (1024 * 1024 * 1024)
 	stat.Mem.Cached = float64(memory.Cached) / (1024 * 1024 * 1024)
-	stat.Mem.Free = float64(memory.Free+memory.SwapFree) / (1024 * 1024 * 1024)
+	stat.Mem.Free = float64(memory.Free) / (1024 * 1024 * 1024)
+
 	return stat
 }
