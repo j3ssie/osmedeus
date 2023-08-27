@@ -111,26 +111,45 @@ func UtilsUsage() string {
 	h += "  osmedeus health git\n"
 	h += "  osmedeus health cloud\n"
 	h += "  osmedeus version --json \n"
+	h += "\n"
+
+	h += color.HiBlackString("  ## Set the base threads hold\n")
+	h += "  osmedeus config set --threads-hold=10\n"
+	h += "\n"
 
 	h += color.HiBlackString("  ## Update utilities\n")
 	h += "  osmedeus update \n"
 	h += "  osmedeus update --vuln\n"
 	h += "  osmedeus update --force --clean \n"
+	h += "\n"
 
 	h += color.HiBlackString("  ## Workflow utilities\n")
 	h += "  osmedeus workflow list \n"
 	h += "  osmedeus workflow view -f general\n"
+	h += "\n"
 
-	h += color.HiBlackString("  ## Other utilities\n")
+	h += color.HiBlackString("  ## Tmux utilities\n")
 	h += "  osmedeus utils tmux ls \n"
 	h += "  osmedeus utils tmux logs -A -l 10 \n"
+	h += "\n"
+
+	h += color.HiBlackString("  ## Process utilities\n")
 	h += "  osmedeus utils ps \n"
-	h += "  osmedeus utils ps --osm \n"
-	h += "  osmedeus utils ps --osm --kill \n"
 	h += "  osmedeus utils ps --proc 'jaeles' \n"
+	h += "\n"
+
+	h += color.HiBlackString("  ## List all the sub proccess running by osmedeus\n")
+	h += "  osmedeus utils ps --osm \n"
+	h += "\n"
+
+	h += color.HiBlackString("  ## Kill all the sub proccess running by osmedeus\n")
+	h += "  osmedeus utils ps --osm --kill \n"
+	h += "\n"
+
+	h += color.HiBlackString("  ## Other utilities\n")
 	h += "  osmedeus utils cron --cmd 'osmdeus scan -t example.com' --sch 60\n"
 	h += "  osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'\n"
-	h += "  osmedeus config set --threads-hold=10\n"
+
 	return h
 }
 
