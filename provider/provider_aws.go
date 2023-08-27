@@ -81,9 +81,16 @@ func (p *Provider) AccountAWS() error {
 	}
 
 	// Send the query and get the results
+	// result, err := ceSvc.GetCostAndUsage(params)
+	// if err != nil {
+	// 	utils.ErrorF("Error getting cost and usage:", err)
+	// 	return err
+	// }
+
+	// Send the query and get the results
 	result, err := ceSvc.GetCostAndUsage(params)
 	if err != nil {
-		utils.ErrorF("Error getting cost and usage:", err)
+		utils.ErrorF("Error getting cost and usage: %v", err)
 		return err
 	}
 
