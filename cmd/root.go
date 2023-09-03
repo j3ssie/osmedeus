@@ -50,6 +50,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&options.Scan.SuffixName, "suffix", "", "Suffix string for file converted (default: randomly)")
 	RootCmd.PersistentFlags().IntVarP(&options.Threads, "threads-hold", "B", 0, "Threads hold for each module (default: number of CPUs)")
 	RootCmd.PersistentFlags().StringVar(&options.Tactics, "tactic", "default", "Choosing the tactic for running workflow from [default aggressive gently]")
+	RootCmd.PersistentFlags().StringVar(&options.Scan.ParamsFile, "params-file", "", "Custom file params --params-file=params.yaml")
 
 	// cloud flags
 	RootCmd.PersistentFlags().BoolVar(&options.Cloud.EnableChunk, "chunk", false, "Enable chunk mode")

@@ -75,7 +75,7 @@ type Scan struct {
 	Params    []string
 	Input     string
 	InputType string // domain, url, ip, cidr or domainList, urlList, ipList, cidrList
-
+	ParamsFile string
 	Inputs    []string
 	InputList string
 	Modules   []string

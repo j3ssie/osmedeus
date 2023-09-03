@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Shopify/yaml"
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/database"
 	"github.com/j3ssie/osmedeus/execution"
@@ -221,6 +222,25 @@ func (r *Runner) PrepareParams() {
 				}
 			}
 
+			if len(r.Opt.Scan.ParamsFile) > 0 {
+				var params map[string]string
+				yamlFile, err := os.ReadFile(r.Opt.Scan.ParamsFile)
+				if err != nil {
+					utils.ErrorF("YAML parsing err: %v -- #%v ", r.Opt.Scan.ParamsFile, err)
+					return
+				}
+				err = yaml.Unmarshal(yamlFile, &params)
+				if err != nil {
+					utils.ErrorF("Error unmarshal: %v -- %v", params, err)
+					return
+				}
+				if len(params) > 0 {
+					for k, v := range params {
+						v = ResolveData(v, r.Params)
+						r.Params[k] = v
+					}
+				}
+			}
 			// more params from -p flag which will override everything
 			if len(r.Opt.Scan.Params) > 0 {
 				params := ParseParams(r.Opt.Scan.Params)
