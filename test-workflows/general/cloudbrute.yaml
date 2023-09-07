@@ -1,0 +1,10 @@
+name: cloudbrute
+desc: cloudbrute
+
+params:
+  - testData: "~/go/src/github.com/j3ssie/osmedeus/test-data"
+
+steps:
+  # get data from cdn
+  - scripts:
+      - ImportCloudBrute("{{testData}}/{{Workspace}}/clouds-data.txt")

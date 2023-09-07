@@ -1,0 +1,18 @@
+name: partest
+desc: partest
+
+params:
+  - testFile: "/tmp/partest.txt"
+  - splitLines: "10"
+
+steps:
+  - required:
+      - "{{testFile}}"
+    scripts:
+      - SplitFile("{{testFile}}", "{{Workspace}}-index", {{splitLines}}, "/tmp/pt")
+
+  - label: 'Parallel test'
+    source: "{{testFile}}"
+    parallel: 1
+    commands:
+      - "echo [[.line]]"

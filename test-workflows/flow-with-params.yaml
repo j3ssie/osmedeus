@@ -1,0 +1,11 @@
+name: flow-with-params
+desc: run normal routine
+type: sample
+
+params:
+  - firstTimeout: '5s'
+
+routines:
+  - modules:
+      - timeout-module
+

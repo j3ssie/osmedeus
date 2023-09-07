@@ -1,0 +1,10 @@
+name: portscan
+desc: Scanning for subdomain
+
+params:
+  - testData: "~/go/src/github.com/j3ssie/osmedeus/test-data"
+
+steps:
+  # get data from cdn
+  - scripts:
+      - ImportPortJson("{{testData}}/{{Workspace}}/portscan/portscan-json.txt")

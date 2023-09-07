@@ -1,0 +1,9 @@
+name: set OS Variable
+
+steps:
+
+  - scripts:
+      - "SetOSVar('FROM_OSM', 'IS_TRUE')"
+  - commands:
+      - echo "=> \$FROM_OSM = $FROM_OSM"
+

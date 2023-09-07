@@ -1,0 +1,20 @@
+name: parallel1
+desc: Run dirbscan scan on list of HTTP file
+
+params:
+  - limit: '5000'
+
+steps:
+  - label: 'Start step 111'
+    commands:
+      - "echo '---> {{Target}} '"
+      - "seq {{limit}} > /tmp/source.txt"
+
+  - source: '/tmp/source.txt'
+    threads: '200'
+    commands:
+      - "echo '---> [[.line]]'"
+      # - "sleep 1 && echo '---> done [[.line]]'"
+
+  - commands:
+      - "echo 'done parallel 111111'"

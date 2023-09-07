@@ -1,0 +1,31 @@
+name: general
+desc: run normal routine
+type: general
+validator: domain
+
+routines:
+  - modules:
+      - subdomain
+  - modules:
+      - probing
+  - modules:
+      - fingerprint
+  - modules:
+      - portscan
+  - modules:
+      - ipspace
+  - modules:
+      - archive
+  - modules:
+      - spider
+  - modules:
+      - dirbscan
+  - modules:
+      - vulnscan
+  - modules:
+      - cloudbrute
+  - modules:
+      - credintel
+  - modules:
+      - summary
+
