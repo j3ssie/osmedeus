@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/core"
@@ -155,22 +156,26 @@ func generalCheck() error {
 
 	// check core programs
 	var err error
-	// if _, err = utils.RunCommandWithErr("jaeles -h"); err != nil {
-	// 	color.Red("[-] Core program setup incorrectly")
-	// 	return fmt.Errorf("error checking core programs: %v", "jaeles")
-	// }
+	var errorBinary []string
 	if _, err = utils.RunCommandWithErr("timeout --help"); err != nil {
-		color.Red("[-] Core program setup incorrectly")
-		return fmt.Errorf("error checking core programs: %v", "timeout")
+		errorBinary = append(errorBinary, "timeout")
 	}
 	if _, err = utils.RunCommandWithErr("amass -h"); err != nil {
-		color.Red("[-] Core program setup incorrectly")
-		return fmt.Errorf("error checking core programs: %v", "amass")
+		errorBinary = append(errorBinary, "amass")
 	}
-	_, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "httprobe")))
-	if err != nil {
+	if _, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "subfinder"))); err != nil {
+		errorBinary = append(errorBinary, "subfinder")
+	}
+	if _, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "httprobe"))); err != nil {
+		errorBinary = append(errorBinary, "httprobe")
+	}
+	if _, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "nuclei"))); err != nil {
+		errorBinary = append(errorBinary, "nuclei")
+	}
+
+	if len(errorBinary) > 0 {
 		color.Red("[-] Core program setup incorrectly")
-		return fmt.Errorf("error checking core programs: %v", fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "httprobe")))
+		return fmt.Errorf("error checking core programs: %v", color.HiCyanString(strings.Join(errorBinary, ", ")))
 	}
 	fmt.Printf("[+] Health Check Core Programs: %s\n", color.GreenString("✔"))
 
@@ -237,7 +242,7 @@ func listFlows() error {
 	table.SetHeader([]string{"Flow Name", "Description"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: true})
 	table.SetColWidth(120)
-	table.AppendBulk(content) // Add Bulk Data
+	table.AppendBulk(content)
 	table.Render()
 
 	h := color.HiCyanString("\nUsage:\n")
@@ -273,7 +278,7 @@ func listDefaultModules() error {
 	table.SetHeader([]string{"Module Name", "Description"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: true})
 	table.SetColWidth(120)
-	table.AppendBulk(content) // Add Bulk Data
+	table.AppendBulk(content)
 	table.Render()
 
 	h := color.HiCyanString("\nModule Usage:\n")

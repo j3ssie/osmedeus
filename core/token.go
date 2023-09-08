@@ -113,7 +113,11 @@ func SetupOSEnv(options *libs.Options) {
 				continue
 			}
 
-			utils.DebugF("Setting environment variable: %v -- %v", name, value)
+			redactedValue := "*****"
+			if len(value) > 5 {
+				redactedValue = value[:2] + "***" + value[len(value)-2:]
+			}
+			utils.DebugF("Setting environment variable: %v -- %v", name, redactedValue)
 
 			err := os.Setenv(name, value)
 			if err != nil {

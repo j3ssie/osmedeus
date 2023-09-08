@@ -43,6 +43,13 @@ func runConfig(cmd *cobra.Command, args []string) error {
 	}
 
 	switch action {
+	case "check":
+		err := generalCheck()
+		if err != nil {
+			fmt.Printf("‼️ There is might be something wrong with your setup: %v\n", color.HiRedString("%v", err))
+			return nil
+		}
+		break
 	case "init":
 		if utils.FolderExists(fmt.Sprintf("%vcore", options.Env.RootFolder)) {
 			utils.GoodF("Look like you got properly setup.")
@@ -93,6 +100,9 @@ func runConfig(cmd *cobra.Command, args []string) error {
 		break
 	default:
 		utils.ErrorF("Unknown action: %v", color.HiRedString(action))
+		if options.FullHelp {
+			fmt.Println(cmd.UsageString())
+		}
 		fmt.Println(ConfigUsage())
 	}
 

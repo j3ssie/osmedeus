@@ -264,7 +264,6 @@ func ConfigHelp(cmd *cobra.Command, _ []string) {
 		fmt.Println(cmd.UsageString())
 	}
 	h := ConfigUsage()
-
 	fmt.Println(h)
 	printDocs(cmd)
 }
