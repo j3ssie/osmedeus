@@ -88,6 +88,7 @@ func runHealth(_ *cobra.Command, args []string) error {
 		return nil
 	}
 	fmt.Printf(color.GreenString("\n🦾 Everything is in order. Happy Hacking 🦾\n"))
+	fmt.Printf("💡 Refer to this page if you're uncertain about which workflow to run: %v\n", color.GreenString("https://docs.osmedeus.org/installation/running-your-first-scan/ "))
 	return nil
 }
 

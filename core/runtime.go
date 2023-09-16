@@ -182,6 +182,16 @@ func (r *Runner) LoadScripts() string {
 		return otto.Value{}
 	})
 
+	vm.Set(FolderLength, func(call otto.FunctionCall) otto.Value {
+		data := utils.FolderLength(call.Argument(0).String())
+		utils.DebugF("FolderLength -- %v", data)
+		result, err := vm.ToValue(data)
+		if err == nil {
+			return result
+		}
+		return otto.Value{}
+	})
+
 	vm.Set(IsFile, func(call otto.FunctionCall) otto.Value {
 		data := utils.FileLength(call.Argument(0).String())
 		var validate bool

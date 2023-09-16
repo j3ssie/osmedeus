@@ -14,7 +14,7 @@ import (
 )
 
 func SetupOSEnv(options *libs.Options) {
-	utils.DebugF("Loading all environment variables from: %v", options.TokenConfigFile)
+	utils.DebugF("Loading all environment variables from: %v", color.HiGreenString(options.TokenConfigFile))
 	v = viper.New()
 	v.SetConfigName("osm-var")
 	v.SetConfigType("yaml")
@@ -23,6 +23,7 @@ func SetupOSEnv(options *libs.Options) {
 	// Read the configuration file
 	err := v.ReadInConfig()
 	if err != nil {
+		utils.ErrorF("Error reading config file: %s", err)
 		v.SetDefault("Storages", map[string]string{
 			// path of secret key for push result
 			// ~/.osmedeus/secret/storages_key
@@ -92,7 +93,7 @@ func SetupOSEnv(options *libs.Options) {
 		if ok := v.WriteConfigAs(options.TokenConfigFile); ok != nil {
 			utils.ErrorF("Error writing config file: %s", ok)
 		}
-		utils.InforF("Created a new token configuration file at %s", color.HiCyanString(options.ConfigFile))
+		utils.InforF("Created a new token configuration file at %s", color.HiCyanString(options.TokenConfigFile))
 
 	}
 
@@ -125,20 +126,35 @@ func SetupOSEnv(options *libs.Options) {
 			}
 		}
 	}
+
 	// get all the config that need to be set manually
-	GetStorages(options)
+	utils.DebugF("Getting all the config that need to be set manually")
 	GetStorages(options)
 	GetNotification(options)
 	GetGit(options)
 	GetCdn(options)
 }
 
+func LoadTokenFile(options *libs.Options) *viper.Viper {
+
+	v = viper.New()
+	v.SetConfigName("osm-var")
+	v.SetConfigType("yaml")
+	v.AddConfigPath(path.Dir(options.TokenConfigFile))
+	if err := v.ReadInConfig(); err != nil {
+		utils.ErrorF("Error reading config file, %s", err)
+	}
+	return v
+}
+
 func GetStorages(options *libs.Options) {
-	if !options.PremiumPackage || utils.GetOSEnv("ENABLE_GIT_STORAGES", "") != "TRUE" {
+	if !options.PremiumPackage {
 		return
 	}
 
-	storages := v.GetStringMapString("Storages")
+	utils.DebugF("Loading git storages from: %v", color.HiGreenString(options.TokenConfigFile))
+	v = LoadTokenFile(options)
+	storages := v.GetStringMapString("storages")
 
 	// get variables from config.yaml
 	storagesOptions := make(map[string]string)
@@ -148,6 +164,7 @@ func GetStorages(options *libs.Options) {
 	}
 	secretKey := storages["secret_key"]
 	if secretKey == "" || secretKey == "SECRET_KEY" {
+		utils.DebugF("No secret key has been set. Quitting the storages setup")
 		return
 	}
 
@@ -241,12 +258,13 @@ func GetStorages(options *libs.Options) {
 
 // GetNotification get storge repos
 func GetNotification(options *libs.Options) {
-	noti := v.GetStringMapString("Notification")
-	tokens := v.GetStringMapString("Tokens")
+	v = LoadTokenFile(options)
 
+	noti := v.GetStringMapString("notification")
+	tokens := v.GetStringMapString("tokens")
 	// tokens
-	options.Noti.SlackToken = tokens["slack"]
-	options.Noti.TelegramToken = tokens["telegram"]
+	options.Noti.SlackToken = tokens["slack_api_token"]
+	options.Noti.TelegramToken = tokens["telegram_api_token"]
 
 	// this mean you're not setup the notification yet
 	if len(options.Noti.TelegramToken) < 20 {
@@ -254,7 +272,6 @@ func GetNotification(options *libs.Options) {
 	}
 
 	options.Noti.ClientName = noti["client_name"]
-
 	options.Noti.SlackStatusChannel = noti["slack_status_channel"]
 	options.Noti.SlackReportChannel = noti["slack_report_channel"]
 	options.Noti.SlackDiffChannel = noti["slack_diff_channel"]
@@ -269,7 +286,9 @@ func GetNotification(options *libs.Options) {
 
 // GetCdn get options for client
 func GetCdn(options *libs.Options) {
-	cdn := v.GetStringMapString("Cdn")
+	v = LoadTokenFile(options)
+
+	cdn := v.GetStringMapString("cdn")
 	options.Cdn.Bucket = cdn["cdn_s3_bucket"]
 	options.Cdn.AccessKeyId = cdn["cdn_aws_access_key"]
 	options.Cdn.SecretKey = cdn["cdn_aws_secret_key"]
@@ -278,7 +297,8 @@ func GetCdn(options *libs.Options) {
 
 // GetGit get options for client
 func GetGit(options *libs.Options) {
-	git := v.GetStringMapString("Git")
+	v = LoadTokenFile(options)
+	git := v.GetStringMapString("git")
 	options.Git.BaseURL = git["base_url"]
 	options.Git.DeStorage = git["destorage"]
 	options.Git.Token = git["api"]

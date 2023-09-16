@@ -137,7 +137,6 @@ func InitConfig(options *libs.Options) error {
 		utils.BlockF("fatal", "Make sure you are login as 'root user' if your installation done via root user")
 		os.Exit(-1)
 	}
-	SetupOSEnv(options)
 	return nil
 }
 
@@ -162,6 +161,7 @@ func ParsingConfig(options *libs.Options) {
 	SetupOpt(options)
 	// get the config for cloud provider
 	GetCloud(options)
+	SetupOSEnv(options)
 }
 
 // GetEnv get environment options

@@ -53,6 +53,7 @@ const (
 	DeleteFolder      = "DeleteFolder"
 	SplitFileByPart   = "SplitFileByPart"
 	FileLength        = "FileLength"
+	FolderLength      = "FolderLength"
 	IsFile            = "IsFile"
 	EmptyDir          = "EmptyDir"
 	EmptyFile         = "EmptyFile"

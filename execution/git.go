@@ -156,13 +156,14 @@ func CloneRepo(url string, dest string, options libs.Options) error {
 
 	// cloning new
 	cloneCmd := fmt.Sprintf("GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -i %v' git clone --depth=1 %v %v", options.Storages["secret_key"], url, dest)
-	Execution(cloneCmd, options)
+	out := utils.RunCmdWithOutput(cloneCmd)
 	if utils.FolderExists(dest) {
 		if utils.FileExists(path.Join(dest, "/.git/HEAD")) {
 			return nil
 		}
 		return nil
 	}
+	utils.DebugF(out)
 	return errors.New("fail to clone Repo")
 }
 
