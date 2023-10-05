@@ -101,9 +101,19 @@ func InforF(format string, args ...interface{}) {
 	logger.Info(fmt.Sprintf(format, args...))
 }
 
+// Infor print info message
+func Infor(args ...interface{}) {
+	logger.Info(args...)
+}
+
 // ErrorF print good message
 func ErrorF(format string, args ...interface{}) {
 	logger.Error(fmt.Sprintf(format, args...))
+}
+
+// Error print good message
+func Error(args ...interface{}) {
+	logger.Error(args...)
 }
 
 // WarnF print good message
@@ -111,14 +121,29 @@ func WarnF(format string, args ...interface{}) {
 	logger.Warning(fmt.Sprintf(format, args...))
 }
 
+// Warn print good message
+func Warn(args ...interface{}) {
+	logger.Warning(args...)
+}
+
 // TraceF print good message
 func TraceF(format string, args ...interface{}) {
 	logger.Trace(fmt.Sprintf(format, args...))
 }
 
+// Trace print good message
+func Trace(args ...interface{}) {
+	logger.Trace(args...)
+}
+
 // DebugF print debug message
 func DebugF(format string, args ...interface{}) {
 	logger.Debug(fmt.Sprintf(format, args...))
+}
+
+// Debug print debug message
+func Debug(args ...interface{}) {
+	logger.Debug(args...)
 }
 
 // Emojif print good message

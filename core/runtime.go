@@ -27,6 +27,8 @@ func (r *Runner) ExecScript(script string) string {
 		if nerr == nil {
 			return out
 		}
+	} else {
+		utils.ErrorF("Error running script: %s", err.Error())
 	}
 
 	return ""

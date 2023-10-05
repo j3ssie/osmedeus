@@ -414,12 +414,19 @@ func runCommandWithError(cmd string) (string, error) {
 
 	// output command output to std too
 	cmdReader, _ := realCmd.StdoutPipe()
+	errReader, _ := realCmd.StderrPipe()
 	scanner := bufio.NewScanner(cmdReader)
+	errScanner := bufio.NewScanner(errReader)
 	go func() {
 		for scanner.Scan() {
 			out := scanner.Text()
-			DebugF(out)
+			Debug(out)
 			output += out + "\n"
+		}
+	}()
+	go func() {
+		for errScanner.Scan() {
+			Error(errScanner.Text())
 		}
 	}()
 	if err := realCmd.Start(); err != nil {
@@ -454,6 +461,7 @@ func RunCommandWithErr(command string, timeoutRaw ...string) (string, error) {
 
 	select {
 	case <-c.Done():
+
 		return output, err
 	case <-time.After(time.Duration(timeout) * time.Second):
 		return out, fmt.Errorf("command got timeout")
@@ -472,12 +480,19 @@ func RunCommandSteamOutput(cmd string) (string, error) {
 
 	// output command output to std too
 	cmdReader, _ := realCmd.StdoutPipe()
+	errReader, _ := realCmd.StderrPipe()
 	scanner := bufio.NewScanner(cmdReader)
+	errScanner := bufio.NewScanner(errReader)
 	go func() {
 		for scanner.Scan() {
 			out := scanner.Text()
 			fmt.Println(out)
 			output += out
+		}
+	}()
+	go func() {
+		for errScanner.Scan() {
+			ErrorF(errScanner.Text())
 		}
 	}()
 	if err := realCmd.Start(); err != nil {
@@ -501,12 +516,19 @@ func RunOSCommand(cmd string) (string, error) {
 
 	// output command output to std too
 	cmdReader, _ := realCmd.StdoutPipe()
+	errReader, _ := realCmd.StderrPipe()
 	scanner := bufio.NewScanner(cmdReader)
+	errScanner := bufio.NewScanner(errReader)
 	go func() {
 		for scanner.Scan() {
 			out := scanner.Text()
-			DebugF(out)
+			Debug(out)
 			output += out
+		}
+	}()
+	go func() {
+		for errScanner.Scan() {
+			Error(errScanner.Text())
 		}
 	}()
 	if err := realCmd.Start(); err != nil {
@@ -528,10 +550,17 @@ func RunCommandWithoutOutput(cmd string) error {
 	DebugF("[Exec] %v", command)
 	realCmd := exec.Command(command[0], command[1:]...)
 	cmdReader, _ := realCmd.StdoutPipe()
+	errReader, _ := realCmd.StderrPipe()
 	scanner := bufio.NewScanner(cmdReader)
+	errScanner := bufio.NewScanner(errReader)
 	go func() {
 		for scanner.Scan() {
 			InforF(scanner.Text())
+		}
+	}()
+	go func() {
+		for errScanner.Scan() {
+			ErrorF(errScanner.Text())
 		}
 	}()
 	if err := realCmd.Start(); err != nil {
