@@ -2,6 +2,8 @@ package core
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -62,7 +64,7 @@ func SetupOSEnv(options *libs.Options) {
 		})
 
 		v.SetDefault("Notification", map[string]string{
-			"client_name":                utils.GetOSEnv("CLIENT_NAME", "CLIENT_NAME"),
+			"client_name":                GetPublicIP(),
 			"slack_status_channel":       utils.GetOSEnv("SLACK_STATUS_CHANNEL", "SLACK_STATUS_CHANNEL"),
 			"slack_report_channel":       utils.GetOSEnv("SLACK_REPORT_CHANNEL", "SLACK_REPORT_CHANNEL"),
 			"slack_diff_channel":         utils.GetOSEnv("SLACK_DIFF_CHANNEL", "SLACK_DIFF_CHANNEL"),
@@ -94,7 +96,6 @@ func SetupOSEnv(options *libs.Options) {
 			utils.ErrorF("Error writing config file: %s", ok)
 		}
 		utils.InforF("Created a new token configuration file at %s", color.HiCyanString(options.TokenConfigFile))
-
 	}
 
 	if err := v.ReadInConfig(); err != nil {
@@ -136,7 +137,6 @@ func SetupOSEnv(options *libs.Options) {
 }
 
 func LoadTokenFile(options *libs.Options) *viper.Viper {
-
 	v = viper.New()
 	v.SetConfigName("osm-var")
 	v.SetConfigType("yaml")
@@ -309,4 +309,38 @@ func GetGit(options *libs.Options) {
 	options.Git.DefaultTag = git["default_tag"]
 	options.Git.DefaultUser = git["default_user"]
 	options.Git.DefaultUID = utils.StrToInt(git["default_uid"])
+}
+
+func GetPublicIP() string {
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "unknown"
+	}
+	clientName := hostname + "-" + utils.RandomString(4)
+
+	url := "https://ipinfo.io/ip"
+	resp, err := http.Get(url)
+	if err == nil {
+		if ip, ok := io.ReadAll(resp.Body); ok == nil {
+			clientName = string(ip)
+		}
+	}
+	defer resp.Body.Close()
+	return clientName
+}
+
+func SetClientName(options *libs.Options) {
+	options.Noti.ClientName = GetPublicIP()
+
+	// load token file
+	v = LoadTokenFile(options)
+	if err := v.ReadInConfig(); err != nil {
+		utils.ErrorF("Error reading config file, %s", err)
+	}
+	utils.InforF("Setting up client name: %v", color.HiCyanString(options.Noti.ClientName))
+	v.Set("Notification", map[string]any{
+		"client_name": options.Noti.ClientName,
+	})
+	v.WriteConfig()
+
 }

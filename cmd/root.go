@@ -99,6 +99,7 @@ func init() {
 	// update options
 	RootCmd.PersistentFlags().BoolVar(&options.Update.IsUpdateBin, "bin", false, "Update binaries too")
 	RootCmd.PersistentFlags().BoolVar(&options.Update.EnableUpdate, "update", false, "Enable auto update")
+	RootCmd.PersistentFlags().BoolVar(&options.Update.VulnUpdate, "update-vuln", false, "Enable auto update vulnerability database")
 	RootCmd.PersistentFlags().StringVar(&options.Update.UpdateFolder, "update-folder", "/tmp/osm-update", "Folder to clone the update folder")
 
 	RootCmd.SetHelpFunc(RootHelp)
@@ -113,7 +114,7 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if options.JsonOutput {
+	if options.JsonOutput { // this is not works in all the scan
 		options.Quite = true
 	}
 
@@ -143,5 +144,9 @@ func initConfig() {
 				options.Scan.Inputs = append(options.Scan.Inputs, target)
 			}
 		}
+	}
+
+	if options.Update.VulnUpdate {
+		core.UpdateVuln(options)
 	}
 }

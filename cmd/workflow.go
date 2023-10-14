@@ -146,15 +146,12 @@ func viewWorkflow(workflowName string) error {
 		}
 	}
 
-	var toggleFlags, skippingFlags []string
+	var toggleFlags, skippingFlags, ThreadsFlags []string
 	for key, value := range parameters {
 		if value == "true" {
 			value = color.GreenString(value)
 		} else if value == "false" {
 			value = color.RedString(value)
-		} else {
-
-			value = color.CyanString(value)
 		}
 
 		if strings.HasPrefix(key, "enable") {
@@ -163,6 +160,11 @@ func viewWorkflow(workflowName string) error {
 
 		if strings.HasPrefix(key, "skip") {
 			skippingFlags = append(skippingFlags, fmt.Sprintf("%v=%v", key, value))
+		}
+
+		if strings.Contains(key, "thread") || strings.Contains(key, "Thread") {
+			value = color.HiYellowString(value)
+			ThreadsFlags = append(ThreadsFlags, fmt.Sprintf("%v=%v", key, value))
 		}
 	}
 
@@ -175,11 +177,15 @@ func viewWorkflow(workflowName string) error {
 	})
 
 	content = append(content, []string{
-		"Toggleable parameter", strings.Join(toggleFlags, ", "),
+		"Toggleable Parameters", strings.Join(toggleFlags, ", "),
 	})
 
 	content = append(content, []string{
-		"Skippable parameter", strings.Join(skippingFlags, ", "),
+		"Skippable Parameters", strings.Join(skippingFlags, ", "),
+	})
+
+	content = append(content, []string{
+		"Speed Control Parameters", strings.Join(ThreadsFlags, ", "),
 	})
 
 	if parsedFlow.Usage != "" {
@@ -191,8 +197,8 @@ func viewWorkflow(workflowName string) error {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetRowLine(true)
 	table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: true})
-	table.SetColWidth(120)
-	table.SetAutoWrapText(false)
+	table.SetColWidth(100)
+	table.SetAutoWrapText(true)
 	table.AppendBulk(content)
 	table.Render()
 

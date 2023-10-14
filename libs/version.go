@@ -4,7 +4,7 @@ import "fmt"
 
 const (
 	// VERSION of this project
-	VERSION = "v4.6.0"
+	VERSION = "v4.6.1"
 	// DESC description of the tool
 	DESC = "A Workflow Engine for Offensive Security"
 	// BINARY name of osmedeus

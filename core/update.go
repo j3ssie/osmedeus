@@ -21,8 +21,6 @@ import (
 /* Mostly calling OS commands for double-check the PATH too */
 
 func CheckUpdate(options *libs.Options) bool {
-	// t.Format("02-Jan-2006")
-
 	var shouldUpdate bool
 	// ~/.osmedeus/update/metadata.json
 	options.Update.UpdateConfig = path.Join(utils.NormalizePath(options.Env.RootFolder), "update")

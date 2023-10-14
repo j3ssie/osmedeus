@@ -528,7 +528,7 @@ func RunOSCommand(cmd string) (string, error) {
 	}()
 	go func() {
 		for errScanner.Scan() {
-			Error(errScanner.Text())
+			DebugF(errScanner.Text())
 		}
 	}()
 	if err := realCmd.Start(); err != nil {
@@ -560,7 +560,7 @@ func RunCommandWithoutOutput(cmd string) error {
 	}()
 	go func() {
 		for errScanner.Scan() {
-			ErrorF(errScanner.Text())
+			DebugF(errScanner.Text())
 		}
 	}()
 	if err := realCmd.Start(); err != nil {
