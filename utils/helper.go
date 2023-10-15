@@ -420,13 +420,13 @@ func runCommandWithError(cmd string) (string, error) {
 	go func() {
 		for scanner.Scan() {
 			out := scanner.Text()
-			Debug(out)
+			DebugF(out)
 			output += out + "\n"
 		}
 	}()
 	go func() {
 		for errScanner.Scan() {
-			Error(errScanner.Text())
+			DebugF(errScanner.Text())
 		}
 	}()
 	if err := realCmd.Start(); err != nil {
@@ -461,7 +461,6 @@ func RunCommandWithErr(command string, timeoutRaw ...string) (string, error) {
 
 	select {
 	case <-c.Done():
-
 		return output, err
 	case <-time.After(time.Duration(timeout) * time.Second):
 		return out, fmt.Errorf("command got timeout")
@@ -492,7 +491,7 @@ func RunCommandSteamOutput(cmd string) (string, error) {
 	}()
 	go func() {
 		for errScanner.Scan() {
-			ErrorF(errScanner.Text())
+			DebugF(errScanner.Text())
 		}
 	}()
 	if err := realCmd.Start(); err != nil {
@@ -522,7 +521,7 @@ func RunOSCommand(cmd string) (string, error) {
 	go func() {
 		for scanner.Scan() {
 			out := scanner.Text()
-			Debug(out)
+			DebugF(out)
 			output += out
 		}
 	}()

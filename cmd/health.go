@@ -242,7 +242,8 @@ func listFlows() error {
 	table.SetAutoFormatHeaders(false)
 	table.SetHeader([]string{"Flow Name", "Description"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: true})
-	table.SetColWidth(120)
+	table.SetColWidth(110)
+	table.SetAutoWrapText(true)
 	table.AppendBulk(content)
 	table.Render()
 
@@ -278,7 +279,8 @@ func listDefaultModules() error {
 	table.SetAutoFormatHeaders(false)
 	table.SetHeader([]string{"Module Name", "Description"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: true})
-	table.SetColWidth(120)
+	table.SetColWidth(110)
+	table.SetAutoWrapText(true)
 	table.AppendBulk(content)
 	table.Render()
 
