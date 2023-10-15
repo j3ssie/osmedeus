@@ -141,6 +141,7 @@ func RunUpdate(options libs.Options) error {
 		os.RemoveAll(options.Env.BaseFolder)
 	}
 
+	// avoid printing the premium update URL
 	if options.PremiumPackage {
 		utils.InforF("Running update from premium package install script")
 	} else {

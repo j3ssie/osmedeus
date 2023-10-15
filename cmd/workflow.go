@@ -13,7 +13,6 @@ import (
 )
 
 func init() {
-
 	var workflowCmd = &cobra.Command{
 		Use:     "workflow",
 		Aliases: []string{"wf", "wl", "workflows", "wfs", "work", "works"},

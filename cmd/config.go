@@ -26,7 +26,7 @@ func init() {
 	configCmd.Flags().String("pluginsRepo", "git@gitlab.com:j3ssie/osmedeus-plugins.git", "Osmedeus Plugins repository")
 
 	// for cred action
-	configCmd.Flags().Bool("client-name", false, "Client name for notification")
+	configCmd.Flags().String("client-name", "", "Client name for notification")
 	configCmd.Flags().String("user", "", "Username")
 	configCmd.Flags().String("pass", "", "Password")
 	configCmd.Flags().StringP("workspace", "w", "", "Name of workspace")
@@ -38,7 +38,7 @@ func runConfig(cmd *cobra.Command, args []string) error {
 	sort.Strings(args)
 	action, _ := cmd.Flags().GetString("action")
 	workspace, _ := cmd.Flags().GetString("workspace")
-	isSetClientName, _ := cmd.Flags().GetBool("client-name")
+	clientName, _ := cmd.Flags().GetString("client-name")
 
 	// backward compatible
 	if action == "" && len(args) > 0 {
@@ -93,8 +93,8 @@ func runConfig(cmd *cobra.Command, args []string) error {
 		break
 
 	case "set":
-		if isSetClientName {
-			core.SetClientName(&options)
+		if clientName != "" {
+			core.SetClientName(&options, clientName)
 			break
 		}
 

@@ -20,8 +20,8 @@ func init() {
 	updateCmd.Flags().BoolVar(&options.Update.ForceUpdate, "force", false, "Force update")
 	updateCmd.Flags().BoolVar(&options.Update.CleanOldData, "clean", false, "Clean up old Data")
 	updateCmd.Flags().BoolVar(&options.Update.VulnUpdate, "vuln", false, "Update Vulnerability Database only")
-	// generate update meta data
 	updateCmd.Flags().StringVar(&options.Update.UpdateURL, "update-url", "", "The script URL to download update")
+	// generate update meta data
 	updateCmd.Flags().StringVar(&options.Update.GenerateMeta, "gen", "", "Generate metadata for update")
 	RootCmd.AddCommand(updateCmd)
 	updateCmd.PreRun = func(cmd *cobra.Command, args []string) {

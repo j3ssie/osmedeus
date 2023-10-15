@@ -329,8 +329,12 @@ func GetPublicIP() string {
 	return clientName
 }
 
-func SetClientName(options *libs.Options) {
-	options.Noti.ClientName = GetPublicIP()
+func SetClientName(options *libs.Options, clientName string) {
+	if clientName != "" && clientName != "PublicIP" {
+		options.Noti.ClientName = clientName
+	} else {
+		options.Noti.ClientName = GetPublicIP()
+	}
 
 	// load token file
 	v = LoadTokenFile(options)
