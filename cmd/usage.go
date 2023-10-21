@@ -70,6 +70,9 @@ func ScanExmaples() string {
 	h += color.HiBlueString("\n  ## Start the scan with chunk inputs to review the output way more much faster\n")
 	h += "  osmedeus scan --chunk --chunk-parts 20 -f cidr -t list-of-100-cidr.txt\n"
 
+	h += color.HiBlueString("\n  ## Update the vulnerability database to the latest before starting the scan\n")
+	h += "  osmedeus scan --update-vuln -f urls -t list-of-100-cidr.txt\n"
+
 	h += color.HiBlueString("\n  ## Continuously run the scan on a target right after it finished\n")
 	h += "  osmedeus utils cron --for --cmd 'osmedeus scan -t example.com'\n"
 
@@ -128,6 +131,7 @@ func UtilsUsage() string {
 	h += color.HiBlueString("  ## Workflow utilities\n")
 	h += "  osmedeus workflow list \n"
 	h += "  osmedeus workflow view -f general\n"
+	h += "  osmedeus workflow view -v -f general\n"
 	h += "\n"
 
 	h += color.HiBlueString("  ## Tmux utilities\n")

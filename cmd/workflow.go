@@ -161,10 +161,13 @@ func viewWorkflow(workflowName string) error {
 			skippingFlags = append(skippingFlags, fmt.Sprintf("%v=%v", key, value))
 		}
 
-		if strings.Contains(key, "thread") || strings.Contains(key, "Thread") {
-			value = color.HiYellowString(value)
-			ThreadsFlags = append(ThreadsFlags, fmt.Sprintf("%v=%v", key, value))
+		if options.Verbose {
+			if strings.Contains(key, "thread") || strings.Contains(key, "Thread") {
+				value = color.HiYellowString(value)
+				ThreadsFlags = append(ThreadsFlags, fmt.Sprintf("%v=%v", key, value))
+			}
 		}
+
 	}
 
 	workflowInfo := fmt.Sprintf("Name: %v", color.HiCyanString(parsedFlow.Name)) + ", " + fmt.Sprintf("Total Steps: %v", color.HiCyanString("%v", totalSteps)) + ", " + fmt.Sprintf("Total Modules: %v", color.HiCyanString("%v", totalModules))
@@ -183,9 +186,11 @@ func viewWorkflow(workflowName string) error {
 		"Skippable Parameters", strings.Join(skippingFlags, ", "),
 	})
 
-	content = append(content, []string{
-		"Speed Control Parameters", strings.Join(ThreadsFlags, ", "),
-	})
+	if options.Verbose {
+		content = append(content, []string{
+			"Speed Control Parameters", strings.Join(ThreadsFlags, ", "),
+		})
+	}
 
 	if parsedFlow.Usage != "" {
 		content = append(content, []string{

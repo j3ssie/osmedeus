@@ -43,6 +43,7 @@ const (
 	CastToInt         = "CastToInt"
 	StripSlash        = "StripSlash"
 	Printf            = "Printf"
+	Warnf             = "Warnf"
 	Cat               = "Cat"
 	SortU             = "SortU"
 	SplitFile         = "SplitFile"

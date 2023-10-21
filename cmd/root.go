@@ -70,6 +70,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&options.ScanID, "sid", "s", "", "Scan ID to continue the scan without create new scan record")
 	RootCmd.PersistentFlags().BoolVarP(&options.Resume, "resume", "R", false, "Enable Resume mode to skip modules that have already been finished")
 	RootCmd.PersistentFlags().BoolVar(&options.Debug, "debug", false, "Enable Debug output")
+	RootCmd.PersistentFlags().BoolVarP(&options.Verbose, "verbose", "v", false, "Enable verbose output")
 	RootCmd.PersistentFlags().BoolVarP(&options.Quite, "quite", "q", false, "Show only essential information")
 	RootCmd.PersistentFlags().BoolVar(&options.FullHelp, "hh", false, "Show full help message")
 	RootCmd.PersistentFlags().BoolVar(&options.WildCardCheck, "ww", false, "Check for wildcard target")

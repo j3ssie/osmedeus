@@ -247,7 +247,7 @@ func Update(opt libs.Options) {
 }
 
 func UpdateVuln(opt libs.Options) {
-	utils.InforF("Updating Vulnerability Database only")
+	utils.InforF("Updating Vulnerability Database to the latest version")
 
 	// update nuclei templates
 	utils.DebugF("Updating Nuclei Templates")

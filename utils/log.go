@@ -59,6 +59,7 @@ func InitLog(options *libs.Options) {
 
 	if options.Debug == true {
 		logger.SetLevel(logrus.DebugLevel)
+		options.Verbose = true
 	} else if options.Verbose == true {
 		logger.SetLevel(logrus.ErrorLevel)
 	} else if options.Quite == true {

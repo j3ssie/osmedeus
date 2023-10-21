@@ -264,7 +264,6 @@ func (r *Runner) ResolveRoutine() {
 	var routines []libs.Routine
 
 	for _, rawRoutine := range r.Routines {
-
 		var routine libs.Routine
 		for _, module := range rawRoutine.ParsedModules {
 			module = ResolveReports(module, r.Params)
@@ -300,6 +299,65 @@ func (r *Runner) ResolveRoutine() {
 		routines = append(routines, routine)
 	}
 	r.Routines = routines
+
+	// print some info about the routine
+	var totalSteps, totalModules int
+	parameters := make(map[string]string)
+	for k, v := range r.Params {
+		parameters[k] = v
+	}
+
+	for _, routine := range r.Routines {
+		// loop through all modules to get the parameters
+		for _, module := range routine.ParsedModules {
+			for _, param := range module.Params {
+				for k, v := range param {
+					_, exist := parameters[k]
+					if module.ForceParams && exist {
+						continue
+					}
+					parameters[k] = v
+				}
+			}
+			totalSteps += len(module.Steps)
+			totalModules++
+		}
+	}
+
+	var toggleFlags, skippingFlags, ThreadsFlags []string
+	for key, value := range parameters {
+		colorKey := color.HiMagentaString(key)
+
+		if value == "true" {
+			value = color.GreenString(value)
+		} else if value == "false" {
+			value = color.RedString(value)
+		}
+
+		if strings.HasPrefix(key, "enable") {
+			toggleFlags = append(toggleFlags, fmt.Sprintf("%v=%v", colorKey, value))
+		}
+
+		if strings.HasPrefix(key, "skip") {
+			skippingFlags = append(skippingFlags, fmt.Sprintf("%v=%v", colorKey, value))
+		}
+
+		if r.Opt.Verbose {
+			if strings.Contains(key, "thread") || strings.Contains(key, "Thread") {
+				value = color.HiYellowString(value)
+				ThreadsFlags = append(ThreadsFlags, fmt.Sprintf("%v=%v", colorKey, value))
+			}
+		}
+
+	}
+
+	if len(toggleFlags) > 0 || len(skippingFlags) > 0 {
+		utils.InforF("🔘 Toggleable and Skippable Parameters that being use: %v, %v", strings.Join(toggleFlags, ", "), strings.Join(skippingFlags, ", "))
+		if r.Opt.Verbose {
+			utils.InforF("🚀 Speed Control that being use: %v", strings.Join(ThreadsFlags, ", "))
+		}
+		utils.InforF("💡 You can skip/enable some parater to speed up the scan or get more result. See more with the usage %v", color.HiBlueString("osmedeus workflow view -v -f %v", r.RoutineName))
+	}
 }
 
 func (r *Runner) Start() {
