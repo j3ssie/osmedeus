@@ -122,6 +122,7 @@ func UtilsUsage() string {
 	h += "  osmedeus update \n"
 	h += "  osmedeus update --vuln\n"
 	h += "  osmedeus update --force --clean \n"
+	h += "  osmedeus update --force --update-url https://very-long-url/premium.sh\n"
 	h += "\n"
 
 	h += color.HiBlueString("  ## Workflow utilities\n")

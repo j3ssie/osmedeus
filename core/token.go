@@ -341,7 +341,7 @@ func SetClientName(options *libs.Options, clientName string) {
 	if err := v.ReadInConfig(); err != nil {
 		utils.ErrorF("Error reading config file, %s", err)
 	}
-	utils.InforF("Setting up client name: %v", color.HiCyanString(options.Noti.ClientName))
+	utils.InforF("Set up notification client name: %v", color.HiCyanString(options.Noti.ClientName))
 	v.Set("Notification", map[string]any{
 		"client_name": options.Noti.ClientName,
 	})
