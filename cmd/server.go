@@ -43,7 +43,7 @@ func runServer(cmd *cobra.Command, _ []string) error {
 	host, _ := cmd.Flags().GetString("host")
 	port, _ := cmd.Flags().GetString("port")
 	options.Server.Bind = fmt.Sprintf("%v:%v", host, port)
-	utils.GoodF("%v %v by %v", cases.Title(language.Und, cases.NoLower).String(libs.BINARY), libs.VERSION, color.HiMagentaString(libs.AUTHOR))
+	utils.GoodF("Using the %v Engine %v by %v", cases.Title(language.Und, cases.NoLower).String(libs.BINARY), color.HiCyanString(libs.VERSION), color.HiMagentaString(libs.AUTHOR))
 	server.StartServer(options)
 	return nil
 }

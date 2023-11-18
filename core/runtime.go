@@ -125,10 +125,15 @@ func (r *Runner) LoadScripts() string {
 		filename := call.Argument(0).String()
 		utils.InforF("Showing the content of: %v", color.HiCyanString(filename))
 		utils.Cat(filename)
-		result, err := vm.ToValue(true)
-		if err != nil {
-			return otto.Value{}
-		}
+		result, _ := vm.ToValue(true)
+		return result
+	})
+
+	vm.Set(PrintCSV, func(call otto.FunctionCall) otto.Value {
+		filename := call.Argument(0).String()
+		utils.InforF("Beautify CSV print the content of: %v", color.HiCyanString(filename))
+		execution.PrintCSV(filename)
+		result, _ := vm.ToValue(true)
 		return result
 	})
 

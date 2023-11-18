@@ -143,7 +143,7 @@ func (p *Provider) RunBuild() error {
 	utils.InforF("The Packer file appears to be functioning properly: %s", color.HiCyanString(p.ProviderConfig.BuildFile))
 
 	// really start to build stuff here
-	utils.GoodF("Start packer build for: %s", color.HiCyanString(p.ProviderConfig.BuildFile))
+	utils.TSPrintF("Start packer build for: %s", color.HiCyanString(p.ProviderConfig.BuildFile))
 	cmd = fmt.Sprintf("%s build %s", packerBinary, p.ProviderConfig.BuildFile)
 	out, _ = utils.RunCommandWithErr(cmd)
 

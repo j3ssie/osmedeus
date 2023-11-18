@@ -61,11 +61,11 @@ func StartServer(options libs.Options) {
 	}
 
 	if enableSSL {
-		utils.GoodF("Web UI available at: %v ", color.HiMagentaString("https://%v/ui/", options.Server.Bind))
-		utils.GoodF("Static Content available at: %v", color.HiMagentaString("https://%v/%s/workspaces/", options.Server.Bind, Opt.Server.StaticPrefix))
+		utils.TSPrintF("Web UI available at: %v ", color.HiMagentaString("https://%v/ui/", options.Server.Bind))
+		utils.TSPrintF("Static Content available at: %v", color.HiMagentaString("https://%v/%s/workspaces/", options.Server.Bind, Opt.Server.StaticPrefix))
 		log.Fatal(app.Listener(ln))
 	} else {
-		utils.GoodF("Web UI available at: http://%v/ui/", options.Server.Bind)
+		utils.TSPrintF("Web UI available at: http://%v/ui/", options.Server.Bind)
 		log.Fatal(app.Listen(options.Server.Bind))
 	}
 }
@@ -91,13 +91,6 @@ func SetupRoutes(app *fiber.App) {
 		MaxAge:       3600,
 		NotFoundFile: "",
 	}))
-
-	// for swagger document
-	//app.Get("/docs/*", swagger.Handler) // default
-	//app.Get("/docs/*", swagger.New(swagger.Config{ // custom
-	//    URL:         "https://osmp.io/doc.json",
-	//    DeepLinking: false,
-	//}))
 
 	app.Get("/ping", Ping)
 	api := app.Group("/api", logger.New())

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/libs"
@@ -75,8 +76,10 @@ func PrintLine() {
 
 // GoodF print good message
 func GoodF(format string, args ...interface{}) {
-	good := color.HiGreenString("[+]")
-	fmt.Printf("%s %s\n", good, fmt.Sprintf(format, args...))
+	t := time.Now()
+	ts := t.Format("2006-01-02T15:04:05")
+	prefix := fmt.Sprintf("%v %v", color.HiBlackString("[%v]", ts), color.HiGreenString(" ▶▶ "))
+	fmt.Printf(fmt.Sprintf("%v%v\n", prefix, fmt.Sprintf(format, args...)))
 }
 
 // BannerF print info message
@@ -87,14 +90,26 @@ func BannerF(format string, data string) {
 
 // BlockF print info message
 func BlockF(name string, data string) {
-	banner := fmt.Sprintf("%v%v%v ", color.WhiteString("["), color.GreenString(name), color.WhiteString("]"))
-	fmt.Printf(fmt.Sprintf("%v%v\n", banner, data))
+	t := time.Now()
+	ts := t.Format("2006-01-02T15:04:05")
+	prefix := fmt.Sprintf("%v %v", color.HiBlackString("[%v]", ts), color.HiGreenString("💬 %v ", name))
+	fmt.Printf(fmt.Sprintf("%v%v\n", prefix, data))
+}
+
+// TSPrintF print info message
+func TSPrintF(format string, args ...interface{}) {
+	t := time.Now()
+	ts := t.Format("2006-01-02T15:04:05")
+	prefix := fmt.Sprintf("%v %v", color.HiBlackString("[%v]", ts), color.HiGreenString(" ▶ "))
+	fmt.Printf(fmt.Sprintf("%v%v\n", prefix, fmt.Sprintf(format, args...)))
 }
 
 // BadBlockF print info message
-func BadBlockF(name string, data string) {
-	banner := fmt.Sprintf("%v%v%v ", color.WhiteString("["), color.RedString(name), color.WhiteString("]"))
-	fmt.Printf(fmt.Sprintf("%v%v\n", banner, data))
+func BadBlockF(format string, args ...interface{}) {
+	t := time.Now()
+	ts := t.Format("2006-01-02T15:04:05")
+	prefix := fmt.Sprintf("%v %v", color.HiBlackString("[%v]", ts), color.HiRedString(" [!] "))
+	fmt.Printf(fmt.Sprintf("%v%v\n", prefix, fmt.Sprintf(format, args...)))
 }
 
 // InforF print info message

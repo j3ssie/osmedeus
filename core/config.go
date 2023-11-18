@@ -128,7 +128,6 @@ func InitConfig(options *libs.Options) error {
 		if err := v.WriteConfigAs(options.ConfigFile); err != nil {
 			utils.ErrorF("Error writing config file: %s", err)
 		}
-
 		utils.InforF("Created a new configuration file at %s", color.HiCyanString(options.ConfigFile))
 	}
 

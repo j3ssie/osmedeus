@@ -25,14 +25,15 @@ func (r *Runner) RunModule(module libs.Module) {
 	// check if resume enable or not
 	if (r.Opt.Resume || module.Resume) && !module.Forced {
 		if CheckResume(module) {
-			utils.BlockF(module.Name, "Resume detected")
+			utils.TSPrintF("The %v module has resume", color.HiGreenString(module.Name))
 			return
 		}
 	}
 
 	r.CurrentModule = module.Name
 	timeStart := time.Now()
-	utils.BlockF("Module-Started", fmt.Sprintf("%v - %v", module.Name, module.Desc))
+	utils.TSPrintF("The %v module has begun", color.HiGreenString(module.Name))
+	utils.TSPrintF("The objective of %v module: %v", color.HiGreenString(module.Name), color.HiCyanString(module.Desc))
 
 	// create report record first because I don't want to wait for them to show up in UI until the module done
 	r.DBNewReports(module)
@@ -44,10 +45,9 @@ func (r *Runner) RunModule(module libs.Module) {
 	}
 
 	// main part
-	// utils.BlockF(module.Name, "Begin executing primary tasks")
 	err := r.RunSteps(module.Steps)
 	if err != nil {
-		utils.BadBlockF(module.Name, fmt.Sprintf("got exit call"))
+		utils.BadBlockF(fmt.Sprintf("got an exit call"))
 	}
 
 	// post-run
@@ -57,14 +57,14 @@ func (r *Runner) RunModule(module libs.Module) {
 	}
 
 	// print the reports file
-	utils.PrintLine()
 	printReports(module)
 
 	// estimate time
 	elapsedTime := time.Since(timeStart).Seconds()
-	utils.BlockF("Module-Ended", fmt.Sprintf("Elapsed Time for the module %v in %v", color.HiCyanString(module.Name), color.HiMagentaString("%vs", elapsedTime)))
+	utils.TSPrintF("The %v module finished within %v.", color.HiGreenString(module.Name), color.HiMagentaString("%vs", elapsedTime))
+
 	r.RunningTime += cast.ToInt(elapsedTime)
-	utils.PrintLine()
+
 	r.DBUpdateScan()
 }
 
@@ -111,7 +111,7 @@ func (r *Runner) RunScriptsWithTimeOut(timeoutRaw string, scripts []string) stri
 		utils.DebugF("Scripts done")
 		return ""
 	case <-time.After(time.Duration(timeout) * time.Second):
-		utils.BadBlockF("timeout", fmt.Sprintf("Scripts got timeout after %v", color.HiMagentaString(timeoutRaw)))
+		utils.BadBlockF(fmt.Sprintf("Scripts got timeout after %v", color.HiMagentaString(timeoutRaw)))
 	}
 	return ""
 }
@@ -171,7 +171,7 @@ func (r *Runner) RunStepWithTimeout(timeout int, step libs.Step) (out string, er
 func (r *Runner) RunStep(step libs.Step) (string, error) {
 	var output string
 	if step.Label != "" {
-		utils.BlockF("Step", fmt.Sprintf("Initiating Step %v", color.HiGreenString(step.Label)))
+		utils.TSPrintF("Initiating Step %v", color.HiGreenString(step.Label))
 	}
 
 	// checking required file

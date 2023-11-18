@@ -1,0 +1,14 @@
+name: new-params
+desc: new-params
+
+params:
+  - NewParams: "{{Company}}"
+  - WS: "{{Workspace}}"
+
+steps:
+  - required:
+      - "{{testFile}}"
+    commands:
+      - "echo 'Company  --> {{Company}}'"
+      - "echo 'NewParams --> {{NewParams}}'"
+      - "echo 'WS --> {{WS}}'"

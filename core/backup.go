@@ -25,7 +25,7 @@ func (r *Runner) BackupWorkspace() {
 
 	execution.Compress(dest, outputDir)
 	if utils.FileExists(dest) {
-		utils.GoodF("Backup workspace save at %s", color.HiMagentaString(dest))
+		utils.TSPrintF("Backup workspace save at %s", color.HiMagentaString(dest))
 	}
 }
 
@@ -64,5 +64,5 @@ func ExtractBackup(src string, opt libs.Options) {
 		utils.MakeDir(dest)
 	}
 	execution.Decompress(dest, src)
-	utils.GoodF("Extracting the %v to %s", color.HiCyanString(target), color.HiMagentaString(dest))
+	utils.TSPrintF("Extracting the %v to %s", color.HiCyanString(target), color.HiMagentaString(dest))
 }

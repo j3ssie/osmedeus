@@ -34,7 +34,7 @@ func init() {
 }
 
 func runScan(_ *cobra.Command, _ []string) error {
-	utils.GoodF("%v %v by %v", cases.Title(language.Und, cases.NoLower).String(libs.BINARY), libs.VERSION, color.HiMagentaString(libs.AUTHOR))
+	utils.GoodF("Using the %v Engine %v by %v", cases.Title(language.Und, cases.NoLower).String(libs.BINARY), color.HiCyanString(libs.VERSION), color.HiMagentaString(libs.AUTHOR))
 	utils.InforF("Storing the log file to: %v", color.CyanString(options.LogFile))
 
 	var wg sync.WaitGroup

@@ -55,13 +55,13 @@ func runConfig(cmd *cobra.Command, args []string) error {
 		break
 	case "init":
 		if utils.FolderExists(fmt.Sprintf("%vcore", options.Env.RootFolder)) {
-			utils.GoodF("Look like you got properly setup.")
+			utils.TSPrintF("Look like you got properly setup.")
 		}
 		break
 	case "cred":
 		username, _ := cmd.Flags().GetString("user")
 		password, _ := cmd.Flags().GetString("pass")
-		utils.GoodF("Create new credentials %v:%v \n", username, password)
+		utils.TSPrintF("Create new credentials %v:%v \n", username, password)
 		break
 
 	case "reload":

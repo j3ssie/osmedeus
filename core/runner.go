@@ -196,8 +196,46 @@ func (r *Runner) PrepareRoutine() {
 }
 
 // PrepareParams prepare global params
+func (r *Runner) ParamsFromCLI() {
+	// more params from -p flag which will override everything
+	if len(r.Opt.Scan.Params) > 0 {
+		params := ParseParams(r.Opt.Scan.Params)
+		if len(params) > 0 {
+			for k, v := range params {
+				v = ResolveData(v, r.Params)
+				r.Params[k] = v
+			}
+		}
+	}
+
+	// parsing params from a file with should have the format
+	// param1: value1
+	// param2: value2
+	if len(r.Opt.Scan.ParamsFile) > 0 {
+		var params map[string]string
+		yamlFile, err := os.ReadFile(r.Opt.Scan.ParamsFile)
+		if err != nil {
+			utils.ErrorF("YAML parsing err: %v -- #%v ", r.Opt.Scan.ParamsFile, err)
+			return
+		}
+		err = yaml.Unmarshal(yamlFile, &params)
+		if err != nil {
+			utils.ErrorF("Error unmarshal: %v -- %v", params, err)
+			return
+		}
+		if len(params) > 0 {
+			for k, v := range params {
+				v = ResolveData(v, r.Params)
+				r.Params[k] = v
+			}
+		}
+	}
+}
 func (r *Runner) PrepareParams() {
 	r.Params = r.Target
+
+	// parse from CLI first to avoid blank param if it use in the module file
+	r.ParamsFromCLI()
 
 	// looking for more params from each module
 	for _, routine := range r.Routines {
@@ -221,42 +259,21 @@ func (r *Runner) PrepareParams() {
 					}
 				}
 			}
-
-			if len(r.Opt.Scan.ParamsFile) > 0 {
-				var params map[string]string
-				yamlFile, err := os.ReadFile(r.Opt.Scan.ParamsFile)
-				if err != nil {
-					utils.ErrorF("YAML parsing err: %v -- #%v ", r.Opt.Scan.ParamsFile, err)
-					return
-				}
-				err = yaml.Unmarshal(yamlFile, &params)
-				if err != nil {
-					utils.ErrorF("Error unmarshal: %v -- %v", params, err)
-					return
-				}
-				if len(params) > 0 {
-					for k, v := range params {
-						v = ResolveData(v, r.Params)
-						r.Params[k] = v
-					}
-				}
-			}
-
-			// more params from -p flag which will override everything
-			if len(r.Opt.Scan.Params) > 0 {
-				params := ParseParams(r.Opt.Scan.Params)
-				if len(params) > 0 {
-					for k, v := range params {
-						v = ResolveData(v, r.Params)
-						r.Params[k] = v
-					}
-				}
-			}
 		}
 	}
 
-	r.ResolveRoutine()
+	// more params from -p flag which will override everything
+	r.ParamsFromCLI()
 
+	if r.Opt.Debug {
+		utils.DebugF("Loading %v parameters", color.HiMagentaString("%v", len(r.Params)))
+		var allParams []string
+		for k, v := range r.Params {
+			allParams = append(allParams, fmt.Sprintf("%v=%v", color.HiGreenString(k), color.HiWhiteString(v)))
+		}
+		utils.DebugF("All parameters value: %v", strings.Join(allParams, color.HiMagentaString(", ")))
+	}
+	r.ResolveRoutine()
 }
 
 // ResolveRoutine resolve the module name first
@@ -377,7 +394,7 @@ func (r *Runner) Start() {
 	r.WorkspaceFolder = r.Target["Output"]
 	os.Remove(r.DoneFile)
 
-	utils.InforF("Running the routine %v on %v", color.HiYellowString(r.RoutineName), color.CyanString(r.Input))
+	utils.TSPrintF("Running the routine %v on %v", color.HiYellowString(r.RoutineName), color.CyanString(r.Input))
 	utils.InforF("Detailed runtime file can be found on %v", color.CyanString(r.RuntimeFile))
 	execution.TeleSendMess(r.Opt, fmt.Sprintf("%s -- Start new scan: %s -- %s", r.Opt.Noti.ClientName, r.Opt.Scan.Flow, r.Target["Workspace"]), "#status", false)
 
@@ -393,7 +410,7 @@ func (r *Runner) Start() {
 	/////
 
 	r.DBDoneScan()
-	utils.BlockF("Finished", fmt.Sprintf("The scan for %v was completed within %v", color.HiCyanString(r.Input), color.HiMagentaString("%vs", r.RunningTime)))
+	utils.TSPrintF(fmt.Sprintf("The scan for %v was completed within %v", color.HiCyanString(r.Input), color.HiMagentaString("%vs", r.RunningTime)))
 
 	if r.Opt.EnableBackup {
 		r.BackupWorkspace()
@@ -419,7 +436,7 @@ func (r *Runner) RunRoutine(modules []libs.Module) {
 
 	for _, module := range modules {
 		if funk.ContainsString(r.Opt.Exclude, module.Name) {
-			utils.BadBlockF("Module-Excluded", fmt.Sprintf("Module %v has been excluded", color.CyanString(module.Name)))
+			utils.BadBlockF(fmt.Sprintf("Module %v has been excluded", color.CyanString(module.Name)))
 			continue
 		}
 

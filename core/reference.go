@@ -12,9 +12,10 @@ const (
 	CleanJSONDnsx    = "CleanJSONDnsx"
 	CleanWebanalyze  = "CleanWebanalyze"
 	CleanArjun       = "CleanArjun"
-	GenNucleiReport  = "GenNucleiReport"
 	CleanJSONHttpx   = "CleanJSONHttpx"
 	CleanFFUFJson    = "CleanFFUFJson"
+	GenNucleiReport  = "GenNucleiReport"
+	PrintCSV         = "PrintCSV"
 )
 
 const (

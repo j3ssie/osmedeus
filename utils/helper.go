@@ -167,7 +167,18 @@ func ReadingLines(filename string) []string {
 	}
 	defer file.Close()
 
+	// scanner := bufio.NewScanner(file)
+	// for scanner.Scan() {
+	// 	val := strings.TrimSpace(scanner.Text())
+	// 	if val == "" {
+	// 		continue
+	// 	}
+	// 	result = append(result, val)
+	// }
+
+	// increase the buffer size
 	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
 		val := strings.TrimSpace(scanner.Text())
 		if val == "" {
