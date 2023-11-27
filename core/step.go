@@ -152,6 +152,9 @@ func (r *Runner) RunCommands(commands []string, std string) string {
 			defer wg.Done()
 			var out string
 			if std != "" {
+				if strings.Contains(std, "/dev/pts") {
+					err = utils.RunOSCommandStream(command, std)
+				}
 				out, err = utils.RunOSCommand(command)
 			} else {
 				err = utils.RunCommandWithoutOutput(command)
@@ -168,7 +171,7 @@ func (r *Runner) RunCommands(commands []string, std string) string {
 	}
 	wg.Wait()
 
-	if std != "" {
+	if std != "" && !strings.Contains(std, "/dev/pts") {
 		utils.WriteToFile(std, output)
 	}
 	return output

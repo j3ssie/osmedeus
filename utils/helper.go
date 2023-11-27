@@ -550,6 +550,29 @@ func RunOSCommand(cmd string) (string, error) {
 	return output, nil
 }
 
+func RunOSCommandStream(cmd, std string) error {
+	DebugF("Execute: %s", cmd)
+	command := []string{
+		"bash",
+		"-c",
+		cmd,
+	}
+	fmt.Println(std)
+	file, _ := os.OpenFile(std, os.O_WRONLY, os.ModeAppend)
+	realCmd := exec.Command(command[0], command[1:]...)
+
+	// output command output to std too
+	realCmd.Stdout = file
+	realCmd.Stderr = file
+	if err := realCmd.Start(); err != nil {
+		return err
+	}
+	if err := realCmd.Wait(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // RunCommandWithoutOutput Run a command
 func RunCommandWithoutOutput(cmd string) error {
 	command := []string{
