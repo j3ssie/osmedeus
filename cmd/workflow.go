@@ -111,7 +111,7 @@ func viewWorkflow(workflowName string) error {
 			parameters[k] = v
 		}
 	}
-
+	options.Flow = parsedFlow
 	for _, routine := range parsedFlow.Routines {
 		// select module depend on the flow type
 		if routine.FlowFolder != "" {
