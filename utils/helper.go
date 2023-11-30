@@ -557,9 +557,9 @@ func RunOSCommandStream(cmd, std string) error {
 		"-c",
 		cmd,
 	}
-	fmt.Println(std)
 	file, _ := os.OpenFile(std, os.O_WRONLY, os.ModeAppend)
 	realCmd := exec.Command(command[0], command[1:]...)
+	// realCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	// output command output to std too
 	realCmd.Stdout = file
