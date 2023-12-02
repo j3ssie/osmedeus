@@ -32,8 +32,7 @@ func (r *Runner) RunModule(module libs.Module) {
 
 	r.CurrentModule = module.Name
 	timeStart := time.Now()
-	utils.TSPrintF("The %v module has begun", color.HiGreenString(module.Name))
-	utils.TSPrintF("The objective of %v module: %v", color.HiGreenString(module.Name), color.HiCyanString(module.Desc))
+	utils.TSPrintF("The %v module has begun with the objective %v", color.HiGreenString(module.Name), color.HiCyanString(module.Desc))
 
 	// create report record first because I don't want to wait for them to show up in UI until the module done
 	r.DBNewReports(module)

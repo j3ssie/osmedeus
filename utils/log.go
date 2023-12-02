@@ -78,7 +78,15 @@ func PrintLine() {
 func GoodF(format string, args ...interface{}) {
 	t := time.Now()
 	ts := t.Format("2006-01-02T15:04:05")
-	prefix := fmt.Sprintf("%v %v", color.HiBlackString("[%v]", ts), color.HiGreenString(" ▶▶ "))
+	prefix := fmt.Sprintf("%v %v", color.HiBlackString("[%v]", ts), color.HiBlueString(" ▶▶ "))
+	fmt.Printf(fmt.Sprintf("%v%v\n", prefix, fmt.Sprintf(format, args...)))
+}
+
+// PrefixF print good message
+func PrefixF(symbol string, format string, args ...interface{}) {
+	t := time.Now()
+	ts := t.Format("2006-01-02T15:04:05")
+	prefix := fmt.Sprintf("%v %v", color.HiBlackString("[%v]", ts), color.HiGreenString(symbol))
 	fmt.Printf(fmt.Sprintf("%v%v\n", prefix, fmt.Sprintf(format, args...)))
 }
 
@@ -100,7 +108,7 @@ func BlockF(name string, data string) {
 func TSPrintF(format string, args ...interface{}) {
 	t := time.Now()
 	ts := t.Format("2006-01-02T15:04:05")
-	prefix := fmt.Sprintf("%v %v", color.HiBlackString("[%v]", ts), color.HiGreenString(" ▶ "))
+	prefix := fmt.Sprintf("%v %v", color.HiBlackString("[%v]", ts), color.HiBlueString(" ▶ "))
 	fmt.Printf(fmt.Sprintf("%v%v\n", prefix, fmt.Sprintf(format, args...)))
 }
 

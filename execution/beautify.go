@@ -11,6 +11,7 @@ import (
 func PrintCSV(filename string) {
 	filename = utils.NormalizePath(filename)
 	if !utils.FileExists(filename) {
+		utils.ErrorF("File %v not found", filename)
 		return
 	}
 
@@ -38,8 +39,9 @@ func PrintCSV(filename string) {
 		table.Append(record)
 	}
 	table.SetRowLine(false)
-	table.SetBorders(tablewriter.Border{Left: false, Top: true, Right: false, Bottom: true})
+	table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: true})
 	table.SetColWidth(100)
+	table.SetHeaderLine(true)
 	table.SetAutoWrapText(true)
 	table.Render()
 }

@@ -317,7 +317,7 @@ func CleanJSONDnsx(filename string, dest string) {
 	}
 
 	if len(results) > 0 {
-		utils.WriteToFile(dest, strings.Join(results, "\n"))
+		utils.AppendToContent(dest, strings.Join(results, "\n"))
 	}
 }
 
@@ -477,13 +477,12 @@ func CleanJSONHttpx(filename string, dest string) {
 
 		}
 
-		data := fmt.Sprintf("%s,%s,%s,%s", URL, hash, title, techs)
+		data := fmt.Sprintf("%s,%s,%s,%s", URL, title, techs, hash)
 		results = append(results, data)
-
 	}
 
 	if len(results) > 0 {
-		utils.WriteToFile(dest, strings.Join(results, "\n"))
+		utils.AppendToContent(dest, strings.Join(results, "\n"))
 	}
 }
 
@@ -522,6 +521,6 @@ func CleanFFUFJson(filename string, dest string) {
 	}
 
 	if len(results) > 0 {
-		utils.WriteToFile(dest, strings.Join(results, "\n"))
+		utils.AppendToContent(dest, strings.Join(results, "\n"))
 	}
 }
