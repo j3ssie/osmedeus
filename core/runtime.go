@@ -137,6 +137,15 @@ func (r *Runner) LoadScripts() string {
 		return result
 	})
 
+	vm.Set(BeautifyCSV, func(call otto.FunctionCall) otto.Value {
+		filename := call.Argument(0).String()
+		dest := call.Argument(1).String()
+		utils.InforF("Writing beautify CSV content to: %v", color.HiCyanString(dest))
+		execution.BeautifyCSV(filename, dest)
+		result, _ := vm.ToValue(true)
+		return result
+	})
+
 	// ExecCmdB execute in the background
 	vm.Set(ExecCmdB, func(call otto.FunctionCall) otto.Value {
 		cmd := call.Argument(0).String()
