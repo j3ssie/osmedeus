@@ -145,6 +145,9 @@ func (p *Provider) RunBuild() error {
 	// really start to build stuff here
 	utils.TSPrintF("Start packer build for: %s", color.HiCyanString(p.ProviderConfig.BuildFile))
 	cmd = fmt.Sprintf("%s build %s", packerBinary, p.ProviderConfig.BuildFile)
+	if p.Opt.Debug {
+		cmd = fmt.Sprintf("%s build -debug %s", packerBinary, p.ProviderConfig.BuildFile)
+	}
 	out, _ = utils.RunCommandWithErr(cmd)
 
 	if !strings.Contains(out, fmt.Sprintf("%v scan -f", libs.BINARY)) {
