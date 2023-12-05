@@ -170,7 +170,7 @@ func (r *Runner) RunStepWithTimeout(timeout int, step libs.Step) (out string, er
 func (r *Runner) RunStep(step libs.Step) (string, error) {
 	var output string
 	if step.Label != "" {
-		utils.TSPrintF("Initiating Step %v", color.HiGreenString(step.Label))
+		utils.TSPrintF("Initiating step %v", color.HiGreenString(step.Label))
 	}
 
 	// checking required file

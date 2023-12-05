@@ -189,9 +189,10 @@ func (r *Runner) LoadScripts() string {
 	})
 
 	vm.Set(FileLength, func(call otto.FunctionCall) otto.Value {
-		data := utils.FileLength(call.Argument(0).String())
-		utils.DebugF("FileLength -- %v", data)
-		result, err := vm.ToValue(data)
+		filename := call.Argument(0).String()
+		length := utils.FileLength(filename)
+		utils.DebugF("FileLength(%v) -- %v", filename, length)
+		result, err := vm.ToValue(length)
 		if err == nil {
 			return result
 		}
@@ -199,9 +200,10 @@ func (r *Runner) LoadScripts() string {
 	})
 
 	vm.Set(FolderLength, func(call otto.FunctionCall) otto.Value {
-		data := utils.FolderLength(call.Argument(0).String())
-		utils.DebugF("FolderLength -- %v", data)
-		result, err := vm.ToValue(data)
+		folderName := call.Argument(0).String()
+		length := utils.FileLength(folderName)
+		utils.DebugF("FolderLength(%v) -- %v", folderName, length)
+		result, err := vm.ToValue(length)
 		if err == nil {
 			return result
 		}
@@ -243,14 +245,14 @@ func (r *Runner) LoadScripts() string {
 
 	// Printf simply print a string to console
 	vm.Set(Printf, func(call otto.FunctionCall) otto.Value {
-		utils.InforF(" %v", color.HiWhiteString(call.Argument(0).String()))
+		utils.InforF("%v", color.HiWhiteString(call.Argument(0).String()))
 		returnValue, _ := otto.ToValue(true)
 		return returnValue
 	})
 
 	// Warnf simply print a string to console
 	vm.Set(Warnf, func(call otto.FunctionCall) otto.Value {
-		utils.InforF(" %v", color.HiRedString(call.Argument(0).String()))
+		utils.InforF("%v", color.HiRedString(call.Argument(0).String()))
 		returnValue, _ := otto.ToValue(true)
 		return returnValue
 	})

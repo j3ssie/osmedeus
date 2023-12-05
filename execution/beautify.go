@@ -18,7 +18,11 @@ func PrintCSV(filename string) {
 
 	// Create a new table
 	table := tablewriter.NewWriter(os.Stdout)
-	for _, record := range records {
+	for index, record := range records {
+		if index == 0 {
+			table.SetHeader(record)
+			continue
+		}
 		table.Append(record)
 	}
 	table.SetRowLine(false)
@@ -38,7 +42,11 @@ func BeautifyCSV(filename string, dest string) {
 	// Create a new table
 	var buf bytes.Buffer
 	table := tablewriter.NewWriter(&buf)
-	for _, record := range records {
+	for index, record := range records {
+		if index == 0 {
+			table.SetHeader(record)
+			continue
+		}
 		table.Append(record)
 	}
 	table.SetRowLine(false)
