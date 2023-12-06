@@ -16,6 +16,7 @@ const (
 	CleanFFUFJson    = "CleanFFUFJson"
 	GenNucleiReport  = "GenNucleiReport"
 	PrintCSV         = "PrintCSV"
+	BeautifyCSV      = "BeautifyCSV"
 )
 
 const (
