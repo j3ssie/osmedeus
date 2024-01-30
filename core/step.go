@@ -156,7 +156,10 @@ func (r *Runner) RunCommands(commands []string, std string) string {
 			var out string
 			if std != "" {
 				if strings.Contains(std, "/dev/pts") {
-					err = utils.RunOSCommandStream(command, std)
+					if err := utils.RunOSCommandStream(command, std); err != nil {
+						utils.DebugF("error running command: %v -- %v", command, err)
+					}
+					return 
 				}
 				out, err = utils.RunOSCommand(command)
 			} else {
