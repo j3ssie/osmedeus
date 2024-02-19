@@ -320,9 +320,6 @@ func (r *Runner) ResolveRoutine() {
 	// print some info about the routine
 	var totalSteps, totalModules int
 	parameters := make(map[string]string)
-	for k, v := range r.Params {
-		parameters[k] = v
-	}
 
 	for _, routine := range r.Routines {
 		// loop through all modules to get the parameters
@@ -339,6 +336,10 @@ func (r *Runner) ResolveRoutine() {
 			totalSteps += len(module.Steps)
 			totalModules++
 		}
+	}
+
+	for k, v := range r.Params {
+		parameters[k] = v
 	}
 
 	var toggleFlags, skippingFlags, ThreadsFlags []string
@@ -369,11 +370,11 @@ func (r *Runner) ResolveRoutine() {
 	}
 
 	if len(toggleFlags) > 0 || len(skippingFlags) > 0 {
-		utils.InforF("🔘 Toggleable and Skippable Parameters that being use: %v, %v", strings.Join(toggleFlags, ", "), strings.Join(skippingFlags, ", "))
+		utils.InforF("🔘 Toggleable and Skippable Parameters being used: %v, %v", strings.Join(toggleFlags, ", "), strings.Join(skippingFlags, ", "))
 		if r.Opt.Verbose {
 			utils.InforF("🚀 Speed Control that being use: %v", strings.Join(ThreadsFlags, ", "))
 		}
-		utils.InforF("💡 You can skip/enable some parater to speed up the scan or get more result. See more with the usage %v", color.HiBlueString("osmedeus workflow view -v -f %v", r.RoutineName))
+		utils.InforF("💡 You can skip/enable some parameter to speed up the scan or get more result. See more with the usage %v", color.HiBlueString("osmedeus workflow view -v -f %v", r.RoutineName))
 	}
 }
 

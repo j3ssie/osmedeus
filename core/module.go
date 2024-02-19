@@ -43,6 +43,7 @@ func (r *Runner) RunModule(module libs.Module) {
 		r.RunScripts(module.PreRun)
 	}
 
+	utils.InforF("Running steps for module %v", color.CyanString(module.Name))
 	// main part
 	err := r.RunSteps(module.Steps)
 	if err != nil {
