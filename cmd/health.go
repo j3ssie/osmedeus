@@ -165,12 +165,15 @@ func generalCheck() error {
 	if _, err = utils.RunCommandWithErr("amass -h"); err != nil {
 		errorBinary = append(errorBinary, "amass")
 	}
-	if _, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "subfinder"))); err != nil {
-		errorBinary = append(errorBinary, "subfinder")
+
+	if _, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "httpx"))); err != nil {
+		errorBinary = append(errorBinary, "httpx")
 	}
-	if _, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "httprobe"))); err != nil {
-		errorBinary = append(errorBinary, "httprobe")
-	}
+
+	// if _, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "httprobe"))); err != nil {
+	// 	errorBinary = append(errorBinary, "httprobe")
+	// }
+
 	if _, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "nuclei"))); err != nil {
 		errorBinary = append(errorBinary, "nuclei")
 	}
@@ -183,10 +186,6 @@ func generalCheck() error {
 
 	// Check core signatures
 	okVuln := false
-	// if utils.DirLength("~/.jaeles/base-signatures/") > 0 || utils.DirLength("~/pro-signatures/") > 0 {
-	// 	okVuln = true
-	// }
-
 	if utils.DirLength("~/nuclei-templates") > 0 {
 		okVuln = true
 	}
