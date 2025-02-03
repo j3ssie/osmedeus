@@ -2,6 +2,7 @@ package core
 
 import (
 	"path"
+	"text/template"
 
 	"fmt"
 	"os"
@@ -111,6 +112,7 @@ func (r *Runner) ResolveContentSrc(tag string) string {
 		}
 
 		if strings.Contains(tag, "shorten=true") || len(fileContent) > r.Opt.MDCodeBlockLimit {
+			fileContent = template.HTMLEscapeString(fileContent) // sanitize file content to prevent XSS
 			return extendTag(fileContent)
 		}
 
