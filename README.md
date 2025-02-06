@@ -144,14 +144,6 @@ Check out [**this page**](https://docs.osmedeus.org/installation/usage/) for ful
 
 Join Our Discord server [here](https://discord.gg/mtQG2FQsYA)
 
-## 💎 Donation & Sponsor
-
-<h3 align="center">
- <img alt="Osmedeus" src="https://raw.githubusercontent.com/osmedeus/assets/main/premium-package.gif" />
-
- <p align="center"> Check out for a couple of <strong><a href="https://docs.osmedeus.org/donation/">donation methods here</a></strong> to get a <strong><a href="https://docs.osmedeus.org/premium/">premium package</a></strong><p>
-</h3>
-
 ## License
 
 `Osmedeus` is made with ♥ by [@j3ssiejjj](https://twitter.com/j3ssiejjj) and it is released under the MIT license.
