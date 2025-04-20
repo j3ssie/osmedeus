@@ -27,9 +27,11 @@ func InitLog(options *libs.Options) {
 		}
 		tmpFile, err := os.CreateTemp(logDir, "osmedeus-*.log")
 		if err == nil {
+			 defer tmpFile.Close()
 			options.LogFile = tmpFile.Name()
 		} else {
 			tmpFile, _ := os.CreateTemp("/tmp/", "osmedeus-*.log")
+			 defer tmpFile.Close()
 			options.LogFile = tmpFile.Name()
 		}
 	}
