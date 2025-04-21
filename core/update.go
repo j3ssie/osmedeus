@@ -299,7 +299,6 @@ func UpdateBase(opt libs.Options) {
 			os.RemoveAll(goPath)
 			utils.RunOSCommand(fmt.Sprintf("cp %s %s", newBin, goPath))
 
-			// go path but in plugins folder
 			goPath = path.Join(opt.Env.BinariesFolder, "go", libs.BINARY)
 			os.RemoveAll(goPath)
 			utils.RunOSCommand(fmt.Sprintf("cp %s %s", newBin, goPath))

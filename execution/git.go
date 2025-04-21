@@ -96,7 +96,7 @@ func PushResult(storageFolder string, commitMess string, options libs.Options) {
 	}
 }
 
-// GitClone update latest UI and Plugins from default repo
+// GitClone update latest UI and Base from default repo
 func GitClone(url string, dest string, forced bool, options libs.Options) {
 	if options.NoGit || options.Storages["secret_key"] == "" {
 		utils.WarnF("Storage Disable")

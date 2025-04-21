@@ -102,7 +102,8 @@ const (
 )
 
 const (
-	SetVar   = "SetVar"
-	SetOSVar = "SetOSVar"
-	GetOSEnv = "GetOSEnv"
+	SetVar        = "SetVar"
+	SetOSVar      = "SetOSVar"
+	GetOSEnv      = "GetOSEnv"
+	GetRandString = "GetRandString"
 )

@@ -30,6 +30,8 @@ func init() {
 	configCmd.Flags().String("user", "", "Username")
 	configCmd.Flags().String("pass", "", "Password")
 	configCmd.Flags().StringP("workspace", "w", "", "Name of workspace")
+	configCmd.Flags().String("master-pass", "", "Set Master password for the API Authentication")
+
 	configCmd.SetHelpFunc(ConfigHelp)
 	RootCmd.AddCommand(configCmd)
 }
@@ -37,6 +39,7 @@ func init() {
 func runConfig(cmd *cobra.Command, args []string) error {
 	sort.Strings(args)
 	action, _ := cmd.Flags().GetString("action")
+	masterPass, _ := cmd.Flags().GetString("master-pass")
 	workspace, _ := cmd.Flags().GetString("workspace")
 	clientName, _ := cmd.Flags().GetString("client-name")
 
@@ -98,7 +101,12 @@ func runConfig(cmd *cobra.Command, args []string) error {
 			break
 		}
 
+		if masterPass != "" {
+			core.SetMasterPassword(&options, masterPass)
+			break
+		}
 		core.SetTactic(&options)
+
 		break
 	case "update":
 		core.Update(options)

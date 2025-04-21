@@ -2,12 +2,13 @@ package server
 
 import (
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/j3ssie/osmedeus/libs"
-	"github.com/j3ssie/osmedeus/utils"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/j3ssie/osmedeus/libs"
+	"github.com/j3ssie/osmedeus/utils"
 )
 
 // UploadData data required in json form
@@ -78,15 +79,12 @@ func CommandBuilder(taskData *TaskData) string {
 		}
 	}
 
-	if taskData.ScanID != "" {
-		binary += fmt.Sprintf(" --sid %v ", taskData.ScanID)
-	}
-
 	var command string
 	var workspace, concurrency, timeout, params, workflow, plugin, scanID string
 
 	if len(taskData.TargetsList) > 0 {
 		taskData.TargetsFile = SaveTargets(taskData.TargetsList)
+		taskData.Target = taskData.TargetsFile
 		utils.DebugF("Save targets list to: %v", taskData.TargetsFile)
 	}
 
@@ -94,18 +92,6 @@ func CommandBuilder(taskData *TaskData) string {
 	if taskData.Workspace != "" {
 		taskData.Workspace = utils.CleanPath(taskData.Workspace)
 		workspace = fmt.Sprintf(" -w '%v'", taskData.Workspace)
-	}
-
-	if taskData.Binary != "" {
-		binary = taskData.Binary
-	}
-
-	//if taskData.RawName {
-	//	binary = binary + " --rt "
-	//}
-
-	if taskData.ViewOnly {
-		binary = binary + " --view-only "
 	}
 
 	// default workflow is general
@@ -135,8 +121,8 @@ func CommandBuilder(taskData *TaskData) string {
 		}
 	}
 
-	if taskData.PluginName != "" {
-		plugin = fmt.Sprintf(" -m '%v'", taskData.PluginName)
+	if taskData.ModuleName != "" {
+		plugin = fmt.Sprintf(" -m '%v'", taskData.ModuleName)
 	}
 
 	// override everything
@@ -145,7 +131,7 @@ func CommandBuilder(taskData *TaskData) string {
 	}
 
 	// mean general scan
-	if taskData.PluginName == "" {
+	if taskData.ModuleName == "" {
 		command = fmt.Sprintf("%v %v -t %v %v%v%v%v", binary, workflow, taskData.Target, concurrency, timeout, workspace, params)
 		if taskData.TargetsFile != "" {
 			command = fmt.Sprintf("%v %v -T %v %v%v%v%v", binary, workflow, taskData.TargetsFile, concurrency, timeout, workspace, params)

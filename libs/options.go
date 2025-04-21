@@ -86,6 +86,7 @@ type Scan struct {
 	CustomWorkspace string
 	SuffixName      string
 	Force           bool
+	DryRun          bool
 	// this is true when calling from cloud scan
 	RemoteCall bool
 }
@@ -111,6 +112,7 @@ type Server struct {
 	DisableSSL              bool
 	PreFork                 bool
 	NoAuthen                bool
+	BasicAuth               bool
 
 	PollingTime    int
 	Bind           string

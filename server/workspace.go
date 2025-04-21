@@ -21,10 +21,10 @@ type ResponseHTTP struct {
 	Message string      `json:"message"`
 }
 
-// Workspace is a function to get all books data from database
-// @Summary Get all books
-// @Description Get all books
-// @Tags books
+// ListWorkspaces is a function to get all workspaces from database
+// @Summary Get all workspaces
+// @Description Get all available workspaces
+// @Tags workspaces
 // @Accept json
 // @Produce json
 // @Success 200 {object} ResponseHTTP{}
@@ -40,6 +40,14 @@ func ListWorkspaces(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary Get workspace details
+// @Description Get detailed information about a specific workspace including reports
+// @Tags workspaces
+// @Accept json
+// @Produce json
+// @Param wsname path string true "Workspace name"
+// @Success 200 {object} ResponseHTTP{data=map[string]interface{}} "workspace details and reports"
+// @Router /api/osmp/workspace/{wsname} [get]
 func WorkspaceDetail(c *fiber.Ctx) error {
 	wsname := c.Params("wsname")
 	workspace := database.GetSingleScan(wsname, Opt)
@@ -86,6 +94,13 @@ func WorkspaceDetail(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary List all scan processes
+// @Description Get all running and completed scan processes
+// @Tags scans
+// @Accept json
+// @Produce json
+// @Success 200 {object} ResponseHTTP{data=[]object} "List of all scan processes"
+// @Router /api/osmp/scans [get]
 func ListAllScan(c *fiber.Ctx) error {
 	scan := database.GetScanProgress(Opt)
 	return c.JSON(ResponseHTTP{
@@ -97,6 +112,15 @@ func ListAllScan(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary Delete a workspace
+// @Description Delete a workspace and all its associated files
+// @Tags workspaces
+// @Accept json
+// @Produce json
+// @Param wsname path string true "Workspace name"
+// @Success 200 {object} ResponseHTTP "Workspace successfully deleted"
+// @Failure 400 {object} object{error=string} "Workspace doesn't exist"
+// @Router /api/osmp/delete/{wsname} [delete]
 func DeleteWorkspace(c *fiber.Ctx) error {
 	wsname := c.Params("wsname")
 	wsDir := path.Join(Opt.Env.WorkspacesFolder, utils.NormalizePath(wsname))

@@ -62,6 +62,7 @@ func InitConfig(options *libs.Options) error {
 		secret := utils.GenHash(utils.RandomString(8) + utils.GetTS())[:32] // only 32 char
 		prefix := secret[len(secret)-20 : len(secret)-1]
 
+		master_password := utils.GenHash(utils.RandomString(20) + utils.GetTS())[:32] // only 32 char
 		// set some default config if config file doesn't exist
 		v.SetDefault("Server", map[string]string{
 			"bind":        "0.0.0.0:8000",
@@ -71,7 +72,7 @@ func InitConfig(options *libs.Options) error {
 			"ui":          path.Join(RootFolder, "server/ui"),
 			"cert_file":   path.Join(RootFolder, "server/ssl/cert.pem"),
 			"key_file":    path.Join(RootFolder, "server/ssl/key.pem"),
-			"master_pass": "",
+			"master_pass": master_password,
 		})
 
 		v.SetDefault("Tactic", map[string]any{
@@ -377,5 +378,25 @@ func SetTactic(options *libs.Options) {
 		"gently":     int(baseThreads / 2),
 	})
 
+	v.WriteConfig()
+}
+
+func SetMasterPassword(options *libs.Options, masterPassword string) {
+	v = LoadConfig(options)
+	if err := v.ReadInConfig(); err != nil {
+		utils.ErrorF("Error reading config file, %s", err)
+	}
+
+	if len(masterPassword) < 6 {
+		utils.ErrorF("Master password must be at least 6 characters")
+		os.Exit(-1)
+	}
+
+	// baseThreads := options.Threads
+	redactedMasterPassword := masterPassword[:2] + strings.Repeat("*", len(masterPassword)-4) + masterPassword[len(masterPassword)-2:]
+	utils.InforF("Set server masterpassword to %v", color.HiCyanString("%v", redactedMasterPassword))
+
+	// set some default config if config file doesn't exist
+	v.Set("Server.master_pass", masterPassword)
 	v.WriteConfig()
 }

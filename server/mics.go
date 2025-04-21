@@ -12,6 +12,13 @@ import (
 	"github.com/j3ssie/osmedeus/libs"
 )
 
+// @Summary List running processes
+// @Description Get all currently running Osmedeus processes
+// @Tags processes
+// @Accept json
+// @Produce json
+// @Success 200 {object} ResponseHTTP{data=[]object} "List of all running processes"
+// @Router /api/osmp/ps [get]
 func Process(c *fiber.Ctx) error {
 	processes := execution.GetOsmProcess("")
 	return c.JSON(ResponseHTTP{
@@ -36,6 +43,14 @@ func RawWorkspace(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary List available workflows
+// @Description Get all available workflow configurations and their modules
+// @Tags workflows
+// @Accept json
+// @Produce json
+// @Success 200 {object} ResponseHTTP{data=[]object} "List of workflows with their details"
+// @Failure 400 {object} object{error=string} "Error when no workflow is found"
+// @Router /api/osmp/flows [get]
 func ListFlows(c *fiber.Ctx) error {
 	flows := core.ListFlow(Opt)
 	if len(flows) == 0 {

@@ -218,8 +218,6 @@ func ExtractTarGz(filename string) error {
 			return err
 
 		}
-
 	}
-
 	return nil
 }

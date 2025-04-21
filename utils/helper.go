@@ -957,3 +957,40 @@ func RenderText(format string, data map[string]string) string {
 	}
 	return buf.String()
 }
+
+// CopyFile attempts to copy a file from src to dst, first trying a hard link then falling back to a regular copy
+func CopyFile(src, dst string) error {
+	// Normalize paths
+	src = NormalizePath(src)
+	dst = NormalizePath(dst)
+
+	// First try creating a hard link
+	if err := os.Link(src, dst); err == nil {
+		return nil
+	}
+
+	// If hard link fails, do a regular file copy
+	input, err := os.ReadFile(src)
+	if err != nil {
+		return fmt.Errorf("failed to read source file: %v", err)
+	}
+
+	if err := os.WriteFile(dst, input, 0644); err != nil {
+		return fmt.Errorf("failed to write destination file: %v", err)
+	}
+
+	return nil
+}
+
+func GetRandString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+	// Create a new random source seeded with current timestamp
+	source := rand.NewSource(time.Now().UnixNano())
+	seededRand := rand.New(source)
+
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(b)
+}

@@ -11,13 +11,15 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/basicauth"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	jwtware "github.com/gofiber/jwt/v2"
-	"github.com/j3ssie/osmedeus/libs"
-	"github.com/j3ssie/osmedeus/utils"
-
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	jwtware "github.com/gofiber/jwt/v2"
+	"github.com/gofiber/swagger"
+	_ "github.com/j3ssie/osmedeus/docs"
+	"github.com/j3ssie/osmedeus/libs"
+	"github.com/j3ssie/osmedeus/utils"
 )
 
 // var DB *gorm.DB
@@ -73,6 +75,8 @@ func StartServer(options libs.Options) {
 // SetupRoutes setup router api
 func SetupRoutes(app *fiber.App) {
 	// for UI
+	// Swagger UI endpoint
+	app.Get(fmt.Sprintf("%s/swagger/*", Opt.Server.StaticPrefix), swagger.HandlerDefault)
 	app.Static("/ui", Opt.Server.UIPath)
 	app.Get("/ui/*", func(ctx *fiber.Ctx) error {
 		return ctx.SendFile(path.Join(Opt.Server.UIPath, "index.html"))
@@ -98,18 +102,29 @@ func SetupRoutes(app *fiber.App) {
 
 	// disable JWT Middleware when -A is set
 	if !Opt.Server.NoAuthen {
-		app.Use(jwtware.New(jwtware.Config{
-			SigningKey:     []byte(Opt.Server.JWTSecret),
-			Filter:         nil,
-			SuccessHandler: nil,
-			ErrorHandler:   jwtError,
-			SigningKeys:    nil,
-			SigningMethod:  "",
-			ContextKey:     "",
-			Claims:         nil,
-			TokenLookup:    "",
-			AuthScheme:     "Osmedeus",
-		}))
+		if Opt.Server.BasicAuth {
+			utils.InforF("Master Password is enabled")
+			// Provide a minimal config
+			basicAuth := basicauth.New(basicauth.Config{
+				Users: map[string]string{
+					"osmedeus": Opt.Server.MasterPassword,
+				},
+			})
+			app.Use(basicAuth)
+		} else {
+			app.Use(jwtware.New(jwtware.Config{
+				SigningKey:     []byte(Opt.Server.JWTSecret),
+				Filter:         nil,
+				SuccessHandler: nil,
+				ErrorHandler:   jwtError,
+				SigningKeys:    nil,
+				SigningMethod:  "",
+				ContextKey:     "",
+				Claims:         nil,
+				TokenLookup:    "",
+				AuthScheme:     "Osmedeus",
+			}))
+		}
 	}
 
 	// Middleware
@@ -127,18 +142,6 @@ func SetupRoutes(app *fiber.App) {
 	osmp.Get("/raw", RawWorkspace)
 	osmp.Get("/flows", ListFlows)
 	osmp.Get("/help", HelperMessage)
-
-	//api.Use(basicauth.New(basicauth.Config{
-	//	Users: map[string]string{
-	//		Opt.Client.Username: Opt.Client.Password,
-	//	},
-	//	Realm: "Forbidden",
-	//	Unauthorized: func(c *fiber.Ctx) error {
-	//		return c.SendString("404 not found")
-	//	},
-	//}))
-	//
-
 	// execute endpoints
 	osmp.Post("/execute", NewScan)
 	osmp.Post("/upload", Upload)

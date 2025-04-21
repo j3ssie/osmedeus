@@ -1,0 +1,14 @@
+name: with-threads-hold
+
+steps:
+  - commands:
+      - "echo  'calc ---> {{ 5555 * threads}} '"
+    scripts:
+      - "ExecCmd('mkdir -p /tmp/ott/')"
+      - "ExecCmd('seq 10 > /tmp/ott/source.txt')"
+
+  - source: '/tmp/ott/source.txt'
+    threads: '2'
+    commands:
+      - "echo '---> {{ 2 * threads}} '"
+      # - "sleep 1 && echo '---> done [[.line]]'"

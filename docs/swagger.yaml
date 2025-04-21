@@ -1,0 +1,323 @@
+definitions:
+  server.ResponseHTTP:
+    properties:
+      data: {}
+      message:
+        type: string
+      status:
+        type: integer
+      total:
+        type: integer
+      type:
+        type: string
+    type: object
+  server.TaskData:
+    description: Configuration for executing a new scan
+    properties:
+      as_file:
+        example: false
+        type: boolean
+      chunk:
+        example: false
+        type: boolean
+      command:
+        type: string
+      concurrency:
+        example: 5
+        type: integer
+      debug:
+        example: false
+        type: boolean
+      distributed:
+        example: false
+        type: boolean
+      module:
+        example: subdomain
+        type: string
+      params:
+        example:
+        - '["-deep"'
+        - ' "-aggressive"]'
+        items:
+          type: string
+        type: array
+      password:
+        example: secret123
+        type: string
+      target:
+        example: example.com
+        type: string
+      targets:
+        items:
+          type: string
+        type: array
+      targets_file:
+        example: /path/to/targets.txt
+        type: string
+      test:
+        example: false
+        type: boolean
+      threads:
+        example: 10
+        type: integer
+      timeout:
+        example: 1h
+        type: string
+      wildcard:
+        example: false
+        type: boolean
+      workflow:
+        example: general
+        type: string
+      workspace:
+        example: my-project
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /api/osmp/delete/{wsname}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a workspace and all its associated files
+      parameters:
+      - description: Workspace name
+        in: path
+        name: wsname
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Workspace successfully deleted
+          schema:
+            $ref: '#/definitions/server.ResponseHTTP'
+        "400":
+          description: Workspace doesn't exist
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: Delete a workspace
+      tags:
+      - workspaces
+  /api/osmp/execute:
+    post:
+      consumes:
+      - application/json
+      description: Execute a new scan with specified configuration
+      parameters:
+      - description: Scan configuration
+        in: body
+        name: taskData
+        required: true
+        schema:
+          $ref: '#/definitions/server.TaskData'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Scan started successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/server.ResponseHTTP'
+            - properties:
+                data:
+                  properties:
+                    command:
+                      type: string
+                    input:
+                      type: string
+                  type: object
+              type: object
+        "400":
+          description: Invalid JSON payload
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: Start a new scan
+      tags:
+      - scans
+  /api/osmp/flows:
+    get:
+      consumes:
+      - application/json
+      description: Get all available workflow configurations and their modules
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of workflows with their details
+          schema:
+            allOf:
+            - $ref: '#/definitions/server.ResponseHTTP'
+            - properties:
+                data:
+                  items:
+                    type: object
+                  type: array
+              type: object
+        "400":
+          description: Error when no workflow is found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: List available workflows
+      tags:
+      - workflows
+  /api/osmp/ps:
+    get:
+      consumes:
+      - application/json
+      description: Get all currently running Osmedeus processes
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of all running processes
+          schema:
+            allOf:
+            - $ref: '#/definitions/server.ResponseHTTP'
+            - properties:
+                data:
+                  items:
+                    type: object
+                  type: array
+              type: object
+      summary: List running processes
+      tags:
+      - processes
+  /api/osmp/scans:
+    get:
+      consumes:
+      - application/json
+      description: Get all running and completed scan processes
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of all scan processes
+          schema:
+            allOf:
+            - $ref: '#/definitions/server.ResponseHTTP'
+            - properties:
+                data:
+                  items:
+                    type: object
+                  type: array
+              type: object
+      summary: List all scan processes
+      tags:
+      - scans
+  /api/osmp/workspace/{wsname}:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a specific workspace including reports
+      parameters:
+      - description: Workspace name
+        in: path
+        name: wsname
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: workspace details and reports
+          schema:
+            allOf:
+            - $ref: '#/definitions/server.ResponseHTTP'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+      summary: Get workspace details
+      tags:
+      - workspaces
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: status=success, message=Successfully login, token=JWT_TOKEN
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: User login
+      tags:
+      - authentication
+  /v1/health:
+    get:
+      consumes:
+      - application/json
+      description: Get server health status and version information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.ResponseHTTP'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/server.ResponseHTTP'
+      summary: Check server health status
+      tags:
+      - health
+  /v1/ping:
+    get:
+      consumes:
+      - application/json
+      description: Simple ping endpoint to verify server is responding
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.ResponseHTTP'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/server.ResponseHTTP'
+      summary: Check server connectivity
+      tags:
+      - system
+  /v1/workspaces:
+    get:
+      consumes:
+      - application/json
+      description: Get all available workspaces
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.ResponseHTTP'
+      summary: Get all workspaces
+      tags:
+      - workspaces
+swagger: "2.0"

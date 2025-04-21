@@ -34,8 +34,7 @@ func init() {
 }
 
 func runScan(_ *cobra.Command, _ []string) error {
-	utils.GoodF("Using the %v Engine %v by %v", cases.Title(language.Und, cases.NoLower).String(libs.BINARY), color.HiCyanString(libs.VERSION), color.HiMagentaString(libs.AUTHOR))
-	utils.InforF("Storing the log file to: %v", color.CyanString(options.LogFile))
+	utils.GoodF("Launching %v Engine %v developed by %v", cases.Title(language.Und, cases.NoLower).String(libs.BINARY), color.HiCyanString(libs.VERSION), color.HiMagentaString(libs.AUTHOR))
 
 	var wg sync.WaitGroup
 	p, _ := ants.NewPoolWithFunc(options.Concurrency, func(i interface{}) {

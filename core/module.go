@@ -206,7 +206,6 @@ func (r *Runner) RunStep(step libs.Step) (string, error) {
 	if step.Source != "" {
 		return r.RunStepWithSource(step)
 	}
-	//
 
 	if len(step.Commands) > 0 {
 		r.RunCommands(step.Commands, step.Std)

@@ -174,11 +174,12 @@ func ParseInput(raw string, options libs.Options) map[string]string {
 	ROptions["Date"] = time.Now().Format("2006-01-02T15:04:05")
 	ROptions["TimeStamp"] = utils.GetTS()
 	ROptions["TS"] = time.Now().Format("2006-01-02") + "T" + utils.GetTS()
+	ROptions["Random"] = utils.GetRandString(8)
 
 	/* --- start to load default Env --- */
 	// ~/osmedeus-base
 	ROptions["BaseFolder"] = utils.NormalizePath(strings.TrimLeft(options.Env.BaseFolder, "/"))
-	ROptions["Plugins"] = options.Env.BinariesFolder
+	// ROptions["Plugins"] = options.Env.BinariesFolder
 	ROptions["Binaries"] = options.Env.BinariesFolder
 
 	ROptions["Backup"] = options.Env.BackupFolder

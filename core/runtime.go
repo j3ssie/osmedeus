@@ -250,6 +250,12 @@ func (r *Runner) LoadScripts() string {
 		return returnValue
 	})
 
+	vm.Set(GetRandString, func(call otto.FunctionCall) otto.Value {
+		utils.InforF("%v", color.HiWhiteString(call.Argument(0).String()))
+		returnValue, _ := otto.ToValue(true)
+		return returnValue
+	})
+
 	// Warnf simply print a string to console
 	vm.Set(Warnf, func(call otto.FunctionCall) otto.Value {
 		utils.InforF("%v", color.HiRedString(call.Argument(0).String()))

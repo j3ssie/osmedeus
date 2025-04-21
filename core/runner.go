@@ -9,7 +9,6 @@ import (
 	"github.com/Shopify/yaml"
 	"github.com/fatih/color"
 	"github.com/j3ssie/osmedeus/database"
-	"github.com/j3ssie/osmedeus/execution"
 	"github.com/j3ssie/osmedeus/libs"
 	"github.com/j3ssie/osmedeus/utils"
 	"github.com/panjf2000/ants"
@@ -366,7 +365,6 @@ func (r *Runner) ResolveRoutine() {
 				ThreadsFlags = append(ThreadsFlags, fmt.Sprintf("%v=%v", colorKey, value))
 			}
 		}
-
 	}
 
 	if len(toggleFlags) > 0 || len(skippingFlags) > 0 {
@@ -393,11 +391,24 @@ func (r *Runner) Start() {
 	r.DoneFile = r.Target["Output"] + "/done"
 	r.RuntimeFile = r.Target["Output"] + "/runtime"
 	r.WorkspaceFolder = r.Target["Output"]
+
+	// update the log file
+	scanLogFile := r.WorkspaceFolder + "/execution.log"
+	utils.CopyFile(r.Opt.LogFile, scanLogFile)
+	r.Opt.LogFile = scanLogFile
+	utils.InitLog(&r.Opt)
+	utils.InforF("Storing the log file to: %v", color.CyanString(r.Opt.LogFile))
+
+	r.GenerateFlowChart()
+	if r.Opt.Scan.DryRun {
+		utils.InforF("Dry run mode enabled")
+		os.Exit(0)
+	}
+
 	os.Remove(r.DoneFile)
 
 	utils.TSPrintF("Running the routine %v on %v", color.HiYellowString(r.RoutineName), color.CyanString(r.Input))
 	utils.InforF("Detailed runtime file can be found on %v", color.CyanString(r.RuntimeFile))
-	execution.TeleSendMess(r.Opt, fmt.Sprintf("%s -- Start new scan: %s -- %s", r.Opt.Noti.ClientName, r.Opt.Scan.Flow, r.Target["Workspace"]), "#status", false)
 
 	r.DBNewTarget()
 	r.DBNewScan()

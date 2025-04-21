@@ -6,48 +6,55 @@ import (
 )
 
 // TaskData data required in json form
+// TaskData represents the scan configuration and parameters
+// @Description Configuration for executing a new scan
 type TaskData struct {
-	MasterPassword string `json:"password"`
-	Binary         string `json:"binary"`
-	// override everything below
-	Command string `json:"command"`
+	MasterPassword string `json:"password" example:"secret123" description:"Master password for authentication"`
+	Command        string `json:"command" description:"Override command to execute (optional)"`
 
-	// these two not be blank when run with plugins
-	WorkFlow   string `json:"workflow"`
-	PluginName string `json:"plugin"`
-	ScanID     string `json:"scan_id"`
+	Target      string   `json:"target" example:"example.com" description:"Target to scan"`
+	TargetsList []string `json:"targets" description:"List of targets to scan (optional)"`
+	WorkFlow    string   `json:"workflow" example:"general" description:"Workflow name to execute"`
 
-	// for select scan + task
-	Workspace   string   `json:"workspace"`
-	Target      string   `json:"target"`
-	TargetsList []string `json:"targets"`
-	TargetsFile string   `json:"targets_file"`
-
-	AliveAssets bool `json:"alive_assets"` // skip targets part and select the assets from DB
-	AllAssets   bool `json:"all_assets"`   // skip targets part and select the assets from DB
-
-	// just more mics info for custom command later
-	Params      []string `json:"params"`
-	Timeout     string   `json:"timeout"`
-	Concurrency int      `json:"concurrency"`
-
-	// enable distributed scan
-	Distributed bool `json:"distributed"`
-
-	// for chunk mode only
-	Threads      int  `json:"threads"`
-	Chunk        bool `json:"chunk"`
-	TargetAsFile bool `json:"as_file"`
-
-	// only select record not run the command
-	RawName  bool `json:"RawName"`
-	WildCard bool `json:"wildcard"`
-	ViewOnly bool `json:"view_only"`
-	Debug    bool `json:"debug"`
-	Test     bool `json:"test"`
+	ModuleName   string   `json:"module" example:"subdomain" description:"Plugin name to run (optional)"`
+	Workspace    string   `json:"workspace" example:"my-project" description:"Workspace name (optional)"`
+	TargetsFile  string   `json:"targets_file" example:"/path/to/targets.txt" description:"File containing targets (optional)"`
+	Threads      int      `json:"threads" example:"10" description:"Number of concurrent threads (optional)"`
+	Chunk        bool     `json:"chunk" example:"false" description:"Enable chunk mode (optional)"`
+	TargetAsFile bool     `json:"as_file" example:"false" description:"Treat target as file (optional)"`
+	Params       []string `json:"params" example:"[\"-deep\", \"-aggressive\"]" description:"Additional parameters (optional)"`
+	Timeout      string   `json:"timeout" example:"1h" description:"Scan timeout (optional)"`
+	Concurrency  int      `json:"concurrency" example:"5" description:"Concurrency level (optional)"`
+	Distributed  bool     `json:"distributed" example:"false" description:"Enable distributed scanning (optional)"`
+	WildCard     bool     `json:"wildcard" example:"false" description:"Enable wildcard mode (optional)"`
+	Debug        bool     `json:"debug" example:"false" description:"Enable debug mode (optional)"`
+	Test         bool     `json:"test" example:"false" description:"Test mode without actual execution (optional)"`
 }
 
-// NewScan new scan
+// @Summary Start a new scan
+// @Description Execute a new scan with specified configuration
+// @Tags scans
+// @Accept json
+// @Produce json
+// @Param taskData body TaskData true "Scan configuration"
+// @Success 200 {object} ResponseHTTP{data=object{command=string,input=string}} "Scan started successfully"
+// @Failure 400 {object} object{error=string} "Invalid JSON payload"
+// @Example Request-SingleTarget
+//
+//	{
+//	   "target": "example.com",
+//	   "workflow": "general"
+//	}
+//
+// @Example Request-MultipleTargets
+//
+//	{
+//	   "targets": ["1.2.3.4/24", "5.6.7.8/24"],
+//	   "as_file": true,
+//	   "workflow": "cidr"
+//	}
+//
+// @Router /api/osmp/execute [post]
 func NewScan(c *fiber.Ctx) error {
 	var taskData TaskData
 	var invalid bool
@@ -81,6 +88,7 @@ func NewScan(c *fiber.Ctx) error {
 		Status: 200,
 		Data: fiber.Map{
 			"command": taskData.Command,
+			"input":   taskData.Target,
 		},
 		Type:    "new-scan",
 		Message: "New Scan Imported",
@@ -121,7 +129,6 @@ func NewScanCloud(c *fiber.Ctx) error {
 		Status: 200,
 		Data: fiber.Map{
 			"input":    taskData.Target,
-			"scan_id":  taskData.ScanID,
 			"workflow": taskData.WorkFlow,
 		},
 		Type:    "new-scan",

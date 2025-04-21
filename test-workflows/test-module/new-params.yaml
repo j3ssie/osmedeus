@@ -1,14 +1,16 @@
 name: new-params
-desc: new-params
+desc: new-params desc
 
 params:
   - NewParams: "{{Company}}"
   - WS: "{{Workspace}}"
 
 steps:
-  - required:
-      - "{{testFile}}"
-    commands:
+  - commands:
+      - "echo '/tmp/' > /tmp/sammm"
+
+  - commands:
       - "echo 'Company  --> {{Company}}'"
       - "echo 'NewParams --> {{NewParams}}'"
       - "echo 'WS --> {{WS}}'"
+      - 'ls -la $(cat /tmp/sammm)'

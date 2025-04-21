@@ -51,6 +51,7 @@ func init() {
 	RootCmd.PersistentFlags().IntVarP(&options.Threads, "threads-hold", "B", 0, "Threads hold for each module (default: number of CPUs)")
 	RootCmd.PersistentFlags().StringVar(&options.Tactics, "tactic", "default", "Choosing the tactic for running workflow from [default aggressive gently]")
 	RootCmd.PersistentFlags().StringVar(&options.Scan.ParamsFile, "params-file", "", "Custom file params --params-file=params.yaml")
+	RootCmd.PersistentFlags().BoolVar(&options.Scan.DryRun, "dry-run", false, "Dry run mode to check the flow without executing anything")
 
 	// cloud flags
 	RootCmd.PersistentFlags().BoolVar(&options.Cloud.EnableChunk, "chunk", false, "Enable chunk mode")

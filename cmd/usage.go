@@ -162,7 +162,6 @@ func UtilsUsage() string {
 func ConfigUsage() string {
 	h := color.HiCyanString("\nConfig Usage:\n")
 	h += "  osmedeus config [action] [OPTIONS] \n"
-	h += "  osmedeus config init -p https://github.com/j3ssie/osmedeus-plugins\n"
 	h += "  osmedeus config --user newusser --pass newpassword\n"
 	h += "  osmedeus config clean \n"
 	h += "  osmedeus config delete -t woskapce \n"
@@ -218,6 +217,7 @@ func ServerUsage() string {
 	h += "  osmedeus server --port 5000\n"
 	h += "  osmedeus server --disable-ssl\n"
 	h += "  osmedeus server -A --disable-ssl\n"
+	h += "  osmedeus server --basic-auth --disable-ssl\n"
 	return h
 }
 

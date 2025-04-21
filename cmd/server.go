@@ -28,6 +28,7 @@ func init() {
 	serverCmd.Flags().BoolVar(&options.Server.DisableWorkspaceListing, "disable-listing", false, "Disable workspaces directtory listing")
 	serverCmd.Flags().BoolVar(&options.Server.PreFork, "prefork", false, "Enable Prefork mode for the api server")
 	serverCmd.Flags().BoolVarP(&options.Server.NoAuthen, "no-auth", "A", false, "Disable authentication for the api server")
+	serverCmd.Flags().BoolVar(&options.Server.BasicAuth, "basic-auth", false, "Turn on basic auth for the api server")
 
 	serverCmd.SetHelpFunc(ServerHelp)
 	RootCmd.AddCommand(serverCmd)
@@ -43,7 +44,7 @@ func runServer(cmd *cobra.Command, _ []string) error {
 	host, _ := cmd.Flags().GetString("host")
 	port, _ := cmd.Flags().GetString("port")
 	options.Server.Bind = fmt.Sprintf("%v:%v", host, port)
-	utils.GoodF("Using the %v Engine %v by %v", cases.Title(language.Und, cases.NoLower).String(libs.BINARY), color.HiCyanString(libs.VERSION), color.HiMagentaString(libs.AUTHOR))
+	utils.GoodF("Launching %v Engine %v developed by %v", cases.Title(language.Und, cases.NoLower).String(libs.BINARY), color.HiCyanString(libs.VERSION), color.HiMagentaString(libs.AUTHOR))
 	server.StartServer(options)
 	return nil
 }

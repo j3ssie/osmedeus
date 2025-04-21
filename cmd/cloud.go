@@ -62,7 +62,7 @@ func init() {
 }
 
 func runCloud(cmd *cobra.Command, _ []string) error {
-	utils.GoodF("Using the %v Engine %v by %v", cases.Title(language.Und, cases.NoLower).String(libs.BINARY), color.HiCyanString(libs.VERSION), color.HiMagentaString(libs.AUTHOR))
+	utils.GoodF("Launching %v Engine %v developed by %v", cases.Title(language.Und, cases.NoLower).String(libs.BINARY), color.HiCyanString(libs.VERSION), color.HiMagentaString(libs.AUTHOR))
 	utils.InforF("Storing the log file to: %v", color.CyanString(options.LogFile))
 
 	// parse some arguments

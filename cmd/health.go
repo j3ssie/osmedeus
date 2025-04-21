@@ -162,19 +162,15 @@ func generalCheck() error {
 	if _, err = utils.RunCommandWithErr("timeout --help"); err != nil {
 		errorBinary = append(errorBinary, "timeout")
 	}
-	if _, err = utils.RunCommandWithErr("amass -h"); err != nil {
-		errorBinary = append(errorBinary, "amass")
+	if _, err = utils.RunCommandWithErr("subfinder -h"); err != nil {
+		errorBinary = append(errorBinary, "subfinder")
 	}
 
-	if _, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "httpx"))); err != nil {
+	if _, err = utils.RunCommandWithErr(("httpx -h")); err != nil {
 		errorBinary = append(errorBinary, "httpx")
 	}
 
-	// if _, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "httprobe"))); err != nil {
-	// 	errorBinary = append(errorBinary, "httprobe")
-	// }
-
-	if _, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, "nuclei"))); err != nil {
+	if _, err = utils.RunCommandWithErr("nuclei -h"); err != nil {
 		errorBinary = append(errorBinary, "nuclei")
 	}
 
@@ -185,17 +181,18 @@ func generalCheck() error {
 	fmt.Printf("[+] Health Check Core Programs: %s\n", color.GreenString("✔"))
 
 	// Check core signatures
-	okVuln := false
-	if utils.DirLength("~/nuclei-templates") > 0 {
-		okVuln = true
-	}
 
-	if okVuln {
-		fmt.Printf("[+] Health Check Vulnerability scanning config: %s\n", color.GreenString("✔"))
-	} else {
-		color.Red("vulnerability scanning config setup incorrectly")
-		return fmt.Errorf("vulnerability scanning config setup incorrectly")
-	}
+	// okVuln := false
+	// if utils.DirLength("~/nuclei-templates") > 0 {
+	// 	okVuln = true
+	// }
+
+	// if okVuln {
+	// 	fmt.Printf("[+] Health Check Vulnerability scanning config: %s\n", color.GreenString("✔"))
+	// } else {
+	// 	color.Red("vulnerability scanning config setup incorrectly")
+	// 	return fmt.Errorf("vulnerability scanning config setup incorrectly")
+	// }
 
 	// check data folder
 	if utils.FolderExists(options.Env.DataFolder) {

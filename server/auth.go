@@ -9,8 +9,15 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// authen stuff
-
+// @Summary User login
+// @Description Authenticate user and return JWT token
+// @Tags authentication
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "status=success, message=Successfully login, token=JWT_TOKEN"
+// @Failure 401 {string} string "Unauthorized"
+// @Failure 500 {string} string "Internal Server Error"
+// @Router /login [post]
 func Login(c *fiber.Ctx) error {
 	type LoginInput struct {
 		Username string `json:"username"`

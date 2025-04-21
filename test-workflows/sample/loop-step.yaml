@@ -1,0 +1,20 @@
+name: loop-step
+
+report:
+  final:
+    - "/tmp/ott/source.txt"
+
+steps:
+  - scripts:
+      - "ExecCmd('mkdir -p /tmp/ott/')"
+      - "ExecCmd('seq 4 > /tmp/ott/source.txt')"
+
+  - source: '/tmp/ott/source.txt'
+    threads: '{{ 9 / 2 }}'
+    commands:
+      - "echo '---> {{line}} '"
+      - "sleep 2 && echo '---> done {{line}}'"
+
+  - scripts:
+      - "ExecCmd('sleep 3')"
+      - "ExecCmd('echo \\'<======\\' ')"
