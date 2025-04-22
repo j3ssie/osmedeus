@@ -392,12 +392,12 @@ func (r *Runner) Start() {
 	r.RuntimeFile = r.Target["Output"] + "/runtime"
 	r.WorkspaceFolder = r.Target["Output"]
 
-	// update the log file
-	scanLogFile := r.WorkspaceFolder + "/execution.log"
-	utils.CopyFile(r.Opt.LogFile, scanLogFile)
-	r.Opt.LogFile = scanLogFile
-	utils.InitLog(&r.Opt)
-	utils.InforF("Storing the log file to: %v", color.CyanString(r.Opt.LogFile))
+	// // update the log file
+	// scanLogFile := r.WorkspaceFolder + "/execution.log"
+	// utils.CopyFile(r.Opt.LogFile, scanLogFile)
+	// r.Opt.LogFile = scanLogFile
+	// utils.InitLog(&r.Opt)
+	// utils.InforF("Storing the log file to: %v", color.CyanString(r.Opt.LogFile))
 
 	r.GenerateFlowChart()
 	if r.Opt.Scan.DryRun {

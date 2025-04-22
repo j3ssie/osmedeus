@@ -179,7 +179,6 @@ func ParseInput(raw string, options libs.Options) map[string]string {
 	/* --- start to load default Env --- */
 	// ~/osmedeus-base
 	ROptions["BaseFolder"] = utils.NormalizePath(strings.TrimLeft(options.Env.BaseFolder, "/"))
-	// ROptions["Plugins"] = options.Env.BinariesFolder
 	ROptions["Binaries"] = options.Env.BinariesFolder
 
 	ROptions["Backup"] = options.Env.BackupFolder
@@ -200,6 +199,9 @@ func ParseInput(raw string, options libs.Options) map[string]string {
 		ROptions["Workspace"] = utils.CleanPath(options.Scan.CustomWorkspace)
 	}
 	ROptions["Output"] = path.Join(ROptions["Workspaces"], ROptions["Workspace"])
+
+	ROptions["ExecutionLog"] = path.Join(ROptions["Output"], "execution.log")
+	ROptions["LogFile"] = options.LogFile
 
 	// params in workflow file
 	if len(options.Flow.Params) > 0 {
