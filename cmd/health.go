@@ -162,16 +162,14 @@ func generalCheck() error {
 	if _, err = utils.RunCommandWithErr("timeout --help"); err != nil {
 		errorBinary = append(errorBinary, "timeout")
 	}
-	if _, err = utils.RunCommandWithErr("subfinder -h"); err != nil {
-		errorBinary = append(errorBinary, "subfinder")
-	}
-
-	if _, err = utils.RunCommandWithErr(("httpx -h")); err != nil {
-		errorBinary = append(errorBinary, "httpx")
-	}
-
-	if _, err = utils.RunCommandWithErr("nuclei -h"); err != nil {
-		errorBinary = append(errorBinary, "nuclei")
+	// Check for required binaries
+	binaries := []string{"subfinder", "httpx", "nuclei"}
+	for _, binary := range binaries {
+		if _, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", binary)); err != nil {
+			if _, err = utils.RunCommandWithErr(fmt.Sprintf("%s -h", path.Join(options.Env.BinariesFolder, binary))); err != nil {
+				errorBinary = append(errorBinary, binary)
+			}
+		}
 	}
 
 	if len(errorBinary) > 0 {
