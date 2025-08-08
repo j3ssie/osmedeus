@@ -148,6 +148,12 @@ func ParseInputFormat(raw string, options libs.Options) map[string]string {
 // ParseInput parse input for routine
 func ParseInput(raw string, options libs.Options) map[string]string {
 	ROptions := ParseTarget(raw)
+	if utils.IsFile(raw) {
+		ROptions["TargetIsFile"] = "true"
+	} else {
+		ROptions["TargetIsFile"] = "false"
+	}
+
 	if options.EnableFormatInput {
 		// avoid the loophole
 		options.EnableFormatInput = false
@@ -199,7 +205,6 @@ func ParseInput(raw string, options libs.Options) map[string]string {
 		ROptions["Workspace"] = utils.CleanPath(options.Scan.CustomWorkspace)
 	}
 	ROptions["Output"] = path.Join(ROptions["Workspaces"], ROptions["Workspace"])
-
 	ROptions["ExecutionLog"] = path.Join(ROptions["Output"], "execution.log")
 	ROptions["LogFile"] = options.LogFile
 

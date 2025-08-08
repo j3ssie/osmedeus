@@ -130,12 +130,19 @@ func CommandBuilder(taskData *TaskData) string {
 		return taskData.Command
 	}
 
-	// mean general scan
+	// mean general scan with -f
 	if taskData.ModuleName == "" {
 		command = fmt.Sprintf("%v %v -t %v %v%v%v%v", binary, workflow, taskData.Target, concurrency, timeout, workspace, params)
+
+		// this means loop through targets file one by one
 		if taskData.TargetsFile != "" {
 			command = fmt.Sprintf("%v %v -T %v %v%v%v%v", binary, workflow, taskData.TargetsFile, concurrency, timeout, workspace, params)
 		}
+
+		if taskData.TargetAsFile {
+			command = fmt.Sprintf("%v %v -t %v %v%v%v%v", binary, workflow, taskData.TargetsFile, concurrency, timeout, workspace, params)
+		}
+
 		command = strings.TrimSpace(command)
 		if taskData.Debug {
 			command = command + " --debug"
@@ -144,8 +151,14 @@ func CommandBuilder(taskData *TaskData) string {
 	}
 
 	command = fmt.Sprintf("%v %v -t %v %v %v%v%v%v", binary, plugin, taskData.Target, scanID, concurrency, timeout, workspace, params)
+
+	// this means loop through targets file one by one
 	if taskData.TargetsFile != "" {
 		command = fmt.Sprintf("%v %v -t %v %v %v%v%v%v", binary, plugin, taskData.TargetsFile, scanID, concurrency, timeout, workspace, params)
+	}
+
+	if taskData.TargetAsFile {
+		command = fmt.Sprintf("%v %v -t %v %v%v%v%v", binary, workflow, taskData.TargetsFile, concurrency, timeout, workspace, params)
 	}
 
 	command = strings.TrimSpace(command)
