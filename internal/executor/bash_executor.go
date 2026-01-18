@@ -1,0 +1,242 @@
+package executor
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/j3ssie/osmedeus/v5/internal/core"
+	"github.com/j3ssie/osmedeus/v5/internal/runner"
+	"github.com/j3ssie/osmedeus/v5/internal/template"
+	"go.uber.org/zap"
+)
+
+// BashExecutor executes bash steps
+type BashExecutor struct {
+	templateEngine *template.Engine
+	runner         runner.Runner
+}
+
+// NewBashExecutor creates a new bash executor
+func NewBashExecutor(engine *template.Engine) *BashExecutor {
+	return &BashExecutor{
+		templateEngine: engine,
+	}
+}
+
+// Name returns the executor name for logging/debugging
+func (e *BashExecutor) Name() string {
+	return "bash"
+}
+
+// StepTypes returns the step types this executor handles
+func (e *BashExecutor) StepTypes() []core.StepType {
+	return []core.StepType{core.StepTypeBash}
+}
+
+// SetRunner sets the runner for command execution
+func (e *BashExecutor) SetRunner(r runner.Runner) {
+	e.runner = r
+}
+
+// assembleCommand joins the command with structured args in order:
+// command + speed_args + config_args + input_args + output_args
+func assembleCommand(command, speedArgs, configArgs, inputArgs, outputArgs string) string {
+	parts := []string{command}
+	if speedArgs != "" {
+		parts = append(parts, speedArgs)
+	}
+	if configArgs != "" {
+		parts = append(parts, configArgs)
+	}
+	if inputArgs != "" {
+		parts = append(parts, inputArgs)
+	}
+	if outputArgs != "" {
+		parts = append(parts, outputArgs)
+	}
+	return strings.Join(parts, " ")
+}
+
+// writeStdFile writes command output to the specified file
+func writeStdFile(path, content string) error {
+	// Ensure parent directory exists
+	if dir := filepath.Dir(path); dir != "" && dir != "." {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+	}
+	return os.WriteFile(path, []byte(content), 0644)
+}
+
+// Execute executes a bash step
+func (e *BashExecutor) Execute(ctx context.Context, step *core.Step, execCtx *core.ExecutionContext) (*core.StepResult, error) {
+	result := &core.StepResult{
+		StepName:  step.Name,
+		Status:    core.StepStatusRunning,
+		StartTime: time.Now(),
+	}
+
+	timeout, err := step.Timeout.Duration()
+	if err != nil {
+		result.Status = core.StepStatusFailed
+		result.Error = err
+		result.EndTime = time.Now()
+		result.Duration = result.EndTime.Sub(result.StartTime)
+		return result, err
+	}
+
+	var output string
+
+	// Determine execution mode
+	if len(step.ParallelCommands) > 0 {
+		output, err = e.executeParallel(ctx, step.ParallelCommands, timeout)
+	} else if len(step.Commands) > 0 {
+		output, err = e.executeSequential(ctx, step.Commands, timeout)
+	} else if step.Command != "" {
+		// Assemble command with structured args if present
+		finalCmd := assembleCommand(step.Command, step.SpeedArgs, step.ConfigArgs, step.InputArgs, step.OutputArgs)
+		output, err = e.executeCommand(ctx, finalCmd, timeout)
+	} else {
+		err = fmt.Errorf("no command specified")
+	}
+
+	result.Output = output
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime)
+
+	// Write stdout/stderr to file if std_file is specified
+	if step.StdFile != "" {
+		if writeErr := writeStdFile(step.StdFile, output); writeErr != nil {
+			// Log warning but don't fail the step
+			execCtx.Logger.Warn("Failed to write std_file",
+				zap.String("path", step.StdFile),
+				zap.Error(writeErr))
+		}
+	}
+
+	if err != nil {
+		result.Status = core.StepStatusFailed
+		result.Error = err
+		return result, err
+	}
+
+	result.Status = core.StepStatusSuccess
+	return result, nil
+}
+
+// executeCommand executes a single command
+
+func (e *BashExecutor) executeCommand(ctx context.Context, command string, timeout time.Duration) (string, error) {
+	// Apply timeout if specified
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+
+	// Use runner if available, otherwise fall back to local execution
+	if e.runner != nil {
+		result, err := e.runner.Execute(ctx, command)
+		if err != nil {
+			if ctx.Err() == context.DeadlineExceeded {
+				return result.Output, fmt.Errorf("command timed out after %s", timeout)
+			}
+			return result.Output, fmt.Errorf("command failed: %w", err)
+		}
+		if result.ExitCode != 0 {
+			return result.Output, fmt.Errorf("command exited with code %d", result.ExitCode)
+		}
+		return strings.TrimSpace(result.Output), nil
+	}
+
+	// Fallback to local execution
+	// @NOTE: yes yes, I know this is a security risk. This is the intended behavior.
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+
+	output := stdout.String()
+	if stderr.Len() > 0 {
+		output += "\n" + stderr.String()
+	}
+
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return output, fmt.Errorf("command timed out after %s", timeout)
+		}
+		return output, fmt.Errorf("command failed: %w\nstderr: %s", err, stderr.String())
+	}
+
+	return strings.TrimSpace(output), nil
+}
+
+// executeSequential executes commands sequentially
+func (e *BashExecutor) executeSequential(ctx context.Context, commands []string, timeout time.Duration) (string, error) {
+	var outputs []string
+
+	for _, cmd := range commands {
+		output, err := e.executeCommand(ctx, cmd, timeout)
+		outputs = append(outputs, output)
+		if err != nil {
+			return strings.Join(outputs, "\n"), err
+		}
+	}
+
+	return strings.Join(outputs, "\n"), nil
+}
+
+// executeParallel executes commands in parallel
+func (e *BashExecutor) executeParallel(ctx context.Context, commands []string, timeout time.Duration) (string, error) {
+	type result struct {
+		index  int
+		output string
+		err    error
+	}
+
+	results := make(chan result, len(commands))
+	var wg sync.WaitGroup
+
+	for i, cmd := range commands {
+		wg.Add(1)
+		go func(idx int, command string) {
+			defer wg.Done()
+			output, err := e.executeCommand(ctx, command, timeout)
+			results <- result{index: idx, output: output, err: err}
+		}(i, cmd)
+	}
+
+	// Wait for all commands to complete
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Collect results
+	outputs := make([]string, len(commands))
+	var firstError error
+
+	for r := range results {
+		outputs[r.index] = r.output
+		if r.err != nil && firstError == nil {
+			firstError = r.err
+		}
+	}
+
+	return strings.Join(outputs, "\n"), firstError
+}
+
+// CanHandle returns true if this executor can handle the given step type
+func (e *BashExecutor) CanHandle(stepType core.StepType) bool {
+	return stepType == core.StepTypeBash
+}

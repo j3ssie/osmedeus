@@ -1,0 +1,34 @@
+# Dockerfile for Nix e2e tests
+# Uses the official nixos/nix image with experimental features enabled
+# Builds the osmedeus binary inside the container for architecture compatibility
+
+FROM ubuntu:22.04
+
+# Avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    xz-utils \
+    ca-certificates \
+    sudo \
+ && rm -rf /var/lib/apt/lists/*
+
+# Create nix build group and users (required even for --no-daemon)
+RUN groupadd -r nixbld \
+ && for i in $(seq 1 10); do \
+      useradd -r -g nixbld -G nixbld \
+        -d /var/empty -s /usr/sbin/nologin nixbld$i; \
+    done
+
+# Install Nix (single-user, container-compatible)
+RUN sh <(curl -L https://nixos.org/nix/install) --no-daemon
+
+# Ensure Nix is available in all shells
+ENV PATH="/root/.nix-profile/bin:/root/.nix-profile/sbin:$PATH"
+
+# Optional but recommended
+RUN nix-channel --update && nix profile add nixpkgs#nixFlakes
+
+CMD [ "bash" ]

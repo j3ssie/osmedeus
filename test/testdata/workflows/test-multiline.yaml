@@ -1,0 +1,39 @@
+name: test-multiline
+kind: module
+description: Test multi-line functions and commands
+tags: test,multiline,functions
+
+params:
+  - name: target
+    required: true
+  - name: sleep_time
+    default: "2"
+
+steps:
+  # Multi-line bash command
+  - name: multiline-bash
+    type: bash
+    command: |
+      echo "[$(date +%H:%M:%S)] Phase 1: Starting for {{target}}..."
+      sleep {{sleep_time}}
+      echo "[$(date +%H:%M:%S)] Phase 1 complete"
+
+  # Setup test markdown file
+  - name: setup-markdown
+    type: bash
+    command: |
+      echo "# Test Markdown" > /tmp/test-{{target}}.md
+      echo "This is a test file for **{{target}}**" >> /tmp/test-{{target}}.md
+
+  # Multi-line function with variables and render_markdown_from_file
+  - name: multiline-function
+    type: function
+    function: |
+      var content = render_markdown_from_file("/tmp/test-{{target}}.md");
+      log_info("Rendered: " + content);
+      content
+
+  # Cleanup
+  - name: cleanup
+    type: bash
+    command: rm -f /tmp/test-{{target}}.md

@@ -1,0 +1,147 @@
+name: content-discovery
+kind: module
+desc: Directory and file discovery workflow with threaded foreach and parallel execution
+
+params:
+  - name: threads
+    value: "50"
+  - name: wordlist_small
+    value: "{{Data}}/wordlists/common.txt"
+  - name: wordlist_medium
+    value: "{{Data}}/wordlists/directory-list-2.3-medium.txt"
+  - name: extensions
+    value: "php,asp,aspx,jsp,html,js,json,xml,txt,bak,old,conf"
+  - name: status_codes
+    value: "200,201,204,301,302,307,401,403,405"
+
+steps:
+  # Step 1: bash - Initialize directories and prepare targets
+  - name: initialize
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/discovery
+      - mkdir -p {{Output}}/endpoints
+      - mkdir -p {{Output}}/parameters
+      - echo "{{Target}}" > {{Output}}/discovery/target.txt
+    exports:
+      discovery_dir: "{{Output}}/discovery"
+      endpoints_dir: "{{Output}}/endpoints"
+
+  # Step 2: function - Determine scan intensity
+  - name: determine-intensity
+    type: function
+    script: |
+      var target = "{{Target}}";
+      var wordlist = "{{wordlist_small}}";
+      var threadCount = parseInt("{{threads}}");
+
+      // Use larger wordlist for known targets
+      if (target.includes(".com") || target.includes(".org")) {
+        wordlist = "{{wordlist_medium}}";
+        log_info("Using medium wordlist for domain target");
+      }
+
+      // Adjust threads based on target
+      if (target.includes("localhost") || target.includes("127.0.0.1")) {
+        threadCount = 100;
+        log_info("Increased threads for local target");
+      }
+
+      return JSON.stringify({wordlist: wordlist, threads: threadCount});
+    exports:
+      scan_config: "{{Result}}"
+
+  # Step 3: parallel-steps - Multiple discovery tools simultaneously
+  - name: parallel-discovery
+    type: parallel-steps
+    parallel_steps:
+      - name: ffuf-scan
+        type: bash
+        command: "{{Binaries}}/ffuf -u {{Target}}/FUZZ -w {{wordlist_small}} -mc {{status_codes}} -t {{threads}} -o {{discovery_dir}}/ffuf.json -of json"
+        timeout: 3600
+        on_error: continue
+      - name: gobuster-scan
+        type: bash
+        command: "{{Binaries}}/gobuster dir -u {{Target}} -w {{wordlist_small}} -t {{threads}} -o {{discovery_dir}}/gobuster.txt --no-error"
+        timeout: 3600
+        on_error: continue
+      - name: feroxbuster-scan
+        type: bash
+        command: "{{Binaries}}/feroxbuster -u {{Target}} -w {{wordlist_small}} -t {{threads}} -o {{discovery_dir}}/feroxbuster.txt --quiet"
+        timeout: 3600
+        on_error: continue
+
+  # Step 4: bash - Extract and merge discovered endpoints
+  - name: merge-discoveries
+    type: bash
+    command: |
+      # Extract URLs from ffuf JSON
+      cat {{discovery_dir}}/ffuf.json 2>/dev/null | jq -r '.results[].url' >> {{discovery_dir}}/all-endpoints.txt
+      # Extract from gobuster
+      grep -oE 'https?://[^ ]+' {{discovery_dir}}/gobuster.txt 2>/dev/null >> {{discovery_dir}}/all-endpoints.txt
+      # Extract from feroxbuster
+      grep -oE 'https?://[^ ]+' {{discovery_dir}}/feroxbuster.txt 2>/dev/null >> {{discovery_dir}}/all-endpoints.txt
+      # Deduplicate
+      sort -u {{discovery_dir}}/all-endpoints.txt -o {{discovery_dir}}/all-endpoints.txt
+    exports:
+      all_endpoints: "{{discovery_dir}}/all-endpoints.txt"
+
+  # Step 5: function - Log discovery statistics
+  - name: log-statistics
+    type: function
+    script: |
+      var count = fileLength("{{all_endpoints}}");
+      log_info("Total unique endpoints discovered: " + count);
+
+      if (count == 0) {
+        log_warn("No endpoints discovered");
+        return "empty";
+      } else if (count > 500) {
+        log_info("Large number of endpoints, will batch process");
+        return "large";
+      }
+      return "normal";
+
+  # Step 6: foreach - Probe each endpoint for parameters
+  - name: parameter-discovery
+    type: foreach
+    pre_condition: "fileLength('{{all_endpoints}}') > 0"
+    input: "{{all_endpoints}}"
+    variable: endpoint
+    threads: "{{threads}}"
+    step:
+      name: probe-endpoint
+      type: bash
+      command: "{{Binaries}}/arjun -u [[endpoint]] -oJ {{endpoints_dir}}/params_$(echo [[endpoint]] | md5sum | cut -d' ' -f1).json"
+      timeout: 120
+      on_error: continue
+
+  # Step 7: parallel-steps - Additional content checks
+  - name: additional-checks
+    type: parallel-steps
+    parallel_steps:
+      - name: wayback-urls
+        type: bash
+        command: "{{Binaries}}/waybackurls {{Target}} | sort -u > {{endpoints_dir}}/wayback.txt"
+        timeout: 600
+        on_error: continue
+      - name: gau-fetch
+        type: bash
+        command: "{{Binaries}}/gau {{Target}} | sort -u > {{endpoints_dir}}/gau.txt"
+        timeout: 600
+        on_error: continue
+
+  # Step 8: bash - Generate final content discovery report
+  - name: finalize-report
+    type: bash
+    parallel_commands:
+      - "cat {{endpoints_dir}}/*.txt 2>/dev/null | sort -u > {{Output}}/all-urls.txt"
+      - "cat {{endpoints_dir}}/*.json 2>/dev/null | jq -s '.' > {{Output}}/all-params.json"
+      - |
+        echo "# Content Discovery Report" > {{Output}}/discovery-report.md
+        echo "Target: {{Target}}" >> {{Output}}/discovery-report.md
+        echo "Endpoints Found: $(wc -l < {{discovery_dir}}/all-endpoints.txt)" >> {{Output}}/discovery-report.md
+        echo "Historical URLs: $(wc -l < {{endpoints_dir}}/wayback.txt 2>/dev/null || echo 0)" >> {{Output}}/discovery-report.md
+    exports:
+      final_urls: "{{Output}}/all-urls.txt"
+      discovery_report: "{{Output}}/discovery-report.md"

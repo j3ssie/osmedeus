@@ -1,0 +1,8 @@
+{
+  "/(dashboard)/settings/page": "app/(dashboard)/settings/page.js",
+  "/(dashboard)/utilities/page": "app/(dashboard)/utilities/page.js",
+  "/(dashboard)/workflows/[id]/page": "app/(dashboard)/workflows/[id]/page.js",
+  "/(dashboard)/workflows/page": "app/(dashboard)/workflows/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/mock/api/settings/yaml/route": "app/api/mock/api/settings/yaml/route.js"
+}

@@ -1,0 +1,26 @@
+kind: module
+name: demo-docker
+description: Demo Docker runner with remote-bash
+params:
+  - name: target
+    required: true
+steps:
+  - name: docker-single
+    type: remote-bash
+    log: "Running in Alpine container"
+    step_runner: docker
+    step_runner_config:
+      image: alpine:latest
+      volumes:
+        - "{{Output}}:/output"
+    command: 'echo "Target: {{Target}}" > /output/docker-out.txt'
+  - name: docker-parallel
+    type: remote-bash
+    step_runner: docker
+    step_runner_config:
+      image: alpine:latest
+    parallel_commands:
+      - 'echo "Scan A: {{Target}}"'
+      - 'echo "Scan B: {{Target}}"'
+    exports:
+      docker_done: "true"

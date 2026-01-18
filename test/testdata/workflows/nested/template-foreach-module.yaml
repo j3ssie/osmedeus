@@ -1,0 +1,48 @@
+kind: module
+name: template-foreach-module
+description: Test template rendering in foreach steps
+
+params:
+  - name: inputFile
+    default: "{{Output}}/items-{{TargetSpace}}.txt"
+  - name: outputDir
+    default: "{{Output}}/processed-{{TargetSpace}}"
+
+steps:
+  # Create test input file
+  - name: create-input
+    type: bash
+    command: |
+      mkdir -p {{outputDir}}
+      echo -e "item1\nitem2\nitem3" > {{inputFile}}
+    exports:
+      input_ready: "true"
+
+  # Foreach with templated input path
+  - name: foreach-with-templates
+    type: foreach
+    pre_condition: 'fileExists("{{inputFile}}")'
+    input: "{{inputFile}}"
+    variable: item
+    threads: 2
+    step:
+      name: process-item
+      type: bash
+      command: |
+        echo "Processing [[item]] for {{Target}}" >> {{outputDir}}/[[item]].txt
+
+  # Verify results
+  - name: verify-foreach
+    type: bash
+    pre_condition: 'fileExists("{{outputDir}}/item1.txt")'
+    command: |
+      echo "=== Foreach Verification ==="
+      echo "Foreach completed for {{Target}}"
+      echo "inputFile={{inputFile}}"
+      echo "outputDir={{outputDir}}"
+      echo "=== Output Directory ==="
+      ls -la {{outputDir}}/
+      echo "=== Item1 Contents ==="
+      cat {{outputDir}}/item1.txt
+    exports:
+      foreach_verified: "true"

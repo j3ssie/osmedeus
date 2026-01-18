@@ -1,0 +1,854 @@
+{
+  "_last_update_at": "2026-01-14T10:12:21.439275+00:00",
+  "amass": {
+    "desc": "In-depth attack surface mapping and asset discovery",
+    "repo_link": "https://github.com/owasp-amass/amass",
+    "version": "5.0.1",
+    "package-manager": "github-release",
+    "tags": [
+      "recon",
+      "subdomain",
+      "osint",
+      "asset-discovery"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/owasp-amass/amass/releases/download/v5.0.1/amass_linux_amd64.tar.gz",
+      "arm64": "https://github.com/owasp-amass/amass/releases/download/v5.0.1/amass_linux_arm64.tar.gz"
+    },
+    "darwin": {
+      "amd64": "https://github.com/owasp-amass/amass/releases/download/v5.0.1/amass_darwin_amd64.tar.gz",
+      "arm64": "https://github.com/owasp-amass/amass/releases/download/v5.0.1/amass_darwin_arm64.tar.gz"
+    }
+  },
+  "subfinder": {
+    "desc": "Fast passive subdomain enumeration tool.",
+    "repo_link": "https://github.com/projectdiscovery/subfinder",
+    "version": "2.12.0",
+    "package-manager": "github-release",
+    "tags": [
+      "recon",
+      "subdomain",
+      "passive"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.12.0/subfinder_2.12.0_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.12.0/subfinder_2.12.0_linux_arm64.zip"
+    },
+    "darwin": {
+      "amd64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.12.0/subfinder_2.12.0_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.12.0/subfinder_2.12.0_macOS_arm64.zip"
+    }
+  },
+  "dnsx": {
+    "desc": "fast and multi-purpose DNS toolkit allow to run multiple DNS queries of your choice with a list of user-supplied resolvers",
+    "repo_link": "https://github.com/projectdiscovery/dnsx",
+    "version": "1.2.2",
+    "package-manager": "github-release",
+    "tags": [
+      "recon",
+      "subdomain",
+      "resolver",
+      "dns"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.2/dnsx_1.2.2_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.2/dnsx_1.2.2_linux_arm64.zip"
+    },
+    "darwin": {
+      "amd64": "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.2/dnsx_1.2.2_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.2/dnsx_1.2.2_macOS_arm64.zip"
+    }
+  },
+  "assetfinder": {
+    "desc": "Find domains and subdomains related to a given domain",
+    "repo_link": "https://github.com/tomnomnom/assetfinder",
+    "version": "0.1.1",
+    "package-manager": "go-getter",
+    "tags": [
+      "recon",
+      "subdomain",
+      "passive",
+      "optional"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "github.com/tomnomnom/assetfinder@latest"
+    },
+    "darwin": {
+      "amd64": "github.com/tomnomnom/assetfinder@latest"
+    }
+  },
+  "nuclei": {
+    "desc": "Nuclei is a fast, customizable vulnerability scanner powered by the global security community and built on a simple YAML-based DSL, enabling collaboration to tackle trending vulnerabilities on the internet. It helps you find vulnerabilities in your applications, APIs, networks, DNS, and cloud configurations.",
+    "repo_link": "https://github.com/projectdiscovery/nuclei",
+    "version": "3.6.2",
+    "package-manager": "github-release",
+    "tags": [
+      "vulnerability-scanner",
+      "scanning",
+      "security"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.6.2/nuclei_3.6.2_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.6.2/nuclei_3.6.2_linux_arm64.zip"
+    },
+    "darwin": {
+      "amd64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.6.2/nuclei_3.6.2_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.6.2/nuclei_3.6.2_macOS_arm64.zip"
+    }
+  },
+  "nuclei-templates": {
+    "desc": "Community curated list of templates for the nuclei engine to find security vulnerabilities.",
+    "repo_link": "https://github.com/projectdiscovery/nuclei-templates",
+    "version": "10.3.6",
+    "package-manager": "go-getter",
+    "tags": [
+      "vulnerability-scanner",
+      "templates",
+      "security"
+    ],
+    "valide-command": "",
+    "command-dual": {
+      "dual": "https://github.com/projectdiscovery/nuclei-templates.git?ref=main&depth=1 $HOME/nuclei-templates"
+    }
+  },
+  "httpx": {
+    "desc": "httpx is a fast and multi-purpose HTTP toolkit that allows running multiple probes using the retryablehttp library.",
+    "repo_link": "https://github.com/projectdiscovery/httpx",
+    "version": "1.7.4",
+    "package-manager": "github-release",
+    "tags": [
+      "recon",
+      "http",
+      "probing",
+      "web"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/projectdiscovery/httpx/releases/download/v1.7.4/httpx_1.7.4_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/httpx/releases/download/v1.7.4/httpx_1.7.4_linux_arm64.zip"
+    },
+    "darwin": {
+      "amd64": "https://github.com/projectdiscovery/httpx/releases/download/v1.7.4/httpx_1.7.4_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/httpx/releases/download/v1.7.4/httpx_1.7.4_macOS_arm64.zip"
+    }
+  },
+  "naabu": {
+    "desc": "A fast port scanner written in go with a focus on reliability and simplicity. Designed to be used in combination with other tools for attack surface discovery in bug bounties and pentests",
+    "repo_link": "https://github.com/projectdiscovery/naabu",
+    "version": "2.3.7",
+    "package-manager": "github-release",
+    "tags": [
+      "port-scanner",
+      "scanning",
+      "recon"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/projectdiscovery/naabu/releases/download/v2.3.7/naabu_2.3.7_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/naabu/releases/download/v2.3.7/naabu_2.3.7_linux_arm64.zip"
+    },
+    "darwin": {
+      "amd64": "https://github.com/projectdiscovery/naabu/releases/download/v2.3.7/naabu_2.3.7_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/naabu/releases/download/v2.3.7/naabu_2.3.7_macOS_arm64.zip"
+    }
+  },
+  "ffuf": {
+    "desc": "Fast web fuzzer written in Go",
+    "repo_link": "https://github.com/ffuf/ffuf",
+    "version": "2.1.0",
+    "package-manager": "github-release",
+    "tags": [
+      "fuzzing",
+      "web",
+      "bruteforce",
+      "directory-discovery"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz",
+      "arm64": "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz"
+    },
+    "darwin": {
+      "amd64": "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_macOS_amd64.tar.gz",
+      "arm64": "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_macOS_arm64.tar.gz"
+    }
+  },
+  "trufflehog": {
+    "desc": "Secret detection and scanning tool",
+    "repo_link": "https://github.com/trufflesecurity/trufflehog",
+    "version": "3.90.3",
+    "package-manager": "github-release",
+    "tags": [
+      "secret-detection",
+      "security",
+      "scanning",
+      "credentials"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/trufflesecurity/trufflehog/releases/download/v3.90.3/trufflehog_3.90.3_linux_amd64.tar.gz",
+      "arm64": "https://github.com/trufflesecurity/trufflehog/releases/download/v3.90.3/trufflehog_3.90.3_linux_arm64.tar.gz"
+    },
+    "darwin": {
+      "amd64": "https://github.com/trufflesecurity/trufflehog/releases/download/v3.90.3/trufflehog_3.90.3_darwin_amd64.tar.gz",
+      "arm64": "https://github.com/trufflesecurity/trufflehog/releases/download/v3.90.3/trufflehog_3.90.3_darwin_arm64.tar.gz"
+    }
+  },
+  "semgrep": {
+    "desc": "Static analysis tool for code scanning",
+    "repo_link": "https://github.com/returntocorp/semgrep",
+    "version": "<version>",
+    "package-manager": "pip",
+    "tags": [
+      "code-analysis",
+      "sast",
+      "security",
+      "static-analysis",
+      "optional"
+    ],
+    "valide-command": "",
+    "command-linux": {
+      "dual": "pip install semgrep"
+    },
+    "command-darwin": {
+      "dual": "<auto_detect_package_manager> install semgrep"
+    }
+  },
+  "curl": {
+    "desc": "A command line tool and library for transferring data with URL syntax",
+    "version": "<version>",
+    "repo_link": "https://github.com/curl/curl",
+    "package-manager": "<auto_detect_package_manager>",
+    "tags": [
+      "utility",
+      "http",
+      "networking",
+      "download"
+    ],
+    "valide-command": "",
+    "multi-commands-linux": [
+      "<auto_detect_package_manager> install curl",
+      "curl -h"
+    ],
+    "multi-commands-darwin": [
+      "<auto_detect_package_manager> install curl",
+      "curl -h"
+    ]
+  },
+  "rsync": {
+    "desc": "An open source utility that provides fast incremental file transfer.",
+    "version": "<version>",
+    "package-manager": "<auto_detect_package_manager>",
+    "tags": [
+      "utility",
+      "file-transfer",
+      "sync"
+    ],
+    "valide-command": "",
+    "multi-commands-linux": [
+      "<auto_detect_package_manager> install rsync",
+      "rsync -h"
+    ],
+    "multi-commands-darwin": [
+      "<auto_detect_package_manager> install rsync",
+      "rsync -h"
+    ]
+  },
+  "bun": {
+    "desc": "Incredibly fast JavaScript runtime, bundler, test runner, and package manager - all in one",
+    "version": "<version>",
+    "repo_link": "https://github.com/oven-sh/bun",
+    "package-manager": "none",
+    "tags": [
+      "runtime",
+      "javascript",
+      "dev-tools",
+      "optional",
+      "package-manager"
+    ],
+    "valide-command": "",
+    "command-linux": {
+      "dual": "curl -fsSL https://bun.com/install | bash"
+    },
+    "darwin": {
+      "dual": "<auto_detect_package_manager> install oven-sh/bun/bun"
+    }
+  },
+  "uv": {
+    "desc": "An extremely fast Python package and project manager, written in Rust.",
+    "version": "<version>",
+    "repo_link": "https://github.com/astral-sh/uv",
+    "package-manager": "none",
+    "tags": [
+      "runtime",
+      "python",
+      "dev-tools",
+      "optional",
+      "package-manager"
+    ],
+    "valide-command": "",
+    "command-dual": {
+      "dual": "curl -LsSf https://astral.sh/uv/install.sh | sh"
+    }
+  },
+  "minio-client": {
+    "desc": "MinIO Client (mc) provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff, find etc. It supports filesystems and Amazon S3-compatible object storage services.",
+    "version": "<version>",
+    "repo_link": "https://github.com/minio/mc",
+    "package-manager": "go-getter",
+    "tags": [
+      "utility",
+      "file-transfer",
+      "sync",
+      "optional"
+    ],
+    "valide-command": "mc",
+    "command-dual": {
+      "dual": "github.com/minio/mc@latest"
+    }
+  },
+  "github-endpoints": {
+    "desc": "Find endpoints on GitHub",
+    "repo_link": "https://github.com/gwen001/github-endpoints",
+    "version": "1.2.2",
+    "package-manager": "go-getter",
+    "tags": [
+      "recon",
+      "osint",
+      "github",
+      "endpoint-discovery",
+      "optional"
+    ],
+    "valide-command": "",
+    "command-dual": {
+      "dual": "github.com/gwen001/github-endpoints@latest"
+    }
+  },
+  "github-subdomains": {
+    "desc": "Find subdomains on GitHub",
+    "repo_link": "https://github.com/gwen001/github-subdomains",
+    "version": "1.2.2",
+    "package-manager": "go-getter",
+    "tags": [
+      "recon",
+      "subdomain",
+      "github",
+      "osint",
+      "optional"
+    ],
+    "valide-command": "",
+    "command-dual": {
+      "dual": "github.com/gwen001/github-subdomains@latest"
+    }
+  },
+  "urlfinder": {
+    "desc": "A high-speed tool for passively gathering URLs, optimized for efficient and comprehensive web asset discovery without active scanning",
+    "repo_link": "https://github.com/projectdiscovery/urlfinder",
+    "version": "0.0.3",
+    "package-manager": "github-release",
+    "tags": [
+      "recon",
+      "url-discovery",
+      "passive",
+      "web"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/projectdiscovery/urlfinder/releases/download/v0.0.3/urlfinder_0.0.3_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/urlfinder/releases/download/v0.0.3/urlfinder_0.0.3_linux_arm64.zip"
+    },
+    "darwin": {
+      "amd64": "https://github.com/projectdiscovery/urlfinder/releases/download/v0.0.3/urlfinder_0.0.3_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/urlfinder/releases/download/v0.0.3/urlfinder_0.0.3_macOS_arm64.zip"
+    }
+  },
+  "tldfinder": {
+    "desc": "A streamlined tool for discovering private TLDs for security research",
+    "repo_link": "https://github.com/projectdiscovery/tldfinder",
+    "version": "0.0.2",
+    "package-manager": "github-release",
+    "tags": [
+      "recon",
+      "tld-discovery",
+      "domain"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/projectdiscovery/tldfinder/releases/download/v0.0.2/tldfinder_0.0.2_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/tldfinder/releases/download/v0.0.2/tldfinder_0.0.2_linux_arm64.zip"
+    },
+    "darwin": {
+      "amd64": "https://github.com/projectdiscovery/tldfinder/releases/download/v0.0.2/tldfinder_0.0.2_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/tldfinder/releases/download/v0.0.2/tldfinder_0.0.2_macOS_arm64.zip"
+    }
+  },
+  "tlsx": {
+    "desc": "Fast and configurable TLS grabber focused on TLS based data collection",
+    "repo_link": "https://github.com/projectdiscovery/tlsx",
+    "version": "1.2.2",
+    "package-manager": "github-release",
+    "tags": [
+      "tls",
+      "ssl",
+      "recon",
+      "probing",
+      "certificate"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/projectdiscovery/tlsx/releases/download/v1.2.2/tlsx_1.2.2_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/tlsx/releases/download/v1.2.2/tlsx_1.2.2_linux_arm64.zip"
+    },
+    "darwin": {
+      "amd64": "https://github.com/projectdiscovery/tlsx/releases/download/v1.2.2/tlsx_1.2.2_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/tlsx/releases/download/v1.2.2/tlsx_1.2.2_macOS_arm64.zip"
+    }
+  },
+  "alterx": {
+    "desc": "Subdomain wordlist generator with permutation",
+    "repo_link": "https://github.com/projectdiscovery/alterx",
+    "version": "0.1.0",
+    "package-manager": "github-release",
+    "tags": [
+      "wordlist",
+      "subdomain",
+      "generator",
+      "permutation"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/projectdiscovery/alterx/releases/download/v0.1.0/alterx_0.1.0_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/alterx/releases/download/v0.1.0/alterx_0.1.0_linux_arm64.zip"
+    },
+    "darwin": {
+      "amd64": "https://github.com/projectdiscovery/alterx/releases/download/v0.1.0/alterx_0.1.0_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/alterx/releases/download/v0.1.0/alterx_0.1.0_macOS_arm64.zip"
+    }
+  },
+  "metabigor": {
+    "desc": "OSINT tools and more but without API key",
+    "repo_link": "https://github.com/j3ssie/metabigor",
+    "version": "2.0.1",
+    "package-manager": "github-release",
+    "tags": [
+      "osint",
+      "recon",
+      "intelligence",
+      "passive"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/j3ssie/metabigor/releases/download/v2.0.1/metabigor_v2.0.1_linux_amd64.tar.gz",
+      "arm64": "https://github.com/j3ssie/metabigor/releases/download/v2.0.1/metabigor_v2.0.1_linux_arm64.tar.gz"
+    },
+    "darwin": {
+      "amd64": "https://github.com/j3ssie/metabigor/releases/download/v2.0.1/metabigor_v2.0.1_darwin_amd64.tar.gz",
+      "arm64": "https://github.com/j3ssie/metabigor/releases/download/v2.0.1/metabigor_v2.0.1_darwin_arm64.tar.gz"
+    }
+  },
+  "findomain": {
+    "desc": "The fastest and complete solution for domain recognition with subdomain monitoring and alerts",
+    "repo_link": "https://github.com/Findomain/Findomain",
+    "version": "10.0.1",
+    "package-manager": "github-release",
+    "tags": [
+      "subdomain",
+      "recon",
+      "monitoring",
+      "passive"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/Findomain/Findomain/releases/download/10.0.1/findomain-linux.zip",
+      "arm64": "https://github.com/Findomain/Findomain/releases/download/10.0.1/findomain-aarch64.zip"
+    },
+    "darwin": {
+      "amd64": "https://github.com/Findomain/Findomain/releases/download/10.0.1/findomain-osx-x86_64.zip",
+      "arm64": "https://github.com/Findomain/Findomain/releases/download/10.0.1/findomain-osx-arm64.zip"
+    }
+  },
+  "shuffledns": {
+    "desc": "MassDNS wrapper to bruteforce and resolve domains using active wildcard filtering",
+    "repo_link": "https://github.com/projectdiscovery/shuffledns",
+    "version": "1.2.1",
+    "package-manager": "github-release",
+    "tags": [
+      "dns",
+      "bruteforce",
+      "subdomain",
+      "resolver",
+      "active"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/projectdiscovery/shuffledns/releases/download/v1.2.1/shuffledns_1.2.1_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/shuffledns/releases/download/v1.2.1/shuffledns_1.2.1_linux_arm64.zip"
+    },
+    "darwin": {
+      "amd64": "https://github.com/projectdiscovery/shuffledns/releases/download/v1.2.1/shuffledns_1.2.1_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/shuffledns/releases/download/v1.2.1/shuffledns_1.2.1_macOS_arm64.zip"
+    }
+  },
+  "puredns": {
+    "desc": "Fast domain resolver and subdomain bruteforcing tool with accurate wildcard filtering",
+    "repo_link": "https://github.com/d3mondev/puredns",
+    "version": "2.1.1",
+    "package-manager": "github-release",
+    "tags": [
+      "dns",
+      "bruteforce",
+      "subdomain",
+      "resolver",
+      "active"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/d3mondev/puredns/releases/download/v2.1.1/puredns-Linux-amd64.tgz",
+      "arm64": "https://github.com/d3mondev/puredns/releases/download/v2.1.1/puredns-Linux-arm64.tgz"
+    },
+    "darwin": {
+      "amd64": "https://github.com/d3mondev/puredns/releases/download/v2.1.1/puredns-macOS-amd64.tgz",
+      "arm64": "https://github.com/d3mondev/puredns/releases/download/v2.1.1/puredns-macOS-arm64.tgz"
+    }
+  },
+  "rustscan": {
+    "desc": "The modern port scanner - fast, efficient, and powerful",
+    "repo_link": "https://github.com/RustScan/RustScan",
+    "version": "2.4.1",
+    "package-manager": "github-release",
+    "tags": [
+      "port-scanner",
+      "scanning",
+      "recon",
+      "network",
+      "optional"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/RustScan/RustScan/releases/download/2.4.1/x86_64-linux-rustscan.tar.gz.zip",
+      "arm64": "https://github.com/RustScan/RustScan/releases/download/2.4.1/aarch64-linux-rustscan.zip"
+    },
+    "darwin": {
+      "amd64": "https://github.com/RustScan/RustScan/releases/download/2.4.1/x86_64-macos-rustscan.tar.gz.zip",
+      "arm64": "https://github.com/RustScan/RustScan/releases/download/2.4.1/aarch64-macos-rustscan.tar.gz.zip"
+    }
+  },
+  "massdns": {
+    "desc": "High-performance DNS stub resolver for bulk lookups and reconnaissance",
+    "repo_link": "https://github.com/blechschmidt/massdns",
+    "version": "1.1.0",
+    "package-manager": "source",
+    "tags": [
+      "dns",
+      "resolver",
+      "recon",
+      "bulk"
+    ],
+    "valide-command": "massdns",
+    "multi-commands-linux": [
+      "git clone --depth=1 https://github.com/blechschmidt/massdns.git /tmp/massdns",
+      "cd /tmp/massdns && make",
+      "cp /tmp/massdns/bin/massdns $HOME/.local/bin/"
+    ],
+    "multi-commands-darwin": [
+      "<auto_detect_package_manager> install massdns"
+    ]
+  },
+  "nmap": {
+    "desc": "Network exploration tool and security/port scanner",
+    "version": "<version>",
+    "package-manager": "<auto_detect_package_manager>",
+    "tags": [
+      "port-scanner",
+      "scanning",
+      "network",
+      "recon",
+      "service-detection",
+      "optional"
+    ],
+    "valide-command": "nmap",
+    "multi-commands-linux": [
+      "<auto_detect_package_manager> install nmap",
+      "nmap --version"
+    ],
+    "multi-commands-darwin": [
+      "<auto_detect_package_manager> install nmap",
+      "nmap --version"
+    ]
+  },
+  "git": {
+    "desc": "Distributed version control system",
+    "version": "<version>",
+    "package-manager": "<auto_detect_package_manager>",
+    "tags": [
+      "utility",
+      "vcs",
+      "dev-tools"
+    ],
+    "valide-command": "",
+    "multi-commands-linux": [
+      "<auto_detect_package_manager> install git",
+      "git --version"
+    ],
+    "multi-commands-darwin": [
+      "<auto_detect_package_manager> install git",
+      "git --version"
+    ]
+  },
+  "wget": {
+    "desc": "Non-interactive network downloader",
+    "version": "<version>",
+    "package-manager": "<auto_detect_package_manager>",
+    "tags": [
+      "utility",
+      "download",
+      "networking"
+    ],
+    "valide-command": "",
+    "multi-commands-linux": [
+      "<auto_detect_package_manager> install wget",
+      "wget --version"
+    ],
+    "multi-commands-darwin": [
+      "<auto_detect_package_manager> install wget",
+      "wget --version"
+    ]
+  },
+  "unzip": {
+    "desc": "Extraction utility for .zip archives",
+    "version": "<version>",
+    "package-manager": "<auto_detect_package_manager>",
+    "tags": [
+      "utility",
+      "archive",
+      "extraction"
+    ],
+    "valide-command": "",
+    "multi-commands-linux": [
+      "<auto_detect_package_manager> install unzip",
+      "unzip -v"
+    ],
+    "multi-commands-darwin": [
+      "<auto_detect_package_manager> install unzip",
+      "unzip -v"
+    ]
+  },
+  "coreutils": {
+    "desc": "GNU core utilities (cat, ls, rm, etc.)",
+    "version": "<version>",
+    "package-manager": "<auto_detect_package_manager>",
+    "tags": [
+      "utility",
+      "system",
+      "core"
+    ],
+    "valide-command": "sort -h",
+    "multi-commands-linux": [
+      "<auto_detect_package_manager> install coreutils"
+    ],
+    "multi-commands-darwin": [
+      "<auto_detect_package_manager> install coreutils"
+    ]
+  },
+  "rg": {
+    "desc": "ripgrep - recursively searches directories for a regex pattern",
+    "repo_link": "https://github.com/BurntSushi/ripgrep",
+    "version": "15.1.0",
+    "package-manager": "github-release",
+    "tags": [
+      "utility",
+      "search",
+      "grep",
+      "text-processing"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.0-x86_64-unknown-linux-musl.tar.gz",
+      "arm64": "https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.0-aarch64-unknown-linux-gnu.tar.gz"
+    },
+    "darwin": {
+      "amd64": "https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.0-x86_64-apple-darwin.tar.gz",
+      "arm64": "https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.0-aarch64-apple-darwin.tar.gz"
+    }
+  },
+  "trivy": {
+    "desc": "Find vulnerabilities, misconfigurations, secrets, SBOM in containers, Kubernetes, code repositories, clouds and more",
+    "repo_link": "https://github.com/aquasecurity/trivy",
+    "version": "0.68.2",
+    "package-manager": "github-release",
+    "tags": [
+      "vulnerability-scanner",
+      "container",
+      "security",
+      "scanning",
+      "optional"
+    ],
+    "valide-command": "",
+    "command-dual": {
+      "dual": "curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin"
+    }
+  },
+  "legba": {
+    "desc": "The fastest and more comprehensive multiprotocol credentials bruteforcer / password sprayer and enumerator.  \ud83e\udd77",
+    "repo_link": "https://github.com/evilsocket/legba",
+    "version": "1.2.0",
+    "package-manager": "github-release",
+    "tags": [
+      "bruteforce",
+      "credential-discovery",
+      "scanning",
+      "password",
+      "optional"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/evilsocket/legba/releases/download/1.2.0/legba-1.2.0-linux-x86_64.tar.gz",
+      "arm64": "https://github.com/evilsocket/legba/releases/download/1.2.0/legba-1.2.0-linux-arm64.tar.gz"
+    },
+    "darwin": {
+      "amd64": "https://github.com/evilsocket/legba/releases/download/1.2.0/legba-1.2.0-apple-darwin-arm64.tar.gz",
+      "arm64": "https://github.com/evilsocket/legba/releases/download/1.2.0/legba-1.2.0-apple-darwin-arm64.tar.gz"
+    }
+  },
+  "dalfox": {
+    "desc": "\ud83c\udf19\ud83e\udd8a Dalfox is a powerful open-source XSS scanner and utility focused on automation.",
+    "repo_link": "https://github.com/hahwul/dalfox",
+    "version": "2.12.0",
+    "package-manager": "go-getter",
+    "tags": [
+      "xss-scanner",
+      "web",
+      "vulnerability-scanning",
+      "security",
+      "optional"
+    ],
+    "valide-command": "",
+    "command-dual": {
+      "dual": "github.com/hahwul/dalfox/v2@latest"
+    }
+  },
+  "gosec": {
+    "desc": "Go security checker",
+    "repo_link": "https://github.com/securego/gosec",
+    "version": "2.22.11",
+    "package-manager": "go-getter",
+    "tags": [
+      "sast",
+      "code-analysis",
+      "go",
+      "security",
+      "optional"
+    ],
+    "valide-command": "",
+    "command-dual": {
+      "dual": "github.com/securego/gosec/v2/cmd/gosec@latest"
+    }
+  },
+  "gau": {
+    "desc": "Fetch known URLs from AlienVault's Open Threat Exchange, the Wayback Machine, and Common Crawl.",
+    "repo_link": "https://github.com/lc/gau",
+    "version": "2.2.4",
+    "package-manager": "go-getter",
+    "tags": [
+      "recon",
+      "url-discovery",
+      "osint",
+      "passive",
+      "optional"
+    ],
+    "valide-command": "",
+    "command-dual": {
+      "dual": "github.com/lc/gau/v2/cmd/gau@latest"
+    }
+  },
+  "interactsh": {
+    "desc": "An OOB interaction gathering server and client library",
+    "repo_link": "https://github.com/projectdiscovery/interactsh",
+    "version": "1.2.4",
+    "package-manager": "go-getter",
+    "tags": [
+      "oob-testing",
+      "security",
+      "testing",
+      "payload-delivery",
+      "optional"
+    ],
+    "valide-command": "",
+    "command-dual": {
+      "dual": "github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest"
+    }
+  },
+  "cariddi": {
+    "desc": "Take a list of domains, crawl urls and scan for endpoints, secrets, api keys, file extensions, tokens and more",
+    "repo_link": "https://github.com/edoardottt/cariddi",
+    "version": "1.4.5",
+    "package-manager": "go-getter",
+    "tags": [
+      "api-scanner",
+      "recon",
+      "web",
+      "information-disclosure",
+      "optional"
+    ],
+    "valide-command": "",
+    "command-dual": {
+      "dual": "github.com/edoardottt/cariddi/cmd/cariddi@latest"
+    }
+  },
+  "cloudfox": {
+    "desc": "Automating situational awareness for cloud penetration tests.",
+    "repo_link": "https://github.com/BishopFox/cloudfox",
+    "version": "1.17.0",
+    "package-manager": "go-getter",
+    "tags": [
+      "cloud-security",
+      "aws",
+      "recon",
+      "enumeration",
+      "optional"
+    ],
+    "valide-command": "",
+    "command-dual": {
+      "dual": "github.com/BishopFox/cloudfox@latest"
+    }
+  },
+  "jsluice": {
+    "desc": "Extract sensitive information from JavaScript artifacts",
+    "repo_link": "https://github.com/BishopFox/jsluice",
+    "version": "0.2.0",
+    "package-manager": "go-getter",
+    "tags": [
+      "javascript",
+      "recon",
+      "information-disclosure",
+      "secrets",
+      "optional"
+    ],
+    "valide-command": "",
+    "command-dual": {
+      "dual": "github.com/BishopFox/jsluice@latest"
+    }
+  },
+  "urlhunter": {
+    "desc": "a recon tool that allows searching on URLs that are exposed via shortener services",
+    "repo_link": "https://github.com/utkusen/urlhunter",
+    "version": "0.2.0",
+    "package-manager": "go-getter",
+    "tags": [
+      "url-discovery",
+      "recon",
+      "osint",
+      "passive",
+      "optional"
+    ],
+    "valide-command": "",
+    "command-dual": {
+      "dual": "github.com/utkusen/urlhunter@latest"
+    }
+  }
+}

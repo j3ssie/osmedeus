@@ -1,0 +1,122 @@
+name: test-params-exports
+kind: module
+description: Test workflow for validating params and step exports
+tags: test,params,exports,validation
+
+params:
+  - name: target
+    required: true
+  - name: enable_feature
+    type: string
+    default: "true"
+  - name: skip_validation
+    type: string
+    default: "false"
+  - name: custom_value
+    type: string
+    default: "default_value"
+
+steps:
+  # Step 1: Check if enable_feature param is true
+  - name: check-enable-feature
+    type: bash
+    command: echo "Checking enable_feature={{enable_feature}}"
+    exports:
+      feature_enabled: "{{enable_feature}}"
+    decision:
+      switch: "{{feature_enabled}}"
+      cases:
+        "true":
+          goto: feature-enabled-step
+        "false":
+          goto: feature-disabled-step
+
+  # Step 2a: Executed when feature is enabled
+  - name: feature-enabled-step
+    type: bash
+    command: echo "Feature is ENABLED"
+    exports:
+      feature_status: "ENABLED"
+    decision:
+      switch: "always"
+      cases:
+        "always":
+          goto: check-skip-validation
+
+  # Step 2b: Executed when feature is disabled
+  - name: feature-disabled-step
+    type: bash
+    command: echo "Feature is DISABLED"
+    exports:
+      feature_status: "DISABLED"
+
+  # Step 3: Check skip_validation param
+  - name: check-skip-validation
+    type: bash
+    command: echo "Checking skip_validation={{skip_validation}}"
+    exports:
+      should_skip: "{{skip_validation}}"
+    decision:
+      switch: "{{should_skip}}"
+      cases:
+        "true":
+          goto: validation-skipped
+        "false":
+          goto: run-validation
+
+  # Step 4a: Validation skipped
+  - name: validation-skipped
+    type: bash
+    command: echo "Validation SKIPPED"
+    exports:
+      validation_result: "SKIPPED"
+    decision:
+      switch: "always"
+      cases:
+        "always":
+          goto: export-custom-value
+
+  # Step 4b: Run validation
+  - name: run-validation
+    type: bash
+    command: echo "Validation PASSED"
+    exports:
+      validation_result: "PASSED"
+
+  # Step 5: Export custom_value param and test variable propagation
+  - name: export-custom-value
+    type: bash
+    command: echo "Custom value={{custom_value}}"
+    exports:
+      exported_custom: "{{custom_value}}"
+
+  # Step 6: Verify all exports are accessible from previous steps
+  - name: verify-exports
+    type: bash
+    command: |
+      echo "=== Export Verification ==="
+      echo "feature_enabled: {{feature_enabled}}"
+      echo "feature_status: {{feature_status}}"
+      echo "validation_result: {{validation_result}}"
+      echo "exported_custom: {{exported_custom}}"
+      echo "target: {{target}}"
+      echo "=== All exports verified ==="
+    exports:
+      verification_complete: "true"
+
+  # Step 7: Final summary with all variables
+  - name: final-summary
+    type: bash
+    command: |
+      echo "=== Workflow Summary ==="
+      echo "Target: {{target}}"
+      echo "Enable Feature Param: {{enable_feature}}"
+      echo "Feature Enabled Export: {{feature_enabled}}"
+      echo "Feature Status: {{feature_status}}"
+      echo "Skip Validation Param: {{skip_validation}}"
+      echo "Should Skip Export: {{should_skip}}"
+      echo "Validation Result: {{validation_result}}"
+      echo "Custom Value Param: {{custom_value}}"
+      echo "Exported Custom: {{exported_custom}}"
+      echo "Verification Complete: {{verification_complete}}"
+      echo "=== End Summary ==="

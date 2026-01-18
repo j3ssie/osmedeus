@@ -1,0 +1,49 @@
+# If you prefer a global ignore file, keep this minimal.
+
+# Binaries
+bin/
+dist/**
+dist/config.yaml
+osmedeus
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build artifacts
+*.test
+*.out
+*.cover
+coverage.out
+coverage.html
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# cgo / compiler outputs
+*.o
+*.a
+*.obj
+
+# Logs
+*.log
+
+# SQLite databases (test artifacts)
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Test workspace artifacts (state exports from executor tests)
+internal/executor/*/run-*.json
+internal/executor/*/run-*.yaml
+test/integration/*-test/
+!test/integration/*_test.go
+
+OPTIMIZE.md
+OPTIMIZE-*.md
+PLANNING.md
+PLANNING-*.md
+

@@ -1,0 +1,161 @@
+kind: module
+name: test-http-exports
+description: Test HTTP step exports with status_code and response_body comparisons using contains and regex_match
+tags: test,http,exports
+
+params:
+  - name: target
+    default: "example.com"
+
+steps:
+  # ==========================================================================
+  # Test 1: Status Code Comparisons
+  # ==========================================================================
+  - name: check-status-200
+    type: http
+    method: GET
+    url: "https://httpbin.org/status/200"
+    timeout: 30
+    log: "Testing status code 200 response"
+    exports:
+      is_200: "check_status_200_http_resp.status_code == 200"
+      is_2xx: "check_status_200_http_resp.status_code >= 200 && check_status_200_http_resp.status_code < 300"
+      not_404: "check_status_200_http_resp.status_code != 404"
+
+  - name: verify-status-exports
+    type: bash
+    command: |
+      echo "=== Status Code Export Tests ==="
+      echo "is_200: {{is_200}}"
+      echo "is_2xx: {{is_2xx}}"
+      echo "not_404: {{not_404}}"
+    log: "Verifying status code exports"
+
+  # ==========================================================================
+  # Test 2: Response Body with contains()
+  # ==========================================================================
+  - name: check-get-contains
+    type: http
+    method: GET
+    url: "https://httpbin.org/get?target={{target}}&foo=bar"
+    headers:
+      User-Agent: "Osmedeus/1.0"
+      Accept: "application/json"
+    timeout: 30
+    log: "Testing contains() with response body"
+    exports:
+      has_args: "contains(check_get_contains_http_resp.response_body, 'args')"
+      has_target: "contains(check_get_contains_http_resp.response_body, '{{target}}')"
+      has_foo_bar: "contains(check_get_contains_http_resp.response_body, 'foo')"
+      has_origin: "contains(check_get_contains_http_resp.response_body, 'origin')"
+      body_not_empty: "check_get_contains_http_resp.response_body != ''"
+
+  - name: verify-contains-exports
+    type: bash
+    command: |
+      echo "=== Contains Export Tests ==="
+      echo "has_args: {{has_args}}"
+      echo "has_target: {{has_target}}"
+      echo "has_foo_bar: {{has_foo_bar}}"
+      echo "has_origin: {{has_origin}}"
+      echo "body_not_empty: {{body_not_empty}}"
+    log: "Verifying contains exports"
+
+  # ==========================================================================
+  # Test 3: Response Body with regex_match()
+  # ==========================================================================
+  - name: check-json-regex
+    type: http
+    method: GET
+    url: "https://httpbin.org/json"
+    headers:
+      Accept: "application/json"
+    timeout: 30
+    log: "Testing regex_match() with JSON response"
+    exports:
+      has_slideshow: "regex_match('slideshow', check_json_regex_http_resp.response_body)"
+      has_title_field: "regex_match('\"title\"', check_json_regex_http_resp.response_body)"
+      has_json_object: "regex_match('^\\s*\\{', check_json_regex_http_resp.response_body)"
+      has_author: "regex_match('author', check_json_regex_http_resp.response_body)"
+
+  - name: verify-regex-exports
+    type: bash
+    command: |
+      echo "=== Regex Match Export Tests ==="
+      echo "has_slideshow: {{has_slideshow}}"
+      echo "has_title_field: {{has_title_field}}"
+      echo "has_json_object: {{has_json_object}}"
+      echo "has_author: {{has_author}}"
+    log: "Verifying regex_match exports"
+
+  # ==========================================================================
+  # Test 4: Combined Conditions
+  # ==========================================================================
+  - name: check-combined
+    type: http
+    method: GET
+    url: "https://httpbin.org/get?scan={{target}}"
+    headers:
+      User-Agent: "Osmedeus/1.0"
+    timeout: 30
+    log: "Testing combined status and body conditions"
+    exports:
+      success_with_args: "check_combined_http_resp.status_code == 200 && contains(check_combined_http_resp.response_body, 'args')"
+      valid_json_response: "check_combined_http_resp.status_code == 200 && regex_match('^\\s*\\{', check_combined_http_resp.response_body)"
+      has_scan_param: "contains(check_combined_http_resp.response_body, 'scan') && contains(check_combined_http_resp.response_body, '{{target}}')"
+
+  - name: verify-combined-exports
+    type: bash
+    command: |
+      echo "=== Combined Condition Tests ==="
+      echo "success_with_args: {{success_with_args}}"
+      echo "valid_json_response: {{valid_json_response}}"
+      echo "has_scan_param: {{has_scan_param}}"
+    log: "Verifying combined condition exports"
+
+  # ==========================================================================
+  # Test 5: POST Request with Body Validation
+  # ==========================================================================
+  - name: check-post-echo
+    type: http
+    method: POST
+    url: "https://httpbin.org/post"
+    headers:
+      Content-Type: "application/json"
+      User-Agent: "Osmedeus/1.0"
+    request_body: '{"target": "{{target}}", "action": "scan", "enabled": true}'
+    timeout: 30
+    log: "Testing POST with response body validation"
+    exports:
+      post_success: "check_post_echo_http_resp.status_code == 200"
+      echoed_target: "contains(check_post_echo_http_resp.response_body, '{{target}}')"
+      echoed_action: "contains(check_post_echo_http_resp.response_body, 'scan')"
+      has_json_field: "regex_match('\"json\"\\s*:', check_post_echo_http_resp.response_body)"
+
+  - name: verify-post-exports
+    type: bash
+    command: |
+      echo "=== POST Export Tests ==="
+      echo "post_success: {{post_success}}"
+      echo "echoed_target: {{echoed_target}}"
+      echo "echoed_action: {{echoed_action}}"
+      echo "has_json_field: {{has_json_field}}"
+    log: "Verifying POST exports"
+
+  # ==========================================================================
+  # Final Summary
+  # ==========================================================================
+  - name: test-summary
+    type: bash
+    command: |
+      echo ""
+      echo "========================================="
+      echo "HTTP Exports Test Summary"
+      echo "========================================="
+      echo "Status Tests: is_200={{is_200}}, is_2xx={{is_2xx}}"
+      echo "Contains Tests: has_args={{has_args}}, has_target={{has_target}}"
+      echo "Regex Tests: has_slideshow={{has_slideshow}}, has_title_field={{has_title_field}}"
+      echo "Combined Tests: success_with_args={{success_with_args}}"
+      echo "POST Tests: post_success={{post_success}}, echoed_target={{echoed_target}}"
+      echo "========================================="
+    log: "Test summary"

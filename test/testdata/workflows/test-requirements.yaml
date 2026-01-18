@@ -1,0 +1,24 @@
+name: test-requirements
+kind: module
+description: Test workflow dependency validation (success case)
+tags: test,requirements,validation
+
+dependencies:
+  commands:
+    - echo
+    - cat
+  files:
+    - /tmp
+  variables:
+    - name: target
+      type: string
+      required: true
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: requirements-passed
+    type: bash
+    command: echo "All requirements satisfied for {{target}}"

@@ -1,0 +1,155 @@
+version: '3.8'
+
+# Osmedeus Production Stack with PostgreSQL
+# ==========================================
+# Usage:
+#   1. Copy .env.example to .env and configure secrets
+#   2. Copy osm-settings.production.yaml to osm-settings.yaml and adjust if needed
+#   3. Start: docker-compose -f build/docker/docker-compose.production.yaml up -d
+#   4. Scale workers: docker-compose -f build/docker/docker-compose.production.yaml up -d --scale worker=5
+#
+# First-time setup:
+#   docker-compose -f build/docker/docker-compose.production.yaml up -d postgres redis
+#   # Wait for healthy status, then start the app:
+#   docker-compose -f build/docker/docker-compose.production.yaml up -d
+
+services:
+  # PostgreSQL - Primary database for persistent storage
+  postgres:
+    image: postgres:16-alpine
+    container_name: osmedeus-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-osmedeus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-osmedeus}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-osmedeus} -d ${POSTGRES_DB:-osmedeus}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - osmedeus-network
+    # Uncomment to expose PostgreSQL externally (not recommended for production)
+    # ports:
+    #   - "5432:5432"
+
+  # Redis - Message queue for distributed task processing
+  redis:
+    image: redis:7-alpine
+    container_name: osmedeus-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - osmedeus-network
+    # Uncomment to expose Redis externally (not recommended for production)
+    # ports:
+    #   - "6379:6379"
+
+  # Master Node - API server and task coordinator
+  server:
+    build:
+      context: ../..
+      dockerfile: build/docker/Dockerfile
+    image: osmedeus:latest
+    container_name: osmedeus-server
+    restart: unless-stopped
+    ports:
+      - "${OSM_SERVER_PORT:-8002}:8002"
+    environment:
+      # These are passed to the container but config is read from mounted file
+      - TZ=${TZ:-UTC}
+    volumes:
+      - osmedeus-data:/root/osmedeus-base
+      - workspaces:/root/workspaces-osmedeus
+      - ./osm-settings.production.yaml:/root/osmedeus-base/osm-settings.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["serve", "--master"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    networks:
+      - osmedeus-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # Worker Nodes - Execute distributed scan tasks
+  worker:
+    build:
+      context: ../..
+      dockerfile: build/docker/Dockerfile
+    image: osmedeus:latest
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ:-UTC}
+    volumes:
+      - osmedeus-data:/root/osmedeus-base
+      - workspaces:/root/workspaces-osmedeus
+      - ./osm-settings.production.yaml:/root/osmedeus-base/osm-settings.yaml:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    command: ["worker", "join", "--redis-url", "redis://${REDIS_PASSWORD:+:${REDIS_PASSWORD}@}redis:6379"]
+    deploy:
+      replicas: ${WORKER_REPLICAS:-2}
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - osmedeus-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+volumes:
+  postgres-data:
+    driver: local
+    name: osmedeus-postgres-data
+  redis-data:
+    driver: local
+    name: osmedeus-redis-data
+  osmedeus-data:
+    driver: local
+    name: osmedeus-app-data
+  workspaces:
+    driver: local
+    name: osmedeus-workspaces
+
+networks:
+  osmedeus-network:
+    driver: bridge
+    name: osmedeus-network

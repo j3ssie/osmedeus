@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  nix-test:
+    build:
+      context: ../..
+      dockerfile: build/docker/Dockerfile.nix-test
+    container_name: osm-test-nix
+    # Binary is built inside the container, no volume mount needed
+    command: ["sleep", "infinity"]
+    restart: "no"

@@ -1,0 +1,81 @@
+# Full Comprehensive Scan Flow
+# Orchestrates all 5 modules in a complete security assessment pipeline
+
+name: full-scan
+kind: flow
+description: Full comprehensive scan - all modules orchestrated
+tags: test, full, flow
+
+
+params:
+  - name: threads
+    value: "10"
+  - name: severity
+    value: "critical,high,medium,low"
+  - name: timeout
+    value: "14400"
+
+modules:
+  # Stage 1: Subdomain Enumeration
+  - name: subdomain-enumeration
+    path: modules/subdomain-enum.yaml
+    params:
+      threads: "{{threads}}"
+    condition: "true"
+    exports:
+      all_subdomains: "{{final_subdomains}}"
+
+  # Stage 2: Port Scanning (depends on subdomain enumeration)
+  - name: port-scanning
+    path: modules/port-scan.yaml
+    depends_on:
+      - subdomain-enumeration
+    params:
+      threads: "{{threads}}"
+      ports: "80,443,8080,8443,22,21,25,53,3306,5432"
+    condition: "fileLength('{{all_subdomains}}') > 0"
+    exports:
+      open_ports: "{{all_ports}}"
+
+  # Stage 3: HTTP Probing (depends on port scanning)
+  - name: http-probing
+    path: modules/http-probe.yaml
+    depends_on:
+      - port-scanning
+    params:
+      threads: "{{threads}}"
+    condition: "fileLength('{{open_ports}}') > 0"
+    exports:
+      http_hosts: "{{http_hosts}}"
+
+  # Stage 4: Screenshot Capture (depends on HTTP probing)
+  - name: screenshot-capture
+    path: modules/screenshot.yaml
+    depends_on:
+      - http-probing
+    params:
+      threads: "5"
+      timeout: "30"
+    condition: "fileLength('{{http_hosts}}') > 0"
+
+  # Stage 5: Vulnerability Scanning (depends on HTTP probing)
+  # Can run in parallel with screenshot capture since they both depend on http-probing
+  - name: vulnerability-scanning
+    path: modules/vuln-scan.yaml
+    depends_on:
+      - http-probing
+    params:
+      threads: "{{threads}}"
+      severity: "{{severity}}"
+      timeout: "3600"
+    condition: "fileLength('{{http_hosts}}') > 0"
+    on_success:
+      - type: function
+        script: |
+          log_info("=== Full Scan Completed Successfully ===");
+          log_info("Target: {{Target}}");
+          log_info("All stages executed.");
+    on_error:
+      - type: function
+        script: |
+          log_error("Vulnerability scanning stage failed");

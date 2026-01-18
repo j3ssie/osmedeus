@@ -1,0 +1,5 @@
+# Exclude frontend files from GitHub language statistics
+public/ui/** linguist-vendored
+public/ui/**/*.js linguist-vendored
+public/ui/**/*.css linguist-vendored
+public/ui/**/*.html linguist-vendored

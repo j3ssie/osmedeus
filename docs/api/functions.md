@@ -1,0 +1,149 @@
+# Functions
+
+## Execute Utility Function
+
+Execute a utility function script with template rendering and JavaScript execution.
+
+```bash
+curl -X POST http://localhost:8002/osm/api/functions/eval \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "script": "trim(\"  hello  \")"
+  }'
+```
+
+**With target variable:**
+```bash
+curl -X POST http://localhost:8002/osm/api/functions/eval \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "script": "fileExists(\"{{target}}\")",
+    "target": "/tmp/test.txt"
+  }'
+```
+
+**With custom parameters:**
+```bash
+curl -X POST http://localhost:8002/osm/api/functions/eval \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "script": "log_info(\"{{host}}:{{port}}\")",
+    "params": {
+      "host": "localhost",
+      "port": "8080"
+    }
+  }'
+```
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `script` | string | Yes | The JavaScript script to execute |
+| `target` | string | No | Target value for `{{target}}` variable |
+| `params` | object | No | Additional parameters for template rendering |
+
+**Response:**
+```json
+{
+  "result": "hello",
+  "rendered_script": "trim(\"  hello  \")"
+}
+```
+
+---
+
+## List Utility Functions
+
+Get a categorized list of all available utility functions.
+
+```bash
+curl http://localhost:8002/osm/api/functions/list \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "functions": {
+    "file": [
+      {"name": "fileExists(path)", "description": "Check if file exists", "return_type": "bool"},
+      {"name": "fileLength(path)", "description": "Count non-empty lines in file", "return_type": "int"},
+      {"name": "readFile(path)", "description": "Read entire file contents", "return_type": "string"},
+      {"name": "writeFile(path, content)", "description": "Write content to file", "return_type": "bool"},
+      {"name": "appendFile(path, content)", "description": "Append content to file", "return_type": "bool"},
+      {"name": "removeFile(path)", "description": "Delete a file", "return_type": "bool"},
+      {"name": "copyFile(src, dst)", "description": "Copy file to destination", "return_type": "bool"},
+      {"name": "mergeFiles(pattern, output)", "description": "Merge multiple files matching pattern", "return_type": "bool"}
+    ],
+    "string": [
+      {"name": "trim(str)", "description": "Trim whitespace", "return_type": "string"},
+      {"name": "split(str, delim)", "description": "Split string by delimiter", "return_type": "[]string"},
+      {"name": "replace(str, old, new)", "description": "Replace all occurrences", "return_type": "string"},
+      {"name": "contains(str, substr)", "description": "Check if string contains substring", "return_type": "bool"},
+      {"name": "toLowerCase(str)", "description": "Convert string to lowercase", "return_type": "string"},
+      {"name": "toUpperCase(str)", "description": "Convert string to uppercase", "return_type": "string"},
+      {"name": "join(array, delim)", "description": "Join array elements with delimiter", "return_type": "string"}
+    ],
+    "utility": [
+      {"name": "len(val)", "description": "Get length of string or array", "return_type": "int"},
+      {"name": "exec_cmd(command)", "description": "Execute bash command and return output", "return_type": "string"},
+      {"name": "isEmpty(val)", "description": "Check if value is empty/nil", "return_type": "bool"},
+      {"name": "commandExists(name)", "description": "Check if command is installed", "return_type": "bool"},
+      {"name": "sleep(seconds)", "description": "Sleep for specified seconds", "return_type": "void"}
+    ],
+    "http": [
+      {"name": "http_get(url)", "description": "Make HTTP GET request", "return_type": "object"},
+      {"name": "http_post(url, body)", "description": "Make HTTP POST request with JSON body", "return_type": "object"},
+      {"name": "httpRequest(url, method, headers, body)", "description": "Make HTTP request with full control", "return_type": "object"}
+    ],
+    "logging": [
+      {"name": "log_info(message)", "description": "Log info message with [INFO] prefix", "return_type": "void"},
+      {"name": "log_debug(message)", "description": "Log debug message with [DEBUG] prefix", "return_type": "void"},
+      {"name": "log_warn(message)", "description": "Log warning message with [WARN] prefix", "return_type": "void"},
+      {"name": "log_error(message)", "description": "Log error message with [ERROR] prefix", "return_type": "void"}
+    ],
+    "generation": [
+      {"name": "randomString(length)", "description": "Generate random alphanumeric string", "return_type": "string"},
+      {"name": "uuid()", "description": "Generate UUID v4", "return_type": "string"},
+      {"name": "timestamp()", "description": "Get current Unix timestamp", "return_type": "int"}
+    ],
+    "encoding": [
+      {"name": "base64Encode(str)", "description": "Encode string to base64", "return_type": "string"},
+      {"name": "base64Decode(str)", "description": "Decode base64 string", "return_type": "string"},
+      {"name": "urlEncode(str)", "description": "URL encode string", "return_type": "string"},
+      {"name": "urlDecode(str)", "description": "URL decode string", "return_type": "string"}
+    ],
+    "unix_commands": [
+      {"name": "sortUnix(inputFile, outputFile)", "description": "Sort file and remove duplicates", "return_type": "bool"},
+      {"name": "diff_unix(file1, file2, outputFile)", "description": "Get difference between two files", "return_type": "bool"},
+      {"name": "gitClone(url, destPath)", "description": "Clone git repository", "return_type": "bool"},
+      {"name": "gitPull(repoPath)", "description": "Pull latest changes from git remote", "return_type": "bool"}
+    ],
+    "database": [
+      {"name": "db_insert_asset(workspace, data)", "description": "Insert asset into database", "return_type": "bool"},
+      {"name": "db_query_assets(workspace, filter)", "description": "Query assets from database", "return_type": "[]object"},
+      {"name": "db_update_workspace_stats(workspace)", "description": "Update workspace statistics", "return_type": "bool"}
+    ]
+  }
+}
+```
+
+**Available Function Categories:**
+- `file` - File operations (fileExists, readFile, removeFile, etc.)
+- `string` - String manipulation (trim, split, replace, etc.)
+- `type_conversion` - Type conversions (parseInt, toString, etc.)
+- `utility` - General utilities (len, isEmpty, exec_cmd)
+- `logging` - Logging functions (log_info, log_debug)
+- `http` - HTTP requests
+- `generation` - Random values (randomString, uuid)
+- `encoding` - Base64 encode/decode
+- `notification` - Telegram notifications
+- `cdn_storage` - Cloud storage operations
+- `unix_commands` - Unix command wrappers (sortUnix, gitClone, etc.)
+- `archive` - Archive operations (zip_dir, unzip_dir)
+- `markdown` - Markdown rendering functions
+- `database` - Database operations

@@ -1,0 +1,300 @@
+# Installation
+
+## Get Registry Info
+
+Fetch binary registry metadata with installation status. Supports two modes:
+- `direct-fetch` (default): Binary download URLs from registry JSON
+- `nix-build`: Nix flake binaries grouped by category
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `registry_mode` | string | `direct-fetch` | Registry mode: `direct-fetch` or `nix-build` |
+
+---
+
+### Direct-Fetch Mode (Default)
+
+Returns binary metadata with download URLs for each platform/architecture.
+
+```bash
+curl http://localhost:8002/osm/api/registry-info \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "registry_mode": "direct-fetch",
+  "registry_url": "https://raw.githubusercontent.com/osmedeus/osmedeus-base/main/registry-metadata.json",
+  "binaries": {
+    "nuclei": {
+      "desc": "Vulnerability scanner",
+      "tags": ["vuln", "scanner"],
+      "version": "3.0.0",
+      "linux": {
+        "amd64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.0.0/nuclei_3.0.0_linux_amd64.zip",
+        "arm64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.0.0/nuclei_3.0.0_linux_arm64.zip"
+      },
+      "darwin": {
+        "amd64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.0.0/nuclei_3.0.0_darwin_amd64.zip",
+        "arm64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.0.0/nuclei_3.0.0_darwin_arm64.zip"
+      },
+      "installed": true,
+      "path": "/usr/local/bin/nuclei"
+    },
+    "amass": {
+      "desc": "In-depth attack surface mapping",
+      "tags": ["recon", "subdomain"],
+      "version": "4.0.0",
+      "linux": {
+        "amd64": "https://github.com/owasp-amass/amass/releases/download/v4.0.0/amass_linux_amd64.zip"
+      },
+      "darwin": {
+        "amd64": "https://github.com/owasp-amass/amass/releases/download/v4.0.0/amass_darwin_amd64.zip"
+      },
+      "installed": false,
+      "path": ""
+    }
+  }
+}
+```
+
+**Response Fields (direct-fetch):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `registry_mode` | string | Always `"direct-fetch"` |
+| `registry_url` | string | URL of the binary registry source |
+| `binaries` | object | Map of binary names to their metadata |
+| `binaries[name].desc` | string | Description of the binary tool |
+| `binaries[name].tags` | []string | Tags/categories for the binary |
+| `binaries[name].version` | string | Version of the binary |
+| `binaries[name].linux` | object | Linux download URLs by architecture (amd64, arm64) |
+| `binaries[name].darwin` | object | macOS download URLs by architecture |
+| `binaries[name].windows` | object | Windows download URLs by architecture |
+| `binaries[name].command-linux` | object | Linux install commands by architecture |
+| `binaries[name].command-darwin` | object | macOS install commands by architecture |
+| `binaries[name].installed` | boolean | Whether the binary is currently installed |
+| `binaries[name].path` | string | Full path to the installed binary |
+
+---
+
+### Nix-Build Mode
+
+Returns Nix flake binaries grouped by category with registry metadata.
+
+```bash
+curl "http://localhost:8002/osm/api/registry-info?registry_mode=nix-build" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "registry_mode": "nix-build",
+  "nix_installed": true,
+  "categories": [
+    {
+      "name": "Subdomain",
+      "tools": [
+        {
+          "name": "amass",
+          "desc": "In-depth attack surface mapping and asset discovery",
+          "tags": ["recon", "subdomain"],
+          "version": "4.2.0",
+          "repo_link": "https://github.com/owasp-amass/amass",
+          "installed": true,
+          "path": "/home/user/.nix-profile/bin/amass"
+        },
+        {
+          "name": "subfinder",
+          "desc": "Fast passive subdomain enumeration tool",
+          "tags": ["recon", "subdomain"],
+          "version": "2.6.0",
+          "installed": false
+        }
+      ]
+    },
+    {
+      "name": "Vuln",
+      "tools": [
+        {
+          "name": "nuclei",
+          "desc": "Fast, customizable vulnerability scanner",
+          "tags": ["vuln", "scanner"],
+          "version": "3.0.0",
+          "installed": true,
+          "path": "/home/user/.nix-profile/bin/nuclei"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Response Fields (nix-build):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `registry_mode` | string | Always `"nix-build"` |
+| `nix_installed` | boolean | Whether Nix package manager is installed |
+| `categories` | array | List of tool categories from flake.nix |
+| `categories[].name` | string | Category name (e.g., "Subdomain", "Vuln") |
+| `categories[].tools` | array | List of tools in this category |
+| `categories[].tools[].name` | string | Binary name |
+| `categories[].tools[].desc` | string | Description from registry |
+| `categories[].tools[].tags` | []string | Tags from registry |
+| `categories[].tools[].version` | string | Version from registry |
+| `categories[].tools[].repo_link` | string | Repository URL |
+| `categories[].tools[].installed` | boolean | Whether the binary is installed |
+| `categories[].tools[].path` | string | Full path to installed binary |
+
+---
+
+## Install Binaries or Workflows
+
+Install binaries from registry or workflows from git/zip URL. Supports two installation modes for binaries.
+
+**Endpoint:** `POST /osm/api/registry-install`
+
+**Request Body:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | **Required.** Either `"binary"` or `"workflow"` |
+| `names` | []string | Binary names to install (for `type=binary`) |
+| `install_all` | bool | Install all binaries from registry (for `type=binary`) |
+| `source` | string | Git URL, zip URL, or file path (for `type=workflow`) |
+| `registry_url` | string | Custom registry URL (optional, for `type=binary`) |
+| `registry_mode` | string | `"direct-fetch"` (default) or `"nix-build"` |
+
+---
+
+### Install Binaries (Direct-Fetch Mode)
+
+Downloads binaries directly from GitHub releases or configured URLs.
+
+**Install specific binaries:**
+```bash
+curl -X POST http://localhost:8002/osm/api/registry-install \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "binary",
+    "names": ["nuclei", "httpx", "ffuf"]
+  }'
+```
+
+**Install all binaries from registry:**
+```bash
+curl -X POST http://localhost:8002/osm/api/registry-install \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "binary",
+    "install_all": true
+  }'
+```
+
+**Response:**
+```json
+{
+  "message": "Binary installation completed",
+  "registry_mode": "direct-fetch",
+  "installed": ["nuclei", "httpx"],
+  "installed_count": 2,
+  "binaries_folder": "/home/user/osmedeus-base/binaries",
+  "failed": [
+    {"name": "ffuf", "error": "download failed"}
+  ],
+  "failed_count": 1
+}
+```
+
+---
+
+### Install Binaries (Nix-Build Mode)
+
+Installs binaries via Nix package manager using `nix profile add`.
+
+**Install specific binaries via Nix:**
+```bash
+curl -X POST http://localhost:8002/osm/api/registry-install \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "binary",
+    "names": ["amass", "subfinder", "nuclei"],
+    "registry_mode": "nix-build"
+  }'
+```
+
+**Install all Nix binaries:**
+```bash
+curl -X POST http://localhost:8002/osm/api/registry-install \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "binary",
+    "install_all": true,
+    "registry_mode": "nix-build"
+  }'
+```
+
+**Response:**
+```json
+{
+  "message": "Nix binary installation completed",
+  "registry_mode": "nix-build",
+  "installed": ["amass", "subfinder", "nuclei"],
+  "installed_count": 3,
+  "binaries_folder": "/home/user/osmedeus-base/binaries"
+}
+```
+
+**Error (Nix not installed):**
+```json
+{
+  "error": true,
+  "message": "Nix is not installed. Install Nix first or use registry_mode=direct-fetch"
+}
+```
+
+---
+
+### Install Workflow
+
+Install a workflow from a git repository or zip archive.
+
+**Install workflow from git URL:**
+```bash
+curl -X POST http://localhost:8002/osm/api/registry-install \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "workflow",
+    "source": "https://github.com/osmedeus/osmedeus-workflow.git"
+  }'
+```
+
+**Install workflow from zip URL:**
+```bash
+curl -X POST http://localhost:8002/osm/api/registry-install \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "workflow",
+    "source": "https://example.com/custom-workflow.zip"
+  }'
+```
+
+**Response:**
+```json
+{
+  "message": "Workflow installed successfully",
+  "source": "https://github.com/osmedeus/osmedeus-workflow.git",
+  "workflow_folder": "/home/user/osmedeus-base/workflow"
+}
+```

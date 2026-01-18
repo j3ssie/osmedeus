@@ -1,0 +1,62 @@
+name: test-docker-file-outputs
+kind: module
+description: Test std_file, step_remote_file, and host_output_file with Docker runner
+tags: test,docker,file-output
+
+params:
+  - name: target
+    required: true
+  - name: output_dir
+    default: /tmp/osm-docker-file-test
+
+steps:
+  # Test 1: std_file - capture stdout to local file
+  - name: test-std-file
+    type: remote-bash
+    log: "Testing std_file output capture"
+    step_runner: docker
+    step_runner_config:
+      image: alpine:latest
+    command: 'echo "stdout from docker: {{target}}" && echo "line 2"'
+    std_file: "{{output_dir}}/std_file_output.txt"
+
+  # Test 2: step_remote_file + host_output_file - copy file from container
+  - name: test-remote-file-copy
+    type: remote-bash
+    log: "Testing file copy from Docker container"
+    step_runner: docker
+    step_runner_config:
+      image: alpine:latest
+      persistent: true
+    commands:
+      - 'echo "created in container: {{target}}" > /tmp/container-output.txt'
+      - 'cat /tmp/container-output.txt'
+    step_remote_file: /tmp/container-output.txt
+    host_output_file: "{{output_dir}}/copied_from_container.txt"
+
+  # Test 3: Combined - both std_file and remote file copy
+  - name: test-combined-outputs
+    type: remote-bash
+    log: "Testing combined std_file and remote file copy"
+    step_runner: docker
+    step_runner_config:
+      image: alpine:latest
+      persistent: true
+    commands:
+      - 'echo "Processing target: {{target}}"'
+      - 'echo "result-data-{{target}}" > /tmp/result.txt'
+    std_file: "{{output_dir}}/combined_stdout.txt"
+    step_remote_file: /tmp/result.txt
+    host_output_file: "{{output_dir}}/combined_result.txt"
+
+  # Test 4: Verify files exist on host
+  - name: verify-outputs
+    type: bash
+    log: "Verifying all output files exist"
+    commands:
+      - 'test -f "{{output_dir}}/std_file_output.txt" && echo "std_file: OK"'
+      - 'test -f "{{output_dir}}/copied_from_container.txt" && echo "remote_copy: OK"'
+      - 'test -f "{{output_dir}}/combined_stdout.txt" && echo "combined_stdout: OK"'
+      - 'test -f "{{output_dir}}/combined_result.txt" && echo "combined_result: OK"'
+      - 'cat "{{output_dir}}/std_file_output.txt"'
+      - 'cat "{{output_dir}}/copied_from_container.txt"'

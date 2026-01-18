@@ -1,0 +1,76 @@
+# HTTP Probing Module (Test Style)
+# This is a test-style workflow using simple commands for testing purposes.
+# In production, replace echo commands with real tools like httpx, httprobe, etc.
+
+name: http-probe
+kind: module
+description: Simulated HTTP probing for testing
+tags: test, recon, http
+
+params:
+  - name: threads
+    value: "20"
+  - name: timeout
+    value: "10"
+
+steps:
+  # Step 1: Setup directories
+  - name: setup-directories
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/http/probed
+      - mkdir -p {{Output}}/http/categorized
+    exports:
+      http_dir: "{{Output}}/http"
+
+  # Step 2: Simulate HTTP probing
+  - name: probe-hosts
+    type: bash
+    command: |
+      # Simulate httpx-style output
+      echo "http://{{Target}} [200] [Example Domain] [text/html]" > {{http_dir}}/probed/results.txt
+      echo "https://{{Target}} [200] [Example Domain] [text/html]" >> {{http_dir}}/probed/results.txt
+      echo "http://www.{{Target}} [301] [Redirect] [text/html]" >> {{http_dir}}/probed/results.txt
+      echo "https://api.{{Target}} [200] [API Server] [application/json]" >> {{http_dir}}/probed/results.txt
+      echo "https://admin.{{Target}} [403] [Forbidden] [text/html]" >> {{http_dir}}/probed/results.txt
+      sleep 0.5
+    timeout: 120
+    exports:
+      probe_results: "{{http_dir}}/probed/results.txt"
+
+  # Step 3: Extract live hosts
+  - name: extract-live-hosts
+    type: bash
+    command: |
+      awk '{print $1}' {{probe_results}} > {{http_dir}}/live-hosts.txt
+    exports:
+      live_hosts: "{{http_dir}}/live-hosts.txt"
+
+  # Step 4: Categorize by status code using function
+  - name: categorize-results
+    type: function
+    function: |
+      log_info("Categorizing HTTP responses by status code");
+      // In real workflow, would parse and categorize responses
+      log_info("Categories: 200 OK, 301 Redirect, 403 Forbidden");
+      return true;
+
+  # Step 5: Filter successful responses
+  - name: filter-successful
+    type: bash
+    command: |
+      grep '\[200\]' {{probe_results}} | awk '{print $1}' > {{http_dir}}/categorized/success-200.txt || true
+      grep '\[301\]\|\[302\]' {{probe_results}} | awk '{print $1}' > {{http_dir}}/categorized/redirects.txt || true
+      grep '\[403\]\|\[401\]' {{probe_results}} | awk '{print $1}' > {{http_dir}}/categorized/auth-required.txt || true
+    exports:
+      success_hosts: "{{http_dir}}/categorized/success-200.txt"
+      redirect_hosts: "{{http_dir}}/categorized/redirects.txt"
+      auth_hosts: "{{http_dir}}/categorized/auth-required.txt"
+
+  # Step 6: Generate summary
+  - name: generate-summary
+    type: bash
+    commands:
+      - cp {{live_hosts}} {{Output}}/http-hosts.txt
+      - echo "HTTP probe completed at $(date)" > {{Output}}/http-stats.txt
+      - "wc -l {{live_hosts}} | awk '{print \"Live hosts: \" $1}' >> {{Output}}/http-stats.txt"

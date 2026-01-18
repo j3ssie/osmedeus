@@ -1,0 +1,30 @@
+kind: flow
+name: template-rendering-flow
+description: Flow to test template rendering across all step types and fields
+tags: test,template,rendering
+
+params:
+  - name: flowParam
+    default: "flow-{{Target}}"
+
+dependencies:
+  variables:
+    - name: Target
+      type: domain
+      required: true
+
+modules:
+  - name: basic-rendering
+    path: nested/template-rendering-module.yaml
+    params:
+      customPrefix: "{{flowParam}}-custom"
+
+  - name: foreach-rendering
+    path: nested/template-foreach-module.yaml
+    depends_on:
+      - basic-rendering
+
+  - name: parallel-rendering
+    path: nested/template-parallel-module.yaml
+    depends_on:
+      - foreach-rendering

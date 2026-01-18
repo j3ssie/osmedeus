@@ -1,0 +1,32 @@
+kind: module
+name: nested-module-2
+description: Second nested module for testing export propagation and param inheritance
+
+params:
+  - name: paramFromFlowFile
+    default: "not-set"
+
+  - name: anotherParam2
+    default: "{{Output}}/another2-{{Workspace}}.txt"
+
+  - name: anotherParam3as1
+    default: "{{Output}}/another1-{{TargetSpace}}.txt"
+
+
+steps:
+  - name: verify-exports-and-params
+    type: bash
+    command: |
+      echo "Module 2: Target={{Target}}"
+      echo "Module 2: module1_with_target={{module1_with_target}}"
+      echo "Module 2: paramFromFlowFile={{paramFromFlowFile}}"
+      echo "Module 2: module1_completed={{module1_completed}}"
+
+  - name: verify-exports-and-params
+    type: bash
+    pre_condition: 'fileExists("{{anotherParam3as1}}")'
+    command: |
+      echo "Module 2: paramFromFlowFile={{paramFromFlowFile}}"
+      echo "Module 2: module1_completed={{module1_completed}}"
+      echo "Module 2: anotherParam3as1={{anotherParam3as1}}"
+    

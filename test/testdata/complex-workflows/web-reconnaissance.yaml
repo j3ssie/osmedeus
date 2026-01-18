@@ -1,0 +1,263 @@
+name: web-reconnaissance
+kind: module
+desc: Comprehensive web reconnaissance module demonstrating advanced workflow features
+
+params:
+  - name: target
+    required: true
+  - name: output_dir
+    default: /tmp/osm-web-recon
+  - name: threads
+    default: "5"
+  - name: subfinderThreads
+    default: "{{threads * 4}}"
+  - name: httpxThreads
+    default: "{{threads * 2}}"
+  - name: nucleiThreads
+    default: "{{threads}}"
+  - name: screenshotThreads
+    default: "5"
+  - name: httpxTimeout
+    default: "10"
+  - name: nucleiTimeout
+    default: "3600"
+  - name: enableScreenshots
+    default: "true"
+  - name: enableNuclei
+    default: "true"
+  - name: nucleiSeverity
+    default: "critical,high,medium"
+  - name: subfinderConfig
+    default: "{{Data}}/external-configs/subfinder-provider.yaml"
+
+steps:
+  # ============================================================
+  # Phase 1: Validate Dependencies
+  # ============================================================
+  - name: validate-dependencies
+    type: function
+    function: |
+      fileExists("{{Binaries}}/subfinder") &&
+      fileExists("{{Binaries}}/assetfinder") &&
+      fileExists("{{Binaries}}/httpx")
+    exports:
+      deps_valid: "output"
+    on_error:
+      - action: log
+        message: "Required binaries not found"
+      - action: abort
+
+  # ============================================================
+  # Phase 2: Parallel Subdomain Enumeration
+  # ============================================================
+  - name: subdomain-enumeration
+    type: parallel-steps
+    parallel_steps:
+      - name: run-subfinder
+        type: bash
+        command: "{{Binaries}}/subfinder -d {{Target}} -provider-config {{subfinderConfig}} -t {{subfinderThreads}} -o {{Output}}/web-recon/subdomains/{{Workspace}}-subfinder.txt -silent"
+        timeout: 600
+        on_error:
+          - action: log
+            message: "Subfinder failed, continuing with other tools"
+          - action: continue
+
+      - name: run-assetfinder
+        type: bash
+        command: "{{Binaries}}/assetfinder -subs-only {{Target}} > {{Output}}/web-recon/subdomains/{{Workspace}}-assetfinder.txt"
+        timeout: 300
+        on_error:
+          - action: continue
+
+      - name: run-findomain
+        type: bash
+        command: "{{Binaries}}/findomain -u {{Output}}/web-recon/subdomains/{{Workspace}}-findomain.txt -t {{Target}} 2>/dev/null"
+        timeout: 300
+        on_error:
+          - action: continue
+
+  # ============================================================
+  # Phase 3: Merge and Deduplicate Subdomains
+  # ============================================================
+  - name: merge-subdomains
+    type: bash
+    commands:
+      - "cat {{Output}}/web-recon/subdomains/{{Workspace}}-*.txt 2>/dev/null | sort -u > {{Output}}/web-recon/subdomains/all-{{Workspace}}.txt"
+      - "cat {{Output}}/web-recon/subdomains/all-{{Workspace}}.txt | {{Binaries}}/cleansub -t '{{Target}}' > {{Output}}/web-recon/subdomains/final-{{Workspace}}.txt 2>/dev/null || cp {{Output}}/web-recon/subdomains/all-{{Workspace}}.txt {{Output}}/web-recon/subdomains/final-{{Workspace}}.txt"
+    exports:
+      subdomains_file: "{{Output}}/web-recon/subdomains/final-{{Workspace}}.txt"
+
+  - name: count-subdomains
+    type: function
+    function: |
+      var count = fileLength("{{subdomains_file}}");
+      return count > 0 ? "true" : "false";
+    exports:
+      subdomain_count: "{{Result}}"
+      has_subdomains: "{{Result}}"
+
+  # Decision: Skip remaining steps if no subdomains found
+  - name: check-subdomain-results
+    type: bash
+    command: "echo {{subdomain_count}}"
+    decision:
+      switch: "{{has_subdomains}}"
+      cases:
+        "false":
+          goto: generate-empty-report
+      default:
+        goto: http-probing
+
+  # ============================================================
+  # Phase 4: HTTP Probing
+  # ============================================================
+  - name: http-probing
+    type: bash
+    command: "{{Binaries}}/httpx -l {{subdomains_file}} -threads {{httpxThreads}} -timeout {{httpxTimeout}} -silent -o {{Output}}/web-recon/probing/live-{{Workspace}}.txt -json -output {{Output}}/web-recon/probing/httpx-{{Workspace}}.json"
+    timeout: 900
+    exports:
+      live_hosts_file: "{{Output}}/web-recon/probing/live-{{Workspace}}.txt"
+    on_error:
+      - action: log
+        message: "HTTP probing failed"
+      - action: run
+        step: fallback-probing
+
+  - name: fallback-probing
+    type: bash
+    pre_condition: "!fileExists('{{Output}}/web-recon/probing/live-{{Workspace}}.txt')"
+    command: "cat {{subdomains_file}} | xargs -I {} curl -s -o /dev/null -w '%{http_code} {}\\n' http://{} 2>/dev/null | grep '^200' | awk '{print $2}' > {{Output}}/web-recon/probing/live-{{Workspace}}.txt"
+    exports:
+      live_hosts_file: "{{Output}}/web-recon/probing/live-{{Workspace}}.txt"
+
+  - name: count-live-hosts
+    type: function
+    function: fileLength("{{live_hosts_file}}")
+    exports:
+      live_host_count: "output"
+
+  # ============================================================
+  # Phase 5: Parallel Analysis (Screenshots + Nuclei)
+  # ============================================================
+  - name: parallel-analysis
+    type: parallel-steps
+    parallel_steps:
+      # Screenshot capture using Docker
+      - name: capture-screenshots
+        type: remote-bash
+        pre_condition: '"{{enableScreenshots}}" == "true" && parseInt("{{live_host_count}}") > 0'
+        step_runner: docker
+        step_runner_config:
+          image: projectdiscovery/katana:latest
+          volumes:
+            - "{{Output}}/web-recon:/output"
+          workdir: /output
+          env:
+            TARGETS_FILE: "/output/probing/live-{{Workspace}}.txt"
+        command: |
+          echo "Capturing screenshots for live hosts..."
+          cat $TARGETS_FILE | head -20
+        timeout: 1800
+        on_error:
+          - action: log
+            message: "Screenshot capture failed"
+          - action: continue
+
+      # Nuclei vulnerability scanning using Docker
+      - name: nuclei-scan
+        type: remote-bash
+        pre_condition: '"{{enableNuclei}}" == "true" && parseInt("{{live_host_count}}") > 0'
+        step_runner: docker
+        step_runner_config:
+          image: projectdiscovery/nuclei:latest
+          volumes:
+            - "{{Output}}/web-recon:/output"
+          workdir: /output
+          env:
+            SEVERITY: "{{nucleiSeverity}}"
+            THREADS: "{{nucleiThreads}}"
+        command: |
+          nuclei -l /output/probing/live-{{Workspace}}.txt \
+            -severity $SEVERITY \
+            -c $THREADS \
+            -json-export /output/nuclei/results-{{Workspace}}.json \
+            -silent
+        timeout: 3600
+        exports:
+          nuclei_results: "{{Output}}/web-recon/nuclei/results-{{Workspace}}.json"
+        on_error:
+          - action: log
+            message: "Nuclei scan failed"
+          - action: continue
+
+  # ============================================================
+  # Phase 6: Foreach - Detailed Host Analysis
+  # ============================================================
+  - name: detailed-host-analysis
+    type: foreach
+    pre_condition: 'parseInt("{{live_host_count}}") > 0 && parseInt("{{live_host_count}}") < 50'
+    input: "{{live_hosts_file}}"
+    variable: host
+    threads: 5
+    step:
+      name: analyze-single-host
+      type: bash
+      command: |
+        echo "Analyzing [[host]]..."
+        curl -s -I "[[host]]" 2>/dev/null | head -20 >> {{Output}}/web-recon/probing/headers-{{Workspace}}.txt
+        echo "---" >> {{Output}}/web-recon/probing/headers-{{Workspace}}.txt
+      timeout: 30
+
+  # ============================================================
+  # Phase 7: Result Processing and Reporting
+  # ============================================================
+  - name: process-nuclei-results
+    type: function
+    pre_condition: 'fileExists("{{Output}}/web-recon/nuclei/results-{{Workspace}}.json")'
+    parallel_functions:
+      - db_vuln_critical("{{Output}}/web-recon/nuclei/results-{{Workspace}}.json")
+      - db_vuln_high("{{Output}}/web-recon/nuclei/results-{{Workspace}}.json")
+      - db_vuln_medium("{{Output}}/web-recon/nuclei/results-{{Workspace}}.json")
+    exports:
+      vuln_stats: "output"
+
+  - name: generate-report
+    type: bash
+    commands:
+      - |
+        echo "=== Web Reconnaissance Report ===" > {{Output}}/web-recon/final-report-{{Workspace}}.txt
+        echo "Target: {{Target}}" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
+        echo "Workspace: {{Workspace}}" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
+        echo "Date: $(date)" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
+        echo "" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
+        echo "=== Statistics ===" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
+        echo "Total Subdomains: {{subdomain_count}}" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
+        echo "Live Hosts: {{live_host_count}}" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
+        echo "" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
+        echo "=== Live Hosts ===" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
+        cat {{live_hosts_file}} >> {{Output}}/web-recon/final-report-{{Workspace}}.txt 2>/dev/null || echo "No live hosts found"
+      - "cp {{live_hosts_file}} {{Output}}/web-recon/live-hosts-{{Workspace}}.txt 2>/dev/null || touch {{Output}}/web-recon/live-hosts-{{Workspace}}.txt"
+      - "cp {{Output}}/web-recon/nuclei/results-{{Workspace}}.json {{Output}}/web-recon/vulnerabilities-{{Workspace}}.json 2>/dev/null || echo '[]' > {{Output}}/web-recon/vulnerabilities-{{Workspace}}.json"
+
+  - name: generate-empty-report
+    type: bash
+    pre_condition: '"{{has_subdomains}}" == "false"'
+    commands:
+      - |
+        echo "=== Web Reconnaissance Report ===" > {{Output}}/web-recon/final-report-{{Workspace}}.txt
+        echo "Target: {{Target}}" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
+        echo "No subdomains found for target." >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
+      - "touch {{Output}}/web-recon/live-hosts-{{Workspace}}.txt"
+      - "echo '[]' > {{Output}}/web-recon/vulnerabilities-{{Workspace}}.json"
+
+  # ============================================================
+  # Phase 8: Cleanup and Notifications
+  # ============================================================
+  - name: final-cleanup
+    type: function
+    function: SortU("{{Output}}/web-recon/live-hosts-{{Workspace}}.txt")
+
+  - name: notify-completion
+    type: function
+    pre_condition: 'parseInt("{{subdomain_count}}") > 0'
+    function: printf("Scan complete: {{subdomain_count}} subdomains, {{live_host_count}} live hosts")

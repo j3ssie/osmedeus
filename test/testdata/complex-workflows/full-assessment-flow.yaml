@@ -1,0 +1,184 @@
+name: full-assessment-flow
+kind: flow
+desc: Complete security assessment flow combining reconnaissance, vulnerability scanning, and data processing
+
+params:
+  - name: threads
+    value: "30"
+  - name: scan_depth
+    value: "standard"
+  - name: enable_bruteforce
+    value: "false"
+  - name: output_format
+    value: "json"
+
+modules:
+  # Module 1: Reconnaissance - Asset discovery and enumeration
+  - name: recon
+    condition: "true"
+    steps:
+      - name: init-recon
+        type: bash
+        commands:
+          - mkdir -p {{Output}}/recon/subdomains
+          - mkdir -p {{Output}}/recon/ports
+          - mkdir -p {{Output}}/recon/tech
+        exports:
+          recon_dir: "{{Output}}/recon"
+          subdomain_dir: "{{Output}}/recon/subdomains"
+          ports_dir: "{{Output}}/recon/ports"
+
+      - name: subdomain-discovery
+        type: parallel-steps
+        parallel_steps:
+          - name: subfinder
+            type: bash
+            command: "{{Binaries}}/subfinder -d {{Target}} -silent -o {{subdomain_dir}}/subfinder.txt"
+            timeout: 600
+          - name: amass
+            type: bash
+            command: "{{Binaries}}/amass enum -passive -d {{Target}} -o {{subdomain_dir}}/amass.txt"
+            timeout: 900
+            on_error: continue
+          - name: crt-sh
+            type: bash
+            command: "curl -s 'https://crt.sh/?q=%25.{{Target}}&output=json' | jq -r '.[].name_value' | sort -u > {{subdomain_dir}}/crtsh.txt"
+            timeout: 120
+            on_error: continue
+
+      - name: merge-and-resolve
+        type: bash
+        commands:
+          - cat {{subdomain_dir}}/*.txt | sort -u > {{recon_dir}}/all-subdomains.txt
+          - "{{Binaries}}/dnsx -l {{recon_dir}}/all-subdomains.txt -silent -a -resp -o {{recon_dir}}/resolved.txt"
+        exports:
+          all_subdomains: "{{recon_dir}}/all-subdomains.txt"
+          resolved_hosts: "{{recon_dir}}/resolved.txt"
+
+  # Module 2: Vulnerability Scanning - Security assessment
+  - name: vuln-scan
+    depends_on:
+      - recon
+    condition: "fileLength('{{all_subdomains}}') > 0"
+    steps:
+      - name: init-vulns
+        type: bash
+        commands:
+          - mkdir -p {{Output}}/vulns/nuclei
+          - mkdir -p {{Output}}/vulns/web
+        exports:
+          vulns_dir: "{{Output}}/vulns"
+
+      - name: http-probe
+        type: bash
+        command: "{{Binaries}}/httpx -l {{all_subdomains}} -silent -status-code -title -tech-detect -o {{vulns_dir}}/http-probe.txt"
+        timeout: 900
+        exports:
+          http_hosts: "{{vulns_dir}}/http-probe.txt"
+
+      - name: vulnerability-scans
+        type: parallel-steps
+        parallel_steps:
+          - name: nuclei-critical
+            type: bash
+            command: "{{Binaries}}/nuclei -l {{http_hosts}} -severity critical,high -c {{threads}} -o {{vulns_dir}}/nuclei/critical.json -jsonl"
+            timeout: 3600
+            on_error: continue
+          - name: nuclei-medium
+            type: bash
+            command: "{{Binaries}}/nuclei -l {{http_hosts}} -severity medium -c {{threads}} -o {{vulns_dir}}/nuclei/medium.json -jsonl"
+            timeout: 3600
+            on_error: continue
+          - name: tech-detect
+            type: bash
+            command: "{{Binaries}}/whatweb -i {{http_hosts}} --log-json={{vulns_dir}}/web/tech.json"
+            timeout: 1800
+            on_error: continue
+        exports:
+          critical_vulns: "{{vulns_dir}}/nuclei/critical.json"
+          medium_vulns: "{{vulns_dir}}/nuclei/medium.json"
+
+  # Module 3: Data Processing - Aggregate and report
+  - name: data-processing
+    depends_on:
+      - vuln-scan
+    condition: "true"
+    steps:
+      - name: init-processing
+        type: bash
+        commands:
+          - mkdir -p {{Output}}/reports
+          - mkdir -p {{Output}}/aggregated
+        exports:
+          reports_dir: "{{Output}}/reports"
+          aggregated_dir: "{{Output}}/aggregated"
+
+      - name: aggregate-findings
+        type: function
+        script: |
+          var summary = {
+            target: "{{Target}}",
+            scan_depth: "{{scan_depth}}",
+            timestamp: timestamp(),
+            statistics: {
+              subdomains: fileLength("{{all_subdomains}}"),
+              http_hosts: fileLength("{{http_hosts}}"),
+              critical_findings: 0,
+              medium_findings: 0
+            }
+          };
+
+          if (fileExists("{{critical_vulns}}")) {
+            summary.statistics.critical_findings = fileLength("{{critical_vulns}}");
+          }
+          if (fileExists("{{medium_vulns}}")) {
+            summary.statistics.medium_findings = fileLength("{{medium_vulns}}");
+          }
+
+          log_info("Assessment Summary:");
+          log_info("  Subdomains: " + summary.statistics.subdomains);
+          log_info("  HTTP Hosts: " + summary.statistics.http_hosts);
+          log_info("  Critical: " + summary.statistics.critical_findings);
+          log_info("  Medium: " + summary.statistics.medium_findings);
+
+          writeFile("{{aggregated_dir}}/summary.json", JSON.stringify(summary, null, 2));
+          return JSON.stringify(summary.statistics);
+        exports:
+          assessment_stats: "{{Result}}"
+
+      - name: generate-final-report
+        type: bash
+        command: |
+          cat > {{reports_dir}}/full-assessment.md << 'EOF'
+          # Full Security Assessment Report
+
+          ## Target Information
+          - **Target:** {{Target}}
+          - **Scan Depth:** {{scan_depth}}
+          - **Generated:** $(date)
+
+          ## Executive Summary
+          This report contains findings from a comprehensive security assessment including:
+          - Subdomain enumeration and DNS resolution
+          - HTTP service discovery and technology detection
+          - Vulnerability scanning with multiple severity levels
+
+          ## Statistics
+          {{assessment_stats}}
+
+          ## Methodology
+          1. **Reconnaissance**: Passive and active subdomain enumeration
+          2. **Service Discovery**: HTTP probing and technology fingerprinting
+          3. **Vulnerability Assessment**: Template-based scanning for known vulnerabilities
+
+          ## Files Generated
+          - `recon/all-subdomains.txt` - Discovered subdomains
+          - `vulns/nuclei/*.json` - Vulnerability findings
+          - `aggregated/summary.json` - Machine-readable summary
+
+          ## Recommendations
+          Review all critical and high severity findings immediately.
+          Medium severity findings should be addressed in the next security sprint.
+          EOF
+        exports:
+          final_report: "{{reports_dir}}/full-assessment.md"

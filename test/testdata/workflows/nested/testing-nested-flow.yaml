@@ -1,0 +1,23 @@
+kind: flow
+name: testing-nested-flow
+description: Test flow for nested workflow execution with param and target sharing
+tags: test,nested
+
+params:
+  - name: paramFromFlowFile
+    default: "flow-value"
+
+dependencies:
+  variables:
+    - name: Target
+      type: domain
+      required: true
+
+modules:
+  - name: nested-module-one
+    path: nested/nested-module-1.yaml
+
+  - name: nested-module-two
+    path: nested/nested-module-2.yaml
+    depends_on:
+      - nested-module-one

@@ -1,0 +1,231 @@
+name: cidr-probing
+kind: module
+description: Running HTTP fingerprint technology and response with CIDR inputs - demonstrates port scanning, HTTP probing, and result processing
+
+params:
+  - name: target
+    required: true
+  - name: inputFile
+    default: "{{Target}}"
+  - name: output_dir
+    default: "{{Output}}/portscan"
+  - name: httpFile
+    default: "{{Output}}/portscan/http-{{Workspace}}.txt"
+  - name: enableScreenshot
+    default: "false"
+  - name: httpTimeout
+    default: "10"
+  - name: ports
+    default: "3000,3128,3333,4243,443,4567,4711,4712,4993,5000,5104,5108,5800,591,593,6443,6543,7000,7396,7474,7779,80,8000,8001,8008,8014,8042,8069,8080,8081,8088,8090,8091,81,8118,8123,8172,8222,8243,8280,8281,832,8333,8443,8500,8834,8880,8888,8983,9000,9043,9060,9080,9090,9091,9200,9443,9800,981,9981,11443,7443,3001,8009"
+  - name: threads
+    default: "10"
+  - name: httpThreads
+    default: "{{threads * 8}}"
+  - name: rateRustScan
+    default: "{{threads * 500}}"
+
+steps:
+  # ============================================================
+  # Phase 1: Validate Dependencies
+  # ============================================================
+  - name: validate-dependencies
+    type: function
+    function: |
+      fileExists("{{Binaries}}/metabigor") &&
+      fileExists("{{Binaries}}/httpx")
+    exports:
+      deps_valid: "output"
+    on_error:
+      - action: log
+        message: "Required binaries (metabigor, httpx) not found"
+      - action: abort
+
+  # ============================================================
+  # Phase 2: Setup Output Directories
+  # ============================================================
+  - name: setup-directories
+    type: bash
+    command: mkdir -p {{output_dir}}
+
+  # ============================================================
+  # Phase 3: Port Scanning with Metabigor
+  # ============================================================
+  - name: port-scanning
+    type: bash
+    command: "cat {{inputFile}} | {{Binaries}}/metabigor scan --rate {{rateRustScan}} -p {{ports}} --pipe >> {{output_dir}}/raw-open-ports.txt"
+    timeout: 1800
+    exports:
+      raw_ports_file: "{{output_dir}}/raw-open-ports.txt"
+    on_error:
+      - action: log
+        message: "Port scanning failed"
+      - action: continue
+
+  - name: clean-portscan-results
+    type: function
+    pre_condition: 'fileExists("{{output_dir}}/raw-open-ports.txt")'
+    function: CleanRustScan("{{output_dir}}/raw-open-ports.txt", "{{output_dir}}/open-ports.txt")
+    exports:
+      clean_ports_file: "{{output_dir}}/open-ports.txt"
+
+  - name: count-open-ports
+    type: function
+    function: fileLength("{{output_dir}}/open-ports.txt")
+    exports:
+      open_port_count: "output"
+
+  # Decision: Skip HTTP probing if no open ports found
+  - name: check-port-results
+    type: bash
+    command: "echo {{open_port_count}}"
+    decision:
+      switch: "{{open_port_count}}"
+      cases:
+        "0":
+          goto: generate-empty-report
+      default:
+        goto: http-probing
+
+  # ============================================================
+  # Phase 4: HTTP Probing
+  # ============================================================
+  - name: http-probing
+    type: bash
+    command: "cat {{output_dir}}/open-ports.txt | {{Binaries}}/httpx -nf -timeout {{httpTimeout}} -silent -t {{httpThreads}} >> {{httpFile}}"
+    timeout: 900
+    exports:
+      http_file: "{{httpFile}}"
+    on_error:
+      - action: log
+        message: "HTTP probing failed"
+      - action: continue
+
+  - name: sort-http-results
+    type: function
+    pre_condition: 'fileExists("{{httpFile}}")'
+    function: SortU("{{httpFile}}")
+
+  - name: count-http-hosts
+    type: function
+    function: fileLength("{{httpFile}}")
+    exports:
+      http_host_count: "output"
+
+  # ============================================================
+  # Phase 5: Parallel HTTP Fingerprinting
+  # ============================================================
+  - name: http-fingerprinting
+    type: parallel-steps
+    pre_condition: 'parseInt("{{http_host_count}}") > 0'
+    parallel_steps:
+      - name: httpx-json-fingerprint
+        type: bash
+        command: "cat {{httpFile}} | {{Binaries}}/httpx -nf -timeout {{httpTimeout}} -t {{httpThreads}} -no-color -json -title -tech-detect -status-code -silent >> {{output_dir}}/{{Workspace}}-http-overview.txt"
+        timeout: 1200
+        on_error:
+          - action: log
+            message: "HTTP fingerprinting failed"
+          - action: continue
+
+      - name: extract-technologies
+        type: bash
+        command: "cat {{httpFile}} | {{Binaries}}/httpx -nf -timeout {{httpTimeout}} -t {{httpThreads}} -tech-detect -silent >> {{output_dir}}/{{Workspace}}-technologies.txt"
+        timeout: 600
+        on_error:
+          - action: continue
+
+  # ============================================================
+  # Phase 6: Process HTTP Results
+  # ============================================================
+  - name: clean-http-json
+    type: function
+    pre_condition: 'fileExists("{{output_dir}}/{{Workspace}}-http-overview.txt")'
+    function: CleanJSONHttpx("{{output_dir}}/{{Workspace}}-http-overview.txt", "{{output_dir}}/{{Workspace}}-raw-overview.txt")
+    exports:
+      raw_overview: "{{output_dir}}/{{Workspace}}-raw-overview.txt"
+
+  - name: beautify-results
+    type: bash
+    pre_condition: 'fileExists("{{output_dir}}/{{Workspace}}-raw-overview.txt")'
+    command: "cat {{output_dir}}/{{Workspace}}-raw-overview.txt | csvtk pretty --no-header-row -I -s ' | ' -W 75 > {{output_dir}}/beautify-{{Workspace}}-http.txt"
+    on_error:
+      - action: log
+        message: "Beautify failed, copying raw results"
+      - action: run
+        step: fallback-beautify
+
+  - name: fallback-beautify
+    type: bash
+    pre_condition: '!fileExists("{{output_dir}}/beautify-{{Workspace}}-http.txt")'
+    command: "cp {{output_dir}}/{{Workspace}}-raw-overview.txt {{output_dir}}/beautify-{{Workspace}}-http.txt 2>/dev/null || touch {{output_dir}}/beautify-{{Workspace}}-http.txt"
+
+  # ============================================================
+  # Phase 7: Foreach - Detailed Host Analysis
+  # ============================================================
+  - name: detailed-host-analysis
+    type: foreach
+    pre_condition: 'parseInt("{{http_host_count}}") > 0 && parseInt("{{http_host_count}}") < 100'
+    input: "{{httpFile}}"
+    variable: host
+    threads: 5
+    step:
+      name: analyze-single-host
+      type: bash
+      command: |
+        echo "Analyzing [[host]]..."
+        curl -s -I "[[host]]" 2>/dev/null | grep -i "server\|x-powered-by\|content-type" >> {{output_dir}}/headers-{{Workspace}}.txt
+        echo "---" >> {{output_dir}}/headers-{{Workspace}}.txt
+      timeout: 30
+
+  # ============================================================
+  # Phase 8: Generate Reports
+  # ============================================================
+  - name: generate-report
+    type: bash
+    commands:
+      - |
+        echo "=== CIDR Probing Report ===" > {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "Target: {{Target}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "Workspace: {{Workspace}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "Date: $(date)" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "=== Statistics ===" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "Open Ports Found: {{open_port_count}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "HTTP Hosts: {{http_host_count}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "=== HTTP Hosts ===" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        cat {{httpFile}} >> {{output_dir}}/final-report-{{Workspace}}.txt 2>/dev/null || echo "No HTTP hosts found"
+      - "cat {{output_dir}}/beautify-{{Workspace}}-http.txt 2>/dev/null || true"
+
+  - name: generate-markdown-report
+    type: function
+    pre_condition: 'fileExists("{{Data}}/markdown/simple-template.md")'
+    function: GenMarkdownReport("{{Data}}/markdown/simple-template.md", "{{Output}}/summary.html")
+    on_error:
+      - action: log
+        message: "Markdown report generation skipped - template not found"
+      - action: continue
+
+  - name: generate-empty-report
+    type: bash
+    pre_condition: '{{open_port_count}} == 0'
+    commands:
+      - |
+        echo "=== CIDR Probing Report ===" > {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "Target: {{Target}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "No open ports found for target." >> {{output_dir}}/final-report-{{Workspace}}.txt
+      - "touch {{output_dir}}/beautify-{{Workspace}}-http.txt"
+      - "touch {{httpFile}}"
+
+  # ============================================================
+  # Phase 9: Cleanup and Notifications
+  # ============================================================
+  - name: final-sort
+    type: function
+    pre_condition: 'fileExists("{{httpFile}}")'
+    function: SortU("{{httpFile}}")
+
+  - name: notify-completion
+    type: function
+    pre_condition: 'parseInt("{{open_port_count}}") > 0'
+    function: printf("CIDR scan complete: {{open_port_count}} open ports, {{http_host_count}} HTTP hosts")

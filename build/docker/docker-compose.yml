@@ -1,0 +1,97 @@
+version: '3.8'
+
+# Osmedeus Master-Worker Architecture with Redis
+# Usage:
+#   docker-compose -f build/docker/docker-compose.yml up -d
+#   docker-compose -f build/docker/docker-compose.yml up -d --scale worker=5
+
+services:
+  # Redis - Message queue for distributed task processing
+  redis:
+    image: redis:7-alpine
+    container_name: osmedeus-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - osmedeus-network
+
+  # Master Node - Coordinates tasks and exposes API
+  master:
+    build:
+      context: ../..
+      dockerfile: build/docker/Dockerfile
+    image: osmedeus:latest
+    container_name: osmedeus-master
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - osmedeus-data:/root/osmedeus-base
+      - workspaces:/root/workspaces-osmedeus
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["serve", "--master", "-A"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+    networks:
+      - osmedeus-network
+
+  # Worker Nodes - Execute distributed tasks
+  worker:
+    build:
+      context: ../..
+      dockerfile: build/docker/Dockerfile
+    image: osmedeus:latest
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - osmedeus-data:/root/osmedeus-base
+      - workspaces:/root/workspaces-osmedeus
+    depends_on:
+      redis:
+        condition: service_healthy
+      master:
+        condition: service_healthy
+    command: ["worker", "join", "--redis-url", "redis://redis:6379"]
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - osmedeus-network
+
+volumes:
+  redis-data:
+    driver: local
+  osmedeus-data:
+    driver: local
+  workspaces:
+    driver: local
+
+networks:
+  osmedeus-network:
+    driver: bridge

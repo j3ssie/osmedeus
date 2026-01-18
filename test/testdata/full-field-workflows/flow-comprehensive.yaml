@@ -1,0 +1,345 @@
+# =============================================================================
+# Flow Workflow: Comprehensive Example
+# =============================================================================
+# This file demonstrates ALL fields available in a flow-kind workflow.
+# Flows orchestrate multiple modules with dependencies, conditions, and routing.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# WORKFLOW-LEVEL FIELDS
+# Same as module workflows (kind, name, description, tags, params, etc.)
+# -----------------------------------------------------------------------------
+
+# kind: Workflow type - "flow" orchestrates multiple modules
+kind: flow
+
+# name: Unique identifier for this workflow (required)
+name: comprehensive-flow-example
+
+# description: Human-readable description
+description: Demonstrates all flow-specific fields including modules, dependencies, conditions, and decisions
+
+# tags: Comma-separated tags for filtering
+tags: flow, comprehensive, example
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# Parameters available to all modules in this flow
+# -----------------------------------------------------------------------------
+params:
+  - name: threads
+    default: "10"
+
+  - name: timeout
+    default: "3600"
+
+  - name: scan_depth
+    default: "normal"
+
+  - name: output_format
+    default: "json"
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES SECTION
+# Flow-level dependencies checked before any module executes
+# -----------------------------------------------------------------------------
+dependencies:
+  commands:
+    - nmap
+    - nuclei
+    - httpx
+
+  files:
+    - /tmp
+
+  target_types:
+    - domain
+    - url
+
+  variables:
+    - name: Target
+      type: domain
+      required: true
+
+# -----------------------------------------------------------------------------
+# REPORTS SECTION
+# Reports aggregated from all modules in this flow
+# -----------------------------------------------------------------------------
+reports:
+  - name: flow-summary
+    path: "{{Output}}/flow-summary.json"
+    type: json
+    description: Aggregated results from all modules
+
+  - name: vulnerabilities
+    path: "{{Output}}/vulnerabilities.txt"
+    type: text
+    description: All discovered vulnerabilities
+
+# -----------------------------------------------------------------------------
+# PREFERENCES SECTION
+# Flow-level preferences apply to all module executions
+# -----------------------------------------------------------------------------
+preferences:
+  disable_notifications: false
+  heuristics_check: 'basic'
+
+# -----------------------------------------------------------------------------
+# MODULES SECTION (Flow-specific)
+# Ordered list of module references to execute
+# =============================================================================
+modules:
+  # ===========================================================================
+  # Module Reference: Basic Configuration
+  # ===========================================================================
+  - # name: Display name for this module execution (required)
+    name: reconnaissance
+
+    # path: Path to the module YAML file (required)
+    # Can be relative to workflows directory or absolute
+    path: modules/recon.yaml
+
+    # params: Parameters to pass to this module
+    # Overrides module defaults and flow-level params
+    params:
+      threads: "20"  # Override flow-level threads
+      output_dir: "{{Output}}/recon"
+
+  # ===========================================================================
+  # Module Reference: With Dependencies (depends_on)
+  # ===========================================================================
+  - name: port-scanning
+    path: modules/portscan.yaml
+
+    # depends_on: List of module names that must complete before this module runs
+    # Creates a DAG (Directed Acyclic Graph) for execution order
+    depends_on:
+      - reconnaissance
+
+    params:
+      target_list: "{{Output}}/recon/subdomains.txt"
+      threads: "{{threads}}"
+
+  # ===========================================================================
+  # Module Reference: With Condition
+  # ===========================================================================
+  - name: web-scanning
+    path: modules/webscan.yaml
+
+    depends_on:
+      - port-scanning
+
+    # condition: JavaScript expression - module only runs if evaluates to true
+    # Can reference exported variables from previous modules
+    condition: 'fileLength("{{Output}}/portscan/http-services.txt") > 0'
+
+    params:
+      input: "{{Output}}/portscan/http-services.txt"
+
+  # ===========================================================================
+  # Module Reference: With on_success Handler
+  # ===========================================================================
+  - name: vulnerability-scanning
+    path: modules/vuln-scan.yaml
+
+    depends_on:
+      - web-scanning
+
+    condition: 'fileExists("{{Output}}/webscan/endpoints.txt")'
+
+    params:
+      endpoints: "{{Output}}/webscan/endpoints.txt"
+      timeout: "{{timeout}}"
+
+    # on_success: Actions to execute when this module completes successfully
+    on_success:
+      # action: log - Log a message
+      - action: log
+        message: "Vulnerability scanning completed for {{Target}}"
+
+      # action: export - Export a variable for subsequent modules
+      - action: export
+        name: vuln_scan_complete
+        value: "true"
+
+      # action: notify - Send a notification
+      - action: notify
+        notify: "Vulnerability scan finished for {{Target}}"
+
+      # action: run - Execute a follow-up step
+      - action: run
+        type: bash
+        command: 'echo "Vuln scan done" >> {{Output}}/flow-log.txt'
+
+      # action: run with functions
+      - action: run
+        type: function
+        functions:
+          - 'log_info("Module completed successfully")'
+
+  # ===========================================================================
+  # Module Reference: With on_error Handler
+  # ===========================================================================
+  - name: exploit-verification
+    path: modules/exploit-verify.yaml
+
+    depends_on:
+      - vulnerability-scanning
+
+    condition: '{{vuln_scan_complete}} == "true"'
+
+    params:
+      vulns_file: "{{Output}}/vuln-scan/vulnerabilities.json"
+
+    # on_error: Actions to execute when this module fails
+    on_error:
+      # action: log - Log error message
+      - action: log
+        message: "Exploit verification failed for {{Target}}"
+        # condition: Only execute if this condition is true
+        condition: 'true'
+
+      # action: continue - Allow flow to continue despite error
+      - action: continue
+        message: "Continuing flow despite exploit verification failure"
+
+      # action: abort - Stop the entire flow
+      # (Usually with a condition so it doesn't always abort)
+      - action: abort
+        message: "Critical failure - aborting flow"
+        condition: 'false'  # Only abort under specific conditions
+
+      # action: notify - Alert on failure
+      - action: notify
+        notify: "Module failed: exploit-verification for {{Target}}"
+
+      # action: export - Export error state
+      - action: export
+        name: exploit_verify_failed
+        value: "true"
+
+  # ===========================================================================
+  # Module Reference: With Decision Routing
+  # ===========================================================================
+  - name: deep-scan
+    path: modules/deep-scan.yaml
+
+    depends_on:
+      - vulnerability-scanning
+
+    params:
+      scan_depth: "{{scan_depth}}"
+
+    # on_success exports severity_level for decision routing
+    on_success:
+      - action: export
+        name: severity_level
+        # This would be set by the module based on vuln-scan results
+        value: "{{vuln_severity}}"
+
+    # decision: Conditional routing using switch/case syntax
+    # Determines which module to execute next based on severity
+    decision:
+      # switch: Variable to match against cases
+      switch: "{{severity_level}}"
+      # cases: Map severity levels to notification modules
+      cases:
+        "critical":
+          goto: notification-critical
+        "high":
+          goto: notification-high
+      # default: Fallback to cleanup if no critical/high findings
+      default:
+        goto: cleanup
+
+  # ===========================================================================
+  # Module Reference: Notification branches (targets of decision routing)
+  # ===========================================================================
+  - name: notification-critical
+    path: modules/notify.yaml
+
+    # Note: This module can be jumped to via decision routing
+    # It won't run in normal sequential flow unless explicitly in depends_on
+
+    params:
+      severity: critical
+      message: "Critical vulnerabilities found for {{Target}}"
+      channel: security-alerts
+
+    on_success:
+      - action: export
+        name: notification_sent
+        value: "critical"
+
+  - name: notification-high
+    path: modules/notify.yaml
+
+    params:
+      severity: high
+      message: "High severity vulnerabilities found for {{Target}}"
+      channel: security-team
+
+    on_success:
+      - action: export
+        name: notification_sent
+        value: "high"
+
+  # ===========================================================================
+  # Module Reference: Parallel Module Execution
+  # Modules with same depends_on and no inter-dependencies run in parallel
+  # ===========================================================================
+  - name: ssl-analysis
+    path: modules/ssl-check.yaml
+
+    depends_on:
+      - port-scanning  # Same dependency as web-scanning
+
+    params:
+      input: "{{Output}}/portscan/ssl-services.txt"
+
+  - name: dns-analysis
+    path: modules/dns-check.yaml
+
+    depends_on:
+      - reconnaissance  # Can run in parallel with port-scanning
+
+    params:
+      domains: "{{Output}}/recon/subdomains.txt"
+
+  # ===========================================================================
+  # Module Reference: Cleanup/Final Module
+  # ===========================================================================
+  - name: cleanup
+    path: modules/cleanup.yaml
+
+    # depends_on multiple modules - waits for all to complete
+    depends_on:
+      - vulnerability-scanning
+      - exploit-verification
+      - ssl-analysis
+      - dns-analysis
+
+    # condition with multiple checks
+    condition: 'true'  # Always run cleanup
+
+    params:
+      output_dir: "{{Output}}"
+      format: "{{output_format}}"
+
+    on_success:
+      - action: log
+        message: "Flow completed successfully for {{Target}}"
+
+      - action: notify
+        notify: "Security scan flow completed for {{Target}}"
+
+      - action: export
+        name: flow_status
+        value: "completed"
+
+    on_error:
+      - action: log
+        message: "Cleanup failed but flow results are preserved"
+
+      - action: continue
+        message: "Flow complete despite cleanup issues"

@@ -1,0 +1,36 @@
+name: test-parallel-steps
+kind: module
+description: Test nested parallel steps with mixed types
+tags: test,parallel,nested
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: setup
+    type: bash
+    command: mkdir -p /tmp/parallel-steps-test
+
+  - name: nested-parallel
+    type: parallel-steps
+    parallel_steps:
+      - name: sub-step-1
+        type: bash
+        command: 'echo "sub 1: {{target}}" > /tmp/parallel-steps-test/sub1.txt'
+      - name: sub-step-2
+        type: bash
+        command: 'echo "sub 2: {{target}}" > /tmp/parallel-steps-test/sub2.txt'
+      - name: sub-step-3
+        type: function
+        function: 'trim("  nested  ")'
+
+  - name: verify-files
+    type: function
+    function: fileExists("/tmp/parallel-steps-test/sub1.txt")
+    exports:
+      file_exists: "output"
+
+  - name: cleanup
+    type: bash
+    command: rm -rf /tmp/parallel-steps-test

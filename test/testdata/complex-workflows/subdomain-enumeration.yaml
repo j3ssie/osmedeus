@@ -1,0 +1,102 @@
+name: subdomain-enumeration
+kind: module
+desc: Comprehensive subdomain enumeration workflow demonstrating various step types
+
+params:
+  - name: threads
+    value: "10"
+  - name: resolvers
+    value: "{{Data}}/resolvers.txt"
+  - name: wordlist
+    value: "{{Data}}/subdomains-top1million-5000.txt"
+
+steps:
+  # Step 1: bash - Initialize output directories
+  - name: setup-directories
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/subdomains
+      - mkdir -p {{Output}}/resolved
+      - mkdir -p {{Output}}/wordlists
+    exports:
+      subdomain_dir: "{{Output}}/subdomains"
+      resolved_dir: "{{Output}}/resolved"
+
+  # Step 2: function - Log start and validate target
+  - name: validate-target
+    type: function
+    script: |
+      log_info("Starting subdomain enumeration for: {{Target}}");
+      if (isEmpty("{{Target}}")) {
+        log_error("Target is empty");
+        return false;
+      }
+      return true;
+
+  # Step 3: parallel-steps - Run multiple passive enumeration tools concurrently
+  - name: passive-enumeration
+    type: parallel-steps
+    parallel_steps:
+      - name: subfinder-scan
+        type: bash
+        command: "{{Binaries}}/subfinder -d {{Target}} -silent -o {{subdomain_dir}}/subfinder.txt"
+        timeout: 600
+      - name: amass-passive
+        type: bash
+        command: "{{Binaries}}/amass enum -passive -d {{Target}} -o {{subdomain_dir}}/amass.txt"
+        timeout: 900
+      - name: assetfinder-scan
+        type: bash
+        command: "{{Binaries}}/assetfinder --subs-only {{Target}} > {{subdomain_dir}}/assetfinder.txt"
+        timeout: 300
+
+  # Step 4: bash - Merge and deduplicate results
+  - name: merge-results
+    type: bash
+    command: "cat {{subdomain_dir}}/*.txt | sort -u > {{subdomain_dir}}/all-subdomains.txt"
+    exports:
+      all_subdomains: "{{subdomain_dir}}/all-subdomains.txt"
+
+  # Step 5: function - Check if we found any subdomains
+  - name: check-results
+    type: function
+    script: |
+      var count = fileLength("{{all_subdomains}}");
+      log_info("Found " + count + " unique subdomains");
+      if (count == 0) {
+        log_warn("No subdomains found, trying bruteforce");
+      }
+      return count;
+    exports:
+      subdomain_count: "{{Result}}"
+
+  # Step 6: bash with pre_condition - Active bruteforce if passive found few results
+  - name: active-bruteforce
+    type: bash
+    pre_condition: "fileLength('{{all_subdomains}}') < 50"
+    command: "{{Binaries}}/puredns bruteforce {{wordlist}} {{Target}} -r {{resolvers}} -w {{subdomain_dir}}/bruteforce.txt"
+    timeout: 1800
+    on_error: continue
+
+  # Step 7: foreach - Resolve each subdomain for live hosts
+  - name: resolve-subdomains
+    type: foreach
+    input: "{{all_subdomains}}"
+    variable: subdomain
+    threads: "{{threads}}"
+    step:
+      name: resolve-single
+      type: bash
+      command: "echo [[subdomain]] | {{Binaries}}/dnsx -silent -a -resp -o {{resolved_dir}}/[[subdomain]].txt"
+      timeout: 30
+      on_error: continue
+
+  # Step 8: bash with parallel_commands - Final aggregation
+  - name: final-aggregation
+    type: bash
+    parallel_commands:
+      - "cat {{resolved_dir}}/*.txt 2>/dev/null | grep -v '^$' | sort -u > {{Output}}/resolved-subdomains.txt"
+      - "wc -l {{subdomain_dir}}/all-subdomains.txt | awk '{print $1}' > {{Output}}/stats.txt"
+      - "echo 'Enumeration completed at:' $(date) >> {{Output}}/stats.txt"
+    exports:
+      final_subdomains: "{{Output}}/resolved-subdomains.txt"
