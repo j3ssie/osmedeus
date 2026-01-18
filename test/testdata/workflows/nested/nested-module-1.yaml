@@ -1,0 +1,27 @@
+kind: module
+name: nested-module-1
+description: First nested module for testing param and target sharing
+
+params:
+  - name: paramFromFlowFile
+    default: "not-set"
+
+  - name: anotherParam1
+    default: "{{Output}}/another1-{{TargetSpace}}.txt"
+
+
+steps:
+  - name: echo-target-and-param
+    type: bash
+    command: |
+      echo "Module 1: Target={{Target}}" >> {{anotherParam1}}
+      echo "Module 1: paramFromFlowFile={{paramFromFlowFile}}" >> {{anotherParam1}}
+    exports:
+      module1_completed: "true"
+
+  - name: echo-target-and-param
+    type: bash
+    command: |
+      echo "Module 1: Target={{Target}}" >> {{anotherParam1}}
+    exports:
+      module1_with_target: "module1-{{Target}}"

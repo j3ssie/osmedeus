@@ -1,0 +1,29 @@
+kind: flow
+name: demo-flow
+description: Demo flow orchestrating modules with decision routing
+params:
+  - name: threads
+    default: "5"
+  - name: mode
+    default: "full"
+modules:
+  - name: bash-module
+    path: demo-bash.yaml
+    params:
+      threads: "{{threads}}"
+  - name: docker-module
+    path: demo-docker.yaml
+    depends_on: [bash-module]
+    condition: "{{mode}} == 'full'"
+    on_success:
+      - action: export
+        name: scan_status
+        value: "complete"
+    decision:
+      switch: "{{scan_status}}"
+      cases:
+        "complete": { goto: ssh-module }
+      default: { goto: _end }
+  - name: ssh-module
+    path: demo-ssh.yaml
+    depends_on: [docker-module]

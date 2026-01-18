@@ -1,0 +1,30 @@
+# Dockerfile for Nix e2e tests
+# Uses the official nixos/nix image with experimental features enabled
+# Builds the osmedeus binary inside the container for architecture compatibility
+
+FROM nixos/nix:latest
+
+# Enable flakes and nix-command experimental features
+RUN mkdir -p /root/.config/nix && \
+    echo "experimental-features = nix-command flakes" > /root/.config/nix/nix.conf
+
+# Install Go using Nix (for building the binary)
+RUN nix profile add nixpkgs#go
+
+# Create app directory
+WORKDIR /app
+
+# Copy source code for building
+COPY go.mod go.sum ./
+COPY cmd/ cmd/
+COPY internal/ internal/
+COPY pkg/ pkg/
+COPY public/ public/
+COPY docs/ docs/
+
+# Build the binary inside the container (disable CGO for static build)
+RUN CGO_ENABLED=0 go build -o /app/bin/osmedeus ./cmd/osmedeus && \
+    chmod +x /app/bin/osmedeus
+
+# Command to keep container running for test execution
+CMD ["sleep", "infinity"]

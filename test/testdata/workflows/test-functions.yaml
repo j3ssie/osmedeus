@@ -1,0 +1,32 @@
+name: test-functions
+kind: module
+description: Test utility functions
+tags: test,functions,utility
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: create-file
+    type: bash
+    command: | 
+      echo "test content" > /tmp/test-{{target}}.txt
+      echo "test content" > /tmp/test-{{target}}.txt
+      echo "test content" > /tmp/test-{{target}}.txt
+
+  - name: check-file
+    type: function
+    function: fileExists("/tmp/test-{{target}}.txt")
+    exports:
+      exists: "output"
+
+  - name: read-file
+    type: function
+    function: readFile("/tmp/test-{{target}}.txt")
+    exports:
+      content: "output"
+
+  - name: cleanup
+    type: bash
+    command: rm -f /tmp/test-{{target}}.txt

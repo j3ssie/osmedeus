@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: osmedeus
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: osmedeus
+    main: ./cmd/osmedeus
+    binary: osmedeus
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.BuildTime={{.Date}}
+      - -X main.CommitHash={{.ShortCommit}}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE*
+      - README*
+      - CHANGELOG*
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ .Tag }}-snapshot"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: osmedeus
+    name: osmedeus
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} {{.Tag}}"

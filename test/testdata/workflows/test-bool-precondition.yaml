@@ -1,0 +1,50 @@
+name: test-bool-precondition
+kind: module
+description: Test workflow for boolean params in pre_condition
+tags: test,params,boolean,precondition
+
+params:
+  - name: target
+    required: true
+  - name: run_scan
+    type: bool
+    default: true
+  - name: enable_debug
+    type: bool
+    default: false
+
+steps:
+  - name: always-runs
+    type: bash
+    command: echo "This step always runs for {{target}}"
+
+  # This step only runs when run_scan is true (native boolean check)
+  - name: scan-step
+    type: bash
+    pre_condition: "run_scan"
+    command: echo "SCAN RUNNING - run_scan is true"
+
+  # This step only runs when run_scan is false (negation)
+  - name: skip-scan-step
+    type: bash
+    pre_condition: "!run_scan"
+    command: echo "SCAN SKIPPED - run_scan is false"
+
+  # This step only runs when enable_debug is true
+  - name: debug-step
+    type: bash
+    pre_condition: "enable_debug"
+    command: echo "DEBUG ENABLED"
+
+  # Compound condition: both must be true
+  - name: scan-with-debug
+    type: bash
+    pre_condition: "run_scan && enable_debug"
+    command: echo "SCAN WITH DEBUG MODE"
+
+  - name: summary
+    type: bash
+    command: |
+      echo "=== Pre-condition Test Summary ==="
+      echo "run_scan: {{run_scan}}"
+      echo "enable_debug: {{enable_debug}}"

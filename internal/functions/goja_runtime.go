@@ -1,0 +1,294 @@
+package functions
+
+import (
+	"fmt"
+	"sync"
+
+	"github.com/dop251/goja"
+)
+
+// GojaRuntime wraps the Goja JavaScript interpreter with VM pooling.
+// Uses a pool of Goja VMs for parallel execution without global mutex.
+type GojaRuntime struct {
+	pool *VMPool       // Pool of configured VMs
+	mu   sync.Mutex    // Only used for custom function registration
+}
+
+// vmFunc provides VM access to all function implementations.
+// This wrapper is needed because goja.FunctionCall doesn't provide direct VM access
+// like otto.FunctionCall.Otto did.
+type vmFunc struct {
+	vm      *goja.Runtime
+	runtime *GojaRuntime
+}
+
+// getContext retrieves the VMContext for the current VM
+func (vf *vmFunc) getContext() *VMContext {
+	return getVMContext(vf.vm)
+}
+
+// NewGojaRuntime creates a new Goja runtime with VM pooling
+func NewGojaRuntime() *GojaRuntime {
+	r := &GojaRuntime{}
+	// Create pool with function registration callback
+	r.pool = NewVMPool(r.registerFunctionsOnVM)
+	return r
+}
+
+// Backward compatibility alias
+var NewOttoRuntime = NewGojaRuntime
+
+// OttoRuntime is an alias for backward compatibility
+type OttoRuntime = GojaRuntime
+
+// registerFunctionsOnVM registers all built-in functions on a given VM.
+// This is called by the pool when creating new VMs.
+func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
+	vf := &vmFunc{vm: vm, runtime: r}
+
+	// File functions
+	_ = vm.Set(FnFileExists, vf.fileExists)
+	_ = vm.Set(FnFileLength, vf.fileLength)
+	_ = vm.Set(FnDirLength, vf.dirLength)
+	_ = vm.Set(FnFileContains, vf.fileContains)
+	_ = vm.Set(FnRegexExtract, vf.regexExtract)
+	_ = vm.Set(FnReadFile, vf.readFile)
+	_ = vm.Set(FnReadLines, vf.readLines)
+	_ = vm.Set(FnRemoveFile, vf.removeFile)
+	_ = vm.Set(FnRemoveFolder, vf.removeFolder)
+	_ = vm.Set(FnRmRF, vf.rmRF)
+	_ = vm.Set(FnRemoveAllExcept, vf.removeAllExcept)
+	_ = vm.Set(FnCreateFolder, vf.createFolder)
+	_ = vm.Set(FnAppendFile, vf.appendFile)
+	_ = vm.Set(FnMoveFile, vf.moveFile)
+	_ = vm.Set(FnGlob, vf.glob)
+	_ = vm.Set(FnGrepStringToFile, vf.grepStringToFile)
+	_ = vm.Set(FnGrepRegexToFile, vf.grepRegexToFile)
+	_ = vm.Set(FnGrepString, vf.grepString)
+	_ = vm.Set(FnGrepRegex, vf.grepRegex)
+	_ = vm.Set(FnRemoveBlankLines, vf.removeBlankLines)
+
+	// String functions
+	_ = vm.Set(FnTrim, vf.trim)
+	_ = vm.Set(FnSplit, vf.split)
+	_ = vm.Set(FnJoin, vf.join)
+	_ = vm.Set(FnReplace, vf.replace)
+	_ = vm.Set(FnContains, vf.contains)
+	_ = vm.Set(FnStartsWith, vf.startsWith)
+	_ = vm.Set(FnEndsWith, vf.endsWith)
+	_ = vm.Set(FnToLowerCase, vf.toLowerCase)
+	_ = vm.Set(FnToUpperCase, vf.toUpperCase)
+	_ = vm.Set(FnMatch, vf.match)
+	_ = vm.Set(FnRegexMatch, vf.regexMatch)
+	_ = vm.Set(FnCutWithDelim, vf.cutWithDelim)
+	_ = vm.Set(FnNormalizePath, vf.normalizePath)
+	_ = vm.Set(FnCleanSub, vf.cleanSub)
+
+	// Type conversion
+	_ = vm.Set(FnParseInt, vf.parseInt)
+	_ = vm.Set(FnParseFloat, vf.parseFloat)
+	_ = vm.Set(FnToString, vf.toString)
+	_ = vm.Set(FnToBoolean, vf.toBoolean)
+
+	// Utility functions
+	_ = vm.Set(FnLen, vf.length)
+	_ = vm.Set(FnIsEmpty, vf.isEmpty)
+	_ = vm.Set(FnIsNotEmpty, vf.isNotEmpty)
+	_ = vm.Set(FnPrintf, vf.printf)
+	_ = vm.Set(FnCatFile, vf.catFile)
+	_ = vm.Set(FnExit, vf.exit)
+	_ = vm.Set(FnExecCmd, vf.execCmd)
+	_ = vm.Set(FnSleep, vf.sleep)
+
+	// Logging functions
+	_ = vm.Set(FnLogDebug, vf.logDebug)
+	_ = vm.Set(FnLogInfo, vf.logInfo)
+	_ = vm.Set(FnLogWarn, vf.logWarn)
+	_ = vm.Set(FnLogError, vf.logError)
+
+	// HTTP and network functions
+	_ = vm.Set(FnHttpRequest, vf.httpRequest)
+	_ = vm.Set(FnHttpGet, vf.httpGet)
+	_ = vm.Set(FnHttpPost, vf.httpPost)
+
+	// Generation functions
+	_ = vm.Set(FnRandomString, vf.randomString)
+	_ = vm.Set(FnUUID, vf.uuidFunc)
+
+	// Encoding functions
+	_ = vm.Set(FnBase64Encode, vf.base64Encode)
+	_ = vm.Set(FnBase64Decode, vf.base64Decode)
+
+	// Data query functions
+	_ = vm.Set(FnJQ, vf.jq)
+	_ = vm.Set(FnJQFromFile, vf.jqFromFile)
+
+	// Notification functions
+	_ = vm.Set(FnNotifyTelegram, vf.notifyTelegram)
+	_ = vm.Set(FnSendTelegramFile, vf.sendTelegramFile)
+	_ = vm.Set(FnNotifyWebhook, vf.notifyWebhook)
+	_ = vm.Set(FnSendWebhookEvent, vf.sendWebhookEvent)
+
+	// CDN/Storage functions
+	_ = vm.Set(FnCdnUpload, vf.cdnUpload)
+	_ = vm.Set(FnCdnDownload, vf.cdnDownload)
+	_ = vm.Set(FnCdnExists, vf.cdnExists)
+	_ = vm.Set(FnCdnDelete, vf.cdnDelete)
+
+	// Unix command wrappers
+	_ = vm.Set(FnSortUnix, vf.sortUnix)
+	_ = vm.Set(FnWgetUnix, vf.wgetUnix)
+	_ = vm.Set(FnGitClone, vf.gitClone)
+	_ = vm.Set(FnZipUnix, vf.zipUnix)
+	_ = vm.Set(FnUnzipUnix, vf.unzipUnix)
+	_ = vm.Set(FnTarUnix, vf.tarUnix)
+	_ = vm.Set(FnUntarUnix, vf.untarUnix)
+	_ = vm.Set(FnDiffUnix, vf.diffUnix)
+	_ = vm.Set(FnSedStringReplace, vf.sedStringReplace)
+	_ = vm.Set(FnSedRegexReplace, vf.sedRegexReplace)
+
+	// Archive functions (Go implementations)
+	_ = vm.Set(FnZipDir, vf.zipDir)
+	_ = vm.Set(FnUnzipDir, vf.unzipDir)
+
+	// Diff functions
+	_ = vm.Set(FnExtractDiff, vf.extractDiff)
+
+	// Output functions
+	_ = vm.Set(FnSaveContent, vf.saveContent)
+	_ = vm.Set(FnJSONLToCSV, vf.jsonlToCSV)
+	_ = vm.Set(FnCSVToJSONL, vf.csvToJSONL)
+	_ = vm.Set(FnJSONLUnique, vf.jsonlUnique)
+	_ = vm.Set(FnJSONLFilter, vf.jsonlFilter)
+
+	// URL processing functions
+	_ = vm.Set(FnInterestingUrls, vf.interestingUrls)
+
+	// Markdown functions
+	_ = vm.Set(FnRenderMarkdownFromFile, vf.renderMarkdownFromFile)
+	_ = vm.Set(FnPrintMarkdownFromFile, vf.printMarkdownFromFile)
+	_ = vm.Set(FnConvertJSONLToMarkdown, vf.convertJSONLToMarkdown)
+	_ = vm.Set(FnConvertCSVToMarkdown, vf.convertCSVToMarkdown)
+	_ = vm.Set(FnRenderMarkdownReport, vf.renderMarkdownReport)
+	_ = vm.Set(FnGenerateSecurityReport, vf.generateSecurityReport)
+
+	// Database functions
+	_ = vm.Set(FnDBUpdate, vf.dbUpdate)
+	_ = vm.Set(FnDBImportAsset, vf.dbImportAsset)
+	_ = vm.Set(FnDBRawInsertAsset, vf.dbRawInsertAsset)
+	_ = vm.Set(FnDBTotalURLs, vf.dbTotalURLs)
+	_ = vm.Set(FnDBTotalSubdomains, vf.dbTotalSubdomains)
+	_ = vm.Set(FnDBTotalAssets, vf.dbTotalAssets)
+	_ = vm.Set(FnDBTotalVulns, vf.dbTotalVulns)
+	_ = vm.Set(FnDBVulnCritical, vf.dbVulnCritical)
+	_ = vm.Set(FnDBVulnHigh, vf.dbVulnHigh)
+	_ = vm.Set(FnDBVulnMedium, vf.dbVulnMedium)
+	_ = vm.Set(FnDBVulnLow, vf.dbVulnLow)
+	_ = vm.Set(FnDBTotalIPs, vf.dbTotalIPs)
+	_ = vm.Set(FnDBTotalLinks, vf.dbTotalLinks)
+	_ = vm.Set(FnDBTotalContent, vf.dbTotalContent)
+	_ = vm.Set(FnDBTotalArchive, vf.dbTotalArchive)
+	_ = vm.Set(FnRuntimeExport, vf.runtimeExport)
+	_ = vm.Set(FnDBRegisterArtifact, vf.dbRegisterArtifact)
+	_ = vm.Set(FnStoreArtifact, vf.storeArtifact)
+	_ = vm.Set(FnDBSelectAssets, vf.dbSelectAssets)
+	_ = vm.Set(FnDBSelectAssetsFiltered, vf.dbSelectAssetsFiltered)
+	_ = vm.Set(FnDBSelectVulnerabilities, vf.dbSelectVulnerabilities)
+	_ = vm.Set(FnDBSelectVulnerabilitiesFiltered, vf.dbSelectVulnerabilitiesFiltered)
+	_ = vm.Set(FnDBSelect, vf.dbSelect)
+	_ = vm.Set(FnDBSelectToFile, vf.dbSelectToFile)
+	_ = vm.Set(FnDBSelectToJSONL, vf.dbSelectToJSONL)
+
+	// Workspace stats SELECT functions (no arguments, use current workspace context)
+	_ = vm.Set(FnDBSelectTotalSubdomains, vf.dbSelectTotalSubdomains)
+	_ = vm.Set(FnDBSelectTotalURLs, vf.dbSelectTotalURLs)
+	_ = vm.Set(FnDBSelectTotalAssets, vf.dbSelectTotalAssets)
+	_ = vm.Set(FnDBSelectTotalVulns, vf.dbSelectTotalVulns)
+	_ = vm.Set(FnDBSelectVulnCritical, vf.dbSelectVulnCritical)
+	_ = vm.Set(FnDBSelectVulnHigh, vf.dbSelectVulnHigh)
+	_ = vm.Set(FnDBSelectVulnMedium, vf.dbSelectVulnMedium)
+	_ = vm.Set(FnDBSelectVulnLow, vf.dbSelectVulnLow)
+
+	// JSONL import functions
+	_ = vm.Set(FnDBImportAssetFromFile, vf.dbImportAssetFromFile)
+	_ = vm.Set(FnDBImportVuln, vf.dbImportVuln)
+	_ = vm.Set(FnDBImportVulnFromFile, vf.dbImportVulnFromFile)
+
+	// Console for debugging
+	_ = vm.Set("console", map[string]interface{}{
+		"log": func(call goja.FunctionCall) goja.Value {
+			fmt.Println(call.Argument(0).String())
+			return goja.Undefined()
+		},
+	})
+}
+
+// Execute executes a JavaScript expression with context.
+// Uses VM pooling for parallel execution without global mutex.
+func (r *GojaRuntime) Execute(expr string, ctx map[string]interface{}) (interface{}, error) {
+	// Get VM from pool (no global lock!)
+	vmCtx := r.pool.Get()
+	defer r.pool.Put(vmCtx)
+
+	// Set context fields on this VM's context
+	vmCtx.SetContext(ctx)
+
+	// Set context variables on the VM
+	if err := vmCtx.SetVariables(ctx); err != nil {
+		return nil, fmt.Errorf("error setting variables: %w", err)
+	}
+
+	// Execute expression
+	result, err := vmCtx.Run(expr)
+	if err != nil {
+		return nil, fmt.Errorf("error executing expression: %w", err)
+	}
+
+	// Export result to Go value (goja.Export() returns interface{} directly, no error)
+	exported := result.Export()
+
+	return exported, nil
+}
+
+// EvaluateCondition evaluates a boolean condition.
+// Uses VM pooling for parallel execution without global mutex.
+func (r *GojaRuntime) EvaluateCondition(condition string, ctx map[string]interface{}) (bool, error) {
+	// Get VM from pool (no global lock!)
+	vmCtx := r.pool.Get()
+	defer r.pool.Put(vmCtx)
+
+	// Set context variables on the VM
+	if err := vmCtx.SetVariables(ctx); err != nil {
+		return false, fmt.Errorf("error setting variables: %w", err)
+	}
+
+	// Execute condition
+	result, err := vmCtx.Run(condition)
+	if err != nil {
+		return false, fmt.Errorf("error evaluating condition: %w", err)
+	}
+
+	// goja.ToBoolean() returns bool directly, no error
+	boolResult := result.ToBoolean()
+
+	return boolResult, nil
+}
+
+// Register registers a custom function on all VMs.
+// Note: This only affects newly created VMs from the pool.
+// For consistent behavior, register functions before first use.
+func (r *GojaRuntime) Register(name string, fn interface{}) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	// Get a VM, register the function, then return it
+	// Note: This is a limitation - custom functions only work on VMs that call this
+	vmCtx := r.pool.Get()
+	defer r.pool.Put(vmCtx)
+	return vmCtx.VM().Set(name, fn)
+}
+
+// Clone returns the same runtime since VM pooling handles parallelism.
+// The runtime is safe for concurrent use.
+func (r *GojaRuntime) Clone() *GojaRuntime {
+	return r
+}

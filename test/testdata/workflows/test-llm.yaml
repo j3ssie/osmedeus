@@ -1,0 +1,128 @@
+kind: module
+name: test-llm
+description: Test LLM step execution
+tags: test,llm,quick
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  # Basic chat completion
+  - name: basic-chat
+    type: llm
+    log: "Running basic chat completion"
+    messages:
+      - role: user
+        content: "Say hello to {{Target}} in one sentence."
+    timeout: 60
+    exports:
+      greeting: "{{basic_chat_content}}"
+
+  # Chat with system prompt
+  - name: with-system-prompt
+    type: llm
+    log: "Running chat with system prompt"
+    messages:
+      - role: system
+        content: "You are a security analyst. Be concise."
+      - role: user
+        content: "What is {{Target}}?"
+    timeout: 60
+
+  # Step-level config override
+  - name: with-config-override
+    type: llm
+    log: "Running with config override"
+    messages:
+      - role: user
+        content: "Describe {{Target}} briefly."
+    llm_config:
+      max_tokens: 100
+      temperature: 0.3
+    timeout: 60
+
+  # Structured JSON output
+  - name: structured-output
+    type: llm
+    log: "Running with structured JSON output"
+    messages:
+      - role: user
+        content: "Return a JSON object with 'target' and 'type' fields for: {{Target}}"
+    llm_config:
+      response_format:
+        type: json_object
+    timeout: 60
+    exports:
+      json_result: "{{structured_output_content}}"
+
+  # Extra LLM parameters
+  - name: extra-params
+    type: llm
+    log: "Running with extra parameters"
+    messages:
+      - role: user
+        content: "What is {{Target}}?"
+    extra_llm_parameters:
+      top_k: 40
+      repeat_penalty: 1.1
+    timeout: 60
+
+  # Multimodal content (example structure - would need actual image)
+  # - name: multimodal
+  #   type: llm
+  #   log: "Running multimodal analysis"
+  #   messages:
+  #     - role: user
+  #       content:
+  #         - type: text
+  #           text: "What do you see in this image?"
+  #         - type: image_url
+  #           image_url:
+  #             url: "data:image/png;base64,{{screenshot_base64}}"
+  #   timeout: 60
+
+  # Tool call example
+  - name: with-tools
+    type: llm
+    log: "Running with tools"
+    messages:
+      - role: user
+        content: "What DNS records exist for {{Target}}?"
+    tools:
+      - type: function
+        function:
+          name: dns_lookup
+          description: "Look up DNS records for a domain"
+          parameters:
+            type: object
+            properties:
+              domain:
+                type: string
+                description: "The domain to look up"
+              record_type:
+                type: string
+                enum: ["A", "AAAA", "MX", "TXT", "NS", "CNAME"]
+            required:
+              - domain
+    tool_choice: auto
+    timeout: 60
+
+  # Embedding example
+  - name: generate-embedding
+    type: llm
+    log: "Generating embeddings"
+    is_embedding: true
+    embedding_input:
+      - "{{Target}} security analysis"
+      - "vulnerability assessment for {{Target}}"
+    timeout: 60
+    exports:
+      embeddings: "{{generate_embedding_llm_resp}}"
+
+  # Use previous export in next step
+  - name: use-greeting
+    type: bash
+    log: "Using greeting from LLM"
+    command: echo "LLM said - {{greeting}}"

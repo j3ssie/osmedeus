@@ -1,0 +1,348 @@
+package database
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+	"time"
+
+	"github.com/uptrace/bun"
+)
+
+// JSONLImporter handles batch import from JSONL files
+type JSONLImporter struct {
+	db        *bun.DB
+	batchSize int
+}
+
+// NewJSONLImporter creates a new JSONL importer
+func NewJSONLImporter(db *bun.DB) *JSONLImporter {
+	return &JSONLImporter{
+		db:        db,
+		batchSize: 100,
+	}
+}
+
+// WithBatchSize sets the batch size for imports
+func (i *JSONLImporter) WithBatchSize(size int) *JSONLImporter {
+	if size > 0 {
+		i.batchSize = size
+	}
+	return i
+}
+
+// ImportResult holds import statistics
+type ImportResult struct {
+	Total    int           `json:"total"`
+	Imported int           `json:"imported"`
+	Updated  int           `json:"updated"`
+	Failed   int           `json:"failed"`
+	Errors   []ImportError `json:"errors,omitempty"`
+	Duration time.Duration `json:"duration"`
+}
+
+// ImportError represents a single import error
+type ImportError struct {
+	Line  int    `json:"line"`
+	Error string `json:"error"`
+	Data  string `json:"data,omitempty"`
+}
+
+// ImportAssets imports assets from a JSONL file
+func (i *JSONLImporter) ImportAssets(ctx context.Context, filePath, workspace, source string) (*ImportResult, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer func() { _ = file.Close() }()
+
+	return i.ImportAssetsFromReader(ctx, file, workspace, source)
+}
+
+// ImportAssetsFromReader imports assets from an io.Reader
+func (i *JSONLImporter) ImportAssetsFromReader(ctx context.Context, r io.Reader, workspace, source string) (*ImportResult, error) {
+	startTime := time.Now()
+	scanner := bufio.NewScanner(r)
+	// Allow large lines (up to 10MB)
+	scanner.Buffer(make([]byte, 1024*1024), 10*1024*1024)
+
+	result := &ImportResult{}
+	batch := make([]*Asset, 0, i.batchSize)
+
+	for scanner.Scan() {
+		result.Total++
+		line := scanner.Bytes()
+
+		// Skip empty lines
+		if len(line) == 0 {
+			continue
+		}
+
+		asset, err := ParseAssetLine(line, workspace, source)
+		if err != nil {
+			result.Failed++
+			result.Errors = append(result.Errors, ImportError{
+				Line:  result.Total,
+				Error: err.Error(),
+				Data:  truncateString(string(line), 200),
+			})
+			continue
+		}
+
+		batch = append(batch, asset)
+
+		if len(batch) >= i.batchSize {
+			imported, err := i.insertAssetBatch(ctx, batch)
+			if err != nil {
+				return result, fmt.Errorf("batch insert failed at line %d: %w", result.Total, err)
+			}
+			result.Imported += imported
+			batch = batch[:0]
+		}
+	}
+
+	// Insert remaining batch
+	if len(batch) > 0 {
+		imported, err := i.insertAssetBatch(ctx, batch)
+		if err != nil {
+			return result, fmt.Errorf("final batch insert failed: %w", err)
+		}
+		result.Imported += imported
+	}
+
+	if err := scanner.Err(); err != nil {
+		return result, fmt.Errorf("scanner error: %w", err)
+	}
+
+	result.Duration = time.Since(startTime)
+	return result, nil
+}
+
+// insertAssetBatch inserts a batch of assets with upsert
+func (i *JSONLImporter) insertAssetBatch(ctx context.Context, assets []*Asset) (int, error) {
+	if len(assets) == 0 {
+		return 0, nil
+	}
+
+	// Use ON CONFLICT for upsert
+	res, err := i.db.NewInsert().
+		Model(&assets).
+		On("CONFLICT (workspace, asset_value, url) DO UPDATE").
+		Set("status_code = EXCLUDED.status_code").
+		Set("title = EXCLUDED.title").
+		Set("tech = EXCLUDED.tech").
+		Set("content_type = EXCLUDED.content_type").
+		Set("content_length = EXCLUDED.content_length").
+		Set("host_ip = EXCLUDED.host_ip").
+		Set("a_records = EXCLUDED.a_records").
+		Set("tls = EXCLUDED.tls").
+		Set("response_time = EXCLUDED.response_time").
+		Set("words = EXCLUDED.words").
+		Set("lines = EXCLUDED.lines").
+		Set("remarks = EXCLUDED.remarks").
+		Set("raw_data = EXCLUDED.raw_data").
+		Set("updated_at = EXCLUDED.updated_at").
+		Exec(ctx)
+
+	if err != nil {
+		return 0, err
+	}
+
+	rowsAffected, _ := res.RowsAffected()
+	return int(rowsAffected), nil
+}
+
+// ParseAssetLine parses a single JSONL line into an Asset
+func ParseAssetLine(line []byte, defaultWorkspace, source string) (*Asset, error) {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(line, &raw); err != nil {
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+
+	now := time.Now()
+	asset := &Asset{
+		Workspace:   defaultWorkspace,
+		Source:      source,
+		RawJsonData: string(line),
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+
+	// Map JSON fields to Asset struct
+	// Required fields
+	if v, ok := raw["workspace"].(string); ok && v != "" {
+		asset.Workspace = v
+	}
+	if v, ok := raw["asset_value"].(string); ok {
+		asset.AssetValue = v
+	}
+
+	// HTTP data
+	if v, ok := raw["url"].(string); ok {
+		asset.URL = v
+	}
+	if v, ok := raw["input"].(string); ok {
+		asset.Input = v
+	}
+	if v, ok := raw["scheme"].(string); ok {
+		asset.Scheme = v
+	}
+	if v, ok := raw["method"].(string); ok {
+		asset.Method = v
+	}
+	if v, ok := raw["path"].(string); ok {
+		asset.Path = v
+	}
+
+	// Response data
+	if v, ok := raw["status_code"].(float64); ok {
+		asset.StatusCode = int(v)
+	}
+	if v, ok := raw["content_type"].(string); ok {
+		asset.ContentType = v
+	}
+	if v, ok := raw["content_length"].(float64); ok {
+		asset.ContentLength = int64(v)
+	}
+	if v, ok := raw["title"].(string); ok {
+		asset.Title = v
+	}
+	if v, ok := raw["words"].(float64); ok {
+		asset.Words = int(v)
+	}
+	if v, ok := raw["lines"].(float64); ok {
+		asset.Lines = int(v)
+	}
+
+	// Network data
+	if v, ok := raw["host_ip"].(string); ok {
+		asset.HostIP = v
+	}
+	if v, ok := raw["a"].([]interface{}); ok {
+		asset.DnsRecords = interfaceSliceToStringSlice(v)
+	}
+	if v, ok := raw["tls"].(string); ok {
+		asset.TLS = v
+	}
+
+	// Metadata
+	if v, ok := raw["tech"].([]interface{}); ok {
+		asset.Technologies = interfaceSliceToStringSlice(v)
+	}
+	if v, ok := raw["time"].(string); ok {
+		asset.ResponseTime = v
+	}
+	if v, ok := raw["remarks"].(string); ok {
+		asset.Labels = v
+	}
+
+	// Validate required fields
+	if asset.AssetValue == "" {
+		return nil, fmt.Errorf("asset_value is required")
+	}
+	if asset.Workspace == "" {
+		return nil, fmt.Errorf("workspace is required")
+	}
+
+	return asset, nil
+}
+
+// ImportEventLogs imports event logs from a JSONL file
+func (i *JSONLImporter) ImportEventLogs(ctx context.Context, filePath string) (*ImportResult, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer func() { _ = file.Close() }()
+
+	return i.ImportEventLogsFromReader(ctx, file)
+}
+
+// ImportEventLogsFromReader imports event logs from an io.Reader
+func (i *JSONLImporter) ImportEventLogsFromReader(ctx context.Context, r io.Reader) (*ImportResult, error) {
+	startTime := time.Now()
+	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 1024*1024), 10*1024*1024)
+
+	result := &ImportResult{}
+	batch := make([]*EventLog, 0, i.batchSize)
+
+	for scanner.Scan() {
+		result.Total++
+		line := scanner.Bytes()
+
+		if len(line) == 0 {
+			continue
+		}
+
+		event, err := ParseEventLogLine(line)
+		if err != nil {
+			result.Failed++
+			result.Errors = append(result.Errors, ImportError{
+				Line:  result.Total,
+				Error: err.Error(),
+			})
+			continue
+		}
+
+		batch = append(batch, event)
+
+		if len(batch) >= i.batchSize {
+			if _, err := i.db.NewInsert().Model(&batch).Exec(ctx); err != nil {
+				return result, fmt.Errorf("batch insert failed: %w", err)
+			}
+			result.Imported += len(batch)
+			batch = batch[:0]
+		}
+	}
+
+	if len(batch) > 0 {
+		if _, err := i.db.NewInsert().Model(&batch).Exec(ctx); err != nil {
+			return result, fmt.Errorf("final batch insert failed: %w", err)
+		}
+		result.Imported += len(batch)
+	}
+
+	result.Duration = time.Since(startTime)
+	return result, scanner.Err()
+}
+
+// ParseEventLogLine parses a single JSONL line into an EventLog
+func ParseEventLogLine(line []byte) (*EventLog, error) {
+	var event EventLog
+	if err := json.Unmarshal(line, &event); err != nil {
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+
+	if event.Topic == "" {
+		return nil, fmt.Errorf("topic is required")
+	}
+
+	if event.CreatedAt.IsZero() {
+		event.CreatedAt = time.Now()
+	}
+
+	return &event, nil
+}
+
+// Helper functions
+
+func interfaceSliceToStringSlice(slice []interface{}) []string {
+	result := make([]string, 0, len(slice))
+	for _, v := range slice {
+		if s, ok := v.(string); ok {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}

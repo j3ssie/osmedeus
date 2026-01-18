@@ -1,0 +1,178 @@
+name: screenshot-capture
+kind: module
+desc: Web screenshot and visual analysis workflow with pre_condition checks and exports
+
+params:
+  - name: threads
+    value: "10"
+  - name: timeout_per_page
+    value: "30"
+  - name: viewport_width
+    value: "1920"
+  - name: viewport_height
+    value: "1080"
+
+steps:
+  # Step 1: bash - Setup screenshot directories
+  - name: setup-directories
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/screenshots
+      - mkdir -p {{Output}}/thumbnails
+      - mkdir -p {{Output}}/analysis
+    exports:
+      screenshots_dir: "{{Output}}/screenshots"
+      thumbnails_dir: "{{Output}}/thumbnails"
+      analysis_dir: "{{Output}}/analysis"
+
+  # Step 2: function - Validate URL input and prepare target list
+  - name: prepare-targets
+    type: function
+    script: |
+      var target = "{{Target}}";
+      var urls = [];
+
+      // Check if target is a file or single URL
+      if (fileExists(target)) {
+        log_info("Target is a file, reading URLs");
+        var content = readFile(target);
+        urls = content.trim().split("\n").filter(function(u) { return u.length > 0; });
+      } else {
+        // Ensure URL has protocol
+        if (!target.startsWith("http")) {
+          target = "https://" + target;
+        }
+        urls = [target];
+        log_info("Single target mode: " + target);
+      }
+
+      log_info("Total URLs to screenshot: " + urls.length);
+      writeFile("{{Output}}/url-list.txt", urls.join("\n"));
+      return urls.length;
+    exports:
+      url_count: "{{Result}}"
+      url_list: "{{Output}}/url-list.txt"
+
+  # Step 3: bash with pre_condition - Quick probe to filter live URLs
+  - name: probe-live-urls
+    type: bash
+    pre_condition: "fileExists('{{url_list}}')"
+    command: "{{Binaries}}/httpx -l {{url_list}} -silent -mc 200,201,301,302,307,401,403 -o {{Output}}/live-urls.txt"
+    timeout: 600
+    on_error: continue
+    exports:
+      live_urls: "{{Output}}/live-urls.txt"
+
+  # Step 4: function - Check live URL count before proceeding
+  - name: validate-live-urls
+    type: function
+    pre_condition: "fileExists('{{live_urls}}')"
+    script: |
+      var count = fileLength("{{live_urls}}");
+      log_info("Live URLs found: " + count);
+
+      if (count == 0) {
+        log_warn("No live URLs found, screenshots may fail");
+        return false;
+      }
+
+      return count > 0;
+    exports:
+      has_live_urls: "{{Result}}"
+
+  # Step 5: foreach - Capture screenshots of each URL
+  - name: capture-screenshots
+    type: foreach
+    pre_condition: "fileExists('{{live_urls}}') && fileLength('{{live_urls}}') > 0"
+    input: "{{live_urls}}"
+    variable: url
+    threads: "{{threads}}"
+    step:
+      name: screenshot-single
+      type: bash
+      command: |
+        filename=$(echo "[[url]]" | md5sum | cut -d' ' -f1)
+        {{Binaries}}/gowitness single --url="[[url]]" --screenshot-path={{screenshots_dir}} --screenshot-filename=${filename}.png --timeout={{timeout_per_page}}
+      timeout: 60
+      on_error: continue
+
+  # Step 6: parallel-steps - Generate thumbnails and analyze
+  - name: process-screenshots
+    type: parallel-steps
+    parallel_steps:
+      - name: generate-thumbnails
+        type: bash
+        command: |
+          for img in {{screenshots_dir}}/*.png; do
+            if [ -f "$img" ]; then
+              filename=$(basename "$img" .png)
+              convert "$img" -resize 400x300 {{thumbnails_dir}}/${filename}_thumb.png 2>/dev/null || true
+            fi
+          done
+        timeout: 300
+        on_error: continue
+      - name: extract-metadata
+        type: bash
+        command: |
+          echo "[]" > {{analysis_dir}}/metadata.json
+          for img in {{screenshots_dir}}/*.png; do
+            if [ -f "$img" ]; then
+              size=$(stat -f%z "$img" 2>/dev/null || stat -c%s "$img" 2>/dev/null)
+              echo "{\"file\": \"$(basename $img)\", \"size\": $size}" >> {{analysis_dir}}/metadata.json
+            fi
+          done
+        timeout: 120
+
+  # Step 7: function - Generate screenshot statistics
+  - name: generate-stats
+    type: function
+    script: |
+      var stats = {
+        total_urls: parseInt("{{url_count}}"),
+        live_urls: fileLength("{{live_urls}}"),
+        screenshots: 0,
+        thumbnails: 0
+      };
+
+      // Count screenshot files
+      var screenshotDir = "{{screenshots_dir}}";
+      log_info("Screenshot capture statistics:");
+      log_info("  Total URLs: " + stats.total_urls);
+      log_info("  Live URLs: " + stats.live_urls);
+
+      writeFile("{{analysis_dir}}/stats.json", JSON.stringify(stats, null, 2));
+      return JSON.stringify(stats);
+    exports:
+      screenshot_stats: "{{Result}}"
+
+  # Step 8: bash - Create HTML gallery and final report
+  - name: create-gallery
+    type: bash
+    commands:
+      - |
+        cat > {{Output}}/gallery.html << 'HTMLEOF'
+        <!DOCTYPE html>
+        <html>
+        <head><title>Screenshot Gallery - {{Target}}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
+          .item { border: 1px solid #ddd; padding: 10px; }
+          .item img { max-width: 100%; height: auto; }
+        </style>
+        </head>
+        <body>
+        <h1>Screenshot Gallery</h1>
+        <p>Target: {{Target}}</p>
+        <div class="grid">
+        HTMLEOF
+      - |
+        for img in {{screenshots_dir}}/*.png; do
+          if [ -f "$img" ]; then
+            filename=$(basename "$img")
+            echo "<div class='item'><img src='screenshots/$filename'><p>$filename</p></div>" >> {{Output}}/gallery.html
+          fi
+        done
+        echo "</div></body></html>" >> {{Output}}/gallery.html
+    exports:
+      gallery_html: "{{Output}}/gallery.html"

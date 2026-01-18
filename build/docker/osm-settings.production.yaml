@@ -1,0 +1,162 @@
+# Osmedeus Production Configuration
+# ==================================
+# This configuration is optimized for standalone Docker deployment with SQLite.
+# Copy this file and adjust values for your environment.
+#
+# Usage:
+#   1. Mount to /root/osmedeus-base/osm-settings.yaml
+#   2. Update passwords and secrets with secure values
+#   3. Adjust resource limits based on your infrastructure
+
+# =============================================================================
+# Environment Paths
+# =============================================================================
+environment:
+  # Binary tools directory
+  binaries: "{{base_folder}}/external-binaries"
+
+  # Data directory for wordlists, templates, etc.
+  external_data: "{{base_folder}}/external-data"
+
+  # External configuration files
+  external_configs: "{{base_folder}}/external-configs"
+
+  # Output directory for scan workspaces
+  workspaces: /root/workspaces-osmedeus
+
+  # Workflow YAML files directory
+  workflows: "{{base_folder}}/workflows"
+
+  # Workspace snapshots directory
+  snapshot: "{{base_folder}}/snapshot"
+
+# =============================================================================
+# Database Configuration - SQLite (Standalone)
+# =============================================================================
+database:
+  # Use SQLite for standalone Docker deployment
+  db_engine: sqlite
+
+  # SQLite database file path
+  db_path: "{{base_folder}}/database-osm.sqlite"
+
+  # Connection timeout in seconds
+  connection_timeout: 60
+
+  # PostgreSQL settings (uncomment for distributed deployment)
+  # db_engine: postgresql
+  # host: postgres
+  # port: 5432
+  # username: osmedeus
+  # password: "CHANGE_ME_POSTGRES_PASSWORD"
+  # db_name: osmedeus
+  # ssl_mode: disable
+
+# =============================================================================
+# Server Configuration
+# =============================================================================
+server:
+  # Bind to all interfaces (required for Docker)
+  host: "0.0.0.0"
+
+  # API server port
+  port: 8002
+
+  # UI static files path
+  ui_path: "{{base_folder}}/ui/"
+
+  # Workspace static files URL prefix (auto-generated if empty)
+  workspace_prefix_key: ""
+
+  # Authentication credentials
+  # IMPORTANT: Change these for production!
+  simple_user_map_key:
+    admin: "CHANGE_ME_ADMIN_PASSWORD"
+
+  # JWT settings
+  jwt:
+    # IMPORTANT: Use a strong, unique secret (min 32 characters recommended)
+    # Generate with: openssl rand -base64 32
+    secret_signing_key: "CHANGE_ME_JWT_SECRET_MIN_32_CHARS"
+
+    # Token expiration in minutes (1440 = 24 hours)
+    expiration_minutes: 1440
+
+# =============================================================================
+# Scan Tactic Configuration
+# =============================================================================
+scan_tactic:
+  # Production-optimized thread counts
+  aggressive: 50
+  default: 20
+  gently: 5
+
+# =============================================================================
+# Redis Configuration (Optional)
+# =============================================================================
+# Required for distributed mode with workers
+redis:
+  # Redis hostname (matches docker-compose service name)
+  host: redis
+
+  # Redis port
+  port: 6379
+
+  # Redis authentication (if REDIS_PASSWORD is set in .env)
+  username: ""
+  password: ""
+
+  # Redis database number
+  db: 0
+
+  # Connection timeout
+  connection_timeout: 60
+
+# =============================================================================
+# Global Variables
+# =============================================================================
+# API keys and secrets for external services
+# Add your API keys here for use in workflows
+global_variables:
+  # GitHub API key for authenticated requests
+  # - name: GITHUB_API_KEY
+  #   value: "ghp_xxxxxxxxxxxx"
+  #   as_env: true
+
+  # Shodan API key
+  # - name: SHODAN_API_KEY
+  #   value: "xxxxxxxxxxxx"
+  #   as_env: true
+
+# =============================================================================
+# Notification Configuration (Optional)
+# =============================================================================
+notification:
+  # Telegram notifications
+  telegram:
+    enabled: false
+    bot_token: ""
+    chat_id: ""
+
+# =============================================================================
+# Cloud Storage Configuration (Optional)
+# =============================================================================
+# S3-compatible storage for workspace backups
+cdn_storage:
+  enabled: false
+  access_key_id: ""
+  secret_access_key: ""
+  bucket: ""
+  region: ""
+  endpoint: ""
+
+# =============================================================================
+# LLM Configuration (Optional)
+# =============================================================================
+# AI/LLM provider settings for intelligent analysis
+llm:
+  enabled: false
+  provider: openai
+  api_key: ""
+  model: "gpt-4"
+  base_url: ""

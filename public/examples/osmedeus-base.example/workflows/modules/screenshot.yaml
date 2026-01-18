@@ -1,0 +1,110 @@
+# Screenshot Capture Module (Test Style)
+# This is a test-style workflow using simple commands for testing purposes.
+# In production, replace touch commands with real tools like gowitness, eyewitness, etc.
+
+name: screenshot
+kind: module
+description: Simulated screenshot capture for testing
+tags: test, recon, visual
+
+params:
+  - name: threads
+    value: "5"
+  - name: timeout
+    value: "30"
+
+steps:
+  # Step 1: Setup directories
+  - name: setup-directories
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/screenshots/full
+      - mkdir -p {{Output}}/screenshots/thumbnails
+    exports:
+      screenshots_dir: "{{Output}}/screenshots"
+
+  # Step 2: Create sample target list
+  - name: create-target-list
+    type: bash
+    command: |
+      echo "http://{{Target}}" > {{screenshots_dir}}/targets.txt
+      echo "https://{{Target}}" >> {{screenshots_dir}}/targets.txt
+      echo "http://www.{{Target}}" >> {{screenshots_dir}}/targets.txt
+      echo "https://api.{{Target}}" >> {{screenshots_dir}}/targets.txt
+    exports:
+      screenshot_targets: "{{screenshots_dir}}/targets.txt"
+
+  # Step 3: Simulate screenshot capture with foreach
+  - name: capture-screenshots
+    type: foreach
+    input: "{{screenshot_targets}}"
+    variable: url
+    threads: "{{threads}}"
+    step:
+      name: capture-single
+      type: bash
+      command: |
+        # Simulate screenshot by creating placeholder file
+        FILENAME=$(echo "[[url]]" | sed 's/[^a-zA-Z0-9]/_/g')
+        touch {{screenshots_dir}}/full/${FILENAME}.png
+        echo "[[url]] -> ${FILENAME}.png" >> {{screenshots_dir}}/capture-log.txt
+        sleep 0.3
+      timeout: "{{timeout}}"
+
+  # Step 4: Generate thumbnails (simulated)
+  - name: generate-thumbnails
+    type: bash
+    command: |
+      # Simulate thumbnail generation
+      for f in {{screenshots_dir}}/full/*.png; do
+        if [ -f "$f" ]; then
+          BASENAME=$(basename "$f")
+          touch {{screenshots_dir}}/thumbnails/thumb_${BASENAME}
+        fi
+      done
+      sleep 0.2
+    timeout: 60
+
+  # Step 5: Generate HTML index
+  - name: generate-index
+    type: bash
+    command: |
+      cat > {{Output}}/screenshots-index.html << 'HTMLEOF'
+      <!DOCTYPE html>
+      <html>
+      <head><title>Screenshots - {{Target}}</title></head>
+      <body>
+      <h1>Screenshot Gallery for {{Target}}</h1>
+      <p>Generated at $(date)</p>
+      <ul>
+      HTMLEOF
+
+      for f in {{screenshots_dir}}/full/*.png; do
+        if [ -f "$f" ]; then
+          BASENAME=$(basename "$f")
+          echo "<li><a href='screenshots/full/${BASENAME}'>${BASENAME}</a></li>" >> {{Output}}/screenshots-index.html
+        fi
+      done
+
+      cat >> {{Output}}/screenshots-index.html << 'HTMLEOF'
+      </ul>
+      </body>
+      </html>
+      HTMLEOF
+    exports:
+      screenshots_index: "{{Output}}/screenshots-index.html"
+
+  # Step 6: Count and log results
+  - name: count-results
+    type: bash
+    commands:
+      - ls -1 {{screenshots_dir}}/full/*.png 2>/dev/null | wc -l > {{Output}}/screenshot-count.txt
+      - echo "Screenshot capture completed at $(date)" >> {{Output}}/screenshot-stats.txt
+      - "cat {{Output}}/screenshot-count.txt | xargs -I{} echo \"Screenshots captured: {}\" >> {{Output}}/screenshot-stats.txt"
+
+  # Step 7: Log completion
+  - name: log-completion
+    type: function
+    function: |
+      log_info("Screenshot capture completed for {{Target}}");
+      return true;

@@ -1,0 +1,242 @@
+name: data-processing
+kind: module
+desc: Data aggregation and processing workflow with function steps, decision routing, and parallel execution
+
+params:
+  - name: input_dir
+    value: "{{Output}}"
+  - name: output_format
+    value: "json"
+  - name: max_entries
+    value: "10000"
+  - name: enable_dedup
+    value: "true"
+
+steps:
+  # Step 1: function - Initialize processing context
+  - name: initialize-context
+    type: function
+    script: |
+      log_info("Data Processing Pipeline Started");
+      log_info("Input Directory: {{input_dir}}");
+      log_info("Output Format: {{output_format}}");
+
+      // Create processing manifest
+      var manifest = {
+        start_time: timestamp(),
+        input_dir: "{{input_dir}}",
+        output_format: "{{output_format}}",
+        files_processed: 0,
+        total_entries: 0
+      };
+
+      writeFile("{{Output}}/processing/manifest.json", JSON.stringify(manifest, null, 2));
+      return true;
+    exports:
+      processing_started: "{{Result}}"
+
+  # Step 2: bash - Setup processing directories
+  - name: setup-processing
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/processing
+      - mkdir -p {{Output}}/aggregated
+      - mkdir -p {{Output}}/reports
+      - find {{input_dir}} -type f \( -name "*.txt" -o -name "*.json" -o -name "*.csv" \) > {{Output}}/processing/file-list.txt
+    exports:
+      file_list: "{{Output}}/processing/file-list.txt"
+      processing_dir: "{{Output}}/processing"
+      aggregated_dir: "{{Output}}/aggregated"
+
+  # Step 3: function with decision - Determine processing strategy
+  - name: determine-strategy
+    type: function
+    script: |
+      var fileCount = fileLength("{{file_list}}");
+      log_info("Files to process: " + fileCount);
+
+      if (fileCount == 0) {
+        log_warn("No files found to process");
+        return "no_data";
+      } else if (fileCount > 100) {
+        log_info("Large dataset, using batch processing");
+        return "batch";
+      } else if (fileCount > 20) {
+        log_info("Medium dataset, using parallel processing");
+        return "parallel";
+      }
+
+      log_info("Small dataset, using sequential processing");
+      return "sequential";
+    exports:
+      processing_strategy: "{{Result}}"
+    decision:
+      switch: "{{processing_strategy}}"
+      cases:
+        "no_data":
+          goto: handle-no-data
+        "batch":
+          goto: batch-processing
+        "parallel":
+          goto: parallel-processing
+        "sequential":
+          goto: sequential-processing
+
+  # Step 4a: foreach - Sequential processing for small datasets
+  - name: sequential-processing
+    type: foreach
+    input: "{{file_list}}"
+    variable: datafile
+    threads: 1
+    step:
+      name: process-file
+      type: bash
+      command: |
+        filename=$(basename "[[datafile]]")
+        extension="${filename##*.}"
+        if [ "$extension" = "json" ]; then
+          cat "[[datafile]]" | jq -c '.' >> {{aggregated_dir}}/combined.jsonl 2>/dev/null || cat "[[datafile]]" >> {{aggregated_dir}}/combined.jsonl
+        else
+          cat "[[datafile]]" >> {{aggregated_dir}}/combined.txt
+        fi
+      on_error: continue
+    exports:
+      processing_mode: "sequential"
+
+  # Step 4b: parallel-steps - Parallel processing for medium datasets
+  - name: parallel-processing
+    type: parallel-steps
+    parallel_steps:
+      - name: process-json-files
+        type: bash
+        command: "find {{input_dir}} -name '*.json' -exec cat {} \\; | jq -c '.' > {{aggregated_dir}}/all-json.jsonl 2>/dev/null || true"
+        timeout: 600
+        on_error: continue
+      - name: process-txt-files
+        type: bash
+        command: "find {{input_dir}} -name '*.txt' -exec cat {} \\; | sort -u > {{aggregated_dir}}/all-txt.txt"
+        timeout: 600
+        on_error: continue
+      - name: process-csv-files
+        type: bash
+        command: "find {{input_dir}} -name '*.csv' -exec tail -n +2 {} \\; > {{aggregated_dir}}/all-csv.csv"
+        timeout: 600
+        on_error: continue
+    exports:
+      processing_mode: "parallel"
+
+  # Step 4c: bash - Batch processing for large datasets
+  - name: batch-processing
+    type: bash
+    command: |
+      # Process in batches of 50 files
+      split -l 50 {{file_list}} {{processing_dir}}/batch_
+      for batch in {{processing_dir}}/batch_*; do
+        while read -r file; do
+          cat "$file" >> {{aggregated_dir}}/batch-output.txt 2>/dev/null
+        done < "$batch"
+      done
+    timeout: 3600
+    exports:
+      processing_mode: "batch"
+
+  # Step 4d: function - Handle no data case
+  - name: handle-no-data
+    type: function
+    script: |
+      log_warn("No data files found for processing");
+      writeFile("{{Output}}/reports/no-data.txt", "No data files found in " + "{{input_dir}}");
+      return false;
+    exports:
+      processing_mode: "skipped"
+
+  # Step 5: function - Deduplicate and clean data
+  - name: deduplicate-data
+    type: function
+    pre_condition: "'{{enable_dedup}}' == 'true'"
+    script: |
+      log_info("Deduplicating aggregated data");
+
+      var txtFile = "{{aggregated_dir}}/all-txt.txt";
+      if (fileExists(txtFile)) {
+        var lineCount = fileLength(txtFile);
+        log_info("Text entries before dedup: " + lineCount);
+        sortUnix(txtFile);
+        var newCount = fileLength(txtFile);
+        log_info("Text entries after dedup: " + newCount);
+      }
+
+      return true;
+    exports:
+      dedup_complete: "{{Result}}"
+
+  # Step 6: parallel-steps - Generate multiple report formats
+  - name: generate-reports
+    type: parallel-steps
+    parallel_steps:
+      - name: json-report
+        type: bash
+        command: |
+          cat {{aggregated_dir}}/*.jsonl 2>/dev/null | head -{{max_entries}} > {{Output}}/reports/data.json
+          echo '{"total": '$(wc -l < {{Output}}/reports/data.json 2>/dev/null || echo 0)'}' > {{Output}}/reports/summary.json
+        on_error: continue
+      - name: csv-report
+        type: bash
+        command: |
+          echo "source,data" > {{Output}}/reports/data.csv
+          cat {{aggregated_dir}}/*.txt 2>/dev/null | head -{{max_entries}} | while read line; do
+            echo "aggregated,\"$line\"" >> {{Output}}/reports/data.csv
+          done
+        on_error: continue
+      - name: markdown-report
+        type: bash
+        command: |
+          cat > {{Output}}/reports/report.md << EOF
+          # Data Processing Report
+
+          **Target:** {{Target}}
+          **Processing Mode:** {{processing_mode}}
+          **Generated:** $(date)
+
+          ## Statistics
+          - Input Directory: {{input_dir}}
+          - Files Processed: $(wc -l < {{file_list}})
+          - Output Format: {{output_format}}
+
+          ## Files Generated
+          - data.json
+          - data.csv
+          - summary.json
+          EOF
+
+  # Step 7: function - Calculate final statistics
+  - name: calculate-statistics
+    type: function
+    script: |
+      var stats = {
+        processing_mode: "{{processing_mode}}",
+        files_processed: fileLength("{{file_list}}"),
+        dedup_enabled: "{{enable_dedup}}" === "true",
+        output_format: "{{output_format}}",
+        completion_time: timestamp()
+      };
+
+      log_info("Processing Complete:");
+      log_info("  Mode: " + stats.processing_mode);
+      log_info("  Files: " + stats.files_processed);
+
+      writeFile("{{Output}}/reports/stats.json", JSON.stringify(stats, null, 2));
+      return JSON.stringify(stats);
+    exports:
+      final_stats: "{{Result}}"
+
+  # Step 8: bash - Archive and cleanup
+  - name: archive-results
+    type: bash
+    parallel_commands:
+      - "tar -czf {{Output}}/data-archive.tar.gz -C {{Output}} reports aggregated 2>/dev/null || true"
+      - "rm -rf {{processing_dir}}/batch_* 2>/dev/null || true"
+      - "echo 'Processing pipeline completed at:' $(date) > {{Output}}/COMPLETED.txt"
+    exports:
+      archive_file: "{{Output}}/data-archive.tar.gz"
+      pipeline_complete: "true"

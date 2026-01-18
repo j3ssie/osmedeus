@@ -1,0 +1,68 @@
+name: test-decision-switch
+kind: module
+description: Test workflow demonstrating switch/case decision syntax
+
+params:
+  - name: target_type
+    type: string
+    default: "domain"
+
+steps:
+  - name: detect-type
+    type: bash
+    command: echo "{{target_type}}"
+    exports:
+      detected_type: "{{target_type}}"
+    decision:
+      switch: "{{detected_type}}"
+      cases:
+        "domain":
+          goto: subdomain-enum
+        "ip":
+          goto: port-scan
+        "cidr":
+          goto: network-scan
+        "url":
+          goto: web-scan
+      default:
+        goto: generic-recon
+
+  - name: subdomain-enum
+    type: bash
+    command: echo "Running subdomain enumeration for {{target}}"
+    decision:
+      switch: "always"
+      cases:
+        "always":
+          goto: _end
+
+  - name: port-scan
+    type: bash
+    command: echo "Running port scan for {{target}}"
+    decision:
+      switch: "always"
+      cases:
+        "always":
+          goto: _end
+
+  - name: network-scan
+    type: bash
+    command: echo "Running network scan for {{target}}"
+    decision:
+      switch: "always"
+      cases:
+        "always":
+          goto: _end
+
+  - name: web-scan
+    type: bash
+    command: echo "Running web scan for {{target}}"
+    decision:
+      switch: "always"
+      cases:
+        "always":
+          goto: _end
+
+  - name: generic-recon
+    type: bash
+    command: echo "Running generic reconnaissance for {{target}}"

@@ -1,0 +1,41 @@
+name: test-sleep-parallel
+kind: module
+description: Module that runs parallel sleep tasks
+tags: test,parallel,sleep
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: setup
+    type: bash
+    command: echo "[$(date +%H:%M:%S)] Starting parallel sleep test for {{target}}"
+
+  - name: parallel-sleeps
+    type: parallel-steps
+    parallel_steps:
+      - name: sleep-task-a
+        type: bash
+        command: |
+          echo "[$(date +%H:%M:%S)] Task A starting (15s)..."
+          sleep 15
+          echo "[$(date +%H:%M:%S)] Task A complete"
+
+      - name: sleep-task-b
+        type: bash
+        command: |
+          echo "[$(date +%H:%M:%S)] Task B starting (10s)..."
+          sleep 10
+          echo "[$(date +%H:%M:%S)] Task B complete"
+
+      - name: sleep-task-c
+        type: bash
+        command: |
+          echo "[$(date +%H:%M:%S)] Task C starting (5s)..."
+          sleep 5
+          echo "[$(date +%H:%M:%S)] Task C complete"
+
+  - name: finish
+    type: bash
+    command: echo "[$(date +%H:%M:%S)] All parallel tasks complete (took ~15s total)"

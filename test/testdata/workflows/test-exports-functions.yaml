@@ -1,0 +1,81 @@
+name: test-exports-functions
+kind: module
+description: Test exports with utility functions like fileLength, contains, fileExists, replace
+tags: test,exports,functions,utility
+
+params:
+  - name: target
+    required: true
+  - name: outputFile
+    type: string
+    default: "{{Output}}/test-output.txt"
+  - name: trimTestFile
+    type: string
+    default: "{{Output}}/trim-test.txt"
+  - name: replaceTestFile
+    type: string
+    default: "{{Output}}/replace-test.txt"
+
+steps:
+  - name: setup
+    type: bash
+    commands:
+      - mkdir -p {{Output}}
+      - printf 'line1\nline2\nline3\nline4\nline5\n' > {{outputFile}}
+      - printf '   trimmed_value   ' > {{trimTestFile}}
+      - printf 'hello,world,test' > {{replaceTestFile}}
+
+  - name: test-filelength
+    type: bash
+    command: echo "Checking file length"
+    exports:
+      line_count: "fileLength('{{outputFile}}')"
+
+  - name: test-trim
+    type: bash
+    command: echo "Checking trim"
+    exports:
+      trimmed_output: "trim(readFile('{{trimTestFile}}'))"
+
+  - name: test-contains-success
+    type: bash
+    command: echo "Checking contains"
+    exports:
+      has_success: "contains('success_completed', 'success')"
+
+  - name: test-contains-failure
+    type: bash
+    command: echo "Checking contains"
+    exports:
+      has_failure: "contains('success_completed', 'failure')"
+
+  - name: test-fileexists-true
+    type: bash
+    command: echo "Checking existence"
+    exports:
+      file_exists: "fileExists('{{outputFile}}')"
+
+  - name: test-fileexists-false
+    type: bash
+    command: echo "Checking nonexistent"
+    exports:
+      missing_file: "fileExists('{{Output}}/nonexistent.txt')"
+
+  - name: test-replace
+    type: bash
+    command: echo "Checking replace"
+    exports:
+      replaced_output: "replace(readFile('{{replaceTestFile}}'), ',', '-')"
+
+  - name: final-summary
+    type: bash
+    command: |
+      echo "=== Exports Functions Summary ==="
+      echo "Trimmed: [{{trimmed_output}}]"
+      echo "Line count: {{line_count}}"
+      echo "Has success: {{has_success}}"
+      echo "Has failure: {{has_failure}}"
+      echo "File exists: {{file_exists}}"
+      echo "Missing file: {{missing_file}}"
+      echo "Replaced: {{replaced_output}}"
+      echo "=== All Exports Verified ==="

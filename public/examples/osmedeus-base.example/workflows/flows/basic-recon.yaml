@@ -1,0 +1,35 @@
+# Basic Reconnaissance Flow
+# Orchestrates subdomain enumeration, port scanning, and HTTP probing
+
+name: basic-recon
+kind: flow
+description: Basic reconnaissance flow - subdomain enum, port scan, http probe
+tags: test, recon, flow
+
+
+params:
+  - name: threads
+    value: "10"
+  - name: timeout
+    value: "3600"
+
+modules:
+  # Module 1: Subdomain Enumeration
+  - name: subdomain-enumeration
+    path: modules/subdomain-enum.yaml
+    params:
+      threads: "{{threads}}"
+    condition: "true"
+    exports:
+      enum_subdomains: "{{final_subdomains}}"
+
+  # Module 2: HTTP Probing (depends on subdomain enumeration)
+  - name: http-probing
+    path: modules/http-probe.yaml
+    depends_on:
+      - subdomain-enumeration
+    params:
+      threads: "{{threads}}"
+    condition: "fileLength('{{enum_subdomains}}') > 0"
+    exports:
+      http_results: "{{http_hosts}}"

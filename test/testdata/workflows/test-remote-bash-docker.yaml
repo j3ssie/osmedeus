@@ -1,0 +1,40 @@
+name: test-remote-bash-docker
+kind: module
+description: Test remote-bash step type with Docker runner
+tags: test,remote-bash,docker
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: check-alpine-docker
+    type: remote-bash
+    log: "Running command in Docker container"
+    step_runner: docker
+    step_runner_config:
+      image: alpine:latest
+    command: cat /etc/os-release | grep -i alpine
+
+  - name: run-multiple-docker
+    type: remote-bash
+    log: "Running multiple commands sequentially"
+    step_runner: docker
+    step_runner_config:
+      image: alpine:latest
+    commands:
+      - 'echo "First command: {{target}}"'
+      - echo "Second command"
+      - hostname
+
+  - name: parallel-docker
+    type: remote-bash
+    log: "Running parallel commands"
+    timeout: 30
+    step_runner: docker
+    step_runner_config:
+      image: alpine:latest
+    parallel_commands:
+      - 'echo "Parallel 1: {{target}}"'
+      - 'echo "Parallel 2: {{target}}"'
+      - 'echo "Parallel 3: {{target}}"'

@@ -1,0 +1,487 @@
+basePath: /
+definitions:
+  pkg_server_handlers.CreateScanRequest:
+    properties:
+      concurrency:
+        default: 1
+        description: Number of concurrent scans (default: 1)
+        type: integer
+      flow:
+        description: Flow workflow name
+        type: string
+      module:
+        description: Module workflow name
+        type: string
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      target:
+        description: Single target to scan
+        type: string
+      targets:
+        description: Array of targets to scan
+        items:
+          type: string
+        type: array
+      target_file:
+        description: Path to file containing targets (one per line)
+        type: string
+    type: object
+  pkg_server_handlers.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  pkg_server_handlers.SubmitTaskRequest:
+    properties:
+      params:
+        additionalProperties: true
+        type: object
+      target:
+        type: string
+      workflow_kind:
+        type: string
+      workflow_name:
+        type: string
+    type: object
+host: localhost:8002
+info:
+  contact:
+    email: support@osmedeus.org
+    name: Osmedeus Support
+    url: https://github.com/j3ssie/osmedeus
+  description: Modern Orchestration Engine for Security - REST API for managing security
+    automation workflows, scans, and distributed task execution.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://docs.osmedeus.org/terms/
+  title: Osmedeus API
+  version: 5.0.0
+paths:
+  /:
+    get:
+      description: Get server version and info
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Server information
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Server info
+      tags:
+      - Info
+  /osm/api/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and get JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_server_handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JWT token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            additionalProperties: true
+            type: object
+      summary: User login
+      tags:
+      - Auth
+  /osm/api/new-scan:
+    post:
+      consumes:
+      - application/json
+      description: Execute a workflow against a target
+      parameters:
+      - description: Scan configuration
+        in: body
+        name: scan
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_server_handlers.CreateScanRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Scan started
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new scan
+      tags:
+      - Scans
+  /osm/api/upload-file:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a file containing a list of inputs (targets, URLs, etc.)
+        for later use in scans
+      parameters:
+      - description: Input file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: File uploaded with path
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload input file
+      tags:
+      - Files
+  /osm/api/workflow-upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a raw YAML workflow file and save it to the workflows directory
+      parameters:
+      - description: Workflow YAML file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Workflow uploaded
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or YAML
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload workflow file
+      tags:
+      - Workflows
+  /osm/api/tasks:
+    get:
+      description: Get a list of all running and completed tasks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of running and completed tasks
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to list tasks
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all tasks
+      tags:
+      - Distributed
+    post:
+      consumes:
+      - application/json
+      description: Submit a new task to the distributed worker queue
+      parameters:
+      - description: Task configuration
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/pkg_server_handlers.SubmitTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Task submitted
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to submit task
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Submit a new task
+      tags:
+      - Distributed
+  /osm/api/tasks/{id}:
+    get:
+      description: Get details for a specific task by ID
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Task not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get task details
+      tags:
+      - Distributed
+  /osm/api/workers:
+    get:
+      description: Get a list of all registered workers in the distributed pool
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of workers
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to list workers
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all workers
+      tags:
+      - Distributed
+  /osm/api/workers/{id}:
+    get:
+      description: Get details for a specific worker by ID
+      parameters:
+      - description: Worker ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Worker details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Worker not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to get worker
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get worker details
+      tags:
+      - Distributed
+  /osm/api/workflows:
+    get:
+      description: Get a list of all available workflows with details
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of workflows
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to load workflows
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all workflows
+      tags:
+      - Workflows
+  /osm/api/workflows/{name}:
+    get:
+      description: Get detailed information about a specific workflow. Use show_yaml=true
+        to get raw YAML content.
+      parameters:
+      - description: Workflow name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Return raw YAML content instead of JSON
+        in: query
+        name: show_yaml
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Workflow details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get workflow details
+      tags:
+      - Workflows
+  /osm/api/workspaces:
+    get:
+      description: Get a list of all scan workspaces
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of workspaces
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to read workspaces
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all workspaces
+      tags:
+      - Workspaces
+  /osm/api/snapshot-download/{workspace_name}:
+    get:
+      description: Compress a workspace folder into a zip file and download it
+      parameters:
+      - description: Workspace name
+        in: path
+        name: workspace_name
+        required: true
+        type: string
+      produces:
+      - application/zip
+      responses:
+        "200":
+          description: Zip file download
+          schema:
+            type: file
+        "404":
+          description: Workspace not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to create snapshot
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Download workspace snapshot
+      tags:
+      - Snapshots
+  /health:
+    get:
+      description: Check if the server is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'status: ok'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - Health
+  /health/ready:
+    get:
+      description: Check if the server is ready to accept requests
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'status: ready'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Readiness check
+      tags:
+      - Health
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: 'JWT Bearer token authentication. Format: "Bearer {token}"'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

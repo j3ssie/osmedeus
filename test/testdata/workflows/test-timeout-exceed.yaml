@@ -1,0 +1,14 @@
+name: test-timeout-exceed
+kind: module
+description: Test step timeout exceeded (1s timeout, 10s sleep)
+tags: test,timeout,error
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: slow-command
+    type: bash
+    command: sleep 10
+    timeout: 1

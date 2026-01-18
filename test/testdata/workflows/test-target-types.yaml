@@ -1,0 +1,18 @@
+name: test-target-types
+kind: module
+description: Test dependencies target_types with domain and url
+tags: test,dependencies,target-types
+
+params:
+  - name: target
+    required: true
+
+dependencies:
+  target_types:
+    - domain
+    - url
+
+steps:
+  - name: echo-ok
+    type: bash
+    command: echo "OK for {{target}}"

@@ -1,0 +1,17 @@
+name: test-flow
+kind: flow
+description: Simple test flow combining modules
+tags: test,flow,orchestration
+
+params:
+  - name: target
+    required: true
+
+modules:
+  - name: echo-module
+    path: modules/test-echo
+
+  - name: loop-module
+    path: modules/test-loop
+    depends_on:
+      - echo-module

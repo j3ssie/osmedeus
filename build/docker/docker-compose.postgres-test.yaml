@@ -1,0 +1,29 @@
+version: '3.8'
+
+# Simple PostgreSQL setup for testing database schema
+# Usage:
+#   docker-compose -f docker-compose.postgres-test.yaml up -d
+#   osmedeus db seed --config build/docker/osm-settings.postgres-test.yaml
+#   docker-compose -f docker-compose.postgres-test.yaml down -v
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: osmedeus-postgres-test
+    environment:
+      POSTGRES_USER: osmedeus
+      POSTGRES_PASSWORD: test_password_123
+      POSTGRES_DB: osmedeus
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U osmedeus"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - postgres-test-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-test-data:
+    driver: local

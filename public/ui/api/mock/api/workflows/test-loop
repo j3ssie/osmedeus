@@ -1,0 +1,24 @@
+name: test-loop
+kind: module
+description: Test foreach loop with threading
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: create-input
+    type: bash
+    commands:
+      - mkdir -p {{Output}}
+      - printf 'one\ntwo\nthree\nfour\nfive\n' > {{Output}}/items.txt
+
+  - name: process-items
+    type: foreach
+    input: "{{Output}}/items.txt"
+    variable: item
+    threads: 2
+    step:
+      name: process-item
+      type: bash
+      command: echo "Processing [[item]] for {{target}}"

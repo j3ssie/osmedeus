@@ -1,0 +1,36 @@
+kind: module
+name: test-structured-args
+description: Test workflow for structured argument fields
+tags: test,bash,args
+
+params:
+  - name: target
+    required: true
+  - name: threads
+    default: "10"
+  - name: rate
+    default: "100"
+  - name: config_file
+    default: "config.yaml"
+
+steps:
+  - name: test-with-all-args
+    type: bash
+    command: "echo 'Running tool'"
+    speed_args: "-t {{threads}} --rate {{rate}}"
+    config_args: "-c {{config_file}}"
+    input_args: "-i {{target}}"
+    output_args: "-o output.txt"
+    log: "Testing structured args with all fields"
+
+  - name: test-with-some-args
+    type: bash
+    command: "echo 'Running second tool'"
+    speed_args: "-t {{threads}}"
+    input_args: "-target {{target}}"
+    log: "Testing structured args with some fields"
+
+  - name: test-without-args
+    type: bash
+    command: "echo 'Hello {{target}}'"
+    log: "Testing without structured args"

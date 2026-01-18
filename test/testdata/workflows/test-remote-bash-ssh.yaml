@@ -1,0 +1,57 @@
+name: test-remote-bash-ssh
+kind: module
+description: Test remote-bash step type with SSH runner
+tags: test,remote-bash,ssh
+
+params:
+  - name: target
+    required: true
+  - name: ssh_host
+    default: localhost
+  - name: ssh_port
+    default: "2222"
+  - name: ssh_user
+    default: testuser
+  - name: ssh_password
+    default: testpass
+
+steps:
+  - name: check-ssh-connection
+    type: remote-bash
+    log: "Testing SSH connection"
+    step_runner: ssh
+    step_runner_config:
+      host: "{{ssh_host}}"
+      port: 2222
+      user: "{{ssh_user}}"
+      password: "{{ssh_password}}"
+    command: echo "Hello from SSH" && hostname
+
+  - name: run-multiple-ssh
+    type: remote-bash
+    log: "Running multiple commands via SSH"
+    step_runner: ssh
+    step_runner_config:
+      host: "{{ssh_host}}"
+      port: 2222
+      user: "{{ssh_user}}"
+      password: "{{ssh_password}}"
+    commands:
+      - 'echo "Target: {{target}}"'
+      - whoami
+      - pwd
+
+  - name: parallel-ssh
+    type: remote-bash
+    log: "Running parallel commands via SSH"
+    timeout: 30
+    step_runner: ssh
+    step_runner_config:
+      host: "{{ssh_host}}"
+      port: 2222
+      user: "{{ssh_user}}"
+      password: "{{ssh_password}}"
+    parallel_commands:
+      - echo "Parallel 1"
+      - echo "Parallel 2"
+      - echo "Parallel 3"

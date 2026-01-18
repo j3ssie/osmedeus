@@ -1,0 +1,33 @@
+name: test-foreach
+kind: module
+description: Test foreach loop
+tags: test,foreach,loop
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: create-input
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/osm-test
+      - printf 'one\ntwo\nthree\n' > {{Output}}/osm-test/items.txt
+
+  - name: process-items
+    type: foreach
+    input: "{{Output}}/osm-test/items.txt"
+    variable: item
+    threads: 1
+    step:
+      name: process
+      type: bash
+      command: echo "Processing [[item]]" >> {{Output}}/osm-test/output.txt
+
+  - name: verify-output
+    type: bash
+    command: test -f {{Output}}/osm-test/output.txt && wc -l < {{Output}}/osm-test/output.txt
+
+  - name: cleanup
+    type: bash
+    command: rm -rf {{Output}}/osm-test

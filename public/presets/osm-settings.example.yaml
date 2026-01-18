@@ -1,0 +1,343 @@
+# Osmedeus Configuration File
+# This file contains all available configuration options for osmedeus.
+# Copy this file to ~/osmedeus-base/osm-settings.yaml and customize as needed.
+
+# =============================================================================
+# Base Folder
+# =============================================================================
+# Root directory for all osmedeus data (workflows, binaries, data, etc.)
+# Environment variables like $HOME are automatically expanded
+base_folder: $HOME/osmedeus-base
+
+# =============================================================================
+# Environment Paths
+# =============================================================================
+# Directory paths for various osmedeus components
+# Use {{base_folder}} to reference the base_folder value above
+environments:
+  # Path to binary executables (tools like nmap, ffuf, etc.)
+  external_binaries_path: "{{base_folder}}/external-binaries"
+
+  # Data directory for storing assets, wordlists, etc.
+  external_data: "{{base_folder}}/external-data"
+
+  # External configuration files (nuclei templates, etc.)
+  external_configs: "{{base_folder}}/external-configs"
+
+  # Output directory for scan workspaces
+  # Each target gets its own subdirectory here
+  workspaces: "$HOME/workspaces-osmedeus"
+
+  # Directory containing workflow YAML files
+  # Subdirectories: flows/, modules/
+  workflows: "{{base_folder}}/workflows"
+
+  # Directory for workspace snapshots (zip archives)
+  # Used by the snapshot-download API endpoint
+  snapshot: "{{base_folder}}/snapshot"
+
+  # Directory for markdown report templates
+  # Used by render_markdown_report() function
+  markdown_report_templates: "{{base_folder}}/markdown-report-templates"
+
+  # Directory for external agent configurations
+  # Used for LLM Agent commands, skills, and related configurations
+  external_agent_configs: "{{base_folder}}/external-agent-configs"
+
+  # Directory for external utility scripts
+  # Used for storing custom scripts and utilities
+  external_scripts: "{{base_folder}}/external-scripts"
+
+# =============================================================================
+# Database Configuration
+# =============================================================================
+# Osmedeus supports SQLite (default) and PostgreSQL
+database:
+  # Database engine: "sqlite" or "postgresql"
+  db_engine: sqlite
+
+  # SQLite: Path to the database file
+  # Ignored when using PostgreSQL
+  db_path: "{{base_folder}}/database-osm.sqlite"
+
+  # PostgreSQL connection settings
+  # Only used when db_engine is "postgresql"
+  host: localhost
+  port: 5432
+  username: osmedeus
+  password: osmedeus
+  db_name: osmedeus
+
+  # Connection timeout in seconds
+  connection_timeout: 60
+
+  # PostgreSQL SSL mode: disable, require, verify-ca, verify-full
+  ssl_mode: disable
+
+# =============================================================================
+# Server Configuration
+# =============================================================================
+# REST API server settings for the web interface
+server:
+  # Host to bind the server to
+  # Use "0.0.0.0" to listen on all interfaces
+  # Use "127.0.0.1" to listen only on localhost
+  host: "0.0.0.0"
+
+  # Port number for the API server
+  port: 8002
+
+  # Path to serve static UI files
+  # Default: {{base_folder}}/ui/ - if this directory exists, it will be served at /ui
+  # Set to empty string to disable UI serving
+  ui_path: "{{base_folder}}/ui/"
+
+  # Random prefix for workspace static files (auto-generated 16 chars if empty)
+  # Used as URL path segment for direct access to workspaces folder
+  workspace_prefix_key: ""
+
+  # Authentication credentials (map of username:password)
+  # Supports multiple users
+  simple_user_map_key:
+    osmedeus: osmedeus-admin
+
+  # JWT (JSON Web Token) settings
+  jwt:
+    # Secret key for signing JWT tokens
+    # IMPORTANT: Use a strong, unique secret in production!
+    secret_signing_key: change-this-secret-in-production
+
+    # Token expiration time in minutes
+    expiration_minutes: 180
+
+  # License type shown in HTTP Server header and /server-info endpoint
+  license: "open-source"
+
+  # API Key Authentication (alternative to JWT login flow)
+  # When enabled, all API requests must include header: x-osm-api-key: <your-key>
+  # This takes priority over JWT authentication when enabled
+  enabled_auth_api: false
+  auth_api_key: ""  # Set a secure random key when enabled
+
+# =============================================================================
+# Scan Tactic Configuration
+# =============================================================================
+# Thread counts for different scan intensity levels
+# Higher values = faster but more aggressive scans
+# Lower values = slower but gentler on target systems
+scan_tactic:
+  # Aggressive/fast mode - maximum parallelism
+  # Used with: osmedeus scan -t target --tactic aggressive
+  aggressive: 40
+
+  # Default/normal mode - balanced approach
+  # Used when no tactic is specified
+  default: 10
+
+  # Gentle/thorough mode - minimal parallelism
+  # Used with: osmedeus scan -t target --tactic gently
+  gently: 5
+
+# =============================================================================
+# Redis Configuration (Optional)
+# =============================================================================
+# Redis is required for distributed scanning mode
+# Leave host empty to disable Redis
+redis:
+  # Redis server hostname
+  # Leave empty to disable distributed mode
+  host: ""
+
+  # Redis server port
+  port: 6379
+
+  # Redis authentication (if required)
+  username: ""
+  password: ""
+
+  # Redis database number (0-15)
+  db: 0
+
+  # Connection timeout in seconds
+  connection_timeout: 60
+
+# =============================================================================
+# Global Variables
+# =============================================================================
+# User-defined variables available in workflows via {{VARIABLE_NAME}}
+# Variables can optionally be exported to environment variables
+# Use _API_KEY suffix for secrets to indicate sensitive values
+#
+# Format:
+#   VARIABLE_NAME:
+#     value: "the-value"
+#     as_env: true  # Optional: export as env var (default: true)
+#
+# Example usage in workflows:
+#   - bash: "echo {{GITHUB_API_KEY}}"
+#   - bash: "shodan search $SHODAN_API_KEY"  # Uses env var
+global_vars:
+  # GitHub personal access token for API access
+  GITHUB_API_KEY:
+    value: ""
+    as_env: true  # Exports as GITHUB_API_KEY
+
+  # Shodan API key for passive reconnaissance
+  SHODAN_API_KEY:
+    value: ""
+    as_env: true  # Exports as SHODAN_API_KEY
+
+  # Censys API key for certificate/host search
+  CENSYS_API_KEY:
+    value: ""
+    as_env: true  # Exports as CENSYS_API_KEY
+
+  # PassiveTotal API key for passive DNS/WHOIS
+  PASSIVETOTAL_API_KEY:
+    value: ""
+    as_env: true  # Exports as PASSIVETOTAL_API_KEY
+
+  # Add more API keys as needed (use _API_KEY suffix for secrets)
+
+# =============================================================================
+# Notification Configuration
+# =============================================================================
+# Send notifications when scans complete or find interesting results
+notification:
+  # Notification provider: "telegram" (future: slack, discord, webhook)
+  provider: telegram
+
+  # Master switch to enable/disable all notifications
+  enabled: false
+
+  # Telegram bot settings
+  # Create a bot via @BotFather and get the token
+  # Get your chat ID by messaging @userinfobot
+  telegram:
+    # Bot token from @BotFather
+    bot_token: ""
+
+    # Chat ID to send messages to (can be user or group)
+    chat_id: 0
+
+    # Enable Telegram notifications
+    enabled: false
+
+  # Webhook settings
+  # Configure multiple webhook endpoints for notifications
+  # Webhooks are triggered on workflow events (completed, failed, etc.)
+  webhooks:
+    # Example webhook configuration
+    - url: "https://example.com/webhook"
+      # Enable/disable this webhook
+      enabled: false
+      # Custom HTTP headers (e.g., for authentication)
+      headers:
+        Authorization: "Bearer your-token-here"
+        Content-Type: "application/json"
+      # Request timeout in seconds (default: 30)
+      timeout: 30
+      # Number of retry attempts on failure (default: 3)
+      retry_count: 3
+      # Skip TLS certificate verification (default: false)
+      # Set to true for self-signed certificates
+      skip_tls_verify: false
+      # Event filter - only trigger for these events (empty = all events)
+      # Available events: workflow_completed, workflow_failed, workflow_cancelled
+      events:
+        - workflow_completed
+        - workflow_failed
+
+    # Second webhook example (e.g., Slack incoming webhook)
+    # - url: "https://hooks.slack.com/services/xxx/yyy/zzz"
+    #   enabled: false
+    #   headers: {}
+    #   events:
+    #     - workflow_completed
+
+# =============================================================================
+# Cloud Storage Configuration (Optional)
+# =============================================================================
+# S3-compatible storage for backing up scan results
+# Supports AWS S3, MinIO, Google Cloud Storage, DigitalOcean Spaces, etc.
+storage:
+  # Storage provider: "s3", "minio", "gcs", "spaces", etc.
+  provider: s3
+
+  # Storage endpoint URL
+  # AWS S3: Leave empty or use region-specific endpoint
+  # MinIO: "http://localhost:9000"
+  # DigitalOcean: "https://nyc3.digitaloceanspaces.com"
+  endpoint: ""
+
+  # Access credentials
+  access_key_id: ""
+  secret_access_key: ""
+
+  # Bucket name for storing results
+  bucket: ""
+
+  # Cloud region (e.g., us-east-1, eu-west-1)
+  region: us-east-1
+
+  # Use SSL/TLS for connections
+  use_ssl: true
+
+  # Enable cloud storage uploads
+  enabled: false
+
+# =============================================================================
+# LLM Configuration (Optional)
+# =============================================================================
+# Large Language Model settings for AI-powered features
+# Supports providers like Ollama, OpenAI, Anthropic, etc.
+# Multiple providers can be configured for automatic rotation on error/rate limit
+llm_config:
+  # List of LLM providers (rotates to next on error/rate limit)
+  llm_providers:
+    # Primary provider (used first)
+    - provider: ollama
+      base_url: "http://localhost:11434/v1/chat/completions"
+      auth_token: ""
+      model: "gpt-oss:120b-cloud"
+    # Backup provider example (uncomment to enable rotation)
+    # - provider: openai
+    #   base_url: "https://api.openai.com/v1/chat/completions"
+    #   auth_token: "sk-your-api-key"
+    #   model: "gpt-4"
+
+  # Enable LLM tool call features
+  enabled_tool_call: false
+
+  # Maximum number of tokens to generate
+  max_tokens: 1000
+
+  # Temperature for sampling
+  temperature: 0.7
+
+  # Top-k sampling
+  top_k: 50
+
+  # Top-p sampling
+  top_p: 0.9
+
+  # Number of completions to generate
+  n: 1
+
+  # Maximum number of retries for failed requests
+  max_retries: 3
+
+  # Timeout for API requests
+  timeout: 120s
+
+  # Enable streaming responses
+  stream: false
+
+  # Enable structured JSON output format
+  structured_json_format: false
+
+  # System prompt for the LLM
+  system_prompt: ""
+
+  # Custom headers for API requests
+  custom_headers: ""

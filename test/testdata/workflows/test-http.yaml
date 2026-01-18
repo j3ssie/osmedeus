@@ -1,0 +1,42 @@
+kind: module
+name: test-http
+description: Test workflow for HTTP step type
+tags: test,http,api
+
+params:
+  - name: target
+    required: true
+  - name: api_url
+    default: "https://httpbin.org"
+
+steps:
+  - name: http-get
+    type: http
+    method: GET
+    url: "{{api_url}}/get?target={{target}}"
+    headers:
+      User-Agent: "Osmedeus/1.0"
+      Accept: "application/json"
+    timeout: 30
+    log: "Making GET request to httpbin"
+
+  - name: verify-get
+    type: bash
+    command: 'echo "GET status: {{http_get_http_resp.status_code}}"'
+    log: "Verifying GET response"
+
+  - name: http-post
+    type: http
+    method: POST
+    url: "{{api_url}}/post"
+    headers:
+      Content-Type: "application/json"
+      User-Agent: "Osmedeus/1.0"
+    request_body: '{"target": "{{target}}", "action": "scan"}'
+    timeout: 30
+    log: "Making POST request to httpbin"
+
+  - name: verify-post
+    type: bash
+    command: 'echo "POST status: {{http_post_http_resp.status_code}}"'
+    log: "Verifying POST response"

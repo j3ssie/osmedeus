@@ -1,0 +1,64 @@
+kind: module
+name: template-rendering-module
+description: Test template rendering in all step fields
+
+params:
+  - name: customPath
+    default: "{{Output}}/custom-{{TargetSpace}}.txt"
+  - name: customPrefix
+    default: "prefix-{{Target}}"
+  - name: customTimeout
+    default: "30"
+
+steps:
+  # 1. Bash step with all templated fields
+  - name: bash-with-templates
+    type: bash
+    pre_condition: 'true'
+    command: |
+      echo "Target: {{Target}}" > {{customPath}}
+      echo "Prefix: {{customPrefix}}" >> {{customPath}}
+    log: "Executing bash with target {{Target}}"
+    exports:
+      bash_output_path: "{{customPath}}"
+      bash_target: "{{Target}}"
+
+  # 2. Function step with templated function calls
+  - name: function-with-templates
+    type: function
+    pre_condition: 'fileExists("{{bash_output_path}}")'
+    function: 'log_info("Processing {{Target}} with path {{customPath}}")'
+    exports:
+      function_result: "processed-{{Target}}"
+
+  # 3. Parallel commands with templates
+  - name: parallel-with-templates
+    type: bash
+    parallel_commands:
+      - 'echo "Parallel 1: {{Target}}" >> {{customPath}}'
+      - 'echo "Parallel 2: {{customPrefix}}" >> {{customPath}}'
+    exports:
+      parallel_done: "true"
+
+  # 4. Step with structured args using templates
+  - name: structured-args-step
+    type: bash
+    command: cat {{customPath}}
+    exports:
+      structured_output: "{{Output}}/combined-{{TargetSpace}}.txt"
+
+  # 5. Final verification step
+  - name: verify-all-templates
+    type: bash
+    pre_condition: 'fileExists("{{customPath}}")'
+    command: |
+      echo "=== Template Rendering Verification ==="
+      echo "bash_output_path={{bash_output_path}}"
+      echo "bash_target={{bash_target}}"
+      echo "function_result={{function_result}}"
+      echo "parallel_done={{parallel_done}}"
+      echo "structured_output={{structured_output}}"
+      echo "=== File Contents ==="
+      cat {{customPath}}
+    exports:
+      all_verified: "true"

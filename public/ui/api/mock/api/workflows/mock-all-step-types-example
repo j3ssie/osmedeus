@@ -1,0 +1,486 @@
+# =============================================================================
+# Module Workflow: All Step Types Example
+# =============================================================================
+# This file demonstrates ALL fields available in a module-kind workflow,
+# showcasing every step type with comprehensive comments.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# WORKFLOW-LEVEL FIELDS
+# -----------------------------------------------------------------------------
+
+# kind: Workflow type - either "module" (single unit with steps) or "flow" (orchestrates modules)
+kind: module
+
+# name: Unique identifier for this workflow (required)
+name: mock-all-step-types-example
+
+# description: Human-readable description of what this workflow does
+description: Mock Demonstrates all step types and their fields with detailed comments
+
+# tags: Comma-separated tags for filtering and categorization (parsed as []string)
+tags: example, comprehensive, demo
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# Define workflow parameters that can be passed via CLI or referenced in templates
+# -----------------------------------------------------------------------------
+params:
+  # name: Parameter identifier used in templates as {{param_name}}
+  # default: Default value if not provided via CLI
+  # required: If true, workflow fails without this value
+  # generator: Function to generate value, e.g., uuid(), currentDate(), getEnvVar("KEY")
+  - name: message
+    default: "Hello World"
+    required: false
+
+  - name: output_dir
+    default: "{{Output}}/results"  # Can reference built-in variables
+    required: false
+
+  - name: threads
+    default: "10"
+    required: false
+
+  - name: run_id
+    generator: uuid()  # Generates a unique ID automatically
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES SECTION
+# Validate requirements before workflow execution
+# -----------------------------------------------------------------------------
+dependencies:
+  # commands: List of binaries/commands that must exist in PATH
+  commands:
+    - echo
+    - curl
+
+  # files: List of files/directories that must exist
+  files:
+    - /tmp
+
+  # variables: Define variable requirements with type validation
+  # Types: domain, path, number, file, string
+  variables:
+    - name: Target
+      type: string
+      required: true
+
+  # functions_conditions: JavaScript expressions that must evaluate to true
+  functions_conditions:
+    - '1 + 1 == 2'
+
+# -----------------------------------------------------------------------------
+# REPORTS SECTION
+# Define output files produced by this workflow
+# -----------------------------------------------------------------------------
+reports:
+  # name: Display name for the report
+  # path: File path (can use templates like {{Output}})
+  # type: Format type - text, csv, json, markdown, etc.
+  # description: Human-readable description
+  - name: main-output
+    path: "{{Output}}/main-results.txt"
+    type: text
+    description: Main output file from the workflow
+
+  - name: json-results
+    path: "{{Output}}/results.json"
+    type: json
+    description: Structured JSON output
+
+# -----------------------------------------------------------------------------
+# PREFERENCES SECTION (Optional)
+# Set CLI-like flags directly in the workflow. CLI flags always take precedence.
+# -----------------------------------------------------------------------------
+preferences:
+  # skip_workspace: Equivalent to --disable-workspace-creation
+  skip_workspace: false
+
+  # disable_notifications: Equivalent to --disable-notification
+  disable_notifications: true
+
+  # disable_logging: Equivalent to --disable-logging
+  disable_logging: false
+
+  # heuristics_check: Equivalent to --heuristics-check (none, basic, advanced)
+  heuristics_check: 'basic'
+
+  # ci_output_format: Equivalent to --ci-output-format
+  ci_output_format: false
+
+  # silent: Equivalent to --silent
+  silent: false
+
+  # repeat: Equivalent to --repeat
+  repeat: false
+
+  # repeat_wait_time: Equivalent to --repeat-wait-time (e.g., 30s, 1h, 2h30m)
+  repeat_wait_time: '60s'
+
+  # clean_up_workspace: Equivalent to --clean-up-workspace
+  clean_up_workspace: false
+
+# -----------------------------------------------------------------------------
+# STEPS SECTION
+# The ordered list of execution steps for this module
+# -----------------------------------------------------------------------------
+steps:
+  # ===========================================================================
+  # STEP TYPE: bash
+  # Execute shell commands on the host (or configured runner)
+  # ===========================================================================
+  - name: bash-single-command
+    # type: Step type - bash, function, parallel-steps, foreach, remote-bash, http, llm
+    type: bash
+
+    # pre_condition: JavaScript expression - step only runs if this evaluates to true
+    pre_condition: 'true'
+
+    # log: Custom log message displayed when step starts (supports templates)
+    log: "Executing single bash command for {{Target}}"
+
+    # timeout: Maximum execution time in seconds (0 = no timeout)
+    timeout: 60
+
+    # command: Single command to execute
+    command: 'echo "Processing target: {{Target}} with message: {{message}}"'
+
+    # std_file: File path to save stdout/stderr output
+    std_file: "{{Output}}/step1-output.txt"
+
+    # exports: Variables to export for subsequent steps
+    # Key = variable name, Value = extraction pattern or literal value
+    exports:
+      step1_result: "completed"
+
+  # ---------------------------------------------------------------------------
+  # Bash step with multiple sequential commands
+  # ---------------------------------------------------------------------------
+  - name: bash-multiple-commands
+    type: bash
+    log: "Running multiple sequential commands"
+
+    # commands: List of commands executed sequentially
+    commands:
+      - 'echo "First command"'
+      - 'echo "Second command"'
+      - 'echo "Third command"'
+
+  # ---------------------------------------------------------------------------
+  # Bash step with parallel commands
+  # ---------------------------------------------------------------------------
+  - name: bash-parallel-commands
+    type: bash
+    log: "Running commands in parallel"
+
+    # parallel_commands: List of commands executed concurrently
+    parallel_commands:
+      - 'echo "Parallel A" && sleep 1'
+      - 'echo "Parallel B" && sleep 1'
+      - 'echo "Parallel C" && sleep 1'
+
+  # ---------------------------------------------------------------------------
+  # Bash step with structured arguments
+  # Arguments are joined in order: command + speed + config + input + output
+  # ---------------------------------------------------------------------------
+  - name: bash-structured-args
+    type: bash
+    log: "Using structured argument fields"
+
+    command: 'echo'
+
+    # speed_args: Performance-related arguments (e.g., thread count, rate limits)
+    speed_args: '-n'
+
+    # config_args: Configuration arguments (e.g., config file paths)
+    config_args: ''
+
+    # input_args: Input-related arguments (e.g., input file, target)
+    input_args: '"Structured arguments test"'
+
+    # output_args: Output-related arguments (e.g., output file, format)
+    output_args: ''
+
+  # ===========================================================================
+  # STEP TYPE: function
+  # Execute built-in utility functions via Otto JavaScript runtime
+  # ===========================================================================
+  - name: function-single
+    type: function
+    log: "Executing single function"
+
+    # function: Single function call (JavaScript expression)
+    function: 'log_info("Processing {{Target}} in function step")'
+
+  # ---------------------------------------------------------------------------
+  # Function step with multiple sequential functions
+  # ---------------------------------------------------------------------------
+  - name: function-multiple
+    type: function
+    log: "Executing multiple functions sequentially"
+
+    # functions: List of functions executed sequentially
+    functions:
+      - 'log_info("Function 1")'
+      - 'log_info("Function 2")'
+      - 'log_info("Function 3")'
+
+  # ---------------------------------------------------------------------------
+  # Function step with parallel functions
+  # ---------------------------------------------------------------------------
+  - name: function-parallel
+    type: function
+    log: "Executing functions in parallel"
+
+    # parallel_functions: List of functions executed concurrently
+    parallel_functions:
+      - 'log_info("Parallel Function A")'
+      - 'log_info("Parallel Function B")'
+      - 'log_info("Parallel Function C")'
+
+  # ===========================================================================
+  # STEP TYPE: parallel-steps
+  # Execute multiple complete steps in parallel
+  # ===========================================================================
+  - name: parallel-step-container
+    type: parallel-steps
+    log: "Running multiple steps in parallel"
+
+    # parallel_steps: List of Step objects executed concurrently
+    parallel_steps:
+      - name: parallel-inner-1
+        type: bash
+        command: 'echo "Inner parallel step 1"'
+
+      - name: parallel-inner-2
+        type: function
+        function: 'log_info("Inner parallel step 2")'
+
+      - name: parallel-inner-3
+        type: bash
+        command: 'echo "Inner parallel step 3"'
+
+  # ===========================================================================
+  # STEP TYPE: foreach
+  # Iterate over input lines, executing inner step for each
+  # ===========================================================================
+  - name: foreach-example
+    type: foreach
+    log: "Iterating over items"
+
+    # input: File path or direct content to iterate over (one item per line)
+    input: "{{Output}}/items.txt"
+
+    # variable: Name for the loop variable, accessed as [[variable]] in inner step
+    variable: item
+
+    # threads: Number of concurrent iterations (default: 1 = sequential)
+    threads: 5
+
+    # step: The inner step to execute for each item (single Step object)
+    step:
+      name: process-item
+      type: bash
+      command: 'echo "Processing [[item]]"'
+      exports:
+        processed_item: "[[item]]"
+
+  # ===========================================================================
+  # STEP TYPE: http
+  # Make HTTP requests to external APIs
+  # ===========================================================================
+  - name: http-request
+    type: http
+    log: "Making HTTP request"
+    timeout: 30
+
+    # url: Target URL for the request (required for http type)
+    url: "https://httpbin.org/post"
+
+    # method: HTTP method - GET, POST, PUT, DELETE, PATCH, etc.
+    method: POST
+
+    # headers: Map of HTTP headers to send
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{api_token}}"
+      X-Custom-Header: custom-value
+
+    # request_body: Request body content (typically JSON for POST/PUT)
+    request_body: |
+      {
+        "target": "{{Target}}",
+        "message": "{{message}}"
+      }
+
+    exports:
+      http_response: "{{response.body}}"
+
+  # ===========================================================================
+  # STEP TYPE: llm
+  # Make LLM API calls for AI-powered processing
+  # ===========================================================================
+  - name: llm-chat-completion
+    type: llm
+    log: "Calling LLM for analysis"
+    timeout: 120
+
+    # messages: Conversation messages for chat completion
+    # role: system, user, assistant, or tool
+    # content: Message text (can be string or multimodal array)
+    messages:
+      - role: system
+        content: "You are a security analysis assistant."
+
+      - role: user
+        # content can be a simple string or complex multimodal content
+        content: "Analyze this target: {{Target}}"
+
+    # tools: Function tools available to the LLM
+    tools:
+      - type: function  # Currently only "function" type supported
+        function:
+          name: analyze_target
+          description: Analyzes a target for security vulnerabilities
+          # parameters: JSON Schema defining function parameters
+          parameters:
+            type: object
+            properties:
+              target:
+                type: string
+                description: The target to analyze
+              depth:
+                type: string
+                enum: [shallow, deep]
+            required:
+              - target
+
+    # tool_choice: How the model should choose tools
+    # Can be: "auto", "none", "required", or {"type": "function", "function": {"name": "fn_name"}}
+    tool_choice: auto
+
+    # llm_config: Step-level LLM configuration overrides
+    llm_config:
+      # provider: Specific provider to use (overrides rotation)
+      provider: openai
+
+      # model: Model override for this step
+      model: gpt-4
+
+      # Generation parameters
+      max_tokens: 1000
+      temperature: 0.7
+      top_p: 1.0
+
+      # Request settings
+      timeout: "60s"
+      max_retries: 3
+      stream: false
+
+      # response_format: Control output format
+      # type: "text", "json_object", or "json_schema"
+      response_format:
+        type: json_object
+
+    # extra_llm_parameters: Additional provider-specific parameters
+    extra_llm_parameters:
+      seed: 42
+      presence_penalty: 0.0
+
+    exports:
+      llm_analysis: "{{response.content}}"
+
+  # ---------------------------------------------------------------------------
+  # LLM step for embeddings
+  # ---------------------------------------------------------------------------
+  - name: llm-embedding
+    type: llm
+    log: "Generating text embeddings"
+
+    # is_embedding: Flag to indicate this is an embedding request
+    is_embedding: true
+
+    # embedding_input: List of texts to generate embeddings for
+    embedding_input:
+      - "Security vulnerability in {{Target}}"
+      - "Network reconnaissance results"
+      - "Port scan findings"
+
+    llm_config:
+      model: text-embedding-3-small
+
+    exports:
+      embeddings: "{{response.embeddings}}"
+
+  # ===========================================================================
+  # COMMON STEP FIELDS: on_success, on_error, decision
+  # These fields are available on ALL step types
+  # ===========================================================================
+  - name: step-with-handlers
+    type: bash
+    log: "Step demonstrating success/error handlers and decision routing"
+    command: 'echo "Running step with all handler types"'
+
+    # on_success: Actions to execute when step succeeds
+    on_success:
+      # action: Handler type - log, abort, continue, export, run, notify
+      - action: log
+        message: "Step completed successfully for {{Target}}"
+
+      - action: export
+        # name: Variable name to export
+        name: success_flag
+        # value: Value to export (can be string, number, or template)
+        value: "true"
+
+      - action: notify
+        # notify: Notification message
+        notify: "Step succeeded for {{Target}}"
+
+      - action: run
+        # type: Step type to run (bash or function)
+        type: bash
+        command: 'echo "Running follow-up command"'
+
+      - action: run
+        type: function
+        functions:
+          - 'log_info("Running follow-up function")'
+
+    # on_error: Actions to execute when step fails
+    on_error:
+      - action: log
+        message: "Step failed for {{Target}}"
+        # condition: Only execute this action if condition evaluates to true
+        condition: 'true'
+
+      - action: notify
+        notify: "Error in workflow for {{Target}}"
+
+      # abort: Stops workflow execution immediately
+      - action: abort
+        message: "Aborting due to critical failure"
+        condition: 'false'  # Only abort under specific conditions
+
+      # continue: Allows workflow to continue despite error
+      - action: continue
+        message: "Continuing despite error"
+
+    # decision: Conditional routing to other steps or workflow end
+    decision:
+      # condition: JavaScript expression to evaluate
+      # next: Step name to jump to, or "_end" to finish workflow
+      - condition: '{{success_flag}} == "true"'
+        next: final-step
+
+      - condition: '{{success_flag}} != "true"'
+        next: _end  # Special value to end workflow
+
+  # ---------------------------------------------------------------------------
+  # Final step
+  # ---------------------------------------------------------------------------
+  - name: final-step
+    type: function
+    log: "Final step - workflow complete"
+    function: 'log_info("All step types demonstrated for {{Target}}")'

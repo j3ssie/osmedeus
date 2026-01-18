@@ -1,0 +1,36 @@
+name: test-jsonl-utils
+kind: module
+description: Test JSONL utility functions
+tags: test,jsonl,utilities
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: create-jsonl
+    type: bash
+    command: |
+      mkdir -p {{Output}}
+      cat > {{Output}}/in.jsonl << 'EOF'
+      {"name":"Alice","age":30,"hash":{"body_sha256":"abc"}}
+      {"name":"Bob","age":25}
+      {"name":"Alice","age":30,"hash":{"body_sha256":"abc"}}
+      EOF
+
+  - name: jsonl-filter
+    type: function
+    function: jsonl_filter("{{Output}}/in.jsonl", "{{Output}}/filtered.jsonl", "name,hash.body_sha256")
+
+  - name: jsonl-to-csv
+    type: function
+    function: jsonl_to_csv("{{Output}}/in.jsonl", "{{Output}}/out.csv")
+
+  - name: csv-to-jsonl
+    type: function
+    function: csv_to_jsonl("{{Output}}/out.csv", "{{Output}}/back.jsonl")
+
+  - name: jsonl-unique
+    type: function
+    function: jsonl_unique("{{Output}}/in.jsonl", "{{Output}}/unique.jsonl", "name,hash.body_sha256")
+

@@ -1,0 +1,27 @@
+kind: module
+name: demo-ssh
+description: Demo SSH runner with remote-bash
+params:
+  - name: target
+    required: true
+  - name: ssh_host
+    default: "localhost"
+  - name: ssh_user
+    default: "testuser"
+  - name: ssh_password
+    default: "testpass"
+steps:
+  - name: ssh-connect
+    type: remote-bash
+    log: "Executing via SSH"
+    step_runner: ssh
+    step_runner_config:
+      host: "{{ssh_host}}"
+      port: 2222
+      user: "{{ssh_user}}"
+      password: "{{ssh_password}}"
+    commands:
+      - 'echo "Target: {{Target}}"'
+      - 'hostname && whoami'
+    exports:
+      ssh_done: "true"

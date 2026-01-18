@@ -1,0 +1,39 @@
+name: test-heuristics
+kind: module
+description: Test heuristic variable detection
+tags: test,heuristics,variables
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: show-target-type
+    type: bash
+    command: echo "TargetType={{TargetType}}"
+
+  - name: show-url-vars
+    type: bash
+    commands:
+      - echo "TargetBaseURL={{TargetBaseURL}}"
+      - echo "TargetRootURL={{TargetRootURL}}"
+      - echo "TargetHostname={{TargetHostname}}"
+      - echo "TargetRootDomain={{TargetRootDomain}}"
+      - echo "TargetHost={{TargetHost}}"
+      - echo "TargetPort={{TargetPort}}"
+      - echo "TargetPath={{TargetPath}}"
+      - echo "TargetFileExt={{TargetFileExt}}"
+      - echo "TargetScheme={{TargetScheme}}"
+
+  - name: show-domain-vars
+    type: bash
+    commands:
+      - echo "TargetIsWildcard={{TargetIsWildcard}}"
+      - echo "TargetResolvedIP={{TargetResolvedIP}}"
+
+  - name: show-space-vars
+    type: bash
+    commands:
+      - echo "TargetSpace={{TargetSpace}}"
+      - echo "HeuristicsCheck={{HeuristicsCheck}}"
+      - echo "Output={{Output}}"

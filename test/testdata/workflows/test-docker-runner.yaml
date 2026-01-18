@@ -1,0 +1,18 @@
+name: test-docker-runner
+kind: module
+description: Test Docker runner execution
+tags: test,runner,docker
+
+runner: docker
+runner_config:
+  image: alpine:latest
+  persistent: false
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: check-alpine
+    type: bash
+    command: cat /etc/os-release | grep -i alpine

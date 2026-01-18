@@ -1,0 +1,109 @@
+# Vulnerability Scanning Module (Test Style)
+# This is a test-style workflow using simple commands for testing purposes.
+# In production, replace echo commands with real tools like nuclei, nikto, etc.
+
+name: vuln-scan
+kind: module
+description: Simulated vulnerability scanning for testing
+tags: test, vuln, security
+
+params:
+  - name: threads
+    value: "10"
+  - name: severity
+    value: "critical,high,medium"
+  - name: timeout
+    value: "1800"
+
+steps:
+  # Step 1: Setup directories
+  - name: setup-directories
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/vulns/raw
+      - mkdir -p {{Output}}/vulns/processed
+    exports:
+      vulns_dir: "{{Output}}/vulns"
+
+  # Step 2: Validate inputs
+  - name: validate-inputs
+    type: function
+    function: |
+      log_info("Starting vulnerability scan for: {{Target}}");
+      log_info("Severity filter: {{severity}}");
+      log_info("Thread count: {{threads}}");
+      return true;
+
+  # Step 3: Simulate nuclei scan
+  - name: nuclei-scan
+    type: bash
+    command: |
+      # Simulate nuclei-style JSON output
+      cat > {{vulns_dir}}/raw/nuclei-results.json << 'EOF'
+      {"template":"cve-2021-44228","severity":"critical","host":"{{Target}}","matched":"log4j","info":{"name":"Log4j RCE","description":"Apache Log4j2 RCE"}}
+      {"template":"xss-reflected","severity":"medium","host":"{{Target}}","matched":"<script>","info":{"name":"Reflected XSS","description":"Cross-site scripting vulnerability"}}
+      {"template":"open-redirect","severity":"low","host":"{{Target}}","matched":"redirect=","info":{"name":"Open Redirect","description":"URL redirect vulnerability"}}
+      EOF
+      sleep 1
+    timeout: "{{timeout}}"
+    exports:
+      nuclei_results: "{{vulns_dir}}/raw/nuclei-results.json"
+
+  # Step 4: Simulate additional scanner
+  - name: additional-scan
+    type: bash
+    command: |
+      # Simulate additional vulnerability findings
+      cat > {{vulns_dir}}/raw/additional-results.txt << 'EOF'
+      [HIGH] SQL Injection potential at /api/search?q=
+      [MEDIUM] Missing security headers: X-Frame-Options
+      [LOW] Server version disclosure: nginx/1.18.0
+      EOF
+      sleep 0.5
+    timeout: 300
+
+  # Step 5: Process and categorize results
+  - name: process-results
+    type: bash
+    parallel_commands:
+      - grep '"severity":"critical"' {{nuclei_results}} > {{vulns_dir}}/processed/critical.json 2>/dev/null || true
+      - grep '"severity":"high"' {{nuclei_results}} > {{vulns_dir}}/processed/high.json 2>/dev/null || true
+      - grep '"severity":"medium"' {{nuclei_results}} > {{vulns_dir}}/processed/medium.json 2>/dev/null || true
+      - grep '"severity":"low"' {{nuclei_results}} > {{vulns_dir}}/processed/low.json 2>/dev/null || true
+    exports:
+      critical_vulns: "{{vulns_dir}}/processed/critical.json"
+      high_vulns: "{{vulns_dir}}/processed/high.json"
+
+  # Step 6: Generate summary report
+  - name: generate-summary
+    type: bash
+    command: |
+      echo "=== Vulnerability Scan Summary ===" > {{Output}}/vuln-summary.txt
+      echo "Target: {{Target}}" >> {{Output}}/vuln-summary.txt
+      echo "Scan completed at: $(date)" >> {{Output}}/vuln-summary.txt
+      echo "" >> {{Output}}/vuln-summary.txt
+      echo "Findings by severity:" >> {{Output}}/vuln-summary.txt
+      echo "  Critical: $(grep -c 'critical' {{nuclei_results}} 2>/dev/null || echo 0)" >> {{Output}}/vuln-summary.txt
+      echo "  High: $(grep -c 'high' {{nuclei_results}} 2>/dev/null || echo 0)" >> {{Output}}/vuln-summary.txt
+      echo "  Medium: $(grep -c 'medium' {{nuclei_results}} 2>/dev/null || echo 0)" >> {{Output}}/vuln-summary.txt
+      echo "  Low: $(grep -c 'low' {{nuclei_results}} 2>/dev/null || echo 0)" >> {{Output}}/vuln-summary.txt
+    exports:
+      vuln_summary: "{{Output}}/vuln-summary.txt"
+
+  # Step 7: Merge all results
+  - name: merge-results
+    type: bash
+    commands:
+      - cat {{vulns_dir}}/raw/*.json > {{Output}}/all-vulns.json 2>/dev/null || true
+      - cat {{vulns_dir}}/raw/*.txt >> {{Output}}/all-vulns.txt 2>/dev/null || true
+    exports:
+      all_vulns: "{{Output}}/all-vulns.json"
+
+  # Step 8: Log completion with statistics
+  - name: log-completion
+    type: function
+    function: |
+      var summary = readFile("{{vuln_summary}}");
+      log_info("Vulnerability scan completed");
+      log_info(summary);
+      return true;

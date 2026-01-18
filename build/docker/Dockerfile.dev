@@ -1,0 +1,34 @@
+# Osmedeus Development Dockerfile
+# Full Go toolchain for development and debugging
+
+FROM golang:1.21-alpine
+
+# Install development dependencies
+RUN apk add --no-cache \
+    git \
+    make \
+    bash \
+    curl \
+    vim \
+    && go install github.com/cosmtrek/air@latest
+
+WORKDIR /app
+
+# Copy go mod files first for better layer caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the binary
+RUN go build -o build/bin/osmedeus ./cmd/osmedeus
+
+# Create necessary directories
+RUN mkdir -p /root/osmedeus-base /root/workspaces-osmedeus
+
+# Expose default server port
+EXPOSE 8002
+
+# Default command: run server without auth (dev mode)
+CMD ["./build/bin/osmedeus", "serve", "-A"]

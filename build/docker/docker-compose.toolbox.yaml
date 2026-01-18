@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  osmedeus-toolbox:
+    build:
+      context: ../..
+      dockerfile: build/docker/Dockerfile.toolbox
+      args:
+        VERSION: "5.0.0"
+        BUILD_TIME: "${BUILD_TIME:-unknown}"
+        COMMIT_HASH: "${COMMIT_HASH:-unknown}"
+    image: osmedeus-toolbox:latest
+    container_name: osmedeus-toolbox
+    hostname: osmedeus-toolbox
+    volumes:
+      # Persist workspaces and scan results
+      - osmedeus-workspaces:/root/workspaces-osmedeus
+      # Persist database
+      - osmedeus-data:/root/osmedeus-base
+    ports:
+      - "8002:8002"
+    environment:
+      - OSMEDEUS_BASE=/root/osmedeus-base
+    # Keep container running for interactive use
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+volumes:
+  osmedeus-workspaces:
+  osmedeus-data:

@@ -1,0 +1,20 @@
+name: test-runner
+kind: module
+description: Test runner configuration
+tags: test,runner,host
+
+# This module runs on the local host (default)
+runner: host
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: echo-runner-type
+    type: bash
+    command: echo "Running on host with target={{target}}"
+
+  - name: show-hostname
+    type: bash
+    command: hostname

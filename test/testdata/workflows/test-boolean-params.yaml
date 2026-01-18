@@ -1,0 +1,154 @@
+name: test-boolean-params
+kind: module
+description: Test workflow for validating boolean parameter handling
+tags: test,params,boolean,validation
+
+params:
+  - name: target
+    required: true
+  - name: enable_scan
+    type: bool
+    default: true
+  - name: skip_notify
+    type: bool
+    default: false
+  - name: verbose_mode
+    type: bool
+    default: true
+
+steps:
+  # Step 1: Echo all boolean params for verification
+  - name: print-params
+    type: bash
+    command: |
+      echo "=== Boolean Params Test ==="
+      echo "enable_scan={{enable_scan}}"
+      echo "skip_notify={{skip_notify}}"
+      echo "verbose_mode={{verbose_mode}}"
+      echo "target={{target}}"
+
+  # Step 2: Test enable_scan boolean
+  - name: check-enable-scan
+    type: bash
+    command: "echo 'Checking enable_scan value: {{enable_scan}}'"
+    exports:
+      scan_enabled: "{{enable_scan}}"
+    decision:
+      switch: "{{enable_scan}}"
+      cases:
+        "true":
+          goto: scan-enabled-branch
+        "false":
+          goto: scan-disabled-branch
+
+  # Step 3a: Scan is enabled (enable_scan=true)
+  - name: scan-enabled-branch
+    type: bash
+    command: |
+      echo "SCAN IS ENABLED"
+      echo "Running scan for {{target}}..."
+    exports:
+      scan_status: "ENABLED"
+    decision:
+      switch: "always"
+      cases:
+        "always":
+          goto: check-skip-notify
+
+  # Step 3b: Scan is disabled (enable_scan=false)
+  - name: scan-disabled-branch
+    type: bash
+    command: |
+      echo "SCAN IS DISABLED"
+      echo "Skipping scan for {{target}}"
+    exports:
+      scan_status: "DISABLED"
+
+  # Step 4: Test skip_notify boolean
+  - name: check-skip-notify
+    type: bash
+    command: "echo 'Checking skip_notify value: {{skip_notify}}'"
+    exports:
+      notify_skipped: "{{skip_notify}}"
+    decision:
+      switch: "{{skip_notify}}"
+      cases:
+        "true":
+          goto: notify-skipped-branch
+        "false":
+          goto: notify-enabled-branch
+
+  # Step 5a: Notifications skipped (skip_notify=true)
+  - name: notify-skipped-branch
+    type: bash
+    command: echo "NOTIFICATIONS SKIPPED"
+    exports:
+      notify_status: "SKIPPED"
+    decision:
+      switch: "always"
+      cases:
+        "always":
+          goto: check-verbose-mode
+
+  # Step 5b: Notifications enabled (skip_notify=false)
+  - name: notify-enabled-branch
+    type: bash
+    command: echo "NOTIFICATIONS ENABLED"
+    exports:
+      notify_status: "ENABLED"
+
+  # Step 6: Test verbose_mode boolean
+  - name: check-verbose-mode
+    type: bash
+    command: "echo 'Checking verbose_mode value: {{verbose_mode}}'"
+    exports:
+      is_verbose: "{{verbose_mode}}"
+    decision:
+      switch: "{{verbose_mode}}"
+      cases:
+        "true":
+          goto: verbose-on-branch
+        "false":
+          goto: verbose-off-branch
+
+  # Step 7a: Verbose mode on
+  - name: verbose-on-branch
+    type: bash
+    command: "echo 'VERBOSE MODE: ON'"
+    exports:
+      verbose_status: "ON"
+    decision:
+      switch: "always"
+      cases:
+        "always":
+          goto: final-summary
+
+  # Step 7b: Verbose mode off
+  - name: verbose-off-branch
+    type: bash
+    command: "echo 'VERBOSE MODE: OFF'"
+    exports:
+      verbose_status: "OFF"
+
+  # Step 8: Final summary with all boolean results
+  - name: final-summary
+    type: bash
+    command: |
+      echo "=== Boolean Params Summary ==="
+      echo "Target: {{target}}"
+      echo ""
+      echo "Input Params:"
+      echo "  enable_scan: {{enable_scan}}"
+      echo "  skip_notify: {{skip_notify}}"
+      echo "  verbose_mode: {{verbose_mode}}"
+      echo ""
+      echo "Decision Results:"
+      echo "  Scan Status: {{scan_status}}"
+      echo "  Notify Status: {{notify_status}}"
+      echo "  Verbose Status: {{verbose_status}}"
+      echo ""
+      echo "Boolean Exports:"
+      echo "  scan_enabled: {{scan_enabled}}"
+      echo "  notify_skipped: {{notify_skipped}}"
+      echo "  is_verbose: {{is_verbose}}"
+      echo "=== Test Complete ==="

@@ -1,0 +1,11 @@
+# Sample subdomain wordlist for testing
+www
+api
+admin
+dev
+staging
+test
+mail
+ftp
+blog
+shop

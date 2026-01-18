@@ -1,0 +1,27 @@
+kind: module
+name: demo-bash
+description: Demo bash steps with functions and exports
+params:
+  - name: target
+    required: true
+  - name: threads
+    default: "5"
+steps:
+  - name: setup
+    type: bash
+    command: mkdir -p {{Output}}/demo && echo "{{Target}}" > {{Output}}/demo/target.txt
+    exports:
+      target_file: "{{Output}}/demo/target.txt"
+  - name: run-parallel
+    type: bash
+    parallel_commands:
+      - 'echo "Thread 1: {{Target}}" >> {{Output}}/demo/results.txt'
+      - 'echo "Thread 2: {{Target}}" >> {{Output}}/demo/results.txt'
+  - name: check-result
+    type: function
+    function: 'fileLength("{{Output}}/demo/results.txt")'
+    exports:
+      line_count: "output"
+  - name: summary
+    type: bash
+    command: 'echo "Processed {{Target}} with {{line_count}} lines"'

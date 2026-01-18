@@ -1,0 +1,739 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "Modern Orchestration Engine for Security - REST API for managing security automation workflows, scans, and distributed task execution.",
+        "title": "Osmedeus API",
+        "termsOfService": "https://docs.osmedeus.org/terms/",
+        "contact": {
+            "name": "Osmedeus Support",
+            "url": "https://github.com/j3ssie/osmedeus",
+            "email": "support@osmedeus.org"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "5.0.0"
+    },
+    "host": "localhost:8002",
+    "basePath": "/",
+    "paths": {
+        "/": {
+            "get": {
+                "description": "Get server version and info",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Info"
+                ],
+                "summary": "Server info",
+                "responses": {
+                    "200": {
+                        "description": "Server information",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/login": {
+            "post": {
+                "description": "Authenticate user and get JWT token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "User login",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_handlers.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JWT token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/new-scan": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Execute a workflow against a target",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scans"
+                ],
+                "summary": "Create a new scan",
+                "parameters": [
+                    {
+                        "description": "Scan configuration",
+                        "name": "scan",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_handlers.CreateScanRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Scan started",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Workflow not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/tasks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a list of all running and completed tasks",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Distributed"
+                ],
+                "summary": "List all tasks",
+                "responses": {
+                    "200": {
+                        "description": "List of running and completed tasks",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to list tasks",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Submit a new task to the distributed worker queue",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Distributed"
+                ],
+                "summary": "Submit a new task",
+                "parameters": [
+                    {
+                        "description": "Task configuration",
+                        "name": "task",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pkg_server_handlers.SubmitTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Task submitted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to submit task",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/tasks/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get details for a specific task by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Distributed"
+                ],
+                "summary": "Get task details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Task not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/workers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a list of all registered workers in the distributed pool",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Distributed"
+                ],
+                "summary": "List all workers",
+                "responses": {
+                    "200": {
+                        "description": "List of workers",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to list workers",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/workers/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get details for a specific worker by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Distributed"
+                ],
+                "summary": "Get worker details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Worker ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Worker details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Worker not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to get worker",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/workflows": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a list of all available workflows with details",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Workflows"
+                ],
+                "summary": "List all workflows",
+                "responses": {
+                    "200": {
+                        "description": "List of workflows",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to load workflows",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/workflows/{name}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detailed information about a specific workflow. Use show_yaml=true to get raw YAML content.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Workflows"
+                ],
+                "summary": "Get workflow details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workflow name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Return raw YAML content instead of JSON",
+                        "name": "show_yaml",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Workflow details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Workflow not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/workspaces": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a list of all scan workspaces",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Workspaces"
+                ],
+                "summary": "List all workspaces",
+                "responses": {
+                    "200": {
+                        "description": "List of workspaces",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to read workspaces",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/upload-file": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload a file containing a list of inputs (targets, URLs, etc.) for later use in scans",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Upload input file",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Input file to upload",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "File uploaded with path",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/workflow-upload": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upload a raw YAML workflow file and save it to the workflows directory",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Workflows"
+                ],
+                "summary": "Upload workflow file",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Workflow YAML file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Workflow uploaded",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or YAML",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/snapshot-download/{workspace_name}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Compress a workspace folder into a zip file and download it",
+                "produces": [
+                    "application/zip"
+                ],
+                "tags": [
+                    "Snapshots"
+                ],
+                "summary": "Download workspace snapshot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace name",
+                        "name": "workspace_name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Zip file download",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "Workspace not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create snapshot",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Check if the server is running",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "status: ok",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/health/ready": {
+            "get": {
+                "description": "Check if the server is ready to accept requests",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Readiness check",
+                "responses": {
+                    "200": {
+                        "description": "status: ready",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "pkg_server_handlers.CreateScanRequest": {
+            "type": "object",
+            "properties": {
+                "concurrency": {
+                    "description": "Number of concurrent scans (default: 1)",
+                    "type": "integer",
+                    "default": 1
+                },
+                "flow": {
+                    "description": "Flow workflow name",
+                    "type": "string"
+                },
+                "module": {
+                    "description": "Module workflow name",
+                    "type": "string"
+                },
+                "params": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "target": {
+                    "description": "Single target to scan",
+                    "type": "string"
+                },
+                "targets": {
+                    "description": "Array of targets to scan",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "target_file": {
+                    "description": "Path to file containing targets (one per line)",
+                    "type": "string"
+                }
+            }
+        },
+        "pkg_server_handlers.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "pkg_server_handlers.SubmitTaskRequest": {
+            "type": "object",
+            "properties": {
+                "params": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "target": {
+                    "type": "string"
+                },
+                "workflow_kind": {
+                    "type": "string"
+                },
+                "workflow_name": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "JWT Bearer token authentication. Format: \"Bearer {token}\"",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

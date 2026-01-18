@@ -1,0 +1,152 @@
+kind: module
+name: test-remote-bash-ssh
+description: Test remote-bash step type with SSH runner
+tags:
+    - test
+    - remote-bash
+    - ssh
+params:
+    - name: target
+      default: ""
+      required: true
+      generator: ""
+    - name: ssh_host
+      default: localhost
+      required: false
+      generator: ""
+    - name: ssh_port
+      default: "2222"
+      required: false
+      generator: ""
+    - name: ssh_user
+      default: testuser
+      required: false
+      generator: ""
+    - name: ssh_password
+      default: testpass
+      required: false
+      generator: ""
+trigger: []
+dependencies: null
+reports: []
+steps:
+    - name: check-ssh-connection
+      type: remote-bash
+      step_runner: ssh
+      pre_condition: ""
+      log: Testing SSH connection
+      timeout: 0
+      command: echo "Hello from SSH" && hostname
+      commands: []
+      parallel_commands: []
+      std_file: ""
+      speed_args: ""
+      config_args: ""
+      input_args: ""
+      output_args: ""
+      function: ""
+      functions: []
+      parallel_functions: []
+      parallel_steps: []
+      input: ""
+      variable: ""
+      threads: 0
+      step: null
+      step_runner_config:
+        host: '{{ssh_host}}'
+        port: 2222
+        user: '{{ssh_user}}'
+        password: '{{ssh_password}}'
+      step_remote_file: ""
+      host_output_file: ""
+      url: ""
+      method: ""
+      headers: {}
+      request_body: ""
+      messages: []
+      exports: {}
+      on_success: []
+      on_error: []
+      decision: []
+    - name: run-multiple-ssh
+      type: remote-bash
+      step_runner: ssh
+      pre_condition: ""
+      log: Running multiple commands via SSH
+      timeout: 0
+      command: ""
+      commands:
+        - 'echo "Target: {{target}}"'
+        - whoami
+        - pwd
+      parallel_commands: []
+      std_file: ""
+      speed_args: ""
+      config_args: ""
+      input_args: ""
+      output_args: ""
+      function: ""
+      functions: []
+      parallel_functions: []
+      parallel_steps: []
+      input: ""
+      variable: ""
+      threads: 0
+      step: null
+      step_runner_config:
+        host: '{{ssh_host}}'
+        port: 2222
+        user: '{{ssh_user}}'
+        password: '{{ssh_password}}'
+      step_remote_file: ""
+      host_output_file: ""
+      url: ""
+      method: ""
+      headers: {}
+      request_body: ""
+      messages: []
+      exports: {}
+      on_success: []
+      on_error: []
+      decision: []
+    - name: parallel-ssh
+      type: remote-bash
+      step_runner: ssh
+      pre_condition: ""
+      log: Running parallel commands via SSH
+      timeout: 30
+      command: ""
+      commands: []
+      parallel_commands:
+        - echo "Parallel 1"
+        - echo "Parallel 2"
+        - echo "Parallel 3"
+      std_file: ""
+      speed_args: ""
+      config_args: ""
+      input_args: ""
+      output_args: ""
+      function: ""
+      functions: []
+      parallel_functions: []
+      parallel_steps: []
+      input: ""
+      variable: ""
+      threads: 0
+      step: null
+      step_runner_config:
+        host: '{{ssh_host}}'
+        port: 2222
+        user: '{{ssh_user}}'
+        password: '{{ssh_password}}'
+      step_remote_file: ""
+      host_output_file: ""
+      url: ""
+      method: ""
+      headers: {}
+      request_body: ""
+      messages: []
+      exports: {}
+      on_success: []
+      on_error: []
+      decision: []

@@ -1,0 +1,247 @@
+# =============================================================================
+# Module Workflow: SSH Runner Configuration Example
+# =============================================================================
+# This file demonstrates all SSH runner configuration fields at both
+# the workflow level (for all steps) and step level (per-step override).
+# =============================================================================
+
+kind: module
+name: ssh-runner-example
+description: Demonstrates SSH runner configuration with all available fields
+tags: ssh, runner, remote
+
+# -----------------------------------------------------------------------------
+# RUNNER CONFIGURATION (Workflow-Level)
+# Applies to all steps unless overridden at step level
+# -----------------------------------------------------------------------------
+
+# runner: Execution environment for this workflow
+# Options: host (default - local machine), docker, ssh
+runner: ssh
+
+# runner_config: Configuration for the selected runner type
+runner_config:
+  # -------------------------------------------------------------------------
+  # SSH-SPECIFIC CONFIGURATION
+  # -------------------------------------------------------------------------
+
+  # host: SSH hostname or IP address (required for ssh runner)
+  # Can use template variables for dynamic targeting
+  host: "{{ssh_host}}"
+
+  # port: SSH port number
+  # Default: 22
+  port: 22
+
+  # user: SSH username for authentication
+  user: "{{ssh_user}}"
+
+  # key_file: Path to SSH private key file for key-based authentication
+  # Preferred over password authentication for security
+  key_file: "{{ssh_key_path}}"
+
+  # password: SSH password for password-based authentication
+  # WARNING: Not recommended - use key_file instead when possible
+  # Can use template variables or environment references
+  # password: "{{ssh_password}}"
+
+  # -------------------------------------------------------------------------
+  # COMMON CONFIGURATION (applies to docker and ssh)
+  # -------------------------------------------------------------------------
+
+  # workdir: Working directory on the remote machine
+  # Commands will execute in this directory
+  workdir: /home/scanner/workspace
+
+params:
+  - name: ssh_host
+    default: "192.168.1.100"
+    required: true
+
+  - name: ssh_user
+    default: "scanner"
+    required: true
+
+  - name: ssh_key_path
+    default: "~/.ssh/id_rsa"
+
+  - name: threads
+    default: "10"
+
+steps:
+  # ===========================================================================
+  # Step using workflow-level SSH runner
+  # ===========================================================================
+  - name: setup-remote-workspace
+    type: bash
+    log: "Setting up workspace on remote SSH server"
+    command: 'mkdir -p /home/scanner/workspace/results && echo "Workspace ready"'
+
+  # ===========================================================================
+  # Remote-bash step type with SSH (explicit remote-bash type)
+  # remote-bash is specifically designed for remote execution scenarios
+  # ===========================================================================
+  - name: remote-bash-ssh
+    # type: remote-bash is explicitly for remote execution (docker/ssh)
+    type: remote-bash
+    log: "Remote bash execution via SSH"
+
+    # step_runner: Required for remote-bash type - must be "docker" or "ssh"
+    step_runner: ssh
+
+    # step_runner_config: SSH configuration (inherits from workflow if not set)
+    # Omitting this uses workflow-level runner_config
+    step_runner_config:
+      host: "{{ssh_host}}"
+      port: 22
+      user: "{{ssh_user}}"
+      key_file: "{{ssh_key_path}}"
+      workdir: /tmp
+
+    # command: Command to execute on remote server
+    command: 'hostname && whoami && pwd > /tmp/remote-info.txt'
+
+    # step_remote_file: File on remote server to copy back to local host
+    # This is useful for retrieving results from remote execution
+    step_remote_file: /tmp/remote-info.txt
+
+    # host_output_file: Local path where remote file will be copied
+    host_output_file: "{{Output}}/remote-info.txt"
+
+    exports:
+      remote_file: "{{Output}}/remote-info.txt"
+
+  # ===========================================================================
+  # Step overriding SSH connection to different server
+  # ===========================================================================
+  - name: connect-to-secondary-server
+    type: bash
+    log: "Connecting to secondary server"
+
+    # Override workflow runner with different SSH target
+    step_runner: ssh
+
+    step_runner_config:
+      host: "192.168.1.101"  # Different server
+      port: 2222             # Non-standard port
+      user: admin
+      key_file: "~/.ssh/secondary_key"
+      workdir: /opt/scanner
+
+    command: 'echo "Connected to secondary server" && uptime'
+
+  # ===========================================================================
+  # Multiple sequential commands via SSH
+  # ===========================================================================
+  - name: ssh-multiple-commands
+    type: bash
+    log: "Running multiple commands on remote"
+
+    # commands: List of commands executed sequentially on remote
+    commands:
+      - 'echo "Step 1: Checking system"'
+      - 'df -h'
+      - 'echo "Step 2: Checking memory"'
+      - 'free -m'
+      - 'echo "Step 3: Checking processes"'
+      - 'ps aux | head -10'
+
+    std_file: "{{Output}}/system-check.txt"
+
+  # ===========================================================================
+  # Parallel commands on SSH (run concurrently on remote)
+  # ===========================================================================
+  - name: ssh-parallel-commands
+    type: bash
+    log: "Running parallel commands on remote SSH server"
+
+    parallel_commands:
+      - 'nmap -sS -p 80 {{Target}} > /tmp/port80.txt'
+      - 'nmap -sS -p 443 {{Target}} > /tmp/port443.txt'
+      - 'nmap -sS -p 22 {{Target}} > /tmp/port22.txt'
+
+  # ===========================================================================
+  # Run tool with structured arguments via SSH
+  # ===========================================================================
+  - name: ssh-nuclei-scan
+    type: bash
+    log: "Running nuclei scan via SSH"
+    timeout: 3600
+
+    command: nuclei
+    speed_args: '-rate-limit 50 -c {{threads}}'
+    config_args: '-t ~/nuclei-templates/cves/'
+    input_args: '-u {{Target}}'
+    output_args: '-o /home/scanner/workspace/nuclei-results.json -json'
+
+    step_remote_file: /home/scanner/workspace/nuclei-results.json
+    host_output_file: "{{Output}}/nuclei-results.json"
+
+    exports:
+      scan_results: "{{Output}}/nuclei-results.json"
+
+  # ===========================================================================
+  # Foreach loop with SSH execution
+  # Processes multiple targets on remote server
+  # ===========================================================================
+  - name: ssh-foreach-targets
+    type: foreach
+    log: "Processing targets via SSH"
+
+    # input: File containing targets (one per line)
+    input: "{{Output}}/targets.txt"
+
+    # variable: Loop variable accessed as [[variable]] in inner step
+    variable: current_target
+
+    # threads: Number of concurrent SSH executions
+    threads: 5
+
+    step:
+      name: probe-target
+      type: bash
+      # Inner step inherits workflow-level SSH runner
+      command: 'curl -s -o /dev/null -w "%{http_code}" "[[current_target]]" 2>/dev/null || echo "failed"'
+      exports:
+        probe_result: "{{stdout}}"
+
+  # ===========================================================================
+  # Step running on local host (override workflow's SSH runner)
+  # Useful for local processing of results retrieved from remote
+  # ===========================================================================
+  - name: process-results-locally
+    type: bash
+    log: "Processing results on local host"
+
+    # Override to run locally instead of via SSH
+    step_runner: host
+
+    command: 'cat "{{Output}}/nuclei-results.json" | jq -r ".info.severity" | sort | uniq -c'
+
+    exports:
+      severity_summary: "{{stdout}}"
+
+  # ===========================================================================
+  # Function step (always runs locally, regardless of workflow runner)
+  # Note: Function steps execute on the host running osmedeus, not remote
+  # ===========================================================================
+  - name: log-completion
+    type: function
+    log: "Logging scan completion"
+    function: 'log_info("SSH scan completed for {{Target}}")'
+
+  # ===========================================================================
+  # Cleanup step on remote server
+  # ===========================================================================
+  - name: cleanup-remote
+    type: bash
+    log: "Cleaning up remote workspace"
+    command: 'rm -rf /home/scanner/workspace/temp/* 2>/dev/null; echo "Cleanup complete"'
+
+    on_success:
+      - action: log
+        message: "Remote cleanup completed successfully"
+
+    on_error:
+      - action: continue
+        message: "Cleanup failed but continuing workflow"

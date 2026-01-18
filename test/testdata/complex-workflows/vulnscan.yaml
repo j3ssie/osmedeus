@@ -1,0 +1,327 @@
+name: vulnscan
+kind: module
+description: Run vulnerability scan on all HTTP hosts using Jaeles and Nuclei scanners
+
+params:
+  - name: target
+    required: true
+  - name: httpFile
+    default: "{{Output}}/probing/http-{{Workspace}}.txt"
+  - name: output_dir
+    default: "{{Output}}/vuln"
+  - name: sign
+    default: "~/.jaeles/base-signatures/cves/.*"
+  - name: sign2
+    default: "~/.jaeles/base-signatures/common/.*"
+  - name: sign3
+    default: "~/.jaeles/base-signatures/sensitive/.*"
+  - name: splitLines
+    default: "500"
+  - name: limit
+    default: "25000"
+  - name: extra
+    default: " "
+  - name: enableNuclei
+    default: "true"
+  - name: threads
+    default: "10"
+  - name: nucleiThreads
+    default: "{{threads * 10}}"
+  - name: jaelesThreads
+    default: "{{threads * 5}}"
+  - name: nucleiTimeout
+    default: "8h"
+  - name: jaelesTimeout
+    default: "3h"
+  - name: nucleiSeverity
+    default: "critical,high,medium,low,info"
+  - name: defaultUA
+    default: "User-Agent: Mozilla/5.0 (compatible; Osmedeus/v4; +https://github.com/j3ssie/osmedeus)"
+
+steps:
+  # ============================================================
+  # Phase 1: Validate Dependencies
+  # ============================================================
+  - name: validate-dependencies
+    type: function
+    function: |
+      fileExists("{{Binaries}}/jaeles") &&
+      fileExists("{{Binaries}}/nuclei")
+    exports:
+      deps_valid: "output"
+    on_error:
+      - action: log
+        message: "Required binaries (jaeles, nuclei) not found"
+      - action: abort
+
+  # ============================================================
+  # Phase 2: Setup Output Directories
+  # ============================================================
+  - name: setup-directories
+    type: bash
+    commands:
+      - mkdir -p {{output_dir}}
+      - mkdir -p {{output_dir}}/raw
+      - mkdir -p {{output_dir}}/active
+      - mkdir -p {{output_dir}}/sensitive
+      - mkdir -p {{output_dir}}/nuclei
+
+  # ============================================================
+  # Phase 3: Validate Input File
+  # ============================================================
+  - name: check-input-exists
+    type: function
+    function: fileExists("{{httpFile}}")
+    exports:
+      input_exists: "output"
+    on_error:
+      - action: log
+        message: "Input file {{httpFile}} not found"
+      - action: abort
+
+  - name: count-input-lines
+    type: function
+    function: fileLength("{{httpFile}}")
+    exports:
+      input_count: "output"
+
+  # Decision: Abort if input file exceeds limit
+  - name: check-input-limit
+    type: function
+    function: |
+      var count = parseInt("{{input_count}}");
+      var limit = parseInt("{{limit}}");
+      if (count > limit) {
+        return "exceeds_limit";
+      }
+      return "valid";
+    exports:
+      input_valid: "{{Result}}"
+    decision:
+      switch: "{{input_valid}}"
+      cases:
+        "exceeds_limit":
+          goto: abort-large-input
+      default:
+        goto: split-input-file
+
+  - name: abort-large-input
+    type: function
+    function: printf("ERROR: Input file has {{input_count}} lines, exceeds limit of {{limit}}")
+    on_error:
+      - action: abort
+
+  # ============================================================
+  # Phase 4: Split Input for Parallel Processing
+  # ============================================================
+  - name: split-input-file
+    type: function
+    function: SplitFile("{{httpFile}}", "{{Workspace}}-index", {{splitLines}}, "{{output_dir}}/raw")
+    exports:
+      split_dir: "{{output_dir}}/raw"
+
+  - name: list-split-files
+    type: bash
+    command: "ls {{output_dir}}/raw/{{Workspace}}-index* 2>/dev/null | head -100 > {{output_dir}}/raw/split-files.txt || touch {{output_dir}}/raw/split-files.txt"
+    exports:
+      split_files: "{{output_dir}}/raw/split-files.txt"
+
+  - name: count-split-files
+    type: function
+    function: fileLength("{{output_dir}}/raw/split-files.txt")
+    exports:
+      split_count: "output"
+
+  # ============================================================
+  # Phase 5: Jaeles Vulnerability Scanning
+  # ============================================================
+  - name: jaeles-active-scan
+    type: foreach
+    pre_condition: 'parseInt("{{split_count}}") > 0'
+    input: "{{output_dir}}/raw/split-files.txt"
+    variable: splitfile
+    threads: 1
+    step:
+      name: run-jaeles-active
+      type: bash
+      command: |
+        echo "Running Jaeles active scan on [[splitfile]]..."
+        timeout -k 1m {{jaelesTimeout}} {{Binaries}}/jaeles scan -c {{jaelesThreads}} -s '{{sign}}' -s '{{sign2}}' -U [[splitfile]] -o {{output_dir}}/active/ {{extra}} 2>/dev/null || true
+      timeout: 14400
+
+  - name: jaeles-sensitive-scan
+    type: foreach
+    pre_condition: 'parseInt("{{split_count}}") > 0'
+    input: "{{output_dir}}/raw/split-files.txt"
+    variable: splitfile
+    threads: 1
+    step:
+      name: run-jaeles-sensitive
+      type: bash
+      command: |
+        echo "Running Jaeles sensitive scan on [[splitfile]]..."
+        timeout -k 1m {{jaelesTimeout}} {{Binaries}}/jaeles scan --fi -c {{jaelesThreads}} -s '{{sign3}}' -L 2 -U [[splitfile]] -o {{output_dir}}/sensitive/ {{extra}} 2>/dev/null || true
+      timeout: 14400
+
+  # ============================================================
+  # Phase 6: Generate Jaeles Reports
+  # ============================================================
+  - name: generate-jaeles-reports
+    type: parallel-steps
+    parallel_steps:
+      - name: generate-active-report
+        type: bash
+        command: "{{Binaries}}/jaeles report -o {{output_dir}}/active/ -R {{output_dir}}/active/{{Workspace}}-report.html 2>/dev/null || true"
+        on_error:
+          - action: continue
+
+      - name: generate-sensitive-report
+        type: bash
+        command: "{{Binaries}}/jaeles report -o {{output_dir}}/sensitive/ -R {{output_dir}}/sensitive/{{Workspace}}-sensitive.html 2>/dev/null || true"
+        on_error:
+          - action: continue
+
+  # ============================================================
+  # Phase 7: Process Jaeles Results
+  # ============================================================
+  - name: copy-active-summary
+    type: bash
+    pre_condition: 'fileExists("{{output_dir}}/active/jaeles-summary.txt")'
+    command: "cp {{output_dir}}/active/jaeles-summary.txt {{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt"
+    exports:
+      active_summary: "{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt"
+
+  - name: notify-active-results
+    type: function
+    pre_condition: 'fileExists("{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt")'
+    parallel_functions:
+      - TeleMessByFile("#report", "{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt")
+      - Cat("{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt")
+      - TotalVulnerability("{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt")
+    on_error:
+      - action: log
+        message: "Failed to notify active scan results"
+      - action: continue
+
+  - name: copy-sensitive-summary
+    type: bash
+    pre_condition: 'fileExists("{{output_dir}}/sensitive/jaeles-summary.txt")'
+    command: "cp {{output_dir}}/sensitive/jaeles-summary.txt {{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt"
+    exports:
+      sensitive_summary: "{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt"
+
+  - name: notify-sensitive-results
+    type: function
+    pre_condition: 'fileExists("{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt")'
+    parallel_functions:
+      - TeleMessByFile("#sensitive", "{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt")
+      - Cat("{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt")
+      - TotalVulnerability("{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt")
+    on_error:
+      - action: log
+        message: "Failed to notify sensitive scan results"
+      - action: continue
+
+  # ============================================================
+  # Phase 8: Nuclei Vulnerability Scanning
+  # ============================================================
+  - name: nuclei-scan
+    type: bash
+    pre_condition: '"{{enableNuclei}}" == "true" && fileExists("{{httpFile}}")'
+    command: |
+      timeout -k 1m {{nucleiTimeout}} {{Binaries}}/nuclei \
+        -H '{{defaultUA}}' \
+        -silent \
+        -c {{nucleiThreads}} \
+        -jsonl \
+        -severity '{{nucleiSeverity}}' \
+        -t ~/nuclei-templates/ \
+        -l {{httpFile}} \
+        -irr \
+        -o {{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt
+    timeout: 28800
+    exports:
+      nuclei_json: "{{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt"
+    on_error:
+      - action: log
+        message: "Nuclei scan failed or timed out"
+      - action: continue
+
+  - name: count-nuclei-results
+    type: function
+    pre_condition: 'fileExists("{{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt")'
+    function: fileLength("{{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt")
+    exports:
+      nuclei_count: "output"
+
+  # ============================================================
+  # Phase 9: Process Nuclei Results
+  # ============================================================
+  - name: generate-nuclei-report
+    type: function
+    pre_condition: 'parseInt("{{nuclei_count}}") > 0'
+    function: GenNucleiReport("{{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt", "{{output_dir}}/nuclei/{{Workspace}}-nuclei.html")
+    on_error:
+      - action: log
+        message: "Failed to generate Nuclei HTML report"
+      - action: continue
+
+  - name: parse-nuclei-json
+    type: bash
+    pre_condition: 'parseInt("{{nuclei_count}}") > 0'
+    command: |
+      cat {{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt | \
+        jq -r '[.info.severity,.\"template-id\",.\"matched-at\",.\"matched-name\"] | join(\" - \")' \
+        > {{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt 2>/dev/null || true
+    exports:
+      nuclei_parsed: "{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt"
+
+  - name: sort-nuclei-results
+    type: function
+    pre_condition: 'fileExists("{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt")'
+    function: SortU("{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt")
+
+  - name: notify-nuclei-results
+    type: function
+    pre_condition: 'parseInt("{{nuclei_count}}") > 0'
+    parallel_functions:
+      - TeleMessByFile("#sensitive", "{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt")
+      - Cat("{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt")
+    on_error:
+      - action: log
+        message: "Failed to notify Nuclei results"
+      - action: continue
+
+  # ============================================================
+  # Phase 10: Generate Final Report
+  # ============================================================
+  - name: generate-final-report
+    type: function
+    pre_condition: 'fileExists("{{Data}}/markdown/general-template.md")'
+    function: GenMarkdownReport("{{Data}}/markdown/general-template.md", "{{Output}}/summary.html")
+    on_error:
+      - action: log
+        message: "Final report generation skipped - template not found"
+      - action: continue
+
+  - name: generate-vuln-summary
+    type: bash
+    commands:
+      - |
+        echo "=== Vulnerability Scan Report ===" > {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "Target: {{Target}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "Workspace: {{Workspace}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "Date: $(date)" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "=== Statistics ===" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "Input Hosts: {{input_count}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "Nuclei Findings: {{nuclei_count}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "=== Reports Generated ===" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "- Active Scan: {{output_dir}}/active/{{Workspace}}-report.html" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "- Sensitive Scan: {{output_dir}}/sensitive/{{Workspace}}-sensitive.html" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "- Nuclei Scan: {{output_dir}}/nuclei/{{Workspace}}-nuclei.html" >> {{output_dir}}/final-report-{{Workspace}}.txt
+
+  - name: notify-completion
+    type: function
+    function: printf("Vulnerability scan complete: {{input_count}} hosts scanned, {{nuclei_count}} nuclei findings")

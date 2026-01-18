@@ -1,0 +1,70 @@
+name: test-reports-params
+kind: module
+description: Test that report paths can reference params with nested template variables
+tags: test,reports,params
+
+params:
+  - name: target
+    required: true
+  - name: dnsFile
+    type: string
+    default: "{{Output}}/probing/dns-{{TargetSpace}}.txt"
+  - name: httpFile
+    type: string
+    default: "{{Output}}/probing/http-results.txt"
+
+reports:
+  - name: dns-results
+    path: "{{dnsFile}}"
+    type: text
+  - name: http-results
+    path: "{{httpFile}}"
+    type: text
+
+steps:
+  - name: setup-directories
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/probing
+
+  - name: create-dns-file
+    type: bash
+    command: |
+      echo "ns1.{{Target}}" > {{dnsFile}}
+      echo "DNS file created at: {{dnsFile}}"
+
+  - name: create-http-file
+    type: bash
+    command: |
+      echo "http://{{Target}}:80" > {{httpFile}}
+      echo "HTTP file created at: {{httpFile}}"
+
+  - name: verify-files
+    type: bash
+    command: |
+      echo "DNS file exists: $(test -f {{dnsFile}} && echo 'yes' || echo 'no')"
+      echo "HTTP file exists: $(test -f {{httpFile}} && echo 'yes' || echo 'no')"
+
+  - name: read-dns-content
+    type: bash
+    command: |
+      echo "=== DNS File Content ==="
+      cat {{dnsFile}}
+      echo "=== End DNS Content ==="
+
+  - name: read-http-content
+    type: bash
+    command: |
+      echo "=== HTTP File Content ==="
+      cat {{httpFile}}
+      echo "=== End HTTP Content ==="
+
+  - name: final-summary
+    type: bash
+    command: |
+      echo "=== Reports Params Summary ==="
+      echo "Target: {{Target}}"
+      echo "TargetSpace: {{TargetSpace}}"
+      echo "DNS File Path: {{dnsFile}}"
+      echo "HTTP File Path: {{httpFile}}"
+      echo "=== All Reports Verified ==="

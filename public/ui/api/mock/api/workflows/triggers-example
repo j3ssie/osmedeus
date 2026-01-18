@@ -1,0 +1,257 @@
+# =============================================================================
+# Flow Workflow: All Trigger Types Example
+# =============================================================================
+# This file demonstrates ALL trigger types available in osmedeus workflows.
+# Triggers define when/how a workflow should automatically execute.
+# Trigger types: cron, event, watch, manual
+# =============================================================================
+
+kind: flow
+name: triggers-example
+description: Demonstrates all trigger types with comprehensive field documentation
+tags: triggers, automation, scheduled
+
+# -----------------------------------------------------------------------------
+# TRIGGERS SECTION
+# Define automatic execution triggers for this workflow
+# Multiple triggers can be defined; any triggered condition will start execution
+# =============================================================================
+trigger:
+  # ===========================================================================
+  # TRIGGER TYPE: cron
+  # Schedule-based execution using cron expressions
+  # ===========================================================================
+  - # name: Identifier for this trigger (for logging and management)
+    name: daily-scan
+
+    # on: Trigger type - cron, event, watch, or manual
+    on: cron
+
+    # schedule: Cron expression defining when to run
+    # Format: minute hour day-of-month month day-of-week
+    # Examples:
+    #   "0 0 * * *"     - Every day at midnight
+    #   "0 */6 * * *"   - Every 6 hours
+    #   "0 9 * * 1-5"   - 9 AM on weekdays
+    #   "0 0 1 * *"     - First day of every month at midnight
+    schedule: "0 2 * * *"  # Every day at 2 AM
+
+    # input: Defines where the target input comes from for scheduled runs
+    input:
+      # type: Input source type - file, event_data, function, or param
+      type: file
+
+      # path: For "file" type - path to file containing targets (one per line)
+      path: "/data/targets/active-targets.txt"
+
+    # enabled: Whether this trigger is active
+    # true = trigger is active and will fire
+    # false = trigger is defined but disabled
+    enabled: true
+
+  # ---------------------------------------------------------------------------
+  # Cron trigger with function-based input
+  # ---------------------------------------------------------------------------
+  - name: weekly-full-scan
+    on: cron
+    schedule: "0 0 * * 0"  # Every Sunday at midnight
+
+    input:
+      # type: function - Generate input dynamically using a function
+      type: function
+
+      # function: JavaScript function to generate/retrieve targets
+      # Can use built-in functions like db queries, API calls, etc.
+      function: 'get_targets_from_db("scope:production")'
+
+    enabled: true
+
+  # ===========================================================================
+  # TRIGGER TYPE: event
+  # Event-driven execution based on system events
+  # Events follow topic format: <component>.<event_type>
+  # ===========================================================================
+  - name: webhook-trigger
+    on: event
+
+    # event: Event configuration for event triggers
+    event:
+      # topic: Event topic to subscribe to
+      # Common topics:
+      #   webhook.received    - External webhook received
+      #   assets.new          - New asset discovered
+      #   assets.changed      - Asset data changed
+      #   db.change           - Database record changed
+      #   watch.files         - File system change detected
+      topic: webhook.received
+
+      # filters: JavaScript expressions to filter events
+      # Event data available as 'event' object with fields:
+      #   event.name      - Event name
+      #   event.source    - Event source
+      #   event.data      - JSON payload (string)
+      #   event.data_type - Type of data
+      # All filters must evaluate to true for trigger to fire
+      filters:
+        - 'event.source == "github"'
+        - 'event.name == "push"'
+
+    # input: How to extract target from event data
+    input:
+      # type: event_data - Extract from event payload
+      type: event_data
+
+      # field: JSON path to extract from event.data
+      # Uses dot notation for nested fields
+      field: "repository.html_url"
+
+    enabled: true
+
+  # ---------------------------------------------------------------------------
+  # Event trigger for new asset discovery
+  # ---------------------------------------------------------------------------
+  - name: new-asset-scan
+    on: event
+
+    event:
+      topic: assets.new
+
+      filters:
+        # Filter for specific asset types
+        - 'event.data_type == "subdomain"'
+        # Filter by source tool
+        - 'event.source == "subfinder" || event.source == "amass"'
+
+    input:
+      type: event_data
+      field: "hostname"
+
+    enabled: true
+
+  # ---------------------------------------------------------------------------
+  # Event trigger with function-based input extraction
+  # ---------------------------------------------------------------------------
+  - name: vuln-alert-trigger
+    on: event
+
+    event:
+      topic: webhook.received
+
+      filters:
+        - 'event.name == "vulnerability_alert"'
+        - 'JSON.parse(event.data).severity == "critical"'
+
+    input:
+      # type: function - Use function to parse/transform event data
+      type: function
+
+      # function: Transform event data to target format
+      function: 'jq("{{event.data}}", ".affected_host")'
+
+    enabled: true
+
+  # ===========================================================================
+  # TRIGGER TYPE: watch
+  # File system watch - triggers when files change
+  # ===========================================================================
+  - name: targets-file-watch
+    on: watch
+
+    # path: File or directory path to watch for changes
+    # Supports glob patterns in some implementations
+    path: "/data/targets/new-targets.txt"
+
+    # input: How to get targets when file changes
+    input:
+      type: file
+      path: "/data/targets/new-targets.txt"
+
+    enabled: true
+
+  # ---------------------------------------------------------------------------
+  # Watch trigger on directory
+  # ---------------------------------------------------------------------------
+  - name: input-directory-watch
+    on: watch
+
+    path: "/data/incoming/"
+
+    input:
+      # type: function - Process newly added files
+      type: function
+      function: 'get_new_files("/data/incoming/", "*.txt")'
+
+    enabled: true
+
+  # ===========================================================================
+  # TRIGGER TYPE: manual
+  # Explicit manual trigger control
+  # Used to enable/disable CLI execution for this workflow
+  # ===========================================================================
+  - name: manual-execution
+    on: manual
+
+    # For manual triggers, enabled controls whether CLI can run this workflow
+    # enabled: true  - Allow: osmedeus run -f triggers-example -t target
+    # enabled: false - Block CLI execution (only scheduled/event triggers work)
+    enabled: true
+
+    # input: Default input for manual execution
+    # This is optional; CLI -t flag overrides this
+    input:
+      # type: param - Use a parameter as input
+      type: param
+
+      # name: Parameter name to use as target
+      name: Target
+
+  # ---------------------------------------------------------------------------
+  # Disabled manual trigger example
+  # This workflow can ONLY be triggered via cron/events, not CLI
+  # ---------------------------------------------------------------------------
+  # Uncomment to see the effect:
+  # - name: block-manual
+  #   on: manual
+  #   enabled: false
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# -----------------------------------------------------------------------------
+params:
+  - name: scan_type
+    default: "standard"
+
+  - name: threads
+    default: "10"
+
+# -----------------------------------------------------------------------------
+# MODULES SECTION
+# The actual workflow steps to execute when any trigger fires
+# -----------------------------------------------------------------------------
+modules:
+  - name: initial-recon
+    path: modules/recon.yaml
+    params:
+      threads: "{{threads}}"
+
+  - name: scanning
+    path: modules/scan.yaml
+    depends_on:
+      - initial-recon
+    params:
+      scan_type: "{{scan_type}}"
+
+  - name: reporting
+    path: modules/report.yaml
+    depends_on:
+      - scanning
+
+    on_success:
+      - action: notify
+        notify: "Triggered scan completed for {{Target}}"
+        # condition: Only notify for certain triggers
+        condition: 'true'
+
+      - action: export
+        name: completed_at
+        value: "{{currentDate()}}"

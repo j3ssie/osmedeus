@@ -1,0 +1,19 @@
+name: test-trigger-watch
+kind: module
+description: Test file watch trigger
+tags: test,trigger,watch
+
+trigger:
+  - name: watch-files
+    on: watch
+    path: "/tmp/watch-test"
+    enabled: true
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: process-change
+    type: bash
+    command: echo "File changed in watch path"

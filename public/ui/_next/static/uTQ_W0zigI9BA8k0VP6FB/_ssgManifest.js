@@ -1,0 +1,1 @@
+self.__SSG_MANIFEST=new Set(["\u002Fapi\u002Fmock\u002Fapi\u002Fworkflows\u002F[id]","\u002Fassets\u002Fworkspaces\u002F[id]","\u002Finventory\u002Fworkspaces\u002F[id]","\u002Fworkflows\u002F[id]"]);self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()

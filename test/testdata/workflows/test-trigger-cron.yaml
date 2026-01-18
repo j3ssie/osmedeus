@@ -1,0 +1,22 @@
+name: test-trigger-cron
+kind: module
+description: Test cron trigger
+tags: test,trigger,cron
+
+trigger:
+  - name: every-minute
+    on: cron
+    schedule: "* * * * *"
+    enabled: true
+  - name: manual
+    on: manual
+    enabled: true
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: log-execution
+    type: bash
+    command: echo "Cron triggered at $(date)" >> /tmp/cron-test.log

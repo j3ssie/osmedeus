@@ -1,0 +1,31 @@
+name: test-echo
+kind: module
+description: Simple echo test module
+tags: test,bash,quick
+
+params:
+  - name: target
+    required: true
+  - name: message
+    default: "Hello from Osmedeus"
+
+steps:
+  - name: echo-target
+    type: bash
+    command: echo "Target is {{target}}"
+
+  - name: echo-message
+    type: bash
+    command: echo "Message is {{message}}"
+
+  - name: echo-basefolder
+    type: bash
+    command: echo "BaseFolder is {{BaseFolder}}"
+
+  - name: echo-output
+    type: bash
+    command: echo "Output is {{Output}}"
+
+  - name: echo-threads
+    type: bash
+    command: echo "threads={{threads}} baseThreads={{baseThreads}}"

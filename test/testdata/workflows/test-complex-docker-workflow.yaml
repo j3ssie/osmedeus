@@ -1,0 +1,218 @@
+name: test-complex-docker-workflow
+kind: module
+description: Complex workflow demonstrating bash, function steps with docker step_runner
+tags: test,docker,comprehensive
+
+params:
+  - name: target
+    required: true
+  - name: output_dir
+    default: /tmp/osm-complex-test
+  - name: threads
+    default: "5"
+
+steps:
+  # Step 1: Setup - Create directories using function
+  - name: setup-workspace
+    type: function
+    log: "Setting up workspace for {{target}}"
+    function: createDir("{{output_dir}}")
+    exports:
+      workspace_created: "output"
+
+  # Step 2: Create input file with bash
+  - name: create-target-list
+    type: bash
+    log: "Creating target list for {{target}}"
+    commands:
+      - mkdir -p {{output_dir}}/targets
+      - |
+        cat > {{output_dir}}/targets/hosts.txt << 'EOF'
+        sub1.{{target}}
+        sub2.{{target}}
+        api.{{target}}
+        www.{{target}}
+        admin.{{target}}
+        EOF
+    exports:
+      target_file: "{{output_dir}}/targets/hosts.txt"
+
+  # Step 3: Docker-based DNS resolution simulation
+  - name: dns-resolve
+    type: remote-bash
+    log: "Resolving DNS for targets in Docker"
+    timeout: 60
+    step_runner: docker
+    step_runner_config:
+      image: alpine:latest
+      env:
+        TARGET_DOMAIN: "{{target}}"
+      volumes:
+        - "{{output_dir}}:/workspace"
+      workdir: /workspace
+    command: |
+      echo "Resolving DNS for $TARGET_DOMAIN"
+      cat /workspace/targets/hosts.txt | while read host; do
+        echo "$host -> 127.0.0.1" >> /workspace/dns-resolved.txt
+      done
+      echo "DNS resolution complete"
+    exports:
+      dns_output: "{{output_dir}}/dns-resolved.txt"
+
+  # Step 4: Parallel docker commands - simulating port scanning
+  - name: parallel-port-scan
+    type: remote-bash
+    log: "Running parallel port scans in Docker"
+    timeout: 120
+    step_runner: docker
+    step_runner_config:
+      image: alpine:latest
+      volumes:
+        - "{{output_dir}}:/workspace"
+    parallel_commands:
+      - 'echo "Scanning ports 1-1000 on {{target}}" && sleep 1 && echo "Port 80 open" > /workspace/ports-1.txt'
+      - 'echo "Scanning ports 1001-2000 on {{target}}" && sleep 1 && echo "Port 443 open" > /workspace/ports-2.txt'
+      - 'echo "Scanning ports 2001-3000 on {{target}}" && sleep 1 && echo "Port 8080 open" > /workspace/ports-3.txt'
+      - 'echo "Scanning ports 3001-4000 on {{target}}" && sleep 1 && echo "Port 3306 open" > /workspace/ports-4.txt'
+
+  # Step 5: Merge port scan results
+  - name: merge-port-results
+    type: bash
+    log: "Merging port scan results"
+    command: cat {{output_dir}}/ports-*.txt > {{output_dir}}/all-ports.txt
+    exports:
+      ports_file: "{{output_dir}}/all-ports.txt"
+
+  # Step 6: Function to check file existence
+  - name: verify-ports-file
+    type: function
+    log: "Verifying ports file exists"
+    function: fileExists("{{ports_file}}")
+    exports:
+      ports_verified: "output"
+
+  # Step 7: Docker-based HTTP probing with parallel steps
+  - name: http-probe-parallel
+    type: parallel-steps
+    log: "Running parallel HTTP probes"
+    parallel_steps:
+      - name: probe-http
+        type: remote-bash
+        step_runner: docker
+        step_runner_config:
+          image: alpine:latest
+          volumes:
+            - "{{output_dir}}:/workspace"
+        command: |
+          echo "Probing HTTP on port 80"
+          echo "http://{{target}}:80 [200]" > /workspace/http-80.txt
+      - name: probe-https
+        type: remote-bash
+        step_runner: docker
+        step_runner_config:
+          image: alpine:latest
+          volumes:
+            - "{{output_dir}}:/workspace"
+        command: |
+          echo "Probing HTTPS on port 443"
+          echo "https://{{target}}:443 [200]" > /workspace/https-443.txt
+      - name: probe-alt
+        type: remote-bash
+        step_runner: docker
+        step_runner_config:
+          image: alpine:latest
+          volumes:
+            - "{{output_dir}}:/workspace"
+        command: |
+          echo "Probing alternate port 8080"
+          echo "http://{{target}}:8080 [404]" > /workspace/http-8080.txt
+
+  # Step 8: Foreach loop with docker - process each subdomain
+  - name: process-subdomains
+    type: foreach
+    log: "Processing each subdomain"
+    input: "{{output_dir}}/targets/hosts.txt"
+    variable: subdomain
+    threads: 3
+    step:
+      name: scan-subdomain
+      type: remote-bash
+      step_runner: docker
+      step_runner_config:
+        image: alpine:latest
+        volumes:
+          - "{{output_dir}}:/workspace"
+      command: |
+        echo "Scanning [[subdomain]]..."
+        echo "[[subdomain]]: status=200, title=Example" >> /workspace/subdomain-results.txt
+
+  # Step 9: Read results with function
+  - name: read-subdomain-results
+    type: function
+    log: "Reading subdomain scan results"
+    function: readFile("{{output_dir}}/subdomain-results.txt")
+    exports:
+      scan_results: "output"
+
+  # Step 10: Decision based routing
+  - name: check-results
+    type: bash
+    log: "Checking scan results"
+    command: wc -l < {{output_dir}}/subdomain-results.txt
+    exports:
+      result_count: "output"
+    decision:
+      switch: "{{result_count}}"
+      cases:
+        "0":
+          goto: _end
+      default:
+        goto: generate-report
+
+  # Step 11: Generate final report in docker
+  - name: generate-report
+    type: remote-bash
+    log: "Generating final report"
+    timeout: 30
+    step_runner: docker
+    step_runner_config:
+      image: alpine:latest
+      volumes:
+        - "{{output_dir}}:/workspace"
+    commands:
+      - echo "=== Scan Report for {{target}} ===" > /workspace/report.txt
+      - echo "" >> /workspace/report.txt
+      - echo "--- DNS Results ---" >> /workspace/report.txt
+      - cat /workspace/dns-resolved.txt >> /workspace/report.txt 2>/dev/null || echo "No DNS results" >> /workspace/report.txt
+      - echo "" >> /workspace/report.txt
+      - echo "--- Open Ports ---" >> /workspace/report.txt
+      - cat /workspace/all-ports.txt >> /workspace/report.txt 2>/dev/null || echo "No ports found" >> /workspace/report.txt
+      - echo "" >> /workspace/report.txt
+      - echo "--- Subdomain Results ---" >> /workspace/report.txt
+      - cat /workspace/subdomain-results.txt >> /workspace/report.txt 2>/dev/null || echo "No subdomain results" >> /workspace/report.txt
+      - echo "" >> /workspace/report.txt
+      - echo "Report generated at $(date)" >> /workspace/report.txt
+    exports:
+      report_file: "{{output_dir}}/report.txt"
+
+  # Step 12: Parallel functions to get file stats
+  - name: get-file-stats
+    type: function
+    log: "Getting file statistics"
+    parallel_functions:
+      - fileLength("{{output_dir}}/report.txt")
+      - fileExists("{{output_dir}}/all-ports.txt")
+      - trim("  {{target}}  ")
+    exports:
+      file_stats: "output"
+
+  # Step 13: Cleanup (optional - controlled by pre_condition)
+  - name: cleanup-temp-files
+    type: bash
+    log: "Cleaning up temporary files"
+    pre_condition: "false"
+    command: rm -rf {{output_dir}}/ports-*.txt
+    on_error:
+      - action: log
+        message: "Cleanup failed but continuing"
+      - action: continue
