@@ -15,7 +15,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/swagger"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
@@ -24,6 +23,7 @@ import (
 	"github.com/j3ssie/osmedeus/v5/pkg/server/handlers"
 	"github.com/j3ssie/osmedeus/v5/pkg/server/middleware"
 	"github.com/j3ssie/osmedeus/v5/public"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
 	_ "github.com/j3ssie/osmedeus/v5/docs/api-swagger" // swagger docs

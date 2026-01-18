@@ -36,7 +36,8 @@ var defaultHiddenColumns = []string{"id", "created_at", "updated_at", "completed
 
 // tableDefaultColumns defines default columns for specific tables
 var tableDefaultColumns = map[string][]string{
-	"assets": {"host", "host_ip", "title", "status_code", "words", "tech"},
+	"assets":          {"asset_value", "host_ip", "title", "status_code", "words", "tech"},
+	"vulnerabilities": {"asset_value", "asset_type", "severity", "confidence", "vuln_title", "vuln_info"},
 }
 
 // dbCmd - parent command for database management

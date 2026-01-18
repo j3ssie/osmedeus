@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/orivej/go-nix/nix/parser"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
+	"github.com/orivej/go-nix/nix/parser"
 	"go.uber.org/zap"
 )
 

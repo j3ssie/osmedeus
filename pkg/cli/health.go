@@ -286,6 +286,11 @@ func findWorkflowYAMLFiles(root string) ([]string, error) {
 				continue
 			}
 
+			// Skip hidden directories and files
+			if strings.HasPrefix(name, ".") {
+				continue
+			}
+
 			fullPath := filepath.Join(dir, name)
 
 			if entry.IsDir() {
@@ -303,7 +308,10 @@ func findWorkflowYAMLFiles(root string) ([]string, error) {
 
 			lower := strings.ToLower(name)
 			if strings.HasSuffix(lower, ".yaml") || strings.HasSuffix(lower, ".yml") {
-				out = append(out, fullPath)
+				// Only include files that are actually workflow YAML files
+				if isWorkflowYAML(fullPath) {
+					out = append(out, fullPath)
+				}
 			}
 		}
 	}

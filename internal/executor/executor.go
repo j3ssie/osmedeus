@@ -660,7 +660,7 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	}
 	if e.consoleCapture != nil {
 		defer func() {
-			e.consoleCapture.Stop()
+			_ = e.consoleCapture.Stop()
 			e.consoleCapture = nil
 		}()
 	}
@@ -970,7 +970,7 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	}
 	if e.consoleCapture != nil {
 		defer func() {
-			e.consoleCapture.Stop()
+			_ = e.consoleCapture.Stop()
 			e.consoleCapture = nil
 		}()
 	}

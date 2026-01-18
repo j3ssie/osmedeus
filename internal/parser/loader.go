@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -183,6 +184,31 @@ func (l *Loader) LoadAllWorkflows() ([]*core.Workflow, error) {
 	return workflows, nil
 }
 
+// shouldSkipPath returns true for paths that are obviously not workflow files
+func shouldSkipPath(path string) bool {
+	// Skip hidden directories (except the workflow root itself)
+	parts := strings.Split(path, string(os.PathSeparator))
+	for _, part := range parts {
+		if strings.HasPrefix(part, ".") && part != "." {
+			return true // Skip .github/, .gitlab/, .git/, etc.
+		}
+	}
+	return false
+}
+
+// isWorkflowYAML checks if a YAML file contains kind: module or kind: flow
+func isWorkflowYAML(path string) bool {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	if !strings.Contains(string(content), "kind:") {
+		return false
+	}
+	kindPattern := regexp.MustCompile(`(?m)^kind:\s*['"]?(module|flow)['"]?\s*$`)
+	return kindPattern.Match(content)
+}
+
 // findYAMLFiles finds all YAML files in a directory
 func (l *Loader) findYAMLFiles(dir string, recursive bool) ([]string, error) {
 	var files []string
@@ -193,6 +219,12 @@ func (l *Loader) findYAMLFiles(dir string, recursive bool) ([]string, error) {
 				return err
 			}
 			if !info.IsDir() && (strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")) {
+				if shouldSkipPath(path) {
+					return nil // Skip hidden directories
+				}
+				if !isWorkflowYAML(path) {
+					return nil // Skip non-workflow YAML files
+				}
 				files = append(files, path)
 			}
 			return nil
@@ -207,7 +239,14 @@ func (l *Loader) findYAMLFiles(dir string, recursive bool) ([]string, error) {
 
 	for _, entry := range entries {
 		if !entry.IsDir() && (strings.HasSuffix(entry.Name(), ".yaml") || strings.HasSuffix(entry.Name(), ".yml")) {
-			files = append(files, filepath.Join(dir, entry.Name()))
+			path := filepath.Join(dir, entry.Name())
+			if shouldSkipPath(path) {
+				continue // Skip hidden directories
+			}
+			if !isWorkflowYAML(path) {
+				continue // Skip non-workflow YAML files
+			}
+			files = append(files, path)
 		}
 	}
 

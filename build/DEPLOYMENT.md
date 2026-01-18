@@ -44,8 +44,7 @@ make build-windows   # Windows amd64
 ### Docker Build
 
 ```bash
-# Production image (minimal, ~50MB)
-docker build -t osmedeus:5.0.0 -f build/docker/Dockerfile .
+docker build -t osmedeus:latest -f build/docker/Dockerfile .
 
 # Development image (with hot-reload)
 docker build -t osmedeus:dev -f build/docker/Dockerfile.dev .

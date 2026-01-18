@@ -250,16 +250,16 @@ func TestIsNoiseURL(t *testing.T) {
 		url      string
 		expected bool
 	}{
-		{"https://example.com/blog/2022/post", true},       // blog path
-		{"https://example.com/news/article", true},         // news path
-		{"https://example.com/2022/01/02/page", true},      // calendar date
-		{"https://example.com/data/12345.html", true},      // numeric-only path
-		{"https://example.com/data/12345", true},           // numeric-only path no ext
-		{"https://example.com/api/v1/users", false},        // API endpoint
-		{"https://example.com/product/details", true},      // product is noise path
-		{"https://example.com/articles/tech-news", true},   // articles path
-		{"https://example.com/careers/engineer", true},     // careers path
-		{"https://example.com/search?q=test", false},       // search endpoint
+		{"https://example.com/blog/2022/post", true},     // blog path
+		{"https://example.com/news/article", true},       // news path
+		{"https://example.com/2022/01/02/page", true},    // calendar date
+		{"https://example.com/data/12345.html", true},    // numeric-only path
+		{"https://example.com/data/12345", true},         // numeric-only path no ext
+		{"https://example.com/api/v1/users", false},      // API endpoint
+		{"https://example.com/product/details", true},    // product is noise path
+		{"https://example.com/articles/tech-news", true}, // articles path
+		{"https://example.com/careers/engineer", true},   // careers path
+		{"https://example.com/search?q=test", false},     // search endpoint
 	}
 
 	for _, tt := range tests {

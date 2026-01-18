@@ -1310,9 +1310,10 @@ func printValidationTable(results []ValidationResult, baseDir string) {
 		}
 
 		statusColor := terminal.Green
-		if r.Status == "failed" {
+		switch r.Status {
+		case "failed":
 			statusColor = terminal.Red
-		} else if r.Status == "warning" {
+		case "warning":
 			statusColor = terminal.Yellow
 		}
 

@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/j3ssie/osmedeus/v5/internal/config"
 )
 
 // Provider represents a cloud storage provider

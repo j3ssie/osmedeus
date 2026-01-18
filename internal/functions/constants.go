@@ -21,11 +21,11 @@ const (
 	FnMoveFile        = "moveFile"     // moveFile(source, dest) -> bool
 	FnGlob            = "glob"         // glob(pattern) -> []string
 
-	FnGrepStringToFile  = "grep_string_to_file"  // grep_string_to_file(dest, source, str) -> bool
-	FnGrepRegexToFile   = "grep_regex_to_file"   // grep_regex_to_file(dest, source, pattern) -> bool
-	FnGrepString        = "grep_string"          // grep_string(source, str) -> string
-	FnGrepRegex         = "grep_regex"           // grep_regex(source, pattern) -> string
-	FnRemoveBlankLines  = "remove_blank_lines"   // remove_blank_lines(path) -> bool (in-place)
+	FnGrepStringToFile = "grep_string_to_file" // grep_string_to_file(dest, source, str) -> bool
+	FnGrepRegexToFile  = "grep_regex_to_file"  // grep_regex_to_file(dest, source, pattern) -> bool
+	FnGrepString       = "grep_string"         // grep_string(source, str) -> string
+	FnGrepRegex        = "grep_regex"          // grep_regex(source, pattern) -> string
+	FnRemoveBlankLines = "remove_blank_lines"  // remove_blank_lines(path) -> bool (in-place)
 )
 
 // String Functions - String manipulation operations
@@ -156,12 +156,12 @@ const (
 
 // Markdown Functions - Markdown rendering and conversion
 const (
-	FnRenderMarkdownFromFile   = "render_markdown_from_file"   // render_markdown_from_file(path) -> string (rendered markdown)
-	FnPrintMarkdownFromFile    = "print_markdown_from_file"    // print_markdown_from_file(path) -> void (print with syntax highlight)
-	FnConvertJSONLToMarkdown   = "convert_jsonl_to_markdown"   // convert_jsonl_to_markdown(input_path, output_path) -> bool (writes markdown table to file)
-	FnConvertCSVToMarkdown     = "convert_csv_to_markdown"     // convert_csv_to_markdown(path) -> string (markdown table)
-	FnRenderMarkdownReport     = "render_markdown_report"      // render_markdown_report(template_path, output_path) -> bool
-	FnGenerateSecurityReport   = "generate_security_report"    // generate_security_report(template_path) -> bool (output to {{Output}}/security-report.md)
+	FnRenderMarkdownFromFile = "render_markdown_from_file" // render_markdown_from_file(path) -> string (rendered markdown)
+	FnPrintMarkdownFromFile  = "print_markdown_from_file"  // print_markdown_from_file(path) -> void (print with syntax highlight)
+	FnConvertJSONLToMarkdown = "convert_jsonl_to_markdown" // convert_jsonl_to_markdown(input_path, output_path) -> bool (writes markdown table to file)
+	FnConvertCSVToMarkdown   = "convert_csv_to_markdown"   // convert_csv_to_markdown(path) -> string (markdown table)
+	FnRenderMarkdownReport   = "render_markdown_report"    // render_markdown_report(template_path, output_path) -> bool
+	FnGenerateSecurityReport = "generate_security_report"  // generate_security_report(template_path) -> bool (output to {{Output}}/security-report.md)
 )
 
 // Database Functions - Database update and import operations

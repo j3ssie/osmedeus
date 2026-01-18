@@ -10,8 +10,8 @@ import (
 // GojaRuntime wraps the Goja JavaScript interpreter with VM pooling.
 // Uses a pool of Goja VMs for parallel execution without global mutex.
 type GojaRuntime struct {
-	pool *VMPool       // Pool of configured VMs
-	mu   sync.Mutex    // Only used for custom function registration
+	pool *VMPool    // Pool of configured VMs
+	mu   sync.Mutex // Only used for custom function registration
 }
 
 // vmFunc provides VM access to all function implementations.

@@ -9,6 +9,7 @@ OSM_HOME="${OSM_HOME:-$HOME/.osmedeus}"
 BIN_DIR="$HOME/.local/bin"
 GITHUB_REPO="j3ssie/osmedeus"
 GITHUB_RELEASES="https://github.com/${GITHUB_REPO}/releases"
+FALLBACK_VERSION="v5.0.0-beta"
 OSM_URL_ENV_SET=0
 if [[ -n "${OSM_URL+x}" ]]; then
 	OSM_URL_ENV_SET=1
@@ -144,8 +145,13 @@ downloader() {
 download_file() {
 	local url="$1"
 	local output_file="$2"
+	local version="${3:-}"
 
-	log "Downloading $(basename "$output_file")..."
+	if [[ -n "$version" ]]; then
+		log "Downloading $(basename "$output_file") (${LIGHT_GREEN}${version}${NC})..."
+	else
+		log "Downloading $(basename "$output_file")..."
+	fi
 
 	# Use secure temporary file
 	local temp_file
@@ -173,23 +179,31 @@ verify_checksum() {
 	success "Checksum verified"
 }
 
-# Fetch latest CLI version from GitHub
+# Fetch latest CLI version from GitHub API with fallback
 fetch_latest_version() {
-	local api_url="https://api.github.com/repos/${GITHUB_REPO}/releases/latest"
-	local version
-	local tmp_file
+    local api_url="https://api.github.com/repos/${GITHUB_REPO}/releases/latest"
+    local version
+    local tmp_file
 
-	log "Fetching latest version from GitHub..."
-	tmp_file=$(mktemp)
-	downloader "$api_url" "$tmp_file"
-	version=$(grep '"tag_name":' "$tmp_file" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
-	rm -f "$tmp_file"
+    log "Fetching latest version from GitHub..."
+    tmp_file=$(mktemp)
 
-	if [[ -z "$version" ]]; then
-		error "Failed to fetch latest version from GitHub"
-	fi
+    # Try to fetch from GitHub API
+    if downloader "$api_url" "$tmp_file" 2>/dev/null; then
+        version=$(grep '"tag_name":' "$tmp_file" | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+        rm -f "$tmp_file"
 
-	echo "$version"
+        if [[ -n "$version" ]]; then
+            echo "$version"
+            return
+        fi
+    fi
+
+    rm -f "$tmp_file" 2>/dev/null
+
+    # Fall back to hardcoded version
+    warn "Failed to fetch from GitHub API, using fallback: $FALLBACK_VERSION"
+    echo "$FALLBACK_VERSION"
 }
 
 fetch_latest_version_from_metadata() {
@@ -259,9 +273,11 @@ install_osmedeus_binary() {
 	if [[ "$version" != v* ]]; then
 		version="v${version}"
 	fi
-	log "Installing version: $version"
+	log "Installing version: ${LIGHT_GREEN}${version}${NC}"
 
-	local tarball_name="osmedeus_${version}_${platform}.tar.gz"
+	# Strip 'v' prefix for tarball filename (e.g., v5.0.0 -> 5.0.0)
+	local version_no_v="${version#v}"
+	local tarball_name="osmedeus_${version_no_v}_${platform}.tar.gz"
 	local base_url
 	if [[ $OSM_URL_ENV_SET -eq 1 && -n "${OSM_URL}" ]]; then
 		base_url="${OSM_URL%/}"
@@ -282,7 +298,7 @@ install_osmedeus_binary() {
 	mkdir -p "$extract_dir"
 
 	# Download checksum first
-	download_file "$checksum_url" "$checksum_path"
+	download_file "$checksum_url" "$checksum_path" "$version"
 
 	# Extract expected checksum for our tarball
 	local expected_checksum
@@ -293,7 +309,7 @@ install_osmedeus_binary() {
 	fi
 
 	# Download tarball
-	download_file "$tarball_url" "$tarball_path"
+	download_file "$tarball_url" "$tarball_path" "$version"
 
 	# Verify checksum
 	verify_checksum "$tarball_path" "$expected_checksum"

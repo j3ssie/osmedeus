@@ -553,7 +553,7 @@
     "multi-commands-linux": [
       "git clone --depth=1 https://github.com/blechschmidt/massdns.git /tmp/massdns",
       "cd /tmp/massdns && make",
-      "cp /tmp/massdns/bin/massdns $HOME/.local/bin/"
+      "mkdir -p $HOME/.local/bin/ && cp /tmp/massdns/bin/massdns $HOME/.local/bin/"
     ],
     "multi-commands-darwin": [
       "<auto_detect_package_manager> install massdns"

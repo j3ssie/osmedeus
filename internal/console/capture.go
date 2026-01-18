@@ -44,15 +44,15 @@ func StartCapture(filePath string) (*Capture, error) {
 	// Create pipes for stdout and stderr
 	outReader, outWriter, err := os.Pipe()
 	if err != nil {
-		file.Close()
+		_ = file.Close()
 		return nil, err
 	}
 
 	errReader, errWriter, err := os.Pipe()
 	if err != nil {
-		file.Close()
-		outReader.Close()
-		outWriter.Close()
+		_ = file.Close()
+		_ = outReader.Close()
+		_ = outWriter.Close()
 		return nil, err
 	}
 
@@ -146,10 +146,10 @@ func (c *Capture) Stop() error {
 
 	// Close pipe writers to signal EOF to tee goroutines
 	if c.outWriter != nil {
-		c.outWriter.Close()
+		_ = c.outWriter.Close()
 	}
 	if c.errWriter != nil {
-		c.errWriter.Close()
+		_ = c.errWriter.Close()
 	}
 
 	// Restore original stdout/stderr immediately
@@ -161,10 +161,10 @@ func (c *Capture) Stop() error {
 
 	// Close readers
 	if c.outReader != nil {
-		c.outReader.Close()
+		_ = c.outReader.Close()
 	}
 	if c.errReader != nil {
-		c.errReader.Close()
+		_ = c.errReader.Close()
 	}
 
 	// Close file
@@ -172,7 +172,7 @@ func (c *Capture) Stop() error {
 	defer c.mu.Unlock()
 	if c.file != nil {
 		_ = c.file.Sync()
-		c.file.Close()
+		_ = c.file.Close()
 		c.file = nil
 	}
 

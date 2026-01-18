@@ -75,15 +75,14 @@ osmedeus --usage-example
 
 ```bash
 # Show help
-docker run --rm osmedeus:latest --help
+docker run --rm j3ssie/osmedeus:latest --help
 
 # Run a scan
 docker run --rm -v $(pwd)/output:/root/workspaces-osmedeus \
-    osmedeus:latest run -f general -t example.com
+    j3ssie/osmedeus:latest run -f general -t example.com
 ```
 
 For more CLI usage and example commands, refer to the [CLI Reference](https://docs.osmedeus.org/getting-started/cli).
-
 
 | CLI Usage | Web UI Assets | Web UI Workflow |
 |-----------|--------------|-----------------|

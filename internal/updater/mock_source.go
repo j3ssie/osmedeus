@@ -8,12 +8,12 @@ import (
 
 // MockSource is a mock implementation of Source for testing
 type MockSource struct {
-	Releases       []*Release
-	DetectError    error
-	UpdateError    error
-	DetectCalled   int
-	UpdateCalled   int
-	LastUpdateTo   *Release
+	Releases     []*Release
+	DetectError  error
+	UpdateError  error
+	DetectCalled int
+	UpdateCalled int
+	LastUpdateTo *Release
 }
 
 // NewMockSource creates a mock source with predefined releases

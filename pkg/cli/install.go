@@ -19,23 +19,23 @@ import (
 )
 
 var (
-	registryPath    string
-	installAll      bool
-	binaryNames     []string
-	checkOnly       bool
-	customHeaders   []string
-	nixBuildInstall bool
-	nixInstallation bool
-	nixPkgs         []string
-	installOptional bool
-	descMaxWidth    int
-	hideBinaryTags  bool
-	baseSample      bool
-	basePreset      bool
-	workflowPreset  bool
-	validateSample  bool
-	validatePreset  bool
-	installEnvAll   bool
+	registryPath            string
+	installAll              bool
+	binaryNames             []string
+	checkOnly               bool
+	customHeaders           []string
+	nixBuildInstall         bool
+	nixInstallation         bool
+	nixPkgs                 []string
+	installOptional         bool
+	descMaxWidth            int
+	hideBinaryTags          bool
+	baseSample              bool
+	basePreset              bool
+	workflowPreset          bool
+	validateSample          bool
+	validatePreset          bool
+	installEnvAll           bool
 	goGetterSources         []string
 	goGetterDest            string
 	listRegistryNixBuild    bool
@@ -227,14 +227,53 @@ func runInstallBase(cmd *cobra.Command, args []string) error {
 		if err := inst.InstallBase(presetURL); err != nil {
 			return err
 		}
+		printer.Success("Base installed from: %s", terminal.Cyan(presetURL))
+		printer.Newline()
 
+		// Install workflows from OSM_WORKFLOW_URL or DEFAULT_WORKFLOW_REPO
+		workflowURL := os.Getenv("OSM_WORKFLOW_URL")
+		if workflowURL != "" {
+			printer.Info("Using workflow URL from OSM_WORKFLOW_URL environment variable")
+			printer.Println("  %s %s", terminal.SymbolBullet, terminal.Gray(workflowURL))
+		} else {
+			workflowURL = core.DEFAULT_WORKFLOW_REPO
+			printer.Info("Using default workflow URL")
+			printer.Println("  %s %s", terminal.SymbolBullet, terminal.Gray(workflowURL))
+		}
+
+		if err := inst.InstallWorkflow(workflowURL); err != nil {
+			printer.Warning("Failed to install workflows: %s", err)
+			// Continue - workflow installation failure shouldn't block base setup
+		} else {
+			printer.Success("Workflows installed from: %s", terminal.Cyan(workflowURL))
+		}
+		printer.Newline()
+
+		// Reload config after base and workflow installation
 		reloaded, err := config.Load(cfg.BaseFolder)
 		if err == nil {
 			config.Set(reloaded)
+			cfg = reloaded
 			if reloaded.BinariesPath != "" {
 				binariesFolder = reloaded.BinariesPath
 			}
 		}
+
+		// Check if first-time setup is needed (install binaries if so)
+		if isFirstTimeSetupNeeded(cfg.BaseFolder) {
+			printer.Println("%s %s", terminal.BoldBlue(terminal.SymbolLightning), terminal.HiBlue("First-time setup detected. Installing binaries..."))
+			printer.Newline()
+
+			// Install required binaries
+			installRequiredBinaries(cfg, printer)
+
+			// Create initialization marker
+			_ = createInitializationMarker(printer)
+
+			printer.Newline()
+			printer.Println("%s %s", terminal.Green(terminal.SymbolSuccess), terminal.BoldGreen("First-time setup complete!"))
+		}
+
 		ensureBinariesPathInEnv(printer, binariesFolder, true)
 		return nil
 	}
@@ -1565,7 +1604,7 @@ func truncatePad(s string, width int) string {
 const defaultParallelWorkers = 3
 
 // binariesPerRow is the number of binary names displayed per row
-const binariesPerRow = 10
+const binariesPerRow = 6
 
 // splitIntoRows splits binary names into rows of specified size
 func splitIntoRows(names []string, perRow int) [][]string {

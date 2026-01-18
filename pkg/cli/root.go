@@ -292,6 +292,143 @@ func init() {
 	rootCmd.AddCommand(updateCmd)
 }
 
+// installRequiredBinaries installs all required binaries from the registry.
+// Returns counts of installed, skipped, and failed binaries.
+// This is a shared helper used by both runFirstTimeSetup and runInstallBase --preset.
+func installRequiredBinaries(cfg *config.Config, printer *terminal.Printer) (installed, skipped, failed int) {
+	// Check for registry URL override
+	registryURL := os.Getenv("OSM_REGISTRY_URL")
+	registryDisplay := "the default registry"
+	if registryURL != "" {
+		registryDisplay = registryURL
+	}
+
+	printer.Println("%s %s", terminal.BoldBlue(terminal.SymbolLightning),
+		terminal.HiBlue(fmt.Sprintf("Installing security binaries from %s", terminal.Cyan(registryDisplay))))
+	printer.Println("  %s This may take a few minutes depending on your network speed", terminal.SymbolBullet)
+	printer.Newline()
+
+	// Show spinner while loading registry
+	loadingSpinner := terminal.LoadingSpinner("Loading binary registry")
+	loadingSpinner.Start()
+	registry, err := installer.LoadRegistry(registryURL, nil)
+	loadingSpinner.Stop()
+	if err != nil {
+		printer.Warning("Failed to load binary registry: %s", err)
+		printer.Println("  %s", terminal.Gray("You can manually run: osmedeus install binary --all"))
+		return 0, 0, 0
+	}
+
+	binariesFolder := cfg.BinariesPath
+	if binariesFolder == "" {
+		binariesFolder = filepath.Join(cfg.BaseFolder, "external-binaries")
+	}
+
+	// Create binaries folder if it doesn't exist
+	if err := os.MkdirAll(binariesFolder, 0755); err != nil {
+		printer.Warning("Failed to create binaries folder: %s", err)
+	}
+
+	// Count binaries to install
+	var toInstall []string
+	for name, entry := range registry {
+		isOptional := false
+		for _, tag := range entry.Tags {
+			if tag == "optional" {
+				isOptional = true
+				break
+			}
+		}
+		if !isOptional && !installer.IsBinaryInPath(name) {
+			toInstall = append(toInstall, name)
+		}
+	}
+
+	if len(toInstall) > 0 {
+		printer.Println("  %s Installing %s binaries to: %s", terminal.SymbolBullet, terminal.Green(fmt.Sprintf("%d", len(toInstall))), terminal.Cyan(binariesFolder))
+		printer.Newline()
+	}
+
+	// Sort binary names for consistent display
+	sort.Strings(toInstall)
+
+	// Set silent mode for binary installation to reduce noise
+	_ = os.Setenv("OSMEDEUS_SILENT", "1")
+	defer func() { _ = os.Unsetenv("OSMEDEUS_SILENT") }()
+
+	// Suppress logger output during binary installation
+	logCfg := logger.DefaultConfig()
+	logCfg.Silent = true
+	_ = logger.Init(logCfg)
+	defer func() {
+		// Restore normal logging after installation
+		logCfg.Silent = false
+		_ = logger.Init(logCfg)
+	}()
+
+	// Install binaries in parallel with multi-row spinner display
+	var failedNames []string
+	if len(toInstall) > 0 {
+		failedNames = installBinariesParallel(toInstall, registry, binariesFolder, nil, printer, false)
+	}
+
+	// Count results
+	installedCount := len(toInstall) - len(failedNames)
+	failedCount := len(failedNames)
+
+	// Count skipped (already in PATH) - these weren't in toInstall
+	skippedCount := 0
+	for name, entry := range registry {
+		isOptional := false
+		for _, tag := range entry.Tags {
+			if tag == "optional" {
+				isOptional = true
+				break
+			}
+		}
+		if !isOptional && installer.IsBinaryInPath(name) {
+			skippedCount++
+		}
+	}
+
+	printer.Newline()
+
+	// Show summary
+	printer.Success("Installed %s binaries (%s skipped, %s failed)",
+		terminal.Green(fmt.Sprintf("%d", installedCount)),
+		terminal.Yellow(fmt.Sprintf("%d", skippedCount)),
+		terminal.Red(fmt.Sprintf("%d", failedCount)))
+
+	// Ensure binaries path is in environment
+	ensureBinariesPathInEnv(printer, binariesFolder, false)
+
+	return installedCount, skippedCount, failedCount
+}
+
+// createInitializationMarker creates the $HOME/.osmedeus/initialized marker file.
+// This marker indicates that first-time setup has been completed.
+func createInitializationMarker(printer *terminal.Printer) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		printer.Warning("Failed to get home directory: %s", err)
+		return err
+	}
+
+	osmDir := filepath.Join(homeDir, ".osmedeus")
+	if err := os.MkdirAll(osmDir, 0755); err != nil {
+		printer.Warning("Failed to create osmedeus config directory: %s", err)
+		return err
+	}
+
+	markerFile := filepath.Join(osmDir, "initialized")
+	if err := os.WriteFile(markerFile, []byte("initialized\n"), 0644); err != nil {
+		printer.Warning("Failed to create initialization marker: %s", err)
+		return err
+	}
+
+	return nil
+}
+
 // versionCmd shows version information
 var versionCmd = &cobra.Command{
 	Use:   "version",
@@ -392,15 +529,16 @@ func runFirstTimeSetup(baseFolder string, cfg *config.Config) error {
 	}
 	printer.Println("  %s Preset URL: %s", terminal.SymbolBullet, terminal.Cyan(presetURL))
 
-	// Check for custom workflow URL from environment
+	// Check for custom workflow URL from environment (default to DEFAULT_WORKFLOW_REPO)
 	workflowURL := os.Getenv("OSM_WORKFLOW_URL")
-	if workflowURL != "" {
-		printer.Println("  %s Workflow URL: %s", terminal.SymbolBullet, terminal.Cyan(workflowURL))
+	if workflowURL == "" {
+		workflowURL = core.DEFAULT_WORKFLOW_REPO
 	}
+	printer.Println("  %s Workflow URL: %s", terminal.SymbolBullet, terminal.Cyan(workflowURL))
 	printer.Newline()
 
-	// Step 2: Install preset base folder (workflows, etc.)
-	printer.Println("%s %s", terminal.BoldMagenta(terminal.SymbolLightning), terminal.HiMagenta("Installing preset workflows..."))
+	// Step 2: Install preset base folder
+	printer.Println("%s %s", terminal.BoldMagenta(terminal.SymbolLightning), terminal.HiMagenta("Installing preset base folder..."))
 	printer.Println("  %s Downloading from: %s", terminal.SymbolBullet, terminal.Cyan(presetURL))
 	inst := installer.NewInstaller(
 		baseFolder,
@@ -409,24 +547,23 @@ func runFirstTimeSetup(baseFolder string, cfg *config.Config) error {
 		nil,
 	)
 	if err := inst.InstallBase(presetURL); err != nil {
-		printer.Warning("Failed to install preset workflows: %s", err)
+		printer.Warning("Failed to install preset base: %s", err)
 		printer.Println("  %s", terminal.Gray("You can manually run: osmedeus install validate --preset"))
 		return err
 	}
-	printer.Success("Preset workflows installed to: %s", terminal.Cyan(filepath.Join(baseFolder, "workflows")))
+	printer.Success("Base folder installed to: %s", terminal.Cyan(baseFolder))
 	printer.Newline()
 
-	// Step 3: Install workflows from separate URL if specified
-	if workflowURL != "" {
-		printer.Println("%s %s", terminal.BoldBlue(terminal.SymbolLightning), terminal.HiBlue("Installing workflows from OSM_WORKFLOW_URL..."))
-		printer.Println("  %s Downloading from: %s", terminal.SymbolBullet, terminal.Cyan(workflowURL))
-		if err := inst.InstallWorkflow(workflowURL); err != nil {
-			printer.Warning("Failed to install workflows from OSM_WORKFLOW_URL: %s", err)
-		} else {
-			printer.Success("Workflows installed from: %s", terminal.Cyan(workflowURL))
-		}
-		printer.Newline()
+	// Step 3: Install workflows from workflow URL
+	printer.Println("%s %s", terminal.BoldBlue(terminal.SymbolLightning), terminal.HiBlue("Installing workflows..."))
+	printer.Println("  %s Downloading from: %s", terminal.SymbolBullet, terminal.Cyan(workflowURL))
+	if err := inst.InstallWorkflow(workflowURL); err != nil {
+		printer.Warning("Failed to install workflows: %s", err)
+		printer.Println("  %s", terminal.Gray("You can manually run: osmedeus install workflow --preset"))
+	} else {
+		printer.Success("Workflows installed to: %s", terminal.Cyan(filepath.Join(baseFolder, "workflows")))
 	}
+	printer.Newline()
 
 	// Step 4: Reload config and load workflows
 	printer.Println("%s %s", terminal.BoldMagenta(terminal.SymbolLightning), terminal.HiMagenta("Loading workflows..."))
@@ -446,123 +583,11 @@ func runFirstTimeSetup(baseFolder string, cfg *config.Config) error {
 	}
 	printer.Newline()
 
-	// Step 5: Install all binaries
-	// Check for registry URL override
-	registryURL := os.Getenv("OSM_REGISTRY_URL")
-	registryDisplay := "the default registry"
-	if registryURL != "" {
-		registryDisplay = registryURL
-	}
+	// Step 5: Install all binaries using shared helper
+	installRequiredBinaries(cfg, printer)
 
-	printer.Println("%s %s", terminal.BoldBlue(terminal.SymbolLightning),
-		terminal.HiBlue(fmt.Sprintf("Installing security binaries from %s", terminal.Cyan(registryDisplay))))
-	printer.Println("  %s This may take a few minutes depending on your network speed", terminal.SymbolBullet)
-	printer.Newline()
-
-	// Show spinner while loading registry
-	loadingSpinner := terminal.LoadingSpinner("Loading binary registry")
-	loadingSpinner.Start()
-	registry, err := installer.LoadRegistry(registryURL, nil)
-	loadingSpinner.Stop()
-	if err != nil {
-		printer.Warning("Failed to load binary registry: %s", err)
-		printer.Println("  %s", terminal.Gray("You can manually run: osmedeus install binary --all"))
-		return err
-	}
-
-	binariesFolder := cfg.BinariesPath
-	if binariesFolder == "" {
-		binariesFolder = filepath.Join(baseFolder, "external-binaries")
-	}
-
-	// Create binaries folder if it doesn't exist
-	if err := os.MkdirAll(binariesFolder, 0755); err != nil {
-		printer.Warning("Failed to create binaries folder: %s", err)
-	}
-
-	// Count binaries to install
-	var toInstall []string
-	for name, entry := range registry {
-		isOptional := false
-		for _, tag := range entry.Tags {
-			if tag == "optional" {
-				isOptional = true
-				break
-			}
-		}
-		if !isOptional && !installer.IsBinaryInPath(name) {
-			toInstall = append(toInstall, name)
-		}
-	}
-
-	if len(toInstall) > 0 {
-		printer.Println("  %s Installing %s binaries to: %s", terminal.SymbolBullet, terminal.Green(fmt.Sprintf("%d", len(toInstall))), terminal.Cyan(binariesFolder))
-		printer.Newline()
-	}
-
-	// Sort binary names for consistent display
-	sort.Strings(toInstall)
-
-	// Set silent mode for binary installation to reduce noise
-	_ = os.Setenv("OSMEDEUS_SILENT", "1")
-	defer func() { _ = os.Unsetenv("OSMEDEUS_SILENT") }()
-
-	// Suppress logger output during binary installation
-	logCfg := logger.DefaultConfig()
-	logCfg.Silent = true
-	_ = logger.Init(logCfg)
-	defer func() {
-		// Restore normal logging after installation
-		logCfg.Silent = false
-		_ = logger.Init(logCfg)
-	}()
-
-	// Install binaries in parallel with multi-row spinner display
-	var failed []string
-	if len(toInstall) > 0 {
-		failed = installBinariesParallel(toInstall, registry, binariesFolder, nil, printer, false)
-	}
-
-	// Count results
-	installedCount := len(toInstall) - len(failed)
-	failedCount := len(failed)
-
-	// Count skipped (already in PATH) - these weren't in toInstall
-	skippedCount := 0
-	for name, entry := range registry {
-		isOptional := false
-		for _, tag := range entry.Tags {
-			if tag == "optional" {
-				isOptional = true
-				break
-			}
-		}
-		if !isOptional && installer.IsBinaryInPath(name) {
-			skippedCount++
-		}
-	}
-
-	printer.Newline()
-
-	// Show summary
-	printer.Success("Installed %s binaries (%s skipped, %s failed)",
-		terminal.Green(fmt.Sprintf("%d", installedCount)),
-		terminal.Yellow(fmt.Sprintf("%d", skippedCount)),
-		terminal.Red(fmt.Sprintf("%d", failedCount)))
-
-	// Ensure binaries path is in environment
-	ensureBinariesPathInEnv(printer, binariesFolder, false)
-
-	// Create initialization marker file in $HOME/.osmedeus/
-	homeDir, _ := os.UserHomeDir()
-	osmDir := filepath.Join(homeDir, ".osmedeus")
-	if err := os.MkdirAll(osmDir, 0755); err != nil {
-		printer.Warning("Failed to create osmedeus config directory: %s", err)
-	}
-	markerFile := filepath.Join(osmDir, "initialized")
-	if err := os.WriteFile(markerFile, []byte("initialized\n"), 0644); err != nil {
-		printer.Warning("Failed to create initialization marker: %s", err)
-	}
+	// Create initialization marker file
+	_ = createInitializationMarker(printer)
 
 	// Print completion message
 	printer.Newline()

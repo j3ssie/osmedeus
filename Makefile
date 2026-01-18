@@ -1,4 +1,4 @@
-.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-docker test-ssh test-distributed test-all test-summary test-ci clean install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release docker-toolbox docker-toolbox-run docker-toolbox-shell
+.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-docker test-ssh test-distributed test-all test-summary test-ci clean install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
 
 # Go parameters
 GOCMD=go
@@ -268,6 +268,18 @@ docker-toolbox-run:
 docker-toolbox-shell:
 	docker exec -it osmedeus-toolbox bash
 
+# Docker publish (build and push to Docker Hub)
+docker-publish:
+	@echo "$(PREFIX) Building Docker image j3ssie/osmedeus:latest..."
+	docker build -t j3ssie/osmedeus:latest \
+		-f build/docker/Dockerfile \
+		--build-arg BUILD_TIME=$(BUILD_TIME) \
+		--build-arg COMMIT_HASH=$(COMMIT_HASH) \
+		.
+	@echo "$(PREFIX) Pushing to Docker Hub..."
+	docker push j3ssie/osmedeus:latest
+	@echo "$(PREFIX) Published j3ssie/osmedeus:latest successfully!"
+
 # Release commands (GoReleaser)
 snapshot-release:
 	@echo "$(PREFIX) Building $(BINARY_NAME)..."
@@ -278,7 +290,7 @@ snapshot-release:
 	@echo "$(PREFIX) Update registry-metadata-direct-fetch.json..."
 	cp ../osmedeus-registry/registry-metadata-direct-fetch.json public/presets/registry-metadata-direct-fetch.json
 	@echo "$(PREFIX) Building snapshot release..."
-	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --snapshot --clean
+	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --clean --skip=announce,publish,validate
 	@echo "$(PREFIX) Install script copied to dist/install.sh"
 	cp ../osmedeus-registry/install.sh dist/install.sh
 	@echo "$(PREFIX) Prepare registry-metadata-direct-fetch.json"
@@ -341,6 +353,7 @@ help:
 	@echo "\033[33m  DOCKER\033[0m"
 	@echo "    make docker-build     Build Docker image"
 	@echo "    make docker-run       Run Docker container"
+	@echo "    make docker-publish   Build and push j3ssie/osmedeus:latest to Docker Hub"
 	@echo "    make docker-toolbox   Build toolbox image (all tools pre-installed)"
 	@echo "    make docker-toolbox-run   Start toolbox container"
 	@echo "    make docker-toolbox-shell Enter toolbox container shell"

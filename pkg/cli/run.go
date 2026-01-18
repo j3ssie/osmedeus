@@ -31,30 +31,30 @@ import (
 )
 
 var (
-	flowName                 string
-	moduleNames              []string
-	targets                  []string
-	targetFile               string
-	paramFlags               []string
-	paramsFile               string
-	workspacePath   string
-	dryRun          bool
-	threadsHold     int
-	runTactic                string
-	excludeModules           []string
-	spaceName                string
-	workspacesFolder         string
-	heuristicsCheck          string
-	distributedRun           bool
-	redisURLRun              string
-	concurrency              int
-	repeatRun                bool
-	repeatWaitTime           string
-	runTimeout               string
-	stdModule                bool
-	emptyTarget              bool
-	progressBar              bool
-	disableWorkflowState     bool
+	flowName             string
+	moduleNames          []string
+	targets              []string
+	targetFile           string
+	paramFlags           []string
+	paramsFile           string
+	workspacePath        string
+	dryRun               bool
+	threadsHold          int
+	runTactic            string
+	excludeModules       []string
+	spaceName            string
+	workspacesFolder     string
+	heuristicsCheck      string
+	distributedRun       bool
+	redisURLRun          string
+	concurrency          int
+	repeatRun            bool
+	repeatWaitTime       string
+	runTimeout           string
+	stdModule            bool
+	emptyTarget          bool
+	progressBar          bool
+	disableWorkflowState bool
 
 	// explicitFlags tracks which CLI flags were explicitly set by the user
 	// Used to determine precedence when applying workflow preferences

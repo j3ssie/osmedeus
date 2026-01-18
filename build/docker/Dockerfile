@@ -2,7 +2,7 @@
 # Ubuntu/Debian-based image with essential tools for security scanning
 
 # Stage 1: Build osmedeus binary
-FROM golang:1.22-bookworm AS builder
+FROM golang:1.25-bookworm AS builder
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -o /app/bin/osmedeus ./cmd/osmedeus
 
 # Stage 2: Runtime with essential tools
-FROM golang:1.22-bookworm
+FROM golang:1.25-bookworm
 
 # Install essential tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
