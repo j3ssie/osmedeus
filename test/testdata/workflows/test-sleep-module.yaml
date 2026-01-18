@@ -1,0 +1,37 @@
+name: test-sleep-module
+kind: module
+description: Module that simulates long-running tasks with sleep
+tags: test,sleep,simulation
+
+params:
+  - name: target
+    required: true
+  - name: sleep_time
+    default: "5"
+
+steps:
+  - name: start-task
+    type: function
+    function: sleep(2)
+
+  - name: phase-1-sleep
+    type: bash
+    command: echo "[$(date +%H:%M:%S)] Starting long task for {{target}}"
+
+  - name: phase-2-sleep
+    type: bash
+    command: |
+      echo "[$(date +%H:%M:%S)] Phase 2: Simulating scanning..."
+      sleep {{sleep_time}}
+      echo "[$(date +%H:%M:%S)] Phase 2 complete"
+
+  - name: phase-3-sleep
+    type: bash
+    command: |
+      echo "[$(date +%H:%M:%S)] Phase 3: Simulating analysis..."
+      sleep {{sleep_time}}
+      echo "[$(date +%H:%M:%S)] Phase 3 complete"
+
+  - name: finish-task
+    type: bash
+    command: echo "[$(date +%H:%M:%S)] All phases complete for {{target}}"

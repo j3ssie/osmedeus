@@ -1,0 +1,160 @@
+name: test-docker-flow
+kind: flow
+description: Flow orchestrating multiple Docker-based security scanning modules
+tags: test,flow,docker
+
+params:
+  - name: target
+    required: true
+  - name: Output
+    default: /tmp/osm-docker-flow
+  - name: mode
+    default: "full"
+  - name: threads
+    default: "10"
+  - name: skip_vuln_scan
+    default: "false"
+
+modules:
+  # Module 1: Initial reconnaissance
+  - name: recon-module
+    path: modules/test-docker-recon
+    params:
+      target: "{{target}}"
+      output_dir: "{{Output}}/recon"
+      threads: "{{threads}}"
+    on_success:
+      - action: log
+        message: "Reconnaissance completed for {{target}}"
+      - action: export
+        key: recon_complete
+        value: "true"
+    on_error:
+      - action: log
+        message: "Reconnaissance failed for {{target}}"
+      - action: abort
+
+  # Module 2: Subdomain enumeration (depends on recon)
+  - name: subdomain-module
+    path: modules/test-docker-subdomain
+    depends_on:
+      - recon-module
+    params:
+      target: "{{target}}"
+      output_dir: "{{Output}}/subdomains"
+      wordlist: "/usr/share/wordlists/subdomains.txt"
+    condition: "mode == 'full' || mode == 'subdomain'"
+    on_success:
+      - action: export
+        key: subdomains_file
+        value: "{{Output}}/subdomains/all.txt"
+
+  # Module 3: Port scanning (parallel with subdomain)
+  - name: portscan-module
+    path: modules/test-docker-portscan
+    depends_on:
+      - recon-module
+    params:
+      target: "{{target}}"
+      output_dir: "{{Output}}/ports"
+      port_range: "1-10000"
+      rate: "1000"
+    condition: "mode == 'full' || mode == 'portscan'"
+
+  # Module 4: HTTP probing (depends on subdomain results)
+  - name: httpx-module
+    path: modules/test-docker-httpx
+    depends_on:
+      - subdomain-module
+    params:
+      input: "{{subdomains_file}}"
+      output_dir: "{{Output}}/http"
+      threads: "{{threads}}"
+    on_success:
+      - action: export
+        key: alive_hosts
+        value: "{{Output}}/http/alive.txt"
+      - action: export
+        key: httpx_json
+        value: "{{Output}}/http/httpx.json"
+    decision:
+      switch: "{{alive_count}}"
+      cases:
+        "0":
+          goto: report-module
+
+  # Module 5: Technology detection (depends on HTTP probe)
+  - name: tech-detect-module
+    path: modules/test-docker-techdetect
+    depends_on:
+      - httpx-module
+    params:
+      input: "{{alive_hosts}}"
+      output_dir: "{{Output}}/tech"
+
+  # Module 6: Screenshot capture (parallel with tech detection)
+  - name: screenshot-module
+    path: modules/test-docker-screenshot
+    depends_on:
+      - httpx-module
+    params:
+      input: "{{alive_hosts}}"
+      output_dir: "{{Output}}/screenshots"
+      threads: "5"
+
+  # Module 7: Vulnerability scanning (conditional)
+  - name: vulnscan-module
+    path: modules/test-docker-scanning
+    depends_on:
+      - httpx-module
+      - tech-detect-module
+    params:
+      target: "{{target}}"
+      Output: "{{Output}}/vulns"
+      severity: "critical,high,medium"
+      threads: "{{threads}}"
+    condition: "skip_vuln_scan != 'true'"
+    on_error:
+      - action: log
+        message: "Vulnerability scan encountered errors but continuing"
+      - action: continue
+
+  # Module 8: Directory bruteforcing (optional - depends on mode)
+  - name: dirbrute-module
+    path: modules/test-docker-dirbrute
+    depends_on:
+      - httpx-module
+    params:
+      input: "{{alive_hosts}}"
+      output_dir: "{{Output}}/dirs"
+      wordlist: "/usr/share/wordlists/common.txt"
+      threads: "20"
+    condition: "mode == 'full'"
+
+  # Module 9: JavaScript analysis (depends on dir results)
+  - name: js-analysis-module
+    path: modules/test-docker-jsanalysis
+    depends_on:
+      - dirbrute-module
+    params:
+      input: "{{Output}}/dirs/js-files.txt"
+      output_dir: "{{Output}}/js"
+    condition: "mode == 'full'"
+
+  # Module 10: Final report generation
+  - name: report-module
+    path: modules/test-docker-report
+    depends_on:
+      - screenshot-module
+      - vulnscan-module
+      - tech-detect-module
+    params:
+      target: "{{target}}"
+      input_dir: "{{Output}}"
+      output_dir: "{{Output}}/reports"
+      format: "html,json,markdown"
+    on_success:
+      - action: log
+        message: "Flow completed successfully for {{target}}"
+      - action: notify
+        message: "Security assessment complete: {{target}}"

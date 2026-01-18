@@ -1,0 +1,19 @@
+name: test-timeout
+kind: module
+description: Test step timeout handling (success case)
+tags: test,timeout,quick
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: quick-command
+    type: bash
+    command: echo "fast command for {{target}}"
+    timeout: 5
+
+  - name: another-quick-command
+    type: bash
+    command: echo "another fast command"
+    timeout: 10

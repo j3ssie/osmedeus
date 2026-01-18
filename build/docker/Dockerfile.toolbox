@@ -1,0 +1,99 @@
+# Osmedeus Toolbox Dockerfile
+# Full-featured image with all security tools pre-installed via Nix and direct-fetch
+# Based on latest Golang with Python3 and Nix package manager
+
+# Stage 1: Build osmedeus binary
+FROM golang:latest AS builder
+
+WORKDIR /app
+
+# Copy go mod files first for better layer caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the binary
+ARG VERSION=5.0.0
+ARG BUILD_TIME
+ARG COMMIT_HASH
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags "-s -w -X main.BuildTime=${BUILD_TIME} -X main.CommitHash=${COMMIT_HASH}" \
+    -o /app/bin/osmedeus ./cmd/osmedeus
+
+# Stage 2: Toolbox runtime with all tools
+FROM golang:latest
+
+# Install system dependencies and Python3
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    wget \
+    git \
+    unzip \
+    jq \
+    bash \
+    xz-utils \
+    python3 \
+    python3-pip \
+    python3-venv \
+    chromium \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create symlink for python
+RUN ln -sf /usr/bin/python3 /usr/bin/python
+
+# Install Nix package manager (single-user mode for Docker)
+RUN mkdir -m 0755 /nix && \
+    curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+
+# Enable Nix experimental features for flakes
+RUN mkdir -p /root/.config/nix && \
+    echo "experimental-features = nix-command flakes" > /root/.config/nix/nix.conf
+
+# Set up Nix environment
+ENV PATH="/root/.nix-profile/bin:/nix/var/nix/profiles/default/bin:${PATH}"
+ENV NIX_PATH="/root/.nix-defexpr/channels"
+
+# Source Nix profile in bashrc
+RUN echo '. /root/.nix-profile/etc/profile.d/nix.sh' >> /root/.bashrc
+
+# Copy osmedeus binary from builder
+COPY --from=builder /app/bin/osmedeus /usr/local/bin/osmedeus
+
+# Create base directories
+RUN mkdir -p /root/osmedeus-base /root/workspaces-osmedeus
+
+WORKDIR /root
+
+# Initialize osmedeus base folder with sample workflows
+RUN osmedeus install base --sample
+
+# Use bash shell for subsequent commands to source nix profile
+SHELL ["/bin/bash", "-lc"]
+
+# Install binaries via Nix (nix-build-install)
+RUN . /root/.nix-profile/etc/profile.d/nix.sh && \
+    osmedeus install binary --all --nix-build-install || true
+
+# Install remaining binaries via direct-fetch (including optional ones)
+RUN osmedeus install binary --all --install-optional || true
+
+# Set up PATH for external binaries
+ENV PATH="/root/osmedeus-base/external-binaries:/root/.nix-profile/bin:/nix/var/nix/profiles/default/bin:${PATH}"
+
+# Run osmedeus health check to verify installation
+RUN osmedeus health || true
+
+# Expose default server port
+EXPOSE 8002
+
+# Use bash as default shell
+SHELL ["/bin/bash", "-c"]
+
+# Default entrypoint
+ENTRYPOINT ["osmedeus"]
+
+# Default command shows help
+CMD ["--help"]

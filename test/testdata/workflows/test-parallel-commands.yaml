@@ -1,0 +1,20 @@
+name: test-parallel-commands
+kind: module
+description: Test parallel bash command execution
+tags: test,parallel,bash
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: parallel-echo
+    type: bash
+    parallel_commands:
+      - 'echo "command 1: {{target}}"'
+      - 'echo "command 2: {{target}}"'
+      - 'echo "command 3: {{target}}"'
+
+  - name: verify-output
+    type: bash
+    command: echo "All parallel commands completed for {{target}}"

@@ -1,0 +1,26 @@
+name: test-parallel-functions
+kind: module
+description: Test parallel function execution
+tags: test,parallel,functions
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: setup-test-file
+    type: bash
+    command: echo "test content" > /tmp/parallel-func-test.txt
+
+  - name: parallel-funcs
+    type: function
+    parallel_functions:
+      - trim("  hello  ")
+      - contains("hello world", "world")
+      - fileExists("/tmp/parallel-func-test.txt")
+    exports:
+      func_results: "output"
+
+  - name: cleanup
+    type: bash
+    command: rm -f /tmp/parallel-func-test.txt

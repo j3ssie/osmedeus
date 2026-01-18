@@ -1,0 +1,19 @@
+{
+  "workspace": {
+    "name": "full-remote-bash-test",
+    "local_path": "full-remote-bash-test",
+    "total_assets": 0,
+    "total_subdomains": 0,
+    "total_urls": 0,
+    "total_vulns": 0,
+    "vuln_critical": 0,
+    "vuln_high": 0,
+    "vuln_medium": 0,
+    "vuln_low": 0,
+    "vuln_potential": 0,
+    "risk_score": 0,
+    "last_run": "2026-01-10T20:27:03.645672Z",
+    "run_workflow": "test-remote-bash-ssh"
+  },
+  "updated_at": "2026-01-11T04:27:03.717381+08:00"
+}

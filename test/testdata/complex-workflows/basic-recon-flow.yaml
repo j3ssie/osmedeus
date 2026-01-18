@@ -1,0 +1,94 @@
+name: basic-recon-flow
+kind: flow
+desc: Basic reconnaissance flow orchestrating subdomain enumeration, port scanning, and screenshots
+
+params:
+  - name: threads
+    value: "20"
+  - name: timeout
+    value: "3600"
+
+modules:
+  # Module 1: Subdomain Enumeration
+  - name: subdomain-enum
+    condition: "true"
+    steps:
+      - name: setup-enum
+        type: bash
+        commands:
+          - mkdir -p {{Output}}/subdomains
+          - mkdir -p {{Output}}/resolved
+        exports:
+          subdomain_dir: "{{Output}}/subdomains"
+
+      - name: passive-enum
+        type: bash
+        parallel_commands:
+          - "{{Binaries}}/subfinder -d {{Target}} -silent -o {{subdomain_dir}}/subfinder.txt"
+          - "{{Binaries}}/assetfinder --subs-only {{Target}} > {{subdomain_dir}}/assetfinder.txt"
+        timeout: 600
+
+      - name: merge-subdomains
+        type: bash
+        command: "cat {{subdomain_dir}}/*.txt | sort -u > {{Output}}/all-subdomains.txt"
+        exports:
+          all_subdomains: "{{Output}}/all-subdomains.txt"
+
+  # Module 2: Port Scanning (depends on subdomain-enum)
+  - name: port-scan
+    depends_on:
+      - subdomain-enum
+    condition: "fileLength('{{all_subdomains}}') > 0"
+    steps:
+      - name: setup-ports
+        type: bash
+        command: mkdir -p {{Output}}/ports
+        exports:
+          ports_dir: "{{Output}}/ports"
+
+      - name: scan-ports
+        type: foreach
+        input: "{{all_subdomains}}"
+        variable: subdomain
+        threads: "{{threads}}"
+        step:
+          name: naabu-scan
+          type: bash
+          command: "{{Binaries}}/naabu -host [[subdomain]] -top-ports 100 -silent >> {{ports_dir}}/open-ports.txt"
+          timeout: 120
+          on_error: continue
+
+      - name: aggregate-ports
+        type: bash
+        command: "sort -u {{ports_dir}}/open-ports.txt -o {{Output}}/all-ports.txt"
+        exports:
+          all_ports: "{{Output}}/all-ports.txt"
+
+  # Module 3: Screenshot Capture (depends on port-scan)
+  - name: screenshot
+    depends_on:
+      - port-scan
+    condition: "fileLength('{{all_ports}}') > 0"
+    steps:
+      - name: setup-screenshots
+        type: bash
+        command: mkdir -p {{Output}}/screenshots
+
+      - name: probe-http
+        type: bash
+        command: "{{Binaries}}/httpx -l {{all_subdomains}} -silent -o {{Output}}/http-hosts.txt"
+        timeout: 300
+        exports:
+          http_hosts: "{{Output}}/http-hosts.txt"
+
+      - name: capture-screenshots
+        type: foreach
+        input: "{{http_hosts}}"
+        variable: url
+        threads: 10
+        step:
+          name: gowitness-capture
+          type: bash
+          command: "{{Binaries}}/gowitness single --url=[[url]] --screenshot-path={{Output}}/screenshots --timeout=30"
+          timeout: 60
+          on_error: continue

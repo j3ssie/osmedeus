@@ -1,0 +1,31 @@
+name: test-preferences
+kind: module
+description: Test workflow preferences feature - demonstrates setting CLI flags in YAML
+
+# Preferences allow setting CLI-like flags directly in the workflow
+# CLI flags always take precedence over these preferences
+preferences:
+  disable_notifications: true    # Equivalent to --disable-notification
+  disable_logging: false         # Equivalent to --disable-logging
+  heuristics_check: 'none'       # Equivalent to --heuristics-check none
+  ci_output_format: false        # Equivalent to --ci-output-format
+  silent: false                  # Equivalent to --silent
+  repeat: false                  # Equivalent to --repeat
+  repeat_wait_time: '30s'        # Equivalent to --repeat-wait-time 30s
+
+params:
+  - name: message
+    default: "Hello from preferences test"
+
+steps:
+  - name: echo-message
+    type: bash
+    command: 'echo "{{message}}"'
+
+  - name: show-target
+    type: bash
+    command: 'echo "Target is {{Target}}"'
+
+  - name: test-function
+    type: function
+    function: 'log_info("Preferences test completed for {{Target}}")'

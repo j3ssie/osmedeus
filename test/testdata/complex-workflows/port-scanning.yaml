@@ -1,0 +1,131 @@
+name: port-scanning
+kind: module
+desc: Port and service scanning workflow with decision routing and parallel execution
+
+params:
+  - name: threads
+    value: "50"
+  - name: rate_limit
+    value: "1000"
+  - name: ports
+    value: "top-1000"
+  - name: scan_type
+    value: "standard"
+
+steps:
+  # Step 1: bash - Setup directories
+  - name: setup
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/ports
+      - mkdir -p {{Output}}/services
+      - mkdir -p {{Output}}/banners
+    exports:
+      ports_dir: "{{Output}}/ports"
+      services_dir: "{{Output}}/services"
+
+  # Step 2: function - Determine port range based on scan_type
+  - name: configure-ports
+    type: function
+    script: |
+      var scanType = "{{scan_type}}";
+      var portRange = "";
+      if (scanType == "quick") {
+        portRange = "21,22,23,25,80,110,143,443,445,3306,3389,8080";
+      } else if (scanType == "full") {
+        portRange = "1-65535";
+      } else {
+        portRange = "1-10000";
+      }
+      log_info("Port range: " + portRange + " for scan type: " + scanType);
+      return portRange;
+    exports:
+      port_range: "{{Result}}"
+
+  # Step 3: parallel-steps - Run multiple port scanners
+  - name: port-discovery
+    type: parallel-steps
+    parallel_steps:
+      - name: naabu-scan
+        type: bash
+        command: "{{Binaries}}/naabu -host {{Target}} -p {{port_range}} -rate {{rate_limit}} -silent -o {{ports_dir}}/naabu.txt"
+        timeout: 3600
+      - name: masscan-scan
+        type: bash
+        command: "{{Binaries}}/masscan {{Target}} -p{{port_range}} --rate={{rate_limit}} -oL {{ports_dir}}/masscan.txt"
+        timeout: 3600
+        on_error: continue
+
+  # Step 4: bash - Merge port results
+  - name: merge-ports
+    type: bash
+    command: |
+      cat {{ports_dir}}/naabu.txt 2>/dev/null | sort -u > {{ports_dir}}/all-ports.txt
+      grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+' {{ports_dir}}/masscan.txt 2>/dev/null | sort -u >> {{ports_dir}}/all-ports.txt
+      sort -u {{ports_dir}}/all-ports.txt -o {{ports_dir}}/all-ports.txt
+    exports:
+      open_ports: "{{ports_dir}}/all-ports.txt"
+
+  # Step 5: function with decision - Check port count and route
+  - name: analyze-results
+    type: function
+    script: |
+      var portCount = fileLength("{{open_ports}}");
+      log_info("Total open ports found: " + portCount);
+      if (portCount == 0) {
+        return "no_ports";
+      } else if (portCount > 100) {
+        return "many_ports";
+      }
+      return "normal";
+    exports:
+      port_analysis_result: "{{Result}}"
+    decision:
+      switch: "{{port_analysis_result}}"
+      cases:
+        "no_ports":
+          goto: skip-service-detection
+        "many_ports":
+          goto: batch-service-detection
+        "normal":
+          goto: service-detection
+
+  # Step 6: foreach - Standard service detection
+  - name: service-detection
+    type: foreach
+    input: "{{open_ports}}"
+    variable: target_port
+    threads: "{{threads}}"
+    step:
+      name: detect-service
+      type: bash
+      command: "{{Binaries}}/nmap -sV -sC -p [[target_port]] -oN {{services_dir}}/[[target_port]].txt {{Target}}"
+      timeout: 120
+      on_error: continue
+    exports:
+      detection_complete: "true"
+
+  # Step 7: bash - Batch service detection for many ports
+  - name: batch-service-detection
+    type: bash
+    pre_condition: "fileLength('{{open_ports}}') > 100"
+    command: "{{Binaries}}/nmap -sV --version-intensity 5 -iL {{open_ports}} -oN {{services_dir}}/batch-scan.txt"
+    timeout: 7200
+    exports:
+      detection_complete: "true"
+
+  # Step 8: bash - Final report generation
+  - name: generate-report
+    type: bash
+    parallel_commands:
+      - "cat {{services_dir}}/*.txt 2>/dev/null | grep -E 'open|filtered' > {{Output}}/service-summary.txt"
+      - "echo 'Port Scan Report for {{Target}}' > {{Output}}/report.txt && date >> {{Output}}/report.txt && wc -l {{open_ports}} >> {{Output}}/report.txt"
+    exports:
+      port_report: "{{Output}}/report.txt"
+
+  # Placeholder for skip case
+  - name: skip-service-detection
+    type: function
+    script: |
+      log_warn("No open ports found, skipping service detection");
+      return true;

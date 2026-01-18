@@ -1,0 +1,251 @@
+# Workflows
+
+## List All Workflows
+
+Get a paginated list of all available workflows with filtering support.
+
+```bash
+curl http://localhost:8002/osm/api/workflows \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `source` | string | `db` | Data source: `db` (database) or `filesystem` (direct file scan) |
+| `tags` | string | - | Comma-separated list of tags to filter by |
+| `kind` | string | - | Filter by workflow kind: `flow` or `module` |
+| `search` | string | - | Search in workflow name and description |
+| `offset` | int | 0 | Pagination offset |
+| `limit` | int | 50 | Maximum records to return |
+
+**Examples:**
+
+```bash
+# Filter by tags
+curl "http://localhost:8002/osm/api/workflows?tags=recon,subdomain" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Filter by kind
+curl "http://localhost:8002/osm/api/workflows?kind=module" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Search workflows
+curl "http://localhost:8002/osm/api/workflows?search=enum" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Load directly from filesystem (bypasses database)
+curl "http://localhost:8002/osm/api/workflows?source=filesystem" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Pagination
+curl "http://localhost:8002/osm/api/workflows?offset=10&limit=20" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "name": "subdomain-enum",
+      "kind": "flow",
+      "description": "Comprehensive subdomain enumeration and probing workflow",
+      "tags": ["recon", "subdomain", "httpx"],
+      "file_path": "/home/user/osmedeus-base/workflows/flows/subdomain-enum.yaml",
+      "params": [
+        {"name": "target", "required": true, "default": "", "generator": ""},
+        {"name": "threads", "required": false, "default": "50", "generator": ""},
+        {"name": "timeout", "required": false, "default": "30", "generator": ""},
+        {"name": "wordlist", "required": false, "default": "", "generator": "default_wordlist"}
+      ],
+      "required_params": ["target"],
+      "step_count": 8,
+      "module_count": 3,
+      "checksum": "sha256:abc123...",
+      "indexed_at": "2025-01-15T08:00:00Z"
+    },
+    {
+      "name": "port-scan",
+      "kind": "module",
+      "description": "Port scanning module using nmap and masscan",
+      "tags": ["recon", "portscan", "nmap"],
+      "file_path": "/home/user/osmedeus-base/workflows/modules/port-scan.yaml",
+      "params": [
+        {"name": "target", "required": true, "default": "", "generator": ""},
+        {"name": "ports", "required": false, "default": "top-1000", "generator": ""},
+        {"name": "rate", "required": false, "default": "1000", "generator": ""}
+      ],
+      "required_params": ["target"],
+      "step_count": 4,
+      "module_count": 0,
+      "checksum": "sha256:def456...",
+      "indexed_at": "2025-01-15T08:00:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 25,
+    "offset": 0,
+    "limit": 50
+  }
+}
+```
+
+---
+
+## Get Workflow Tags
+
+Get all unique tags from indexed workflows.
+
+```bash
+curl http://localhost:8002/osm/api/workflows/tags \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "tags": ["recon", "subdomain", "portscan", "vulnerability", "nuclei"],
+  "count": 5
+}
+```
+
+---
+
+## Refresh Workflow Index
+
+Re-index all workflows from filesystem to database. Use this after adding or modifying workflow files.
+
+```bash
+curl -X POST http://localhost:8002/osm/api/workflows/refresh \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `force` | bool | false | Force re-index all workflows regardless of checksum |
+
+**Force re-index all:**
+```bash
+curl -X POST "http://localhost:8002/osm/api/workflows/refresh?force=true" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "message": "Workflows indexed successfully",
+  "added": 5,
+  "updated": 2,
+  "removed": 1,
+  "errors": []
+}
+```
+
+---
+
+## Get Workflow Details
+
+Get workflow content. Returns raw YAML by default, or JSON with full parsed details.
+
+```bash
+# Get raw YAML content (default)
+curl http://localhost:8002/osm/api/workflows/subdomain-enum \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```bash
+# Get workflow details as JSON
+curl "http://localhost:8002/osm/api/workflows/subdomain-enum?json=true" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `json` | bool | false | Return JSON with parsed details instead of raw YAML |
+
+**Response (YAML - default):**
+```yaml
+name: subdomain-enum
+kind: flow
+description: Subdomain enumeration
+params:
+  - name: target
+    required: true
+steps:
+  - name: run-subfinder
+    command: subfinder -d {{target}}
+...
+```
+
+**Response (JSON with `?json=true`):**
+```json
+{
+  "name": "subdomain-enum",
+  "kind": "flow",
+  "description": "Comprehensive subdomain enumeration and probing workflow",
+  "file_path": "/home/user/osmedeus-base/workflows/flows/subdomain-enum.yaml",
+  "params": [
+    {"name": "target", "required": true, "default": "", "generator": ""},
+    {"name": "threads", "required": false, "default": "50", "generator": ""},
+    {"name": "output_dir", "required": false, "default": "{{Workspace}}", "generator": "workspace_path"},
+    {"name": "wordlist", "required": false, "default": "", "generator": "default_wordlist"}
+  ],
+  "steps": [
+    {
+      "index": 0,
+      "name": "run-subfinder",
+      "type": "bash",
+      "command": "subfinder -d {{target}} -t {{threads}} -o {{output_dir}}/subdomains-subfinder.txt",
+      "timeout": "30m",
+      "pre_condition": "",
+      "exports": {"subfinder_output": "{{output_dir}}/subdomains-subfinder.txt"}
+    },
+    {
+      "index": 1,
+      "name": "run-amass",
+      "type": "bash",
+      "command": "amass enum -passive -d {{target}} -o {{output_dir}}/subdomains-amass.txt",
+      "timeout": "60m",
+      "pre_condition": "commandExists('amass')",
+      "exports": {"amass_output": "{{output_dir}}/subdomains-amass.txt"}
+    },
+    {
+      "index": 2,
+      "name": "merge-subdomains",
+      "type": "function",
+      "command": "mergeFiles('{{output_dir}}/subdomains-*.txt', '{{output_dir}}/all-subdomains.txt')",
+      "timeout": "",
+      "pre_condition": "",
+      "exports": {"all_subdomains": "{{output_dir}}/all-subdomains.txt"}
+    },
+    {
+      "index": 3,
+      "name": "run-httpx",
+      "type": "bash",
+      "command": "httpx -l {{all_subdomains}} -t {{threads}} -o {{output_dir}}/alive.txt -json -o {{output_dir}}/httpx.json",
+      "timeout": "60m",
+      "pre_condition": "fileLength('{{all_subdomains}}') > 0",
+      "exports": {"alive_hosts": "{{output_dir}}/alive.txt", "httpx_json": "{{output_dir}}/httpx.json"}
+    }
+  ],
+  "modules": [
+    {"index": 0, "name": "port-scan", "path": "modules/port-scan.yaml", "depends_on": [], "condition": ""},
+    {"index": 1, "name": "nuclei-scan", "path": "modules/nuclei-scan.yaml", "depends_on": ["port-scan"], "condition": "fileLength('{{alive_hosts}}') > 0"},
+    {"index": 2, "name": "screenshot", "path": "modules/screenshot.yaml", "depends_on": ["port-scan"], "condition": ""}
+  ],
+  "triggers": [
+    {"name": "daily-scan", "on": "cron", "schedule": "0 2 * * *", "enabled": true},
+    {"name": "on-new-asset", "on": "event", "topic": "asset.discovered", "enabled": false}
+  ],
+  "dependencies": {
+    "commands": ["subfinder", "amass", "httpx", "nuclei", "nmap"],
+    "files": ["{{wordlist}}"]
+  }
+}
+```

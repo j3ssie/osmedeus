@@ -1,0 +1,32 @@
+name: http-probing
+kind: module
+description: Running HTTP fingerprint technology and response with the supplied inputs
+
+params:
+  - name: inputFile
+    default: "{{Target}}"
+  - name: httpFile
+    default: "{{Output}}/fingerprint/http-{{Workspace}}.txt"
+  - name: httpThreads
+    default: "{{ threads * 10 }}"
+  - name: httpTimeout
+    default: "10"
+  - name: defaultUA
+    default: "User-Agent: Mozilla/5.0 (compatible; Osmedeus/v4; +https://github.com/j3ssie/osmedeus)"
+
+steps:
+  - name: httpx-probe
+    type: bash
+    commands:
+      - "echo {{inputFile}} | {{Binaries}}/httpx -nf -timeout {{httpTimeout}} -silent -t {{httpThreads}} >> {{httpFile}}"
+
+  - name: httpx-fingerprint
+    type: bash
+    pre_condition: "fileExists('{{httpFile}}')"
+    command: >
+      cat {{httpFile}} | {{Binaries}}/httpx -H '{{defaultUA}}' -timeout {{httpTimeout}}
+      -t {{httpThreads}} -no-fallback -no-color -silent -json -title -favicon
+      -hash sha256 -jarm -tech-detect -status-code -cdn -tls-grab -ztls -vhost
+      -follow-host-redirects -include-chain -store-response
+      -store-response-dir {{Output}}/fingerprint/raw-data
+      >> {{Output}}/fingerprint/{{Workspace}}-http-overview.txt

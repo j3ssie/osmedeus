@@ -1,0 +1,319 @@
+name: test-docker-scanning
+kind: module
+description: Realistic security scanning simulation with Docker-based tools
+tags: test,docker,scanning
+
+params:
+  - name: target
+    required: true
+  - name: Output
+    default: /tmp/osm-docker-scan
+  - name: threads
+    default: "10"
+  - name: severity
+    default: "critical,high,medium"
+  - name: rate_limit
+    default: "100"
+
+steps:
+  # Phase 1: Initialization
+  - name: init-workspace
+    type: function
+    log: "Initializing workspace for {{target}}"
+    function: createDir("{{Output}}")
+
+  - name: create-subdirs
+    type: bash
+    log: "Creating output subdirectories"
+    commands:
+      - mkdir -p {{Output}}/recon
+      - mkdir -p {{Output}}/enumeration
+      - mkdir -p {{Output}}/vulnerabilities
+      - mkdir -p {{Output}}/screenshots
+      - mkdir -p {{Output}}/reports
+
+  # Phase 2: Subdomain Enumeration (Docker-based)
+  - name: subdomain-enum
+    type: parallel-steps
+    log: "Running subdomain enumeration tools"
+    parallel_steps:
+      - name: subfinder-scan
+        type: remote-bash
+        timeout: 300
+        step_runner: docker
+        step_runner_config:
+          image: alpine:latest
+          env:
+            TARGET: "{{target}}"
+          volumes:
+            - "{{Output}}:/output"
+          workdir: /output
+        command: |
+          echo "Running subfinder for $TARGET"
+          # Simulating subfinder output
+          cat > /output/recon/subfinder.txt << EOF
+          www.$TARGET
+          api.$TARGET
+          admin.$TARGET
+          mail.$TARGET
+          dev.$TARGET
+          staging.$TARGET
+          test.$TARGET
+          EOF
+          echo "Subfinder found $(wc -l < /output/recon/subfinder.txt) subdomains"
+        exports:
+          subfinder_output: "{{Output}}/recon/subfinder.txt"
+
+      - name: amass-scan
+        type: remote-bash
+        timeout: 600
+        step_runner: docker
+        step_runner_config:
+          image: alpine:latest
+          volumes:
+            - "{{Output}}:/output"
+        command: |
+          echo "Running amass for {{target}}"
+          # Simulating amass output
+          cat > /output/recon/amass.txt << EOF
+          www.{{target}}
+          api.{{target}}
+          cdn.{{target}}
+          assets.{{target}}
+          portal.{{target}}
+          EOF
+          echo "Amass found $(wc -l < /output/recon/amass.txt) subdomains"
+        exports:
+          amass_output: "{{Output}}/recon/amass.txt"
+
+      - name: crtsh-lookup
+        type: remote-bash
+        timeout: 120
+        step_runner: docker
+        step_runner_config:
+          image: alpine:latest
+          volumes:
+            - "{{Output}}:/output"
+        command: |
+          echo "Querying crt.sh for {{target}}"
+          # Simulating crt.sh output
+          cat > /output/recon/crtsh.txt << EOF
+          *.{{target}}
+          www.{{target}}
+          secure.{{target}}
+          EOF
+        exports:
+          crtsh_output: "{{Output}}/recon/crtsh.txt"
+
+  # Phase 3: Merge and deduplicate
+  - name: merge-subdomains
+    type: function
+    log: "Merging subdomain results"
+    function: sortUnique("{{Output}}/recon/*.txt", "{{Output}}/recon/all-subdomains.txt")
+    exports:
+      all_subdomains: "{{Output}}/recon/all-subdomains.txt"
+    on_error:
+      - action: log
+        message: "Failed to merge subdomains, attempting fallback"
+      - action: run
+        step: fallback-merge
+
+  - name: fallback-merge
+    type: bash
+    log: "Fallback merge using bash"
+    pre_condition: "false"
+    command: cat {{Output}}/recon/*.txt | sort -u > {{Output}}/recon/all-subdomains.txt
+
+  # Phase 4: DNS Resolution
+  - name: dns-resolution
+    type: foreach
+    log: "Resolving DNS for discovered subdomains"
+    input: "{{Output}}/recon/all-subdomains.txt"
+    variable: host
+    threads: 5
+    step:
+      name: resolve-host
+      type: remote-bash
+      step_runner: docker
+      step_runner_config:
+        image: alpine:latest
+        volumes:
+          - "{{Output}}:/output"
+      command: |
+        echo "[[host]] -> 127.0.0.1" >> /output/recon/resolved.txt
+
+  # Phase 5: HTTP Probing (Docker-based httpx simulation)
+  - name: http-probe
+    type: remote-bash
+    log: "Probing HTTP endpoints"
+    timeout: 300
+    step_runner: docker
+    step_runner_config:
+      image: alpine:latest
+      env:
+        THREADS: "{{threads}}"
+        RATE: "{{rate_limit}}"
+      volumes:
+        - "{{Output}}:/output"
+    commands:
+      - echo "Running httpx with $THREADS threads at rate $RATE"
+      - |
+        while read subdomain; do
+          echo "{\"url\":\"https://$subdomain\",\"status_code\":200,\"title\":\"Example\",\"tech\":[\"nginx\"]}" >> /output/enumeration/httpx.json
+        done < /output/recon/all-subdomains.txt
+      - echo "HTTP probing complete"
+    exports:
+      httpx_output: "{{Output}}/enumeration/httpx.json"
+
+  # Phase 6: Check results and decide
+  - name: check-alive-hosts
+    type: function
+    log: "Checking alive hosts count"
+    function: fileLength("{{Output}}/enumeration/httpx.json")
+    exports:
+      alive_count: "output"
+    decision:
+      switch: "{{alive_count}}"
+      cases:
+        "0":
+          goto: no-hosts-found
+      default:
+        goto: extract-urls
+
+  - name: no-hosts-found
+    type: bash
+    log: "No alive hosts found"
+    command: echo "No alive hosts found for {{target}}" > {{Output}}/reports/summary.txt
+    decision:
+      switch: "always"
+      cases:
+        "always":
+          goto: _end
+
+  # Phase 7: Extract URLs for scanning
+  - name: extract-urls
+    type: bash
+    log: "Extracting URLs from httpx output"
+    command: |
+      grep -o '"url":"[^"]*"' {{Output}}/enumeration/httpx.json | cut -d'"' -f4 > {{Output}}/enumeration/urls.txt
+    exports:
+      urls_file: "{{Output}}/enumeration/urls.txt"
+
+  # Phase 8: Vulnerability Scanning (Parallel Docker nuclei simulation)
+  - name: vuln-scan
+    type: parallel-steps
+    log: "Running vulnerability scans"
+    parallel_steps:
+      - name: nuclei-critical
+        type: remote-bash
+        timeout: 600
+        step_runner: docker
+        step_runner_config:
+          image: alpine:latest
+          env:
+            SEVERITY: critical
+          volumes:
+            - "{{Output}}:/output"
+        command: |
+          echo "Running nuclei with severity=$SEVERITY"
+          echo "[CRITICAL] CVE-2021-44228 - Log4Shell - https://api.{{target}}" > /output/vulnerabilities/nuclei-critical.txt
+          echo "Critical scan complete"
+        exports:
+          nuclei_critical: "{{Output}}/vulnerabilities/nuclei-critical.txt"
+
+      - name: nuclei-high
+        type: remote-bash
+        timeout: 600
+        step_runner: docker
+        step_runner_config:
+          image: alpine:latest
+          env:
+            SEVERITY: high
+          volumes:
+            - "{{Output}}:/output"
+        command: |
+          echo "Running nuclei with severity=high"
+          cat > /output/vulnerabilities/nuclei-high.txt << EOF
+          [HIGH] SQL Injection - https://admin.{{target}}/login
+          [HIGH] XSS Reflected - https://www.{{target}}/search
+          EOF
+          echo "High severity scan complete"
+        exports:
+          nuclei_high: "{{Output}}/vulnerabilities/nuclei-high.txt"
+
+      - name: nuclei-medium
+        type: remote-bash
+        timeout: 600
+        step_runner: docker
+        step_runner_config:
+          image: alpine:latest
+          volumes:
+            - "{{Output}}:/output"
+        command: |
+          echo "Running nuclei with severity=medium"
+          cat > /output/vulnerabilities/nuclei-medium.txt << EOF
+          [MEDIUM] Missing Security Headers - https://www.{{target}}
+          [MEDIUM] Directory Listing - https://dev.{{target}}/static/
+          [MEDIUM] Outdated Software - https://api.{{target}}
+          EOF
+        exports:
+          nuclei_medium: "{{Output}}/vulnerabilities/nuclei-medium.txt"
+
+  # Phase 9: Screenshot capture (Docker-based)
+  - name: take-screenshots
+    type: foreach
+    log: "Capturing screenshots"
+    input: "{{Output}}/enumeration/urls.txt"
+    variable: url
+    threads: 3
+    step:
+      name: capture-screenshot
+      type: remote-bash
+      step_runner: docker
+      step_runner_config:
+        image: alpine:latest
+        volumes:
+          - "{{Output}}:/output"
+      command: |
+        # Simulate screenshot capture
+        hash=$(echo "[[url]]" | md5sum | cut -c1-8)
+        echo "Screenshot captured: [[url]]" > /output/screenshots/$hash.txt
+
+  # Phase 10: Generate final report
+  - name: generate-report
+    type: remote-bash
+    log: "Generating comprehensive report"
+    timeout: 60
+    step_runner: docker
+    step_runner_config:
+      image: alpine:latest
+      volumes:
+        - "{{Output}}:/output"
+    commands:
+      - |
+        cat > /output/reports/scan-report.md << 'REPORT'
+        # Security Scan Report
+        ## Target: {{target}}
+        ## Generated: $(date)
+
+        ### Summary
+        REPORT
+      - 'echo "- Subdomains Found: $(wc -l < /output/recon/all-subdomains.txt 2>/dev/null || echo 0)" >> /output/reports/scan-report.md'
+      - 'echo "- Alive Hosts: $(wc -l < /output/enumeration/httpx.json 2>/dev/null || echo 0)" >> /output/reports/scan-report.md'
+      - 'echo "" >> /output/reports/scan-report.md'
+      - 'echo "### Vulnerabilities" >> /output/reports/scan-report.md'
+      - 'echo "#### Critical" >> /output/reports/scan-report.md'
+      - 'cat /output/vulnerabilities/nuclei-critical.txt >> /output/reports/scan-report.md 2>/dev/null || echo "None" >> /output/reports/scan-report.md'
+      - 'echo "" >> /output/reports/scan-report.md'
+      - 'echo "#### High" >> /output/reports/scan-report.md'
+      - 'cat /output/vulnerabilities/nuclei-high.txt >> /output/reports/scan-report.md 2>/dev/null || echo "None" >> /output/reports/scan-report.md'
+      - 'echo "" >> /output/reports/scan-report.md'
+      - 'echo "#### Medium" >> /output/reports/scan-report.md'
+      - 'cat /output/vulnerabilities/nuclei-medium.txt >> /output/reports/scan-report.md 2>/dev/null || echo "None" >> /output/reports/scan-report.md'
+    exports:
+      final_report: "{{Output}}/reports/scan-report.md"
+    on_success:
+      - action: log
+        message: "Scan completed successfully for {{target}}"
+      - action: notify
+        message: "Security scan complete: {{target}}"

@@ -1,0 +1,13 @@
+name: test-bash
+kind: module
+description: Test basic bash execution
+tags: test,bash,quick
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: echo-test
+    type: bash
+    command: echo "Hello {{target}}"

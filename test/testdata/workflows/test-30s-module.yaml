@@ -1,0 +1,24 @@
+name: test-30s-module
+kind: module
+description: Simple module with a single 30 second sleep
+tags: test,sleep,long-running
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: start
+    type: bash
+    command: echo "[$(date +%H:%M:%S)] Starting 30s sleep test for {{target}}"
+
+  - name: long-sleep
+    type: bash
+    command: |
+      echo "[$(date +%H:%M:%S)] Sleeping for 30 seconds..."
+      sleep 30
+      echo "[$(date +%H:%M:%S)] Sleep complete!"
+
+  - name: finish
+    type: bash
+    command: echo "[$(date +%H:%M:%S)] Done!"

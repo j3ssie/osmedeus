@@ -1,0 +1,20 @@
+name: test-ssh-runner
+kind: module
+description: Test SSH runner execution
+tags: test,runner,ssh
+
+runner: ssh
+runner_config:
+  host: localhost
+  port: 2222
+  user: testuser
+  password: testpass
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: check-remote
+    type: bash
+    command: echo "Hello from SSH" && hostname

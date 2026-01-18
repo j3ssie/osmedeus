@@ -1,0 +1,12 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: osm-test-redis
+    ports:
+      - "6399:6379"  # Use non-standard port to avoid conflicts with local Redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped

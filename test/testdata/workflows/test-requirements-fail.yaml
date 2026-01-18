@@ -1,0 +1,21 @@
+name: test-requirements-fail
+kind: module
+description: Test workflow dependency validation (failure case)
+tags: test,requirements,validation
+
+dependencies:
+  commands:
+    - echo
+    - nonexistent-tool-xyz-12345
+  files:
+    - /tmp
+    - /nonexistent/path/xyz
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: should-not-reach
+    type: bash
+    command: echo "Should not reach here"

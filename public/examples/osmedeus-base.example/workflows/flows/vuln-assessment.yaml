@@ -1,0 +1,44 @@
+# Vulnerability Assessment Flow
+# Orchestrates HTTP probing followed by vulnerability scanning
+
+name: vuln-assessment
+kind: flow
+description: Vulnerability assessment flow - http probe, then vuln scan
+tags: test, vuln, flow
+
+params:
+  - name: threads
+    value: "10"
+  - name: severity
+    value: "critical,high,medium"
+  - name: timeout
+    value: "7200"
+
+modules:
+  # Module 1: HTTP Probing to find live hosts
+  - name: http-probing
+    path: modules/http-probe.yaml
+    params:
+      threads: "{{threads}}"
+    condition: "true"
+    exports:
+      live_hosts: "{{http_hosts}}"
+
+  # Module 2: Vulnerability Scanning (depends on HTTP probing)
+  - name: vulnerability-scanning
+    path: modules/vuln-scan.yaml
+    depends_on:
+      - http-probing
+    params:
+      threads: "{{threads}}"
+      severity: "{{severity}}"
+      timeout: "{{timeout}}"
+    condition: "fileLength('{{live_hosts}}') > 0"
+    on_success:
+      - type: function
+        script: |
+          log_info("Vulnerability assessment completed successfully");
+    on_error:
+      - type: function
+        script: |
+          log_error("Vulnerability scanning failed");

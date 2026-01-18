@@ -1,0 +1,106 @@
+# Subdomain Enumeration Module (Test Style)
+# This is a test-style workflow using simple commands for testing purposes.
+# In production, replace echo commands with real tools like subfinder, amass, etc.
+
+name: subdomain-enum
+kind: module
+description: Simulated subdomain enumeration for testing
+tags: test, recon, subdomain
+
+params:
+  - name: threads
+    value: "5"
+  - name: wordlist
+    value: "{{Data}}/wordlists/sample-subdomains.txt"
+
+steps:
+  # Step 1: Setup directories
+  - name: setup-directories
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/subdomains/sources
+      - mkdir -p {{Output}}/subdomains/resolved
+    exports:
+      subdomain_dir: "{{Output}}/subdomains"
+      sources_dir: "{{Output}}/subdomains/sources"
+
+  # Step 2: Validate target using function
+  - name: validate-target
+    type: function
+    function: |
+      log_info("Starting subdomain enumeration for: {{Target}}");
+      if (isEmpty("{{Target}}")) {
+        log_error("Target is empty");
+        return false;
+      }
+      log_info("Target validation passed");
+      return true;
+
+  # Step 3: Simulate passive enumeration with parallel steps
+  - name: passive-enumeration
+    type: parallel-steps
+    parallel_steps:
+      - name: simulate-subfinder
+        type: bash
+        command: |
+          echo "www.{{Target}}" > {{sources_dir}}/subfinder.txt
+          echo "api.{{Target}}" >> {{sources_dir}}/subfinder.txt
+          echo "admin.{{Target}}" >> {{sources_dir}}/subfinder.txt
+          sleep 0.5
+        timeout: 30
+
+      - name: simulate-amass
+        type: bash
+        command: |
+          echo "mail.{{Target}}" > {{sources_dir}}/amass.txt
+          echo "dev.{{Target}}" >> {{sources_dir}}/amass.txt
+          echo "staging.{{Target}}" >> {{sources_dir}}/amass.txt
+          sleep 0.5
+        timeout: 30
+
+      - name: simulate-assetfinder
+        type: bash
+        command: |
+          echo "blog.{{Target}}" > {{sources_dir}}/assetfinder.txt
+          echo "shop.{{Target}}" >> {{sources_dir}}/assetfinder.txt
+          sleep 0.5
+        timeout: 30
+
+  # Step 4: Merge and deduplicate results
+  - name: merge-results
+    type: bash
+    command: "cat {{sources_dir}}/*.txt | sort -u > {{subdomain_dir}}/all-subdomains.txt"
+    exports:
+      all_subdomains: "{{subdomain_dir}}/all-subdomains.txt"
+
+  # Step 5: Count results using function
+  - name: count-results
+    type: function
+    function: |
+      var count = fileLength("{{all_subdomains}}");
+      log_info("Found " + count + " unique subdomains");
+      return count;
+    exports:
+      subdomain_count: "{{Result}}"
+
+  # Step 6: Simulate DNS resolution with foreach
+  - name: resolve-subdomains
+    type: foreach
+    input: "{{all_subdomains}}"
+    variable: subdomain
+    threads: "{{threads}}"
+    step:
+      name: resolve-single
+      type: bash
+      command: |
+        echo "[[subdomain]] -> 127.0.0.1" >> {{subdomain_dir}}/resolved/dns-results.txt
+        sleep 0.1
+      timeout: 10
+
+  # Step 7: Final aggregation
+  - name: final-output
+    type: bash
+    commands:
+      - cat {{subdomain_dir}}/resolved/*.txt 2>/dev/null | sort -u > {{Output}}/final-subdomains.txt
+      - echo "Enumeration completed at $(date)" >> {{Output}}/stats.txt
+      - "wc -l {{subdomain_dir}}/all-subdomains.txt | awk '{print \"Total subdomains: \" $1}' >> {{Output}}/stats.txt"

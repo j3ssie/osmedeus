@@ -1,0 +1,51 @@
+kind: module
+name: template-parallel-module
+description: Test template rendering in parallel-steps
+
+params:
+  - name: parallelOutput
+    default: "{{Output}}/parallel-{{TargetSpace}}"
+
+steps:
+  - name: setup-parallel
+    type: bash
+    command: mkdir -p {{parallelOutput}}
+    exports:
+      parallel_dir: "{{parallelOutput}}"
+
+  - name: parallel-steps-with-templates
+    type: parallel-steps
+    parallel_steps:
+      - name: parallel-bash-1
+        type: bash
+        command: 'echo "Bash 1: {{Target}}" > {{parallelOutput}}/bash1.txt'
+        exports:
+          p1_done: "true"
+
+      - name: parallel-bash-2
+        type: bash
+        command: 'echo "Bash 2: {{TargetSpace}}" > {{parallelOutput}}/bash2.txt'
+        exports:
+          p2_done: "true"
+
+      - name: parallel-function
+        type: function
+        function: 'log_info("Parallel function for {{Target}}")'
+        exports:
+          p3_done: "true"
+
+  - name: verify-parallel
+    type: bash
+    pre_condition: 'fileExists("{{parallelOutput}}/bash1.txt")'
+    command: |
+      echo "=== Parallel Steps Verification ==="
+      echo "parallel_dir={{parallel_dir}}"
+      echo "p1_done={{p1_done}}"
+      echo "p2_done={{p2_done}}"
+      echo "p3_done={{p3_done}}"
+      echo "=== Bash1 Contents ==="
+      cat {{parallelOutput}}/bash1.txt
+      echo "=== Bash2 Contents ==="
+      cat {{parallelOutput}}/bash2.txt
+    exports:
+      all_parallel_done: "{{p1_done}}-{{p2_done}}-{{p3_done}}"

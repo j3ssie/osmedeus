@@ -1,0 +1,69 @@
+# Port Scanning Module (Test Style)
+# This is a test-style workflow using simple commands for testing purposes.
+# In production, replace echo commands with real tools like nmap, masscan, etc.
+
+name: port-scan
+kind: module
+description: Simulated port scanning for testing
+tags: test, recon, ports
+
+params:
+  - name: threads
+    value: "10"
+  - name: ports
+    value: "80,443,8080,8443,22,21"
+
+steps:
+  # Step 1: Setup directories
+  - name: setup-directories
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/ports/quick
+      - mkdir -p {{Output}}/ports/detailed
+    exports:
+      ports_dir: "{{Output}}/ports"
+
+  # Step 2: Quick port scan simulation
+  - name: quick-scan
+    type: bash
+    command: |
+      echo "{{Target}}:80 open" > {{ports_dir}}/quick/scan.txt
+      echo "{{Target}}:443 open" >> {{ports_dir}}/quick/scan.txt
+      echo "{{Target}}:22 open" >> {{ports_dir}}/quick/scan.txt
+      sleep 1
+    timeout: 60
+    exports:
+      quick_results: "{{ports_dir}}/quick/scan.txt"
+
+  # Step 3: Create target list for detailed scan
+  - name: prepare-targets
+    type: bash
+    command: |
+      awk -F: '{print $1":"$2}' {{quick_results}} > {{ports_dir}}/targets.txt
+    exports:
+      scan_targets: "{{ports_dir}}/targets.txt"
+
+  # Step 4: Detailed scan using foreach
+  - name: detailed-scan
+    type: foreach
+    input: "{{scan_targets}}"
+    variable: target_port
+    threads: "{{threads}}"
+    step:
+      name: scan-single-port
+      type: bash
+      command: |
+        HOST=$(echo "[[target_port]]" | cut -d: -f1)
+        PORT=$(echo "[[target_port]]" | cut -d: -f2)
+        echo "$HOST:$PORT http/https (simulated service)" >> {{ports_dir}}/detailed/services.txt
+        sleep 0.2
+      timeout: 30
+
+  # Step 5: Aggregate results
+  - name: aggregate-results
+    type: bash
+    parallel_commands:
+      - cat {{ports_dir}}/detailed/*.txt 2>/dev/null | sort -u > {{Output}}/all-ports.txt
+      - echo "Port scan completed at $(date)" > {{Output}}/port-stats.txt
+      - "wc -l {{Output}}/all-ports.txt | awk '{print \"Open ports found: \" $1}' >> {{Output}}/port-stats.txt"
+

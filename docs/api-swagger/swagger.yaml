@@ -1,0 +1,2014 @@
+definitions:
+  core.LLMMessage:
+    properties:
+      content:
+        description: string or []LLMContentPart
+      name:
+        type: string
+      role:
+        $ref: '#/definitions/core.LLMMessageRole'
+      tool_call_id:
+        type: string
+      tool_calls:
+        items:
+          $ref: '#/definitions/core.LLMToolCall'
+        type: array
+    type: object
+  core.LLMMessageRole:
+    enum:
+    - system
+    - user
+    - assistant
+    - tool
+    type: string
+    x-enum-varnames:
+    - LLMRoleSystem
+    - LLMRoleUser
+    - LLMRoleAssistant
+    - LLMRoleTool
+  core.LLMResponseFormat:
+    properties:
+      json_schema:
+        additionalProperties: true
+        type: object
+      type:
+        description: '"text", "json_object", "json_schema"'
+        type: string
+    type: object
+  core.LLMTool:
+    properties:
+      function:
+        $ref: '#/definitions/core.LLMToolFunction'
+      type:
+        description: '"function"'
+        type: string
+    type: object
+  core.LLMToolCall:
+    properties:
+      function:
+        $ref: '#/definitions/core.LLMToolCallFunction'
+      id:
+        type: string
+      type:
+        description: '"function"'
+        type: string
+    type: object
+  core.LLMToolCallFunction:
+    properties:
+      arguments:
+        description: JSON string
+        type: string
+      name:
+        type: string
+    type: object
+  core.LLMToolFunction:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      parameters:
+        additionalProperties: true
+        type: object
+    type: object
+  database.AssetStats:
+    properties:
+      total:
+        type: integer
+    type: object
+  database.RunStats:
+    properties:
+      completed:
+        type: integer
+      failed:
+        type: integer
+      pending:
+        type: integer
+      running:
+        type: integer
+      total:
+        type: integer
+    type: object
+  database.ScheduleStats:
+    properties:
+      enabled:
+        type: integer
+      total:
+        type: integer
+    type: object
+  database.SystemStats:
+    properties:
+      assets:
+        $ref: '#/definitions/database.AssetStats'
+      runs:
+        $ref: '#/definitions/database.RunStats'
+      schedules:
+        $ref: '#/definitions/database.ScheduleStats'
+      vulnerabilities:
+        $ref: '#/definitions/database.VulnerabilityStats'
+      workflows:
+        $ref: '#/definitions/database.WorkflowStats'
+      workspaces:
+        $ref: '#/definitions/database.WorkspaceStats'
+    type: object
+  database.VulnerabilityStats:
+    properties:
+      critical:
+        type: integer
+      high:
+        type: integer
+      low:
+        type: integer
+      medium:
+        type: integer
+      total:
+        type: integer
+    type: object
+  database.WorkflowStats:
+    properties:
+      flows:
+        type: integer
+      modules:
+        type: integer
+      total:
+        type: integer
+    type: object
+  database.WorkspaceStats:
+    properties:
+      total:
+        type: integer
+    type: object
+  handlers.CreateRunRequest:
+    properties:
+      concurrency:
+        description: Concurrency control
+        type: integer
+      docker_image:
+        description: Docker image to use when runner_type=docker
+        type: string
+      empty_target:
+        description: Run without target (generates placeholder target)
+        type: boolean
+      flow:
+        description: Workflow identification
+        type: string
+      heuristics_check:
+        description: 'Heuristics check level: none, basic, advanced'
+        type: string
+      module:
+        description: Module workflow name
+        type: string
+      notify_on_complete:
+        description: Send notification when run completes
+        type: boolean
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      priority:
+        description: Priority and timeout
+        type: string
+      repeat:
+        description: Repeat run after completion
+        type: boolean
+      repeat_wait_time:
+        description: Wait time between repeats (e.g., 30s, 20m, 10h, 1d)
+        type: string
+      runner_type:
+        description: Runner configuration
+        type: string
+      schedule:
+        description: Scheduling options
+        type: string
+      schedule_enabled:
+        description: Enable scheduled execution
+        type: boolean
+      ssh_host:
+        description: SSH host when runner_type=ssh
+        type: string
+      target:
+        type: string
+      target_file:
+        description: Path to file containing targets (one per line)
+        type: string
+      targets:
+        description: Multi-target support
+        items:
+          type: string
+        type: array
+      threads_hold:
+        description: Execution options (mirrors CLI flags)
+        type: integer
+      timeout:
+        description: Timeout in minutes (0 = no timeout)
+        type: integer
+    type: object
+  handlers.CreateScheduleRequest:
+    properties:
+      enabled:
+        type: boolean
+      name:
+        type: string
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      runner_type:
+        type: string
+      schedule:
+        description: cron expression
+        type: string
+      target:
+        type: string
+      workflow_kind:
+        description: flow or module
+        type: string
+      workflow_name:
+        type: string
+    type: object
+  handlers.CreateVulnerabilityInput:
+    properties:
+      asset_type:
+        type: string
+      asset_value:
+        type: string
+      detail_http_request:
+        type: string
+      detail_http_response:
+        type: string
+      raw_vuln_json:
+        type: string
+      severity:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      vuln_desc:
+        type: string
+      vuln_info:
+        type: string
+      vuln_poc:
+        type: string
+      vuln_title:
+        type: string
+      workspace:
+        type: string
+    type: object
+  handlers.FunctionEvalRequest:
+    properties:
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      script:
+        type: string
+      target:
+        type: string
+    type: object
+  handlers.InstallRequest:
+    properties:
+      install_all:
+        description: Install all binaries from registry (for type=binary)
+        type: boolean
+      names:
+        description: Binary names to install (for type=binary)
+        items:
+          type: string
+        type: array
+      registry_mode:
+        description: '"direct-fetch" or "nix-build" (default: direct-fetch)'
+        type: string
+      registry_url:
+        description: Custom registry URL (optional, for type=binary)
+        type: string
+      source:
+        description: Git URL, zip URL, or file path (for type=workflow)
+        type: string
+      type:
+        description: '"binary" or "workflow"'
+        type: string
+    type: object
+  handlers.LLMChatRequest:
+    properties:
+      max_tokens:
+        type: integer
+      messages:
+        items:
+          $ref: '#/definitions/core.LLMMessage'
+        type: array
+      model:
+        type: string
+      "n":
+        type: integer
+      response_format:
+        $ref: '#/definitions/core.LLMResponseFormat'
+      stream:
+        type: boolean
+      temperature:
+        type: number
+      tool_choice: {}
+      tools:
+        items:
+          $ref: '#/definitions/core.LLMTool'
+        type: array
+      top_k:
+        type: integer
+      top_p:
+        type: number
+    type: object
+  handlers.LLMChatResponse:
+    properties:
+      content: {}
+      finish_reason:
+        type: string
+      id:
+        type: string
+      model:
+        type: string
+      tool_calls:
+        items:
+          $ref: '#/definitions/core.LLMToolCall'
+        type: array
+      usage:
+        additionalProperties:
+          type: integer
+        type: object
+    type: object
+  handlers.LLMEmbeddingRequest:
+    properties:
+      input:
+        items:
+          type: string
+        type: array
+      model:
+        type: string
+    type: object
+  handlers.LLMEmbeddingResponse:
+    properties:
+      embeddings:
+        items:
+          items:
+            format: float64
+            type: number
+          type: array
+        type: array
+      model:
+        type: string
+      usage:
+        additionalProperties:
+          type: integer
+        type: object
+    type: object
+  handlers.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  handlers.SnapshotExportRequest:
+    properties:
+      workspace:
+        type: string
+    type: object
+  handlers.SubmitTaskRequest:
+    properties:
+      params:
+        additionalProperties: true
+        type: object
+      target:
+        type: string
+      workflow_kind:
+        type: string
+      workflow_name:
+        type: string
+    type: object
+  handlers.UpdateScheduleRequest:
+    properties:
+      enabled:
+        type: boolean
+      name:
+        type: string
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      schedule:
+        type: string
+      target:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /:
+    get:
+      description: Get server version and info
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Server information
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Server info
+      tags:
+      - Info
+  /health:
+    get:
+      description: Check if the server is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'status: ok'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - Health
+  /health/ready:
+    get:
+      description: Check if the server is ready to accept requests
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'status: ready'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Readiness check
+      tags:
+      - Health
+  /osm/api/artifacts:
+    get:
+      description: Get a paginated list of artifacts with optional filtering and existence
+        checks
+      parameters:
+      - description: Filter by workspace name
+        in: query
+        name: workspace
+        type: string
+      - description: Search in artifact name/path
+        in: query
+        name: search
+        type: string
+      - description: Filter by HTTP status code (also accepts statusCode)
+        in: query
+        name: status_code
+        type: integer
+      - default: false
+        description: Annotate results with path_exists and path_is_dir
+        in: query
+        name: verify_exist
+        type: boolean
+      - default: 0
+        description: Number of records to skip
+        in: query
+        name: offset
+        type: integer
+      - default: 20
+        description: Maximum number of records to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of artifacts with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch artifacts
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List artifacts
+      tags:
+      - Artifacts
+  /osm/api/artifacts/{workspace_name}:
+    get:
+      description: Download a single file under the given workspace by relative artifact
+        path
+      parameters:
+      - description: Workspace name
+        in: path
+        name: workspace_name
+        required: true
+        type: string
+      - description: Relative path to artifact under workspace
+        in: query
+        name: artifact_path
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Artifact file
+          schema:
+            type: file
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Artifact not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to download artifact
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Download workspace artifact
+      tags:
+      - Artifacts
+  /osm/api/assets:
+    get:
+      description: Get a paginated list of assets with optional filtering
+      parameters:
+      - description: Filter by workspace name
+        in: query
+        name: workspace
+        type: string
+      - description: Search in asset_value, url, title, host_ip
+        in: query
+        name: search
+        type: string
+      - description: Filter by HTTP status code
+        in: query
+        name: status_code
+        type: integer
+      - default: 0
+        description: Number of records to skip
+        in: query
+        name: offset
+        type: integer
+      - default: 20
+        description: Maximum number of records to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of assets with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch assets
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List assets
+      tags:
+      - Assets
+  /osm/api/event-logs:
+    get:
+      description: Get a paginated list of event logs with optional filtering
+      parameters:
+      - description: Filter by event topic (e.g., run.started, run.completed)
+        in: query
+        name: topic
+        type: string
+      - description: Filter by event name
+        in: query
+        name: name
+        type: string
+      - description: Filter by source (scheduler, api, webhook)
+        in: query
+        name: source
+        type: string
+      - description: Filter by workspace
+        in: query
+        name: workspace
+        type: string
+      - description: Filter by run ID
+        in: query
+        name: run_id
+        type: string
+      - description: Filter by workflow name
+        in: query
+        name: workflow_name
+        type: string
+      - description: Filter by processed status (true/false)
+        in: query
+        name: processed
+        type: string
+      - default: 0
+        description: Number of records to skip
+        in: query
+        name: offset
+        type: integer
+      - default: 20
+        description: Maximum number of records to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of event logs with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch event logs
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List event logs
+      tags:
+      - EventLogs
+  /osm/api/functions/eval:
+    post:
+      consumes:
+      - application/json
+      description: Execute a utility function script with template rendering and JavaScript
+        execution
+      parameters:
+      - description: Function evaluation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.FunctionEvalRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Evaluation result
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Execute utility function
+      tags:
+      - Functions
+  /osm/api/functions/list:
+    get:
+      description: Get a flat list of all available utility functions with metadata
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of functions with total count
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List utility functions
+      tags:
+      - Functions
+  /osm/api/jobs/{id}:
+    get:
+      description: Get the aggregated status of a job and its runs
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Job status
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Job not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get job status
+      tags:
+      - Jobs
+  /osm/api/llm/v1/chat/completions:
+    post:
+      consumes:
+      - application/json
+      description: Send a chat completion request to the configured LLM provider (OpenAI-compatible)
+      parameters:
+      - description: Chat request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LLMChatRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Chat response
+          schema:
+            $ref: '#/definitions/handlers.LLMChatResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: LLM error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: LLM Chat Completion
+      tags:
+      - LLM
+  /osm/api/llm/v1/embeddings:
+    post:
+      consumes:
+      - application/json
+      description: Generate embeddings for input text using the configured LLM provider
+      parameters:
+      - description: Embedding request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LLMEmbeddingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Embedding response
+          schema:
+            $ref: '#/definitions/handlers.LLMEmbeddingResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: LLM error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Generate Embeddings
+      tags:
+      - LLM
+  /osm/api/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and get JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JWT token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            additionalProperties: true
+            type: object
+      summary: User login
+      tags:
+      - Auth
+  /osm/api/registry-info:
+    get:
+      description: Get binary registry with mode support (direct-fetch or nix-build)
+      parameters:
+      - default: direct-fetch
+        description: 'Registry mode: direct-fetch or nix-build'
+        in: query
+        name: registry_mode
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Registry data
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to load registry
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get registry info
+      tags:
+      - Install
+  /osm/api/registry-install:
+    post:
+      consumes:
+      - application/json
+      description: Install binaries from registry or workflows from git/zip URL. Supports
+        direct-fetch and nix-build modes.
+      parameters:
+      - description: Installation configuration
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.InstallRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Installation result
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Installation failed
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Install binaries or workflows
+      tags:
+      - Install
+  /osm/api/runs:
+    get:
+      description: Get a paginated list of workflow runs with optional filters
+      parameters:
+      - default: 0
+        description: Number of records to skip
+        in: query
+        name: offset
+        type: integer
+      - default: 20
+        description: Maximum number of records to return
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by status (pending, running, completed, failed, cancelled)
+        in: query
+        name: status
+        type: string
+      - description: Filter by workflow name
+        in: query
+        name: workflow
+        type: string
+      - description: Filter by target (partial match)
+        in: query
+        name: target
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of runs
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List runs
+      tags:
+      - Runs
+    post:
+      consumes:
+      - application/json
+      description: Execute a workflow against one or more targets. Supports multiple
+        targets via array or file, concurrency control, priority levels, custom timeouts,
+        runner configuration (host/docker/ssh), and scheduling via cron expressions.
+      parameters:
+      - description: Run configuration with optional priority, timeout, runner config,
+          and scheduling
+        in: body
+        name: run
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateRunRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Run started
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new run
+      tags:
+      - Runs
+  /osm/api/runs/{id}:
+    delete:
+      description: Cancel a running workflow execution
+      parameters:
+      - description: Run ID or RunID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Run cancelled
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Run cannot be cancelled
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Run not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancel a run
+      tags:
+      - Runs
+    get:
+      description: Get details of a specific run by ID, including steps and artifacts
+      parameters:
+      - description: Run ID or RunID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: false
+        description: Include step results
+        in: query
+        name: include_steps
+        type: boolean
+      - default: false
+        description: Include artifacts
+        in: query
+        name: include_artifacts
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Run details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Run not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get run details
+      tags:
+      - Runs
+  /osm/api/schedules:
+    get:
+      description: Get a paginated list of all scheduled workflows
+      parameters:
+      - default: 0
+        description: Number of records to skip
+        in: query
+        name: offset
+        type: integer
+      - default: 20
+        description: Maximum number of records to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of schedules
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all schedules
+      tags:
+      - Schedules
+    post:
+      consumes:
+      - application/json
+      description: Create a scheduled workflow execution with cron expression
+      parameters:
+      - description: Schedule configuration
+        in: body
+        name: schedule
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateScheduleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Schedule created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new schedule
+      tags:
+      - Schedules
+  /osm/api/schedules/{id}:
+    delete:
+      description: Delete a schedule by ID
+      parameters:
+      - description: Schedule ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Schedule deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Schedule not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a schedule
+      tags:
+      - Schedules
+    get:
+      description: Get details of a specific schedule by ID
+      parameters:
+      - description: Schedule ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Schedule details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Schedule not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get schedule details
+      tags:
+      - Schedules
+    put:
+      consumes:
+      - application/json
+      description: Update an existing schedule
+      parameters:
+      - description: Schedule ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Schedule update data
+        in: body
+        name: schedule
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateScheduleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Schedule updated
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Schedule not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a schedule
+      tags:
+      - Schedules
+  /osm/api/schedules/{id}/disable:
+    post:
+      description: Disable an enabled schedule
+      parameters:
+      - description: Schedule ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Schedule disabled
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Disable a schedule
+      tags:
+      - Schedules
+  /osm/api/schedules/{id}/enable:
+    post:
+      description: Enable a disabled schedule
+      parameters:
+      - description: Schedule ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Schedule enabled
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Enable a schedule
+      tags:
+      - Schedules
+  /osm/api/schedules/{id}/trigger:
+    post:
+      description: Manually trigger a scheduled workflow execution
+      parameters:
+      - description: Schedule ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Schedule triggered
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Trigger a schedule
+      tags:
+      - Schedules
+  /osm/api/settings/yaml:
+    get:
+      description: Returns the entire configuration file with sensitive fields redacted
+      produces:
+      - text/yaml
+      responses:
+        "200":
+          description: YAML configuration content
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get YAML configuration
+      tags:
+      - Settings
+  /osm/api/snapshot-download/{workspace_name}:
+    get:
+      description: Compress a workspace folder into a zip file and download it
+      parameters:
+      - description: Workspace name
+        in: path
+        name: workspace_name
+        required: true
+        type: string
+      produces:
+      - application/zip
+      responses:
+        "200":
+          description: Zip file download
+          schema:
+            type: file
+        "404":
+          description: Workspace not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to create snapshot
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Download workspace snapshot
+      tags:
+      - Snapshots
+  /osm/api/snapshots:
+    get:
+      description: Get a list of available snapshot files in the snapshot directory
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of snapshots
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to list snapshots
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List snapshots
+      tags:
+      - Snapshots
+  /osm/api/snapshots/{name}:
+    delete:
+      description: Delete a snapshot file by name
+      parameters:
+      - description: Snapshot filename
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Snapshot deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Snapshot not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to delete snapshot
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete snapshot
+      tags:
+      - Snapshots
+  /osm/api/snapshots/export:
+    post:
+      consumes:
+      - application/json
+      description: Export a workspace to a compressed zip archive and download it
+      parameters:
+      - description: Workspace to export
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SnapshotExportRequest'
+      produces:
+      - application/zip
+      responses:
+        "200":
+          description: Snapshot zip file
+          schema:
+            type: file
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Workspace not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to create snapshot
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Export workspace snapshot
+      tags:
+      - Snapshots
+  /osm/api/snapshots/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Import a workspace from an uploaded zip file or URL
+      parameters:
+      - description: Snapshot zip file to import
+        in: formData
+        name: file
+        type: file
+      - description: URL of snapshot to download and import
+        in: formData
+        name: url
+        type: string
+      - description: Overwrite existing workspace if present
+        in: formData
+        name: force
+        type: boolean
+      - description: Skip database import (files only)
+        in: formData
+        name: skip_db
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Import result
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to import snapshot
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Import workspace snapshot
+      tags:
+      - Snapshots
+  /osm/api/stats:
+    get:
+      description: Get aggregated counts for workflows, runs, workspaces, assets,
+        vulnerabilities, and schedules
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: System statistics
+          schema:
+            $ref: '#/definitions/database.SystemStats'
+        "500":
+          description: Failed to get stats
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get system statistics
+      tags:
+      - Stats
+  /osm/api/tasks:
+    get:
+      description: Get a list of all running and completed tasks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of running and completed tasks
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to list tasks
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all tasks
+      tags:
+      - Distributed
+    post:
+      consumes:
+      - application/json
+      description: Submit a new task to the distributed worker queue
+      parameters:
+      - description: Task configuration
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SubmitTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Task submitted
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to submit task
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Submit a new task
+      tags:
+      - Distributed
+  /osm/api/tasks/{id}:
+    get:
+      description: Get details for a specific task by ID
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Task not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get task details
+      tags:
+      - Distributed
+  /osm/api/upload-file:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a file containing a list of inputs (targets, URLs, etc.)
+        for later use in runs
+      parameters:
+      - description: Input file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: File uploaded with path
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload input file
+      tags:
+      - Files
+  /osm/api/vulnerabilities:
+    get:
+      description: Get a paginated list of vulnerabilities with optional workspace,
+        severity, and confidence filtering
+      parameters:
+      - description: Filter by workspace name
+        in: query
+        name: workspace
+        type: string
+      - description: Filter by severity (critical, high, medium, low, info)
+        in: query
+        name: severity
+        type: string
+      - description: Filter by confidence (certain, firm, tentative, manual review
+          required)
+        in: query
+        name: confidence
+        type: string
+      - description: Filter by asset value (partial match)
+        in: query
+        name: asset_value
+        type: string
+      - default: 0
+        description: Number of records to skip
+        in: query
+        name: offset
+        type: integer
+      - default: 20
+        description: Maximum number of records to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of vulnerabilities with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch vulnerabilities
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List vulnerabilities
+      tags:
+      - Vulnerabilities
+    post:
+      consumes:
+      - application/json
+      description: Create a new vulnerability record
+      parameters:
+      - description: Vulnerability data
+        in: body
+        name: vulnerability
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateVulnerabilityInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created vulnerability
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to create vulnerability
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create vulnerability
+      tags:
+      - Vulnerabilities
+  /osm/api/vulnerabilities/{id}:
+    delete:
+      description: Delete a vulnerability by ID
+      parameters:
+      - description: Vulnerability ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Vulnerability deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Vulnerability not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to delete vulnerability
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete vulnerability
+      tags:
+      - Vulnerabilities
+    get:
+      description: Get a single vulnerability by its ID
+      parameters:
+      - description: Vulnerability ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Vulnerability details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Vulnerability not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch vulnerability
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get vulnerability by ID
+      tags:
+      - Vulnerabilities
+  /osm/api/vulnerabilities/summary:
+    get:
+      description: Get a summary of vulnerabilities grouped by severity
+      parameters:
+      - description: Filter by workspace name
+        in: query
+        name: workspace
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Vulnerability summary by severity
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to get summary
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get vulnerability summary
+      tags:
+      - Vulnerabilities
+  /osm/api/workers:
+    get:
+      description: Get a list of all registered workers in the distributed pool
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of workers
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to list workers
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all workers
+      tags:
+      - Distributed
+  /osm/api/workers/{id}:
+    get:
+      description: Get details for a specific worker by ID
+      parameters:
+      - description: Worker ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Worker details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Worker not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to get worker
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get worker details
+      tags:
+      - Distributed
+  /osm/api/workflow-upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a raw YAML workflow file and save it to the workflows directory
+      parameters:
+      - description: Workflow YAML file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Workflow uploaded
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or YAML
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload workflow file
+      tags:
+      - Workflows
+  /osm/api/workflows:
+    get:
+      description: Get a list of all available workflows with details
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of workflows
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to load workflows
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all workflows
+      tags:
+      - Workflows
+  /osm/api/workflows/{name}:
+    get:
+      description: Get workflow content. Returns raw YAML by default. Use json=true
+        to get JSON with parsed details.
+      parameters:
+      - description: Workflow name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Return JSON with parsed details instead of raw YAML
+        in: query
+        name: json
+        type: boolean
+      produces:
+      - application/json
+      - text/yaml
+      responses:
+        "200":
+          description: Workflow details (JSON) or raw YAML content
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Workflow not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get workflow details
+      tags:
+      - Workflows
+  /osm/api/workflows/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Re-index all workflows from filesystem to database
+      parameters:
+      - description: Force re-index all workflows regardless of checksum
+        in: query
+        name: force
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Indexing result
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Indexing failed
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Refresh workflow index
+      tags:
+      - Workflows
+  /osm/api/workflows/tags:
+    get:
+      description: Get all unique tags from indexed workflows in database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of tags
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to get tags
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all workflow tags
+      tags:
+      - Workflows
+  /osm/api/workspace-names:
+    get:
+      description: Get a sorted list of workspace names from the database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Workspace names
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Failed to list workspace names
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List workspace names
+      tags:
+      - Workspaces
+  /osm/api/workspaces:
+    get:
+      description: Get a list of all run workspaces. By default returns full workspace
+        records from database. Use filesystem=true to list workspaces derived from
+        assets.
+      parameters:
+      - default: false
+        description: List workspaces from filesystem/assets instead of workspaces
+          table
+        in: query
+        name: filesystem
+        type: boolean
+      - default: 0
+        description: Number of records to skip
+        in: query
+        name: offset
+        type: integer
+      - default: 20
+        description: Maximum number of records to return (max 10000)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of workspaces
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to read workspaces
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all workspaces
+      tags:
+      - Workspaces
+  /server-info:
+    get:
+      description: Get server version and info in JSON
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Server information
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Server info JSON
+      tags:
+      - Info
+swagger: "2.0"
