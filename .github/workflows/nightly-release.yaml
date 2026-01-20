@@ -29,15 +29,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Delete release if exists (tag will be force-updated)
-          gh release delete nightly --yes || true
+          gh release delete v0.0.0-nightly --yes || true
 
       - name: Create or update nightly tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Use -f to force update if tag exists
-          git tag -fa nightly -m "Nightly build $(date -u +%Y-%m-%d)"
-          git push origin nightly --force
+          # Use semver-compliant tag for GoReleaser v2
+          git tag -fa v0.0.0-nightly -m "Nightly build $(date -u +%Y-%m-%d)"
+          git push origin v0.0.0-nightly --force
 
       - name: Create release notes
         run: |
@@ -57,4 +57,4 @@ jobs:
           args: release --clean --release-notes=/tmp/release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GORELEASER_CURRENT_TAG: nightly
+          GORELEASER_CURRENT_TAG: v0.0.0-nightly
