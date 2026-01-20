@@ -21,6 +21,7 @@ type EventReceiverProvider interface {
 type EventReceiverTriggerInfo struct {
 	WorkflowName string
 	TriggerName  string
+	Type         string // "event", "cron", "watch", "manual"
 	Topic        string
 	Enabled      bool
 }

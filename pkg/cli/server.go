@@ -136,14 +136,18 @@ func runServer(cmd *cobra.Command, args []string) error {
 		log.Info("Debug mode enabled - request bodies and detailed errors will be logged")
 	}
 
-	// Print startup info before starting the server
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+
+	// Start event receiver first (registers triggers synchronously)
+	srv.StartEventReceiver()
+
+	// Print startup info (triggers are now registered)
 	srv.PrintStartupInfo(addr)
 
-	// Start server in goroutine
+	// Start HTTP listener in goroutine
 	serverErr := make(chan error, 1)
 	go func() {
-		serverErr <- srv.Start(addr)
+		serverErr <- srv.StartListener(addr)
 	}()
 
 	// Wait for shutdown or server error

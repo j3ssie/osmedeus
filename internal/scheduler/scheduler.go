@@ -200,7 +200,7 @@ func (s *Scheduler) RegisterTrigger(workflow *core.Workflow, trigger *core.Trigg
 	}
 
 	s.triggers[triggerKey] = reg
-	s.logger.Info("Registered trigger",
+	s.logger.Debug("Registered trigger",
 		zap.String("workflow", workflow.Name),
 		zap.String("trigger", trigger.Name),
 		zap.String("type", string(trigger.On)),
@@ -429,7 +429,7 @@ func (s *Scheduler) Start() error {
 	// Start dedupe cache cleanup goroutine
 	go s.dedupeCleanupLoop()
 
-	s.logger.Info("Scheduler started")
+	s.logger.Debug("Scheduler started")
 	return nil
 }
 

@@ -26,10 +26,10 @@ Built for both beginners and experts, it delivers powerful, composable automatio
 - **Two Workflow Types** - Modules for single execution units, Flows for multi-module orchestration
 - **Multiple Runners** - Execute on local host, Docker containers, or remote machines via SSH
 - **Distributed Execution** - Scale with Redis-based master-worker pattern for parallel scanning
-- **Event-Driven Triggers** - Cron scheduling, file watching, and event-based workflow triggers
+- **Event-Driven Triggers** - Cron scheduling, file watching, and event-based workflow triggers with deduplication
 - **Decision Routing** - Conditional workflow branching with switch/case syntax
 - **Template Engine** - Powerful variable interpolation with built-in and custom variables
-- **Utility Functions** - Rich function library for file operations, string manipulation, and JSON processing
+- **Utility Functions** - Rich function library with event generation, bulk processing, and JSON operations
 - **REST API Server** - Manage and trigger workflows programmatically
 - **Database Support** - SQLite (default) and PostgreSQL for asset tracking
 - **Notifications** - Telegram bot and webhook integrations
@@ -66,6 +66,14 @@ osmedeus serve
 
 # List available workflows
 osmedeus workflow list
+
+# Query database tables
+osmedeus db list --table runs
+osmedeus db list --table event_logs --search "nuclei"
+
+# Evaluate utility functions
+osmedeus func eval 'log_info("hello")'
+osmedeus func eval -e 'httpGet("https://example.com")' -T targets.txt -c 10
 
 # Show all usage examples
 osmedeus --usage-example
@@ -188,6 +196,7 @@ The high-level ambitious plan for the project, in order:
 | Getting Started      | [docs.osmedeus.org/getting-started](https://docs.osmedeus.org/getting-started) |
 | CLI Usage & Examples | [docs.osmedeus.org/getting-started/cli](https://docs.osmedeus.org/getting-started/cli) |
 | Writing Workflows    | [docs.osmedeus.org/workflows/overview](https://docs.osmedeus.org/workflows/overview) |
+| Event-Driven Triggers| [docs.osmedeus.org/advanced/event-driven](https://docs.osmedeus.org/advanced/event-driven) |
 | Deployment           | [docs.osmedeus.org/deployment](https://docs.osmedeus.org/deployment) |
 | Architecture         | [docs.osmedeus.org/concepts/architecture](https://docs.osmedeus.org/concepts/architecture) |
 | Development          | [docs.osmedeus.org/development](https://docs.osmedeus.org/development) and [HACKING.md](HACKING.md) |

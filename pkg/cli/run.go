@@ -93,7 +93,7 @@ func init() {
 	runCmd.Flags().StringVarP(&targetFile, "target-file", "T", "", "file containing targets (one per line)")
 	runCmd.Flags().StringArrayVarP(&paramFlags, "params", "p", nil, "additional parameters (key=value format)")
 	runCmd.Flags().StringVarP(&paramsFile, "params-file", "P", "", "file containing parameters (JSON or YAML key:value pairs)")
-	runCmd.Flags().StringVarP(&workspacePath, "workspace", "w", "", "custom workspace path")
+	runCmd.Flags().StringVarP(&workspacePath, "workspace", "w", "", "custom workspace path (overrides {{TargetSpace}})")
 	runCmd.Flags().BoolVar(&dryRun, "dry-run", false, "show what would be executed without running commands")
 	runCmd.Flags().IntVar(&threadsHold, "threads-hold", 0, "override thread count (0 = use tactic default)")
 	runCmd.Flags().IntVarP(&concurrency, "concurrency", "c", 1, "number of targets to run concurrently")

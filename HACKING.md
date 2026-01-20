@@ -18,6 +18,7 @@ This document describes the technical architecture and development practices for
 - [Database Layer](#database-layer)
 - [Testing](#testing)
 - [Adding New Features](#adding-new-features)
+- [CLI Shortcuts and Tips](#cli-shortcuts-and-tips)
 
 ## Project Structure
 
@@ -63,10 +64,11 @@ osmedeus-ng/
 │   │   └── context.go           # Template context
 │   ├── functions/               # Utility functions
 │   │   ├── registry.go          # Function registry
-│   │   ├── otto_runtime.go      # JavaScript runtime
+│   │   ├── goja_runtime.go      # JavaScript runtime (Goja VM)
 │   │   ├── file_functions.go    # File operations
 │   │   ├── string_functions.go  # String operations
 │   │   ├── util_functions.go    # Utility functions
+│   │   ├── event_functions.go   # Event generation functions
 │   │   └── jq.go                # JSON query functions
 │   ├── scheduler/               # Trigger scheduling
 │   │   └── scheduler.go         # Cron, event, watch triggers
@@ -110,9 +112,10 @@ osmedeus-ng/
 ├── pkg/                         # Public packages
 │   ├── cli/                     # CLI commands
 │   │   ├── root.go              # Root command
-│   │   ├── scan.go              # Scan command
+│   │   ├── run.go               # Run command (scan)
 │   │   ├── workflow.go          # Workflow command
-│   │   ├── function.go          # Function command
+│   │   ├── function.go          # Function command (with bulk processing)
+│   │   ├── db.go                # Database CLI command
 │   │   └── server.go            # Server command
 │   └── server/                  # REST API
 │       ├── server.go            # Server setup
@@ -666,6 +669,42 @@ steps:
     type: function
     function: cat_file("{{Output}}/results.txt")
 ```
+
+### Event Functions
+
+These functions enable event-driven workflows by generating and emitting events:
+
+```go
+// internal/functions/event_functions.go
+
+// generate_event emits a single structured event
+// Usage: generate_event(workspace, topic, source, data_type, data)
+func (vf *vmFunc) generateEvent(call goja.FunctionCall) goja.Value
+
+// generate_event_from_file emits an event for each line in a file
+// Usage: generate_event_from_file(workspace, topic, source, data_type, filePath)
+func (vf *vmFunc) generateEventFromFile(call goja.FunctionCall) goja.Value
+```
+
+Usage in workflows:
+```yaml
+steps:
+  - name: emit-single-event
+    type: function
+    function: |
+      generate_event("{{Workspace}}", "assets.new", "scanner", "subdomain", "api.example.com")
+
+  - name: emit-from-file
+    type: function
+    function: |
+      generate_event_from_file("{{Workspace}}", "assets.new", "recon", "subdomain", "{{Output}}/subdomains.txt")
+```
+
+Event delivery uses a fallback chain:
+1. **Server API** - POST to `/osm/api/events/emit` if server configured
+2. **Redis Pub/Sub** - Publish to `osm:events:{topic}` in distributed mode
+3. **Database Queue** - Store in `event_logs` table with `processed=false`
+4. **Webhooks** - Send to configured webhook endpoints
 
 ### Function Execution
 
@@ -1265,6 +1304,83 @@ func init() {
 
 - `osmedeus func` - alias for `osmedeus function`
 - `osmedeus func e` - alias for `osmedeus function eval`
+- `osmedeus db ls` - alias for `osmedeus db list`
+
+### Database CLI Commands
+
+Query and manage database tables directly from the CLI:
+
+```bash
+# List all tables with row counts
+osmedeus db list
+
+# Query specific table (default columns shown)
+osmedeus db list --table event_logs
+
+# List available columns for a table
+osmedeus db list --table event_logs --list-columns
+
+# Filter by specific columns
+osmedeus db list --table event_logs --columns topic,source,data_type,data
+
+# Show all columns including hidden ones (id, timestamps)
+osmedeus db list --table event_logs --all
+
+# Filter by field value
+osmedeus db list --table event_logs --where topic=assets.new
+osmedeus db list --table event_logs --where processed=false
+
+# Search across all columns
+osmedeus db list --table event_logs --search "nuclei"
+
+# Output as JSON for scripting
+osmedeus db list --table event_logs --json
+
+# Pagination
+osmedeus db list --table event_logs --offset 50 --limit 100
+```
+
+Default columns per table:
+- `runs`: run_id, job_id, workflow_name, target, status, started_at
+- `event_logs`: topic, source, processed, data_type, workspace, data
+- `assets`: asset_value, host_ip, title, status_code, last_seen_at, technologies
+- `schedules`: name, workflow_name, trigger_type, schedule, is_enabled, run_count
+
+### Function Evaluation CLI
+
+Evaluate utility functions from the command line with bulk processing support:
+
+```bash
+# Single expression evaluation
+osmedeus func eval 'log_info("hello")'
+osmedeus func eval -e 'fileLength("/path/to/file.txt")'
+
+# With target variable
+osmedeus func eval -e 'httpGet("https://" + target)' -t example.com
+
+# Bulk processing from file (target variable available in script)
+osmedeus func eval -e 'log_info("Processing: " + target)' -T targets.txt
+
+# Bulk processing with concurrency
+osmedeus func eval -e 'httpGet("https://" + target)' -T targets.txt -c 10
+
+# Using function files for reusable logic
+osmedeus func eval --function-file check-host.js -T targets.txt -c 5
+
+# Additional parameters
+osmedeus func eval -e 'log_info(target + " in " + ws)' -T targets.txt --params ws=production
+
+# Function name with arguments
+osmedeus func eval log_info "hello world"
+osmedeus func eval -f httpGet "https://example.com"
+
+# Read script from stdin
+echo 'log_info("hello")' | osmedeus func eval --stdin
+
+# List available functions
+osmedeus func list
+osmedeus func list event  # Filter by category
+```
 
 ### New Scan Flags
 

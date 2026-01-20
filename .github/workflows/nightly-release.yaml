@@ -1,0 +1,60 @@
+name: Nightly Release
+
+on:
+  schedule:
+    # Run every Sunday at 00:00 UTC
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  nightly-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Delete existing nightly release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Delete release if exists (tag will be force-updated)
+          gh release delete nightly --yes || true
+
+      - name: Create or update nightly tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Use -f to force update if tag exists
+          git tag -fa nightly -m "Nightly build $(date -u +%Y-%m-%d)"
+          git push origin nightly --force
+
+      - name: Create release notes
+        run: |
+          cat << 'EOF' > /tmp/release-notes.md
+          ## Nightly Build
+
+          > **Note**: This is a nightly build, not a tagged release. Even though you enjoy the latest features, things may change when the official release.
+
+          Built from commit: ${{ github.sha }}
+          EOF
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean --release-notes=/tmp/release-notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: nightly

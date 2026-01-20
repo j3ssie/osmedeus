@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"sort"
 	"strings"
 	"time"
 
@@ -408,15 +407,26 @@ func (s *Server) serveEmbeddedUI() {
 	}))
 }
 
-// Start starts the server
-func (s *Server) Start(addr string) error {
-	// Start event receiver if configured
+// StartEventReceiver starts the event receiver and scheduler.
+// This should be called before PrintStartupInfo to ensure triggers are registered.
+func (s *Server) StartEventReceiver() {
 	if s.eventReceiver != nil {
 		if err := s.eventReceiver.Start(context.Background()); err != nil {
 			oslogger.Get().Warn("Failed to start event receiver", zap.Error(err))
 		}
 	}
+}
+
+// StartListener starts only the HTTP listener (event receiver already started).
+func (s *Server) StartListener(addr string) error {
 	return s.app.Listen(addr)
+}
+
+// Start starts the server (event receiver + HTTP listener).
+// For finer control, use StartEventReceiver() + StartListener() instead.
+func (s *Server) Start(addr string) error {
+	s.StartEventReceiver()
+	return s.StartListener(addr)
 }
 
 // Shutdown gracefully shuts down the server
@@ -500,6 +510,11 @@ func startMemoryMetricsCollector(ctx context.Context, interval time.Duration) {
 func (s *Server) PrintStartupInfo(addr string) {
 	p := terminal.NewPrinter()
 
+	// Banner line
+	fmt.Printf("%s Initiating Osmedeus %s - Crafted with <3 by @j3ssie\n",
+		terminal.Yellow("ϟ"),
+		terminal.Cyan(core.VERSION))
+
 	// Starting server
 	p.Info("Starting Osmedeus server %s", terminal.Cyan("http://"+addr))
 
@@ -508,32 +523,48 @@ func (s *Server) PrintStartupInfo(addr string) {
 
 	// Hot reload status
 	if s.hotConfig != nil {
-		p.Info("Started config hot reload watcher %s", terminal.Cyan(s.hotConfig.GetConfigPath()))
+		p.Info("Started config hot reload watcher %s", terminal.Yellow(s.hotConfig.GetConfigPath()))
 	}
 
-	// Event receiver info
+	// Workflows path (always show, in yellow)
+	p.Info("Workflows loaded from %s", terminal.Yellow(s.config.GetWorkflowsDir()))
+
+	// Event receiver info with detailed triggers
 	if s.eventReceiver != nil {
 		triggers := s.eventReceiver.GetRegisteredTriggersInfo()
-		if len(triggers) > 0 {
-			// Collect unique topics
-			topicSet := make(map[string]struct{})
-			for _, t := range triggers {
-				if t.Topic != "" {
-					topicSet[t.Topic] = struct{}{}
-				}
-			}
-			topics := make([]string, 0, len(topicSet))
-			for topic := range topicSet {
-				topics = append(topics, topic)
-			}
-			sort.Strings(topics)
 
+		if len(triggers) > 0 {
 			p.Info("Event receiver initialized")
-			p.Info("Loaded %s workflows with event triggers: %s",
-				terminal.Cyan(fmt.Sprintf("%d", len(s.eventReceiver.GetRegisteredWorkflows()))),
-				terminal.Cyan(strings.Join(topics, ", ")))
+
+			// Show each registered trigger with tree formatting
+			for i, t := range triggers {
+				prefix := "├─"
+				if i == len(triggers)-1 {
+					prefix = "└─"
+				}
+
+				// Format trigger details based on type
+				var detail string
+				if t.Topic != "" {
+					detail = fmt.Sprintf("%s: %s", terminal.Blue("event"), terminal.Blue(t.Topic))
+				} else {
+					detail = terminal.Blue(t.Type)
+				}
+
+				fmt.Printf("  %s Registered trigger: %s (%s)\n",
+					prefix,
+					terminal.Yellow(t.WorkflowName),
+					detail)
+			}
+
+			// Scheduler started message
+			p.Info("Scheduler started with %s triggers", terminal.Cyan(fmt.Sprintf("%d", len(triggers))))
 		} else {
 			p.Info("Event receiver initialized %s", terminal.Gray("(no event triggers)"))
+			p.Info("Scheduler started")
 		}
+	} else {
+		// No event receiver, but still show scheduler status
+		p.Info("Scheduler started")
 	}
 }

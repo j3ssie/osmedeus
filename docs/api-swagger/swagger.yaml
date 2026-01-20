@@ -255,6 +255,75 @@ definitions:
       workspace:
         type: string
     type: object
+  handlers.EmitEventRequest:
+    properties:
+      data:
+        additionalProperties: true
+        type: object
+      data_type:
+        type: string
+      name:
+        type: string
+      source:
+        type: string
+      topic:
+        type: string
+    type: object
+  handlers.EmitEventResponse:
+    properties:
+      event_id:
+        type: string
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  handlers.EventReceiverStatusResponse:
+    properties:
+      enabled:
+        type: boolean
+      running:
+        type: boolean
+      trigger_count:
+        type: integer
+      workflow_count:
+        type: integer
+    type: object
+  handlers.EventReceiverTriggerResponse:
+    properties:
+      enabled:
+        type: boolean
+      topic:
+        type: string
+      trigger_name:
+        type: string
+      workflow_name:
+        type: string
+    type: object
+  handlers.EventReceiverWorkflowResponse:
+    properties:
+      description:
+        type: string
+      kind:
+        type: string
+      name:
+        type: string
+      triggers:
+        items:
+          type: string
+        type: array
+    type: object
+  handlers.EventReceiverWorkflowsResponse:
+    properties:
+      triggers:
+        items:
+          $ref: '#/definitions/handlers.EventReceiverTriggerResponse'
+        type: array
+      workflows:
+        items:
+          $ref: '#/definitions/handlers.EventReceiverWorkflowResponse'
+        type: array
+    type: object
   handlers.FunctionEvalRequest:
     properties:
       params:
@@ -588,6 +657,48 @@ paths:
       summary: List assets
       tags:
       - Assets
+  /osm/api/assets/diff:
+    get:
+      description: Compare assets between two time points to find added, removed,
+        and changed assets
+      parameters:
+      - description: Workspace name
+        in: query
+        name: workspace
+        required: true
+        type: string
+      - description: Start time (RFC3339 format or Unix timestamp)
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: 'End time (default: now)'
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Asset diff result
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to get asset diff
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get asset diff
+      tags:
+      - Assets
   /osm/api/event-logs:
     get:
       description: Get a paginated list of event logs with optional filtering
@@ -648,6 +759,64 @@ paths:
       summary: List event logs
       tags:
       - EventLogs
+  /osm/api/event-receiver/status:
+    get:
+      consumes:
+      - application/json
+      description: Returns the status of the event receiver including enabled state
+        and counts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.EventReceiverStatusResponse'
+      summary: Get event receiver status
+      tags:
+      - event-receiver
+  /osm/api/event-receiver/workflows:
+    get:
+      consumes:
+      - application/json
+      description: Returns all workflows registered with the event receiver
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.EventReceiverWorkflowsResponse'
+      summary: List event receiver workflows
+      tags:
+      - event-receiver
+  /osm/api/events/emit:
+    post:
+      consumes:
+      - application/json
+      description: Emits an event that can trigger event-triggered workflows
+      parameters:
+      - description: Event to emit
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.EmitEventRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.EmitEventResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Emit an event
+      tags:
+      - event-receiver
   /osm/api/functions/eval:
     post:
       consumes:
@@ -1240,6 +1409,49 @@ paths:
       summary: Trigger a schedule
       tags:
       - Schedules
+  /osm/api/settings/reload:
+    post:
+      description: Forces an immediate reload of the configuration file. Hot reload
+        must be enabled.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Configuration reloaded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Hot reload not enabled
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to reload configuration
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Force config reload
+      tags:
+      - Settings
+  /osm/api/settings/status:
+    get:
+      description: Returns the current configuration version and hot reload status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Configuration status
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get config status
+      tags:
+      - Settings
   /osm/api/settings/yaml:
     get:
       description: Returns the entire configuration file with sensitive fields redacted
@@ -1721,6 +1933,48 @@ paths:
       security:
       - BearerAuth: []
       summary: Get vulnerability by ID
+      tags:
+      - Vulnerabilities
+  /osm/api/vulnerabilities/diff:
+    get:
+      description: Compare vulnerabilities between two time points to find added,
+        removed, and changed vulnerabilities
+      parameters:
+      - description: Workspace name
+        in: query
+        name: workspace
+        required: true
+        type: string
+      - description: Start time (RFC3339 format or Unix timestamp)
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: 'End time (default: now)'
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Vulnerability diff result
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to get vulnerability diff
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get vulnerability diff
       tags:
       - Vulnerabilities
   /osm/api/vulnerabilities/summary:

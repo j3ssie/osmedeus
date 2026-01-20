@@ -294,6 +294,68 @@ const docTemplate = `{
                 }
             }
         },
+        "/osm/api/assets/diff": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Compare assets between two time points to find added, removed, and changed assets",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Assets"
+                ],
+                "summary": "Get asset diff",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace name",
+                        "name": "workspace",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start time (RFC3339 format or Unix timestamp)",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "End time (default: now)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Asset diff result",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to get asset diff",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/osm/api/event-logs": {
             "get": {
                 "security": [
@@ -377,6 +439,93 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Failed to fetch event logs",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/event-receiver/status": {
+            "get": {
+                "description": "Returns the status of the event receiver including enabled state and counts",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event-receiver"
+                ],
+                "summary": "Get event receiver status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.EventReceiverStatusResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/event-receiver/workflows": {
+            "get": {
+                "description": "Returns all workflows registered with the event receiver",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event-receiver"
+                ],
+                "summary": "List event receiver workflows",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.EventReceiverWorkflowsResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/events/emit": {
+            "post": {
+                "description": "Emits an event that can trigger event-triggered workflows",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "event-receiver"
+                ],
+                "summary": "Emit an event",
+                "parameters": [
+                    {
+                        "description": "Event to emit",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.EmitEventRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.EmitEventResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1294,6 +1443,72 @@ const docTemplate = `{
                 }
             }
         },
+        "/osm/api/settings/reload": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Forces an immediate reload of the configuration file. Hot reload must be enabled.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Force config reload",
+                "responses": {
+                    "200": {
+                        "description": "Configuration reloaded successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Hot reload not enabled",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to reload configuration",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/settings/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the current configuration version and hot reload status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Get config status",
+                "responses": {
+                    "200": {
+                        "description": "Configuration status",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/osm/api/settings/yaml": {
             "get": {
                 "security": [
@@ -1913,6 +2128,68 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Failed to create vulnerability",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/vulnerabilities/diff": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Compare vulnerabilities between two time points to find added, removed, and changed vulnerabilities",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Vulnerabilities"
+                ],
+                "summary": "Get vulnerability diff",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace name",
+                        "name": "workspace",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start time (RFC3339 format or Unix timestamp)",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "End time (default: now)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Vulnerability diff result",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to get vulnerability diff",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2847,6 +3124,112 @@ const docTemplate = `{
                 },
                 "workspace": {
                     "type": "string"
+                }
+            }
+        },
+        "handlers.EmitEventRequest": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "data_type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "topic": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.EmitEventResponse": {
+            "type": "object",
+            "properties": {
+                "event_id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.EventReceiverStatusResponse": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "running": {
+                    "type": "boolean"
+                },
+                "trigger_count": {
+                    "type": "integer"
+                },
+                "workflow_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handlers.EventReceiverTriggerResponse": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "topic": {
+                    "type": "string"
+                },
+                "trigger_name": {
+                    "type": "string"
+                },
+                "workflow_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.EventReceiverWorkflowResponse": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "triggers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "handlers.EventReceiverWorkflowsResponse": {
+            "type": "object",
+            "properties": {
+                "triggers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.EventReceiverTriggerResponse"
+                    }
+                },
+                "workflows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.EventReceiverWorkflowResponse"
+                    }
                 }
             }
         },

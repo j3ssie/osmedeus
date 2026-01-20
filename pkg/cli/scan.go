@@ -34,7 +34,7 @@ func init() {
 	scanCmd.Flags().StringVarP(&targetFile, "target-file", "T", "", "file containing targets (one per line)")
 	scanCmd.Flags().StringArrayVarP(&paramFlags, "params", "p", nil, "additional parameters (key=value format)")
 	scanCmd.Flags().StringVarP(&paramsFile, "params-file", "P", "", "file containing parameters (JSON or YAML key:value pairs)")
-	scanCmd.Flags().StringVarP(&workspacePath, "workspace", "w", "", "custom workspace path")
+	scanCmd.Flags().StringVarP(&workspacePath, "workspace", "w", "", "custom workspace path (overrides {{TargetSpace}})")
 	scanCmd.Flags().BoolVar(&dryRun, "dry-run", false, "show what would be executed without running commands")
 	scanCmd.Flags().IntVar(&threadsHold, "threads-hold", 0, "override thread count (0 = use tactic default)")
 	scanCmd.Flags().IntVarP(&concurrency, "concurrency", "c", 1, "number of targets to run concurrently")

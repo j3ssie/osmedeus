@@ -278,6 +278,7 @@ func (er *EventReceiver) GetRegisteredTriggersInfo() []*handlers.EventReceiverTr
 		result = append(result, &handlers.EventReceiverTriggerInfo{
 			WorkflowName: t.Workflow.Name,
 			TriggerName:  t.Trigger.Name,
+			Type:         string(t.Trigger.On),
 			Topic:        topic,
 			Enabled:      t.Trigger.Enabled,
 		})
