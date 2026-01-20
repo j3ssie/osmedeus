@@ -20,7 +20,7 @@ func TestSortUnix_InPlace(t *testing.T) {
 
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`sortUnix("`+testFile+`")`,
+		`sort_unix("`+testFile+`")`,
 		map[string]interface{}{},
 	)
 
@@ -45,7 +45,7 @@ func TestSortUnix_ToOutputFile(t *testing.T) {
 
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`sortUnix("`+inputFile+`", "`+outputFile+`")`,
+		`sort_unix("`+inputFile+`", "`+outputFile+`")`,
 		map[string]interface{}{},
 	)
 
@@ -66,7 +66,7 @@ func TestSortUnix_ToOutputFile(t *testing.T) {
 func TestSortUnix_EmptyArgument(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`sortUnix("")`,
+		`sort_unix("")`,
 		map[string]interface{}{},
 	)
 
@@ -77,7 +77,7 @@ func TestSortUnix_EmptyArgument(t *testing.T) {
 func TestSortUnix_NonExistentFile(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`sortUnix("/nonexistent/file.txt")`,
+		`sort_unix("/nonexistent/file.txt")`,
 		map[string]interface{}{},
 	)
 
@@ -88,7 +88,7 @@ func TestSortUnix_NonExistentFile(t *testing.T) {
 func TestGitClone_EmptyArgument(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`gitClone("")`,
+		`git_clone("")`,
 		map[string]interface{}{},
 	)
 
@@ -99,7 +99,7 @@ func TestGitClone_EmptyArgument(t *testing.T) {
 func TestWgetUnix_EmptyArgument(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`wgetUnix("")`,
+		`wget_unix("")`,
 		map[string]interface{}{},
 	)
 

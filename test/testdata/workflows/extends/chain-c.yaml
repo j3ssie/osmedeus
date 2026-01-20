@@ -1,0 +1,15 @@
+kind: module
+name: chain-c
+description: Chain test - leaf
+extends: chain-b
+
+override:
+  params:
+    param-a:
+      default: "final-from-c"
+  steps:
+    mode: append
+    steps:
+      - name: step-from-c
+        type: bash
+        command: echo "from chain-c"

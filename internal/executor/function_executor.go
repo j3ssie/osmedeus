@@ -13,12 +13,12 @@ import (
 
 // FunctionExecutor executes function steps
 type FunctionExecutor struct {
-	templateEngine   *template.Engine
+	templateEngine   template.TemplateEngine
 	functionRegistry *functions.Registry
 }
 
 // NewFunctionExecutor creates a new function executor
-func NewFunctionExecutor(engine *template.Engine, registry *functions.Registry) *FunctionExecutor {
+func NewFunctionExecutor(engine template.TemplateEngine, registry *functions.Registry) *FunctionExecutor {
 	return &FunctionExecutor{
 		templateEngine:   engine,
 		functionRegistry: registry,

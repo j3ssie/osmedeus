@@ -1,0 +1,83 @@
+# Vulnerability Event Emitter Workflow
+# This workflow simulates a scanner that emits vulnerability findings as events
+name: vuln-emitter
+kind: module
+description: Simulates a vulnerability scanner emitting finding events
+tags: event,emitter,vulnerability,example
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: log-start
+    type: function
+    functions:
+      - 'print_blue("Starting vulnerability scan for {{target}}")'
+
+  - name: simulate-scan
+    type: bash
+    command: |
+      echo "Scanning {{target}} for vulnerabilities..."
+      sleep 1
+
+  - name: emit-critical-finding
+    type: function
+    description: Emit a critical severity finding
+    function: |
+      generate_event("{{Workspace}}", "scan.finding", "vuln-scanner", "vulnerability", {
+        url: "https://{{target}}/admin",
+        severity: "critical",
+        template_id: "exposed-admin-panel",
+        confirmed: true,
+        matched_at: "/admin",
+        description: "Admin panel exposed without authentication"
+      })
+    post_run:
+      - 'print_red("CRITICAL: Exposed admin panel found")'
+
+  - name: emit-high-finding
+    type: function
+    description: Emit a high severity finding
+    function: |
+      generate_event("{{Workspace}}", "scan.finding", "vuln-scanner", "vulnerability", {
+        url: "https://{{target}}/api/v1/users",
+        severity: "high",
+        template_id: "api-info-disclosure",
+        confirmed: true,
+        matched_at: "/api/v1/users",
+        description: "API endpoint leaking user information"
+      })
+    post_run:
+      - 'print_yellow("HIGH: API info disclosure found")'
+
+  - name: emit-low-finding
+    type: function
+    description: Emit a low severity finding (should not trigger filtered-receiver)
+    function: |
+      generate_event("{{Workspace}}", "scan.finding", "vuln-scanner", "vulnerability", {
+        url: "https://{{target}}/robots.txt",
+        severity: "low",
+        template_id: "robots-txt-exposed",
+        confirmed: true,
+        matched_at: "/robots.txt",
+        description: "Robots.txt file accessible"
+      })
+
+  - name: emit-scan-complete
+    type: function
+    description: Emit scan completion event with summary
+    function: |
+      generate_event("{{Workspace}}", "scan.complete", "vuln-scanner", "summary", {
+        target: "{{target}}",
+        finding_count: 3,
+        critical_count: 1,
+        high_count: 1,
+        low_count: 1,
+        duration_seconds: 5
+      })
+
+  - name: log-complete
+    type: function
+    functions:
+      - 'print_green("Vulnerability scan complete for {{target}}")'

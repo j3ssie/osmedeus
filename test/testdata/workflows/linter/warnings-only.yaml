@@ -1,0 +1,22 @@
+name: warnings-only
+kind: module
+description: A workflow with only warning-level issues
+tags: test,linter,warnings
+
+params:
+  - name: target
+    required: true
+
+steps:
+  # Warning: unused-variable - exported but never used
+  - name: step-with-unused-export
+    type: bash
+    command: echo "Hello {{target}}"
+    exports:
+      unused_output: "output"
+      another_unused: "also_unused"
+
+  - name: final-step
+    type: bash
+    command: echo "done"
+    timeout: 5m

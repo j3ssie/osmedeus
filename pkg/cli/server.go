@@ -17,11 +17,13 @@ import (
 )
 
 var (
-	serverHost    string
-	serverPort    int
-	noAuth        bool
-	masterMode    bool
-	redisURLServe string
+	serverHost           string
+	serverPort           int
+	noAuth               bool
+	masterMode           bool
+	redisURLServe        string
+	disableHotReload     bool
+	disableEventReceiver bool
 )
 
 // serveCmd represents the serve command
@@ -39,6 +41,8 @@ func init() {
 	serveCmd.Flags().BoolVarP(&noAuth, "no-auth", "A", false, "disable all authentication")
 	serveCmd.Flags().BoolVar(&masterMode, "master", false, "run as distributed master node (requires Redis)")
 	serveCmd.Flags().StringVar(&redisURLServe, "redis-url", "", "Redis connection URL for master mode (overrides settings)")
+	serveCmd.Flags().BoolVar(&disableHotReload, "no-hot-reload", false, "disable config hot reload (default: hot reload is enabled)")
+	serveCmd.Flags().BoolVar(&disableEventReceiver, "no-event-receiver", false, "disable automatic event receiver (event-triggered workflows)")
 }
 
 func runServer(cmd *cobra.Command, args []string) error {
@@ -115,9 +119,11 @@ func runServer(cmd *cobra.Command, args []string) error {
 
 	// Create server with master reference for distributed endpoints
 	opts := &server.Options{
-		NoAuth: noAuth,
-		Master: master,
-		Debug:  debug,
+		NoAuth:              noAuth,
+		Master:              master,
+		Debug:               debug,
+		HotReload:           !disableHotReload,
+		EnableEventReceiver: !disableEventReceiver,
 	}
 	srv, err := server.New(cfg, opts)
 	if err != nil {
@@ -130,16 +136,13 @@ func runServer(cmd *cobra.Command, args []string) error {
 		log.Info("Debug mode enabled - request bodies and detailed errors will be logged")
 	}
 
+	// Print startup info before starting the server
+	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+	srv.PrintStartupInfo(addr)
+
 	// Start server in goroutine
 	serverErr := make(chan error, 1)
 	go func() {
-		addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-		log.Info("Starting Osmedeus server", zap.String("address", addr))
-
-		// Log swagger access URL
-		swaggerURL := fmt.Sprintf("http://%s:%d/swagger/", cfg.Server.Host, cfg.Server.Port)
-		log.Info("Access Swagger documentation", zap.String("url", swaggerURL))
-
 		serverErr <- srv.Start(addr)
 	}()
 

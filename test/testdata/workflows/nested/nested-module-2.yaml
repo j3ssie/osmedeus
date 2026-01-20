@@ -24,7 +24,7 @@ steps:
 
   - name: verify-exports-and-params
     type: bash
-    pre_condition: 'fileExists("{{anotherParam3as1}}")'
+    pre_condition: 'file_exists("{{anotherParam3as1}}")'
     command: |
       echo "Module 2: paramFromFlowFile={{paramFromFlowFile}}"
       echo "Module 2: module1_completed={{module1_completed}}"

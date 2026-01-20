@@ -59,7 +59,31 @@ func connectSQLite(cfg *config.Config) (*bun.DB, error) {
 		return nil, fmt.Errorf("failed to ping SQLite database: %w", err)
 	}
 
+	// Apply additional performance pragmas
+	applySQLitePerformancePragmas(context.Background())
+
+	// Initialize cache after successful connection
+	_ = InitCache(nil)
+
 	return db, nil
+}
+
+// applySQLitePerformancePragmas applies additional SQLite performance settings
+func applySQLitePerformancePragmas(ctx context.Context) {
+	if db == nil {
+		return
+	}
+
+	pragmas := []string{
+		"PRAGMA synchronous = NORMAL",  // Faster writes, safe with WAL
+		"PRAGMA cache_size = -64000",   // 64MB cache (negative = KB)
+		"PRAGMA temp_store = MEMORY",   // Temp tables in memory
+		"PRAGMA mmap_size = 268435456", // 256MB memory-mapped I/O
+	}
+
+	for _, pragma := range pragmas {
+		_, _ = db.ExecContext(ctx, pragma)
+	}
 }
 
 // connectPostgres establishes a PostgreSQL connection
@@ -109,8 +133,11 @@ func SetDB(newDB *bun.DB) {
 	db = newDB
 }
 
-// Close closes the database connection
+// Close closes the database connection and cache
 func Close() error {
+	// Close cache first
+	closeGlobalCache()
+
 	if db != nil {
 		return db.Close()
 	}
@@ -129,6 +156,8 @@ func Migrate(ctx context.Context) error {
 		(*Workspace)(nil),
 		(*WorkflowMeta)(nil),
 		(*Vulnerability)(nil),
+		(*AssetDiffSnapshot)(nil),
+		(*VulnDiffSnapshot)(nil),
 	}
 
 	for _, model := range models {
@@ -166,6 +195,16 @@ func Migrate(ctx context.Context) error {
 		return err
 	}
 
+	// Create indexes for AssetDiffSnapshot table
+	if err := createAssetDiffIndexes(ctx); err != nil {
+		return err
+	}
+
+	// Create indexes for VulnDiffSnapshot table
+	if err := createVulnDiffIndexes(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -195,6 +234,8 @@ func createEventLogIndexes(ctx context.Context) error {
 		"CREATE INDEX IF NOT EXISTS idx_event_logs_workspace ON event_logs(workspace)",
 		"CREATE INDEX IF NOT EXISTS idx_event_logs_run_id ON event_logs(run_id)",
 		"CREATE INDEX IF NOT EXISTS idx_event_logs_created_at ON event_logs(created_at)",
+		// Composite index for unprocessed event queries (ListUnprocessed, Search with processed filter)
+		"CREATE INDEX IF NOT EXISTS idx_event_logs_processed_created ON event_logs(processed, created_at)",
 	}
 
 	for _, idx := range indexes {
@@ -244,6 +285,38 @@ func createVulnerabilityIndexes(ctx context.Context) error {
 func createWorkspaceIndexes(ctx context.Context) error {
 	indexes := []string{
 		"CREATE INDEX IF NOT EXISTS idx_workspaces_data_source ON workspaces(data_source)",
+	}
+
+	for _, idx := range indexes {
+		if _, err := db.ExecContext(ctx, idx); err != nil {
+			return fmt.Errorf("failed to create index: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// createAssetDiffIndexes creates indexes for the asset_diffs table
+func createAssetDiffIndexes(ctx context.Context) error {
+	indexes := []string{
+		"CREATE INDEX IF NOT EXISTS idx_asset_diffs_workspace ON asset_diffs(workspace_name)",
+		"CREATE INDEX IF NOT EXISTS idx_asset_diffs_created_at ON asset_diffs(created_at)",
+	}
+
+	for _, idx := range indexes {
+		if _, err := db.ExecContext(ctx, idx); err != nil {
+			return fmt.Errorf("failed to create index: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// createVulnDiffIndexes creates indexes for the vuln_diffs table
+func createVulnDiffIndexes(ctx context.Context) error {
+	indexes := []string{
+		"CREATE INDEX IF NOT EXISTS idx_vuln_diffs_workspace ON vuln_diffs(workspace_name)",
+		"CREATE INDEX IF NOT EXISTS idx_vuln_diffs_created_at ON vuln_diffs(created_at)",
 	}
 
 	for _, idx := range indexes {

@@ -19,7 +19,7 @@ steps:
       - 'echo "Thread 2: {{Target}}" >> {{Output}}/demo/results.txt'
   - name: check-result
     type: function
-    function: 'fileLength("{{Output}}/demo/results.txt")'
+    function: 'file_length("{{Output}}/demo/results.txt")'
     exports:
       line_count: "output"
   - name: summary

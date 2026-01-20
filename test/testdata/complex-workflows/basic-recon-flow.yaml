@@ -38,7 +38,7 @@ modules:
   - name: port-scan
     depends_on:
       - subdomain-enum
-    condition: "fileLength('{{all_subdomains}}') > 0"
+    condition: "file_length('{{all_subdomains}}') > 0"
     steps:
       - name: setup-ports
         type: bash
@@ -68,7 +68,7 @@ modules:
   - name: screenshot
     depends_on:
       - port-scan
-    condition: "fileLength('{{all_ports}}') > 0"
+    condition: "file_length('{{all_ports}}') > 0"
     steps:
       - name: setup-screenshots
         type: bash

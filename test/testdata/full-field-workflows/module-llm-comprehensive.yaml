@@ -1,0 +1,188 @@
+# Comprehensive example demonstrating all LLM step fields
+kind: module
+name: module-llm-comprehensive
+description: Module demonstrating all LLM step fields (messages, tools, embeddings, multimodal)
+tags: example, llm, comprehensive
+
+params:
+  - name: target
+    required: true
+  - name: scan_results
+    default: ""
+  - name: api_key
+    generator: getEnvVar("OPENAI_API_KEY")
+
+steps:
+  # Basic chat completion with system/user/assistant messages
+  - name: basic-chat
+    type: llm
+    messages:
+      - role: system
+        content: "You are a security analyst specializing in vulnerability assessment."
+      - role: user
+        content: "Analyze the following scan results for {{target}}"
+      - role: assistant
+        content: "I'll analyze the security findings and provide recommendations."
+      - role: user
+        content: "{{scan_results}}"
+    llm_config:
+      provider: openai
+      model: gpt-4
+      max_tokens: 1000
+      temperature: 0.7
+    exports:
+      analysis_output: "{{response.content}}"
+
+  # Multimodal content (text + image_url)
+  - name: multimodal-analysis
+    type: llm
+    messages:
+      - role: user
+        content:
+          - type: text
+            text: "Analyze this screenshot for security issues"
+          - type: image_url
+            image_url:
+              url: "{{Output}}/screenshot.png"
+              detail: high
+    llm_config:
+      model: gpt-4-vision-preview
+      max_tokens: 500
+    exports:
+      screenshot_analysis: "{{response.content}}"
+
+  # LLM with tool definitions
+  - name: llm-with-tools
+    type: llm
+    messages:
+      - role: system
+        content: "You are a security tool assistant. Use the provided tools to analyze targets."
+      - role: user
+        content: "Run a security scan on {{target}}"
+    tools:
+      - type: function
+        function:
+          name: run_nmap
+          description: "Run an Nmap port scan on a target"
+          parameters:
+            type: object
+            properties:
+              target:
+                type: string
+                description: "The target IP or hostname to scan"
+              ports:
+                type: string
+                description: "Port range to scan (e.g., '1-1000', '22,80,443')"
+              scan_type:
+                type: string
+                enum: ["syn", "connect", "udp"]
+                description: "Type of scan to perform"
+            required:
+              - target
+      - type: function
+        function:
+          name: run_nuclei
+          description: "Run Nuclei vulnerability scanner"
+          parameters:
+            type: object
+            properties:
+              target:
+                type: string
+                description: "Target URL to scan"
+              templates:
+                type: array
+                items:
+                  type: string
+                description: "List of template categories to use"
+            required:
+              - target
+    tool_choice: auto
+    llm_config:
+      model: gpt-4-turbo
+      max_tokens: 2000
+    exports:
+      tool_calls: "{{response.tool_calls}}"
+
+  # Tool choice: specific function
+  - name: llm-specific-tool
+    type: llm
+    messages:
+      - role: user
+        content: "Scan {{target}} for open ports"
+    tools:
+      - type: function
+        function:
+          name: port_scan
+          description: "Scan ports on a target"
+          parameters:
+            type: object
+            properties:
+              host:
+                type: string
+            required:
+              - host
+    tool_choice:
+      type: function
+      function:
+        name: port_scan
+    llm_config:
+      model: gpt-4
+    exports:
+      forced_tool_call: "{{response.tool_calls}}"
+
+  # Embedding generation
+  - name: generate-embeddings
+    type: llm
+    is_embedding: true
+    embedding_input:
+      - "Security vulnerability found in {{target}}"
+      - "SQL injection detected"
+      - "XSS vulnerability present"
+    llm_config:
+      model: text-embedding-3-small
+    exports:
+      embeddings: "{{response.embeddings}}"
+
+  # Response format for structured output
+  - name: structured-output
+    type: llm
+    messages:
+      - role: system
+        content: "You are a security analyst. Output findings in JSON format."
+      - role: user
+        content: "List vulnerabilities found for {{target}}"
+    llm_config:
+      model: gpt-4-turbo
+      max_tokens: 1000
+      temperature: 0.3
+      response_format:
+        type: json_object
+    exports:
+      structured_findings: "{{response.content}}"
+
+  # All llm_config fields
+  - name: full-llm-config
+    type: llm
+    messages:
+      - role: user
+        content: "Provide a security assessment summary"
+    llm_config:
+      provider: openai
+      model: gpt-4
+      max_tokens: 500
+      temperature: 0.5
+      top_p: 0.9
+      n: 1
+      timeout: "60s"
+      max_retries: 3
+      stream: false
+      custom_headers:
+        X-Custom-Header: "security-scan"
+    extra_llm_parameters:
+      seed: 42
+      presence_penalty: 0.1
+      frequency_penalty: 0.1
+    exports:
+      summary: "{{response.content}}"
+      model_used: "{{response.model}}"
+      tokens_used: "{{response.usage.total_tokens}}"

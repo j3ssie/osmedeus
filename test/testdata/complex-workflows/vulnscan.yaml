@@ -45,8 +45,8 @@ steps:
   - name: validate-dependencies
     type: function
     function: |
-      fileExists("{{Binaries}}/jaeles") &&
-      fileExists("{{Binaries}}/nuclei")
+      file_exists("{{Binaries}}/jaeles") &&
+      file_exists("{{Binaries}}/nuclei")
     exports:
       deps_valid: "output"
     on_error:
@@ -71,7 +71,7 @@ steps:
   # ============================================================
   - name: check-input-exists
     type: function
-    function: fileExists("{{httpFile}}")
+    function: file_exists("{{httpFile}}")
     exports:
       input_exists: "output"
     on_error:
@@ -81,7 +81,7 @@ steps:
 
   - name: count-input-lines
     type: function
-    function: fileLength("{{httpFile}}")
+    function: file_length("{{httpFile}}")
     exports:
       input_count: "output"
 
@@ -89,8 +89,8 @@ steps:
   - name: check-input-limit
     type: function
     function: |
-      var count = parseInt("{{input_count}}");
-      var limit = parseInt("{{limit}}");
+      var count = parse_int("{{input_count}}");
+      var limit = parse_int("{{limit}}");
       if (count > limit) {
         return "exceeds_limit";
       }
@@ -128,7 +128,7 @@ steps:
 
   - name: count-split-files
     type: function
-    function: fileLength("{{output_dir}}/raw/split-files.txt")
+    function: file_length("{{output_dir}}/raw/split-files.txt")
     exports:
       split_count: "output"
 
@@ -137,7 +137,7 @@ steps:
   # ============================================================
   - name: jaeles-active-scan
     type: foreach
-    pre_condition: 'parseInt("{{split_count}}") > 0'
+    pre_condition: 'parse_int("{{split_count}}") > 0'
     input: "{{output_dir}}/raw/split-files.txt"
     variable: splitfile
     threads: 1
@@ -151,7 +151,7 @@ steps:
 
   - name: jaeles-sensitive-scan
     type: foreach
-    pre_condition: 'parseInt("{{split_count}}") > 0'
+    pre_condition: 'parse_int("{{split_count}}") > 0'
     input: "{{output_dir}}/raw/split-files.txt"
     variable: splitfile
     threads: 1
@@ -186,14 +186,14 @@ steps:
   # ============================================================
   - name: copy-active-summary
     type: bash
-    pre_condition: 'fileExists("{{output_dir}}/active/jaeles-summary.txt")'
+    pre_condition: 'file_exists("{{output_dir}}/active/jaeles-summary.txt")'
     command: "cp {{output_dir}}/active/jaeles-summary.txt {{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt"
     exports:
       active_summary: "{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt"
 
   - name: notify-active-results
     type: function
-    pre_condition: 'fileExists("{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt")'
+    pre_condition: 'file_exists("{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt")'
     parallel_functions:
       - TeleMessByFile("#report", "{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt")
       - Cat("{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt")
@@ -205,14 +205,14 @@ steps:
 
   - name: copy-sensitive-summary
     type: bash
-    pre_condition: 'fileExists("{{output_dir}}/sensitive/jaeles-summary.txt")'
+    pre_condition: 'file_exists("{{output_dir}}/sensitive/jaeles-summary.txt")'
     command: "cp {{output_dir}}/sensitive/jaeles-summary.txt {{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt"
     exports:
       sensitive_summary: "{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt"
 
   - name: notify-sensitive-results
     type: function
-    pre_condition: 'fileExists("{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt")'
+    pre_condition: 'file_exists("{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt")'
     parallel_functions:
       - TeleMessByFile("#sensitive", "{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt")
       - Cat("{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt")
@@ -227,7 +227,7 @@ steps:
   # ============================================================
   - name: nuclei-scan
     type: bash
-    pre_condition: '"{{enableNuclei}}" == "true" && fileExists("{{httpFile}}")'
+    pre_condition: '"{{enableNuclei}}" == "true" && file_exists("{{httpFile}}")'
     command: |
       timeout -k 1m {{nucleiTimeout}} {{Binaries}}/nuclei \
         -H '{{defaultUA}}' \
@@ -249,8 +249,8 @@ steps:
 
   - name: count-nuclei-results
     type: function
-    pre_condition: 'fileExists("{{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt")'
-    function: fileLength("{{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt")
+    pre_condition: 'file_exists("{{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt")'
+    function: file_length("{{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt")
     exports:
       nuclei_count: "output"
 
@@ -259,7 +259,7 @@ steps:
   # ============================================================
   - name: generate-nuclei-report
     type: function
-    pre_condition: 'parseInt("{{nuclei_count}}") > 0'
+    pre_condition: 'parse_int("{{nuclei_count}}") > 0'
     function: GenNucleiReport("{{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt", "{{output_dir}}/nuclei/{{Workspace}}-nuclei.html")
     on_error:
       - action: log
@@ -268,7 +268,7 @@ steps:
 
   - name: parse-nuclei-json
     type: bash
-    pre_condition: 'parseInt("{{nuclei_count}}") > 0'
+    pre_condition: 'parse_int("{{nuclei_count}}") > 0'
     command: |
       cat {{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt | \
         jq -r '[.info.severity,.\"template-id\",.\"matched-at\",.\"matched-name\"] | join(\" - \")' \
@@ -278,12 +278,12 @@ steps:
 
   - name: sort-nuclei-results
     type: function
-    pre_condition: 'fileExists("{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt")'
+    pre_condition: 'file_exists("{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt")'
     function: SortU("{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt")
 
   - name: notify-nuclei-results
     type: function
-    pre_condition: 'parseInt("{{nuclei_count}}") > 0'
+    pre_condition: 'parse_int("{{nuclei_count}}") > 0'
     parallel_functions:
       - TeleMessByFile("#sensitive", "{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt")
       - Cat("{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt")
@@ -297,7 +297,7 @@ steps:
   # ============================================================
   - name: generate-final-report
     type: function
-    pre_condition: 'fileExists("{{Data}}/markdown/general-template.md")'
+    pre_condition: 'file_exists("{{Data}}/markdown/general-template.md")'
     function: GenMarkdownReport("{{Data}}/markdown/general-template.md", "{{Output}}/summary.html")
     on_error:
       - action: log

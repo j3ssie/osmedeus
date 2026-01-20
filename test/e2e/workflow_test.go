@@ -3,6 +3,7 @@ package e2e
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -123,7 +124,9 @@ func TestWorkflow_Validate_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	log.Info("Asserting stdout contains validation success")
-	assert.Contains(t, stdout, "is valid")
+	// Accept either old "is valid" or new "passed all lint checks" message
+	assert.True(t, strings.Contains(stdout, "is valid") || strings.Contains(stdout, "passed all lint checks"),
+		"Expected success message in output: %s", stdout)
 
 	log.Success("workflow validate reports valid workflow")
 }

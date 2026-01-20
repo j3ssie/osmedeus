@@ -1,0 +1,45 @@
+# Simple Event Receiver Workflow
+# This workflow demonstrates how to receive events via triggers
+name: simple-receiver
+kind: module
+description: Simple workflow that receives and processes events
+tags: event,receiver,trigger,example
+
+trigger:
+  # Trigger on new asset discovery events
+  - name: on-new-asset
+    on: event
+    event:
+      topic: "discovery.asset"
+      filters:
+        - "event.source == 'simple-emitter'"
+        - "event.data_type == 'subdomain'"
+    input:
+      type: event_data
+      field: "value"
+      name: target
+    enabled: true
+  - name: manual-trigger
+    on: manual
+    enabled: false
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: log-received
+    type: function
+    functions:
+      - 'print_blue("Received event for target: {{target}}")'
+
+  - name: process-asset
+    type: bash
+    command: |
+      echo "Processing asset: {{target}}"
+      echo "{{target}}" >> {{Output}}/processed-assets.txt
+
+  - name: log-complete
+    type: function
+    functions:
+      - 'print_green("Processed: {{target}}")'

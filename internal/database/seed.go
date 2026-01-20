@@ -19,17 +19,29 @@ func SeedDatabase(ctx context.Context) error {
 	scan1ID := uuid.New().String()
 	scan2ID := uuid.New().String()
 	scan3ID := uuid.New().String()
+	scan4ID := uuid.New().String() // secondary.com - part of batch job
+	scan5ID := uuid.New().String() // tertiary.io - part of batch job
+
+	// Job ID for batch scanning demonstration (scan1, scan4, scan5 share this)
+	job1ID := uuid.New().String()
 
 	now := time.Now()
 	oneHourAgo := now.Add(-1 * time.Hour)
 	twoHoursAgo := now.Add(-2 * time.Hour)
 	thirtyMinsAgo := now.Add(-30 * time.Minute)
+	oneDayAgo := now.Add(-24 * time.Hour)
+	threeDaysAgo := now.Add(-3 * 24 * time.Hour)
+	fiveDaysAgo := now.Add(-5 * 24 * time.Hour)
+	oneWeekAgo := now.Add(-7 * 24 * time.Hour)
+	twoWeeksAgo := now.Add(-14 * 24 * time.Hour)
+	oneMonthAgo := now.Add(-30 * 24 * time.Hour)
 
 	// Seed Runs
 	runs := []Run{
 		{
 			ID:             scan1ID,
 			RunID:          fmt.Sprintf("run-%s", scan1ID[:8]),
+			JobID:          job1ID, // Part of batch job with scan4 and scan5
 			WorkflowName:   "subdomain-enum",
 			WorkflowKind:   "module",
 			Target:         "example.com",
@@ -78,6 +90,42 @@ func SeedDatabase(ctx context.Context) error {
 			CompletedSteps: 3,
 			CreatedAt:      twoHoursAgo,
 			UpdatedAt:      oneHourAgo,
+		},
+		// Batch job runs - scan4 and scan5 share job1ID with scan1
+		{
+			ID:             scan4ID,
+			RunID:          fmt.Sprintf("run-%s", scan4ID[:8]),
+			JobID:          job1ID, // Part of batch job with scan1 and scan5
+			WorkflowName:   "subdomain-enum",
+			WorkflowKind:   "module",
+			Target:         "secondary.com",
+			Params:         map[string]interface{}{"threads": 10, "timeout": 300},
+			Status:         "completed",
+			WorkspacePath:  "/home/osmedeus/workspaces-osmedeus/secondary.com",
+			StartedAt:      &twoHoursAgo,
+			CompletedAt:    &oneHourAgo,
+			TriggerType:    "manual",
+			TotalSteps:     5,
+			CompletedSteps: 5,
+			CreatedAt:      twoHoursAgo,
+			UpdatedAt:      oneHourAgo,
+		},
+		{
+			ID:             scan5ID,
+			RunID:          fmt.Sprintf("run-%s", scan5ID[:8]),
+			JobID:          job1ID, // Part of batch job with scan1 and scan4
+			WorkflowName:   "subdomain-enum",
+			WorkflowKind:   "module",
+			Target:         "tertiary.io",
+			Params:         map[string]interface{}{"threads": 10, "timeout": 300},
+			Status:         "running",
+			WorkspacePath:  "/home/osmedeus/workspaces-osmedeus/tertiary.io",
+			StartedAt:      &thirtyMinsAgo,
+			TriggerType:    "manual",
+			TotalSteps:     5,
+			CompletedSteps: 3,
+			CreatedAt:      thirtyMinsAgo,
+			UpdatedAt:      now,
 		},
 	}
 
@@ -273,6 +321,148 @@ func SeedDatabase(ctx context.Context) error {
 			CompletedAt: timePtr(twoHoursAgo.Add(20050 * time.Millisecond)),
 			CreatedAt:   twoHoursAgo,
 		},
+		// Steps for scan4ID (secondary.com - completed batch job run)
+		{
+			ID:          uuid.New().String(),
+			RunID:       scan4ID,
+			StepName:    "subfinder",
+			StepType:    "bash",
+			Status:      "completed",
+			Command:     "subfinder -d secondary.com -o {{Output}}/subdomain/sources/subfinder.txt",
+			Output:      "Found 32 subdomains",
+			Exports:     map[string]interface{}{"subfinder_output": "{{Output}}/subdomain/sources/subfinder.txt"},
+			DurationMs:  38000,
+			LogFile:     "/home/osmedeus/workspaces-osmedeus/secondary.com/logs/subfinder.log",
+			StartedAt:   &twoHoursAgo,
+			CompletedAt: timePtr(twoHoursAgo.Add(38 * time.Second)),
+			CreatedAt:   twoHoursAgo,
+		},
+		{
+			ID:          uuid.New().String(),
+			RunID:       scan4ID,
+			StepName:    "amass",
+			StepType:    "bash",
+			Status:      "completed",
+			Command:     "amass enum -passive -d secondary.com -o {{Output}}/subdomain/sources/amass.txt",
+			Output:      "Found 58 subdomains",
+			Exports:     map[string]interface{}{"amass_output": "{{Output}}/subdomain/sources/amass.txt"},
+			DurationMs:  95000,
+			LogFile:     "/home/osmedeus/workspaces-osmedeus/secondary.com/logs/amass.log",
+			StartedAt:   timePtr(twoHoursAgo.Add(38 * time.Second)),
+			CompletedAt: timePtr(twoHoursAgo.Add(133 * time.Second)),
+			CreatedAt:   twoHoursAgo,
+		},
+		{
+			ID:          uuid.New().String(),
+			RunID:       scan4ID,
+			StepName:    "merge-subdomains",
+			StepType:    "function",
+			Status:      "completed",
+			Command:     "SortUnique('{{Output}}/subdomain/sources/*.txt', '{{Output}}/subdomain/final-subdomains.txt')",
+			Output:      "Merged 75 unique subdomains",
+			Exports:     map[string]interface{}{"subdomains": "{{Output}}/subdomain/final-subdomains.txt"},
+			DurationMs:  400,
+			StartedAt:   timePtr(twoHoursAgo.Add(133 * time.Second)),
+			CompletedAt: timePtr(twoHoursAgo.Add(134 * time.Second)),
+			CreatedAt:   twoHoursAgo,
+		},
+		{
+			ID:          uuid.New().String(),
+			RunID:       scan4ID,
+			StepName:    "httpx",
+			StepType:    "bash",
+			Status:      "completed",
+			Command:     "httpx -l {{subdomains}} -json -o {{Output}}/http/httpx-output.json",
+			Output:      "Probed 75 hosts, 52 alive",
+			Exports:     map[string]interface{}{"httpx_output": "{{Output}}/http/httpx-output.json"},
+			DurationMs:  145000,
+			LogFile:     "/home/osmedeus/workspaces-osmedeus/secondary.com/logs/httpx.log",
+			StartedAt:   timePtr(twoHoursAgo.Add(134 * time.Second)),
+			CompletedAt: timePtr(twoHoursAgo.Add(279 * time.Second)),
+			CreatedAt:   twoHoursAgo,
+		},
+		{
+			ID:          uuid.New().String(),
+			RunID:       scan4ID,
+			StepName:    "screenshot",
+			StepType:    "bash",
+			Status:      "completed",
+			Command:     "gowitness file -f {{Output}}/http/alive-hosts.txt -P {{Output}}/screenshots/",
+			Output:      "Captured 52 screenshots",
+			DurationMs:  250000,
+			LogFile:     "/home/osmedeus/workspaces-osmedeus/secondary.com/logs/gowitness.log",
+			StartedAt:   timePtr(twoHoursAgo.Add(279 * time.Second)),
+			CompletedAt: &oneHourAgo,
+			CreatedAt:   twoHoursAgo,
+		},
+		// Steps for scan5ID (tertiary.io - running batch job run)
+		{
+			ID:          uuid.New().String(),
+			RunID:       scan5ID,
+			StepName:    "subfinder",
+			StepType:    "bash",
+			Status:      "completed",
+			Command:     "subfinder -d tertiary.io -o {{Output}}/subdomain/sources/subfinder.txt",
+			Output:      "Found 18 subdomains",
+			Exports:     map[string]interface{}{"subfinder_output": "{{Output}}/subdomain/sources/subfinder.txt"},
+			DurationMs:  25000,
+			LogFile:     "/home/osmedeus/workspaces-osmedeus/tertiary.io/logs/subfinder.log",
+			StartedAt:   &thirtyMinsAgo,
+			CompletedAt: timePtr(thirtyMinsAgo.Add(25 * time.Second)),
+			CreatedAt:   thirtyMinsAgo,
+		},
+		{
+			ID:          uuid.New().String(),
+			RunID:       scan5ID,
+			StepName:    "amass",
+			StepType:    "bash",
+			Status:      "completed",
+			Command:     "amass enum -passive -d tertiary.io -o {{Output}}/subdomain/sources/amass.txt",
+			Output:      "Found 34 subdomains",
+			Exports:     map[string]interface{}{"amass_output": "{{Output}}/subdomain/sources/amass.txt"},
+			DurationMs:  78000,
+			LogFile:     "/home/osmedeus/workspaces-osmedeus/tertiary.io/logs/amass.log",
+			StartedAt:   timePtr(thirtyMinsAgo.Add(25 * time.Second)),
+			CompletedAt: timePtr(thirtyMinsAgo.Add(103 * time.Second)),
+			CreatedAt:   thirtyMinsAgo,
+		},
+		{
+			ID:          uuid.New().String(),
+			RunID:       scan5ID,
+			StepName:    "merge-subdomains",
+			StepType:    "function",
+			Status:      "completed",
+			Command:     "SortUnique('{{Output}}/subdomain/sources/*.txt', '{{Output}}/subdomain/final-subdomains.txt')",
+			Output:      "Merged 42 unique subdomains",
+			Exports:     map[string]interface{}{"subdomains": "{{Output}}/subdomain/final-subdomains.txt"},
+			DurationMs:  350,
+			StartedAt:   timePtr(thirtyMinsAgo.Add(103 * time.Second)),
+			CompletedAt: timePtr(thirtyMinsAgo.Add(104 * time.Second)),
+			CreatedAt:   thirtyMinsAgo,
+		},
+		{
+			ID:         uuid.New().String(),
+			RunID:      scan5ID,
+			StepName:   "httpx",
+			StepType:   "bash",
+			Status:     "running",
+			Command:    "httpx -l {{subdomains}} -json -o {{Output}}/http/httpx-output.json",
+			DurationMs: 0,
+			LogFile:    "/home/osmedeus/workspaces-osmedeus/tertiary.io/logs/httpx.log",
+			StartedAt:  timePtr(thirtyMinsAgo.Add(104 * time.Second)),
+			CreatedAt:  thirtyMinsAgo,
+		},
+		{
+			ID:         uuid.New().String(),
+			RunID:      scan5ID,
+			StepName:   "screenshot",
+			StepType:   "bash",
+			Status:     "pending",
+			Command:    "gowitness file -f {{Output}}/http/alive-hosts.txt -P {{Output}}/screenshots/",
+			DurationMs: 0,
+			LogFile:    "/home/osmedeus/workspaces-osmedeus/tertiary.io/logs/gowitness.log",
+			CreatedAt:  thirtyMinsAgo,
+		},
 	}
 
 	for _, step := range stepResults {
@@ -415,6 +605,73 @@ func SeedDatabase(ctx context.Context) error {
 			Description:  "Prepared target list for vulnerability scanning",
 			CreatedAt:    twoHoursAgo,
 		},
+		// Artifacts for scan4ID (secondary.com - completed batch job)
+		{
+			ID:           uuid.New().String(),
+			RunID:        scan4ID,
+			Workspace:    "secondary.com",
+			Name:         "final-subdomains.txt",
+			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/secondary.com/subdomain/final-subdomains.txt",
+			ArtifactType: ArtifactTypeOutput,
+			ContentType:  ContentTypeText,
+			SizeBytes:    1892,
+			LineCount:    75,
+			Description:  "Merged unique subdomains from all sources",
+			CreatedAt:    oneHourAgo,
+		},
+		{
+			ID:           uuid.New().String(),
+			RunID:        scan4ID,
+			Workspace:    "secondary.com",
+			Name:         "alive-hosts.txt",
+			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/secondary.com/http/alive-hosts.txt",
+			ArtifactType: ArtifactTypeOutput,
+			ContentType:  ContentTypeText,
+			SizeBytes:    1304,
+			LineCount:    52,
+			Description:  "HTTP-responsive hosts from httpx probe",
+			CreatedAt:    oneHourAgo,
+		},
+		{
+			ID:           uuid.New().String(),
+			RunID:        scan4ID,
+			Workspace:    "secondary.com",
+			Name:         "httpx-output.json",
+			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/secondary.com/http/httpx-output.json",
+			ArtifactType: ArtifactTypeOutput,
+			ContentType:  ContentTypeJSON,
+			SizeBytes:    98456,
+			LineCount:    52,
+			Description:  "Full httpx probe results with headers and tech detection",
+			CreatedAt:    oneHourAgo,
+		},
+		{
+			ID:           uuid.New().String(),
+			RunID:        scan4ID,
+			Workspace:    "secondary.com",
+			Name:         "screenshots",
+			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/secondary.com/screenshots/",
+			ArtifactType: ArtifactTypeScreenshot,
+			ContentType:  ContentTypeFolder,
+			SizeBytes:    10485760,
+			LineCount:    52,
+			Description:  "GoWitness screenshot captures",
+			CreatedAt:    oneHourAgo,
+		},
+		// Artifacts for scan5ID (tertiary.io - running batch job)
+		{
+			ID:           uuid.New().String(),
+			RunID:        scan5ID,
+			Workspace:    "tertiary.io",
+			Name:         "final-subdomains.txt",
+			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/tertiary.io/subdomain/final-subdomains.txt",
+			ArtifactType: ArtifactTypeOutput,
+			ContentType:  ContentTypeText,
+			SizeBytes:    1056,
+			LineCount:    42,
+			Description:  "Merged unique subdomains from all sources",
+			CreatedAt:    thirtyMinsAgo,
+		},
 	}
 
 	for _, artifact := range artifacts {
@@ -444,6 +701,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Nginx", "CloudFlare"},
 			ResponseTime:  "145ms",
 			Source:        "httpx",
+			LastSeenAt:    oneHourAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -464,6 +722,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Nginx"},
 			ResponseTime:  "98ms",
 			Source:        "httpx",
+			LastSeenAt:    oneHourAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -484,6 +743,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Express", "Node.js"},
 			ResponseTime:  "67ms",
 			Source:        "httpx",
+			LastSeenAt:    oneHourAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -504,6 +764,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Apache", "ModSecurity"},
 			ResponseTime:  "234ms",
 			Source:        "httpx",
+			LastSeenAt:    oneHourAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -524,6 +785,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Roundcube", "PHP"},
 			ResponseTime:  "312ms",
 			Source:        "httpx",
+			LastSeenAt:    oneDayAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -546,6 +808,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"WordPress", "PHP", "MySQL"},
 			ResponseTime:  "456ms",
 			Source:        "httpx",
+			LastSeenAt:    oneDayAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -566,6 +829,7 @@ func SeedDatabase(ctx context.Context) error {
 			ResponseTime:  "23ms",
 			Labels:        "Internal development server - no TLS",
 			Source:        "httpx",
+			LastSeenAt:    threeDaysAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -586,6 +850,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Nginx"},
 			ResponseTime:  "89ms",
 			Source:        "httpx",
+			LastSeenAt:    oneDayAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -605,6 +870,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"CloudFlare CDN"},
 			ResponseTime:  "12ms",
 			Source:        "httpx",
+			LastSeenAt:    oneHourAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -627,6 +893,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Statuspage.io"},
 			ResponseTime:  "156ms",
 			Source:        "httpx",
+			LastSeenAt:    oneHourAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -650,6 +917,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Shopify", "React", "Node.js"},
 			ResponseTime:  "234ms",
 			Source:        "httpx",
+			LastSeenAt:    oneHourAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -672,6 +940,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Docusaurus", "React", "Algolia"},
 			ResponseTime:  "123ms",
 			Source:        "httpx",
+			LastSeenAt:    oneDayAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -694,6 +963,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Zendesk", "jQuery"},
 			ResponseTime:  "189ms",
 			Source:        "httpx",
+			LastSeenAt:    oneDayAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -715,6 +985,7 @@ func SeedDatabase(ctx context.Context) error {
 			ResponseTime:  "67ms",
 			Labels:        "Internal CI/CD server",
 			Source:        "httpx",
+			LastSeenAt:    threeDaysAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -736,6 +1007,7 @@ func SeedDatabase(ctx context.Context) error {
 			ResponseTime:  "45ms",
 			Labels:        "Internal Git server - redirects to login",
 			Source:        "httpx",
+			LastSeenAt:    threeDaysAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -758,6 +1030,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Grafana", "Go"},
 			ResponseTime:  "78ms",
 			Source:        "httpx",
+			LastSeenAt:    oneDayAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -780,6 +1053,7 @@ func SeedDatabase(ctx context.Context) error {
 			ResponseTime:  "567ms",
 			Labels:        "Legacy system - no TLS",
 			Source:        "httpx",
+			LastSeenAt:    oneWeekAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -801,6 +1075,7 @@ func SeedDatabase(ctx context.Context) error {
 			ResponseTime:  "1234ms",
 			Labels:        "Beta environment - currently broken",
 			Source:        "httpx",
+			LastSeenAt:    threeDaysAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -821,6 +1096,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Apache"},
 			ResponseTime:  "89ms",
 			Source:        "httpx",
+			LastSeenAt:    oneWeekAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -841,6 +1117,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"FastAPI", "Python", "uvicorn"},
 			ResponseTime:  "34ms",
 			Source:        "httpx",
+			LastSeenAt:    oneHourAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -861,6 +1138,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Strapi", "Node.js", "React"},
 			ResponseTime:  "156ms",
 			Source:        "httpx",
+			LastSeenAt:    oneDayAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -880,6 +1158,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"CloudFlare", "AWS S3"},
 			ResponseTime:  "15ms",
 			Source:        "httpx",
+			LastSeenAt:    oneHourAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -902,6 +1181,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Prometheus", "Go"},
 			ResponseTime:  "56ms",
 			Source:        "httpx",
+			LastSeenAt:    threeDaysAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -923,6 +1203,7 @@ func SeedDatabase(ctx context.Context) error {
 			ResponseTime:  "5000ms",
 			Labels:        "Elasticsearch backend down",
 			Source:        "httpx",
+			LastSeenAt:    oneWeekAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -945,6 +1226,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Vue.js", "Nginx"},
 			ResponseTime:  "12ms",
 			Source:        "httpx",
+			LastSeenAt:    oneHourAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -967,6 +1249,7 @@ func SeedDatabase(ctx context.Context) error {
 			ResponseTime:  "45ms",
 			Labels:        "Database admin panel",
 			Source:        "httpx",
+			LastSeenAt:    oneDayAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -988,6 +1271,7 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"Redis Commander", "Node.js"},
 			ResponseTime:  "23ms",
 			Source:        "httpx",
+			LastSeenAt:    oneDayAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -1008,6 +1292,7 @@ func SeedDatabase(ctx context.Context) error {
 			ResponseTime:  "34ms",
 			Labels:        "Object storage - access denied",
 			Source:        "httpx",
+			LastSeenAt:    threeDaysAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
 		},
@@ -1029,8 +1314,233 @@ func SeedDatabase(ctx context.Context) error {
 			Technologies:  []string{"RabbitMQ", "Erlang"},
 			ResponseTime:  "67ms",
 			Source:        "httpx",
+			LastSeenAt:    oneHourAgo,
 			CreatedAt:     oneHourAgo,
 			UpdatedAt:     oneHourAgo,
+		},
+		// ============================================================
+		// DIFF DEMONSTRATION ASSETS
+		// These assets are specifically designed to demonstrate the
+		// diff functionality with varied created_at, updated_at, and
+		// last_seen_at timestamps.
+		// ============================================================
+
+		// --- NEWLY ADDED ASSETS (created within last hour) ---
+		// These will appear as "added" in diff queries for recent time ranges
+		{
+			Workspace:     "example.com",
+			AssetValue:    "new-api.example.com",
+			URL:           "https://new-api.example.com/",
+			Scheme:        "https",
+			Method:        "GET",
+			Path:          "/",
+			StatusCode:    200,
+			ContentType:   "application/json",
+			ContentLength: 156,
+			Title:         "",
+			HostIP:        "93.184.216.70",
+			DnsRecords:    []string{"93.184.216.70"},
+			TLS:           "TLS 1.3",
+			Technologies:  []string{"FastAPI", "Python"},
+			ResponseTime:  "45ms",
+			Labels:        "Newly discovered API endpoint",
+			Source:        "httpx",
+			LastSeenAt:    thirtyMinsAgo,
+			CreatedAt:     thirtyMinsAgo,
+			UpdatedAt:     thirtyMinsAgo,
+		},
+		{
+			Workspace:     "example.com",
+			AssetValue:    "v3.example.com",
+			URL:           "https://v3.example.com/",
+			Scheme:        "https",
+			Method:        "GET",
+			Path:          "/",
+			StatusCode:    200,
+			ContentType:   "text/html",
+			ContentLength: 23456,
+			Title:         "Example V3 Beta",
+			Words:         567,
+			Lines:         234,
+			HostIP:        "93.184.216.71",
+			DnsRecords:    []string{"93.184.216.71"},
+			TLS:           "TLS 1.3",
+			Technologies:  []string{"Next.js", "React", "Vercel"},
+			ResponseTime:  "89ms",
+			Labels:        "New version just launched",
+			Source:        "httpx",
+			LastSeenAt:    oneHourAgo,
+			CreatedAt:     oneHourAgo,
+			UpdatedAt:     oneHourAgo,
+		},
+
+		// --- CHANGED ASSETS (created earlier, updated recently) ---
+		// These will appear as "changed" in diff queries
+		{
+			Workspace:     "example.com",
+			AssetValue:    "portal.example.com",
+			URL:           "https://portal.example.com/",
+			Scheme:        "https",
+			Method:        "GET",
+			Path:          "/",
+			StatusCode:    200,
+			ContentType:   "text/html",
+			ContentLength: 45678,
+			Title:         "Customer Portal - Updated",
+			Words:         1234,
+			Lines:         456,
+			HostIP:        "93.184.216.72",
+			DnsRecords:    []string{"93.184.216.72"},
+			TLS:           "TLS 1.3",
+			Technologies:  []string{"Angular", "Node.js", "MongoDB"},
+			ResponseTime:  "234ms",
+			Labels:        "Portal updated with new features",
+			Source:        "httpx",
+			LastSeenAt:    oneHourAgo,
+			CreatedAt:     oneWeekAgo,   // Created a week ago
+			UpdatedAt:     oneHourAgo,   // But updated recently (title changed)
+		},
+		{
+			Workspace:     "example.com",
+			AssetValue:    "dashboard.example.com",
+			URL:           "https://dashboard.example.com/",
+			Scheme:        "https",
+			Method:        "GET",
+			Path:          "/",
+			StatusCode:    200,
+			ContentType:   "text/html",
+			ContentLength: 67890,
+			Title:         "Analytics Dashboard v2.5",
+			Words:         2345,
+			Lines:         789,
+			HostIP:        "93.184.216.73",
+			DnsRecords:    []string{"93.184.216.73"},
+			TLS:           "TLS 1.3",
+			Technologies:  []string{"Vue.js", "D3.js", "PostgreSQL"},
+			ResponseTime:  "156ms",
+			Labels:        "Dashboard version bumped",
+			Source:        "httpx",
+			LastSeenAt:    twoHoursAgo,
+			CreatedAt:     twoWeeksAgo,  // Created two weeks ago
+			UpdatedAt:     twoHoursAgo,  // Updated today (version change)
+		},
+		{
+			Workspace:     "example.com",
+			AssetValue:    "auth.example.com",
+			URL:           "https://auth.example.com/",
+			Scheme:        "https",
+			Method:        "GET",
+			Path:          "/",
+			StatusCode:    200,
+			ContentType:   "text/html",
+			ContentLength: 12345,
+			Title:         "SSO Login - Security Update",
+			Words:         345,
+			Lines:         123,
+			HostIP:        "93.184.216.74",
+			DnsRecords:    []string{"93.184.216.74"},
+			TLS:           "TLS 1.3",
+			Technologies:  []string{"Keycloak", "Java", "Redis"},
+			ResponseTime:  "78ms",
+			Labels:        "Auth service patched",
+			Source:        "httpx",
+			LastSeenAt:    oneDayAgo,
+			CreatedAt:     oneMonthAgo,  // Created a month ago
+			UpdatedAt:     oneDayAgo,    // Updated yesterday (security patch)
+		},
+
+		// --- STALE/REMOVED ASSETS (not seen recently) ---
+		// These will appear as "removed" in diff queries when comparing recent scans
+		{
+			Workspace:     "example.com",
+			AssetValue:    "deprecated-api.example.com",
+			URL:           "https://deprecated-api.example.com/",
+			Scheme:        "https",
+			Method:        "GET",
+			Path:          "/",
+			StatusCode:    503,
+			ContentType:   "text/html",
+			ContentLength: 234,
+			Title:         "Service Unavailable",
+			HostIP:        "93.184.216.80",
+			DnsRecords:    []string{"93.184.216.80"},
+			TLS:           "TLS 1.2",
+			Technologies:  []string{"Nginx"},
+			ResponseTime:  "5000ms",
+			Labels:        "API deprecated and decommissioned",
+			Source:        "httpx",
+			LastSeenAt:    twoWeeksAgo,  // Last seen 2 weeks ago - now gone
+			CreatedAt:     oneMonthAgo,
+			UpdatedAt:     twoWeeksAgo,
+		},
+		{
+			Workspace:     "example.com",
+			AssetValue:    "old-portal.example.com",
+			URL:           "https://old-portal.example.com/",
+			Scheme:        "https",
+			Method:        "GET",
+			Path:          "/",
+			StatusCode:    404,
+			ContentType:   "text/html",
+			ContentLength: 178,
+			Title:         "Not Found",
+			HostIP:        "93.184.216.81",
+			DnsRecords:    []string{"93.184.216.81"},
+			TLS:           "TLS 1.2",
+			Technologies:  []string{"Apache"},
+			ResponseTime:  "123ms",
+			Labels:        "Old portal removed after migration",
+			Source:        "httpx",
+			LastSeenAt:    oneWeekAgo,  // Last seen a week ago
+			CreatedAt:     oneMonthAgo,
+			UpdatedAt:     oneWeekAgo,
+		},
+		{
+			Workspace:     "example.com",
+			AssetValue:    "test-env.example.com",
+			URL:           "http://test-env.example.com/",
+			Scheme:        "http",
+			Method:        "GET",
+			Path:          "/",
+			StatusCode:    000,
+			ContentType:   "",
+			ContentLength: 0,
+			Title:         "",
+			HostIP:        "10.0.0.200",
+			DnsRecords:    []string{"10.0.0.200"},
+			Technologies:  []string{},
+			ResponseTime:  "timeout",
+			Labels:        "Test environment taken offline",
+			Source:        "httpx",
+			LastSeenAt:    fiveDaysAgo,  // Last seen 5 days ago - offline
+			CreatedAt:     twoWeeksAgo,
+			UpdatedAt:     fiveDaysAgo,
+		},
+
+		// --- HISTORICAL ASSETS (created long ago, various states) ---
+		{
+			Workspace:     "example.com",
+			AssetValue:    "archive.example.com",
+			URL:           "https://archive.example.com/",
+			Scheme:        "https",
+			Method:        "GET",
+			Path:          "/",
+			StatusCode:    200,
+			ContentType:   "text/html",
+			ContentLength: 89012,
+			Title:         "Example Archive - Historical Content",
+			Words:         4567,
+			Lines:         1234,
+			HostIP:        "93.184.216.85",
+			DnsRecords:    []string{"93.184.216.85"},
+			TLS:           "TLS 1.2",
+			Technologies:  []string{"Static HTML", "CloudFlare"},
+			ResponseTime:  "45ms",
+			Labels:        "Stable archive - rarely changes",
+			Source:        "httpx",
+			LastSeenAt:    threeDaysAgo,  // Still accessible but rarely scanned
+			CreatedAt:     oneMonthAgo,
+			UpdatedAt:     oneMonthAgo,   // Never updated since creation
 		},
 	}
 
@@ -1121,6 +1631,75 @@ func SeedDatabase(ctx context.Context) error {
 			Data:      `{"schedule_id":"sched-daily-recon","trigger_type":"cron","cron":"0 2 * * *"}`,
 			Processed: true,
 			CreatedAt: thirtyMinsAgo,
+		},
+		// Batch job events for scan4ID (secondary.com)
+		{
+			Topic:        TopicRunStarted,
+			EventID:      uuid.New().String(),
+			Name:         "subdomain-enum started (batch job)",
+			Source:       "executor",
+			DataType:     "scan",
+			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"secondary.com","job_id":"%s"}`, scan4ID, job1ID),
+			Workspace:    "secondary.com",
+			RunID:        scan4ID,
+			WorkflowName: "subdomain-enum",
+			Processed:    true,
+			ProcessedAt:  &twoHoursAgo,
+			CreatedAt:    twoHoursAgo,
+		},
+		{
+			Topic:        TopicRunCompleted,
+			EventID:      uuid.New().String(),
+			Name:         "subdomain-enum completed (batch job)",
+			Source:       "executor",
+			DataType:     "scan",
+			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"secondary.com","job_id":"%s","duration_ms":3200000}`, scan4ID, job1ID),
+			Workspace:    "secondary.com",
+			RunID:        scan4ID,
+			WorkflowName: "subdomain-enum",
+			Processed:    true,
+			ProcessedAt:  &oneHourAgo,
+			CreatedAt:    oneHourAgo,
+		},
+		{
+			Topic:        TopicAssetDiscovered,
+			EventID:      uuid.New().String(),
+			Name:         "New assets discovered",
+			Source:       "httpx-step",
+			DataType:     "asset",
+			Data:         `{"count":52,"workspace":"secondary.com"}`,
+			Workspace:    "secondary.com",
+			RunID:        scan4ID,
+			WorkflowName: "subdomain-enum",
+			Processed:    true,
+			ProcessedAt:  &oneHourAgo,
+			CreatedAt:    oneHourAgo,
+		},
+		// Batch job events for scan5ID (tertiary.io)
+		{
+			Topic:        TopicRunStarted,
+			EventID:      uuid.New().String(),
+			Name:         "subdomain-enum started (batch job)",
+			Source:       "executor",
+			DataType:     "scan",
+			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"tertiary.io","job_id":"%s"}`, scan5ID, job1ID),
+			Workspace:    "tertiary.io",
+			RunID:        scan5ID,
+			WorkflowName: "subdomain-enum",
+			Processed:    true,
+			ProcessedAt:  &thirtyMinsAgo,
+			CreatedAt:    thirtyMinsAgo,
+		},
+		// Batch job started event
+		{
+			Topic:     "job.started",
+			EventID:   uuid.New().String(),
+			Name:      "Batch job started",
+			Source:    "executor",
+			DataType:  "job",
+			Data:      fmt.Sprintf(`{"job_id":"%s","targets":["example.com","secondary.com","tertiary.io"],"total_targets":3}`, job1ID),
+			Processed: true,
+			CreatedAt: twoHoursAgo,
 		},
 	}
 
@@ -1339,6 +1918,10 @@ func SeedDatabase(ctx context.Context) error {
 			TotalAssets:         78,
 			TotalSubdomains:     112,
 			TotalURLs:           245,
+			TotalIPs:            45,
+			TotalLinks:          1892,
+			TotalContent:        156,
+			TotalArchive:        23,
 			TotalVulns:          15,
 			VulnCritical:        2,
 			VulnHigh:            5,
@@ -1363,6 +1946,10 @@ func SeedDatabase(ctx context.Context) error {
 			TotalAssets:         23,
 			TotalSubdomains:     5,
 			TotalURLs:           45,
+			TotalIPs:            8,
+			TotalLinks:          234,
+			TotalContent:        12,
+			TotalArchive:        5,
 			TotalVulns:          3,
 			VulnCritical:        0,
 			VulnHigh:            1,
@@ -1387,6 +1974,10 @@ func SeedDatabase(ctx context.Context) error {
 			TotalAssets:         15,
 			TotalSubdomains:     8,
 			TotalURLs:           30,
+			TotalIPs:            4,
+			TotalLinks:          89,
+			TotalContent:        8,
+			TotalArchive:        2,
 			TotalVulns:          0,
 			VulnCritical:        0,
 			VulnHigh:            0,
@@ -1403,6 +1994,63 @@ func SeedDatabase(ctx context.Context) error {
 			StateWorkflowFolder: "/home/osmedeus/workspaces-osmedeus/staging.test.local/run-modules",
 			CreatedAt:           now.Add(-7 * 24 * time.Hour),
 			UpdatedAt:           twoHoursAgo,
+		},
+		// New workspaces for batch job demonstration
+		{
+			Name:                "secondary.com",
+			LocalPath:           "/home/osmedeus/workspaces-osmedeus/secondary.com",
+			DataSource:          "local",
+			TotalAssets:         52,
+			TotalSubdomains:     75,
+			TotalURLs:           189,
+			TotalIPs:            28,
+			TotalLinks:          1245,
+			TotalContent:        89,
+			TotalArchive:        12,
+			TotalVulns:          8,
+			VulnCritical:        1,
+			VulnHigh:            3,
+			VulnMedium:          2,
+			VulnLow:             2,
+			VulnPotential:       0,
+			RiskScore:           6.2,
+			Tags:                []string{"production", "batch-job"},
+			LastRun:             &oneHourAgo,
+			RunWorkflow:         "subdomain-enum",
+			StateExecutionLog:   "/home/osmedeus/workspaces-osmedeus/secondary.com/run-execution.log",
+			StateCompletedFile:  "/home/osmedeus/workspaces-osmedeus/secondary.com/run-completed.json",
+			StateWorkflowFile:   "/home/osmedeus/workspaces-osmedeus/secondary.com/run-workflow.yaml",
+			StateWorkflowFolder: "/home/osmedeus/workspaces-osmedeus/secondary.com/run-modules",
+			CreatedAt:           now.Add(-10 * 24 * time.Hour),
+			UpdatedAt:           oneHourAgo,
+		},
+		{
+			Name:                "tertiary.io",
+			LocalPath:           "/home/osmedeus/workspaces-osmedeus/tertiary.io",
+			DataSource:          "local",
+			TotalAssets:         0,
+			TotalSubdomains:     42,
+			TotalURLs:           0,
+			TotalIPs:            0,
+			TotalLinks:          0,
+			TotalContent:        0,
+			TotalArchive:        0,
+			TotalVulns:          0,
+			VulnCritical:        0,
+			VulnHigh:            0,
+			VulnMedium:          0,
+			VulnLow:             0,
+			VulnPotential:       0,
+			RiskScore:           0,
+			Tags:                []string{"new", "batch-job"},
+			LastRun:             &thirtyMinsAgo,
+			RunWorkflow:         "subdomain-enum",
+			StateExecutionLog:   "/home/osmedeus/workspaces-osmedeus/tertiary.io/run-execution.log",
+			StateCompletedFile:  "/home/osmedeus/workspaces-osmedeus/tertiary.io/run-completed.json",
+			StateWorkflowFile:   "/home/osmedeus/workspaces-osmedeus/tertiary.io/run-workflow.yaml",
+			StateWorkflowFolder: "/home/osmedeus/workspaces-osmedeus/tertiary.io/run-modules",
+			CreatedAt:           now.Add(-1 * 24 * time.Hour),
+			UpdatedAt:           now,
 		},
 	}
 
@@ -1428,6 +2076,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "POST /login HTTP/1.1\nHost: api.example.com\nContent-Type: application/x-www-form-urlencoded\n\nusername=admin'--&password=x",
 			DetailHTTPResponse: "HTTP/1.1 200 OK\nContent-Type: application/json\n\n{\"status\":\"success\",\"token\":\"eyJ...\"}",
 			RawVulnJSON:        `{"template":"sqli-auth-bypass","severity":"critical","host":"api.example.com"}`,
+			LastSeenAt:         oneHourAgo,
 			CreatedAt:          oneHourAgo,
 			UpdatedAt:          oneHourAgo,
 		},
@@ -1445,6 +2094,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "GET /search?q=<script>alert(1)</script> HTTP/1.1\nHost: blog.example.com",
 			DetailHTTPResponse: "HTTP/1.1 200 OK\nContent-Type: text/html\n\n<h1>Search results for: <script>alert(1)</script></h1>",
 			RawVulnJSON:        `{"template":"xss-reflected","severity":"high","host":"blog.example.com"}`,
+			LastSeenAt:         oneHourAgo,
 			CreatedAt:          oneHourAgo,
 			UpdatedAt:          oneHourAgo,
 		},
@@ -1462,6 +2112,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "GET /.env HTTP/1.1\nHost: dev.example.com",
 			DetailHTTPResponse: "HTTP/1.1 200 OK\nContent-Type: text/plain\n\nDB_PASSWORD=secret123\nAPI_KEY=sk-live-xxx",
 			RawVulnJSON:        `{"template":"exposed-env","severity":"high","host":"dev.example.com"}`,
+			LastSeenAt:         oneHourAgo,
 			CreatedAt:          oneHourAgo,
 			UpdatedAt:          oneHourAgo,
 		},
@@ -1479,6 +2130,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "HEAD / HTTP/1.1\nHost: shop.example.com",
 			DetailHTTPResponse: "HTTP/1.1 200 OK\nContent-Type: text/html\n(no X-Frame-Options header)",
 			RawVulnJSON:        `{"template":"missing-x-frame-options","severity":"medium","host":"shop.example.com"}`,
+			LastSeenAt:         oneDayAgo,
 			CreatedAt:          oneHourAgo,
 			UpdatedAt:          oneHourAgo,
 		},
@@ -1496,6 +2148,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "",
 			DetailHTTPResponse: "",
 			RawVulnJSON:        `{"template":"tls-version-check","severity":"low","host":"legacy.example.com","tls_versions":["TLSv1.0","TLSv1.2"]}`,
+			LastSeenAt:         threeDaysAgo,
 			CreatedAt:          oneHourAgo,
 			UpdatedAt:          oneHourAgo,
 		},
@@ -1514,6 +2167,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "POST /webhook HTTP/1.1\nHost: api.example.com\nContent-Type: application/json\n\n{\"url\":\"http://169.254.169.254/latest/meta-data/\"}",
 			DetailHTTPResponse: "HTTP/1.1 200 OK\nContent-Type: application/json\n\n{\"data\":\"ami-id\\ninstance-id\\nlocal-hostname...\"}",
 			RawVulnJSON:        `{"template":"ssrf-cloud-metadata","severity":"critical","host":"api.example.com","internal_access":true}`,
+			LastSeenAt:         oneHourAgo,
 			CreatedAt:          oneHourAgo,
 			UpdatedAt:          oneHourAgo,
 		},
@@ -1531,6 +2185,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "GET /download?file=../../../etc/passwd HTTP/1.1\nHost: files.example.com",
 			DetailHTTPResponse: "HTTP/1.1 200 OK\nContent-Type: text/plain\n\nroot:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:...",
 			RawVulnJSON:        `{"template":"path-traversal","severity":"high","host":"files.example.com","file_accessed":"/etc/passwd"}`,
+			LastSeenAt:         oneHourAgo,
 			CreatedAt:          oneHourAgo,
 			UpdatedAt:          oneHourAgo,
 		},
@@ -1548,6 +2203,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "GET /dashboard HTTP/1.1\nHost: app.example.com\nCookie: session=rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcA...",
 			DetailHTTPResponse: "HTTP/1.1 500 Internal Server Error\n\nException in thread \"main\" java.lang.Runtime...",
 			RawVulnJSON:        `{"template":"java-deserialization","severity":"critical","host":"app.example.com","gadget":"CommonsCollections5"}`,
+			LastSeenAt:         oneHourAgo,
 			CreatedAt:          oneHourAgo,
 			UpdatedAt:          oneHourAgo,
 		},
@@ -1565,6 +2221,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "GET /user HTTP/1.1\nHost: api.example.com\nOrigin: https://evil.com",
 			DetailHTTPResponse: "HTTP/1.1 200 OK\nAccess-Control-Allow-Origin: https://evil.com\nAccess-Control-Allow-Credentials: true",
 			RawVulnJSON:        `{"template":"cors-misconfiguration","severity":"medium","host":"api.example.com","reflected_origin":"evil.com"}`,
+			LastSeenAt:         oneDayAgo,
 			CreatedAt:          oneHourAgo,
 			UpdatedAt:          oneHourAgo,
 		},
@@ -1582,6 +2239,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "GET /oauth/callback?redirect_uri=https://evil.com/steal HTTP/1.1\nHost: auth.example.com",
 			DetailHTTPResponse: "HTTP/1.1 302 Found\nLocation: https://evil.com/steal?code=abc123",
 			RawVulnJSON:        `{"template":"open-redirect","severity":"medium","host":"auth.example.com","redirect_to":"evil.com"}`,
+			LastSeenAt:         oneDayAgo,
 			CreatedAt:          oneHourAgo,
 			UpdatedAt:          oneHourAgo,
 		},
@@ -1599,6 +2257,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "POST /graphql HTTP/1.1\nHost: api.example.com\nContent-Type: application/json\n\n{\"query\":\"{__schema{types{name}}}\"}",
 			DetailHTTPResponse: "HTTP/1.1 200 OK\nContent-Type: application/json\n\n{\"data\":{\"__schema\":{\"types\":[{\"name\":\"User\"},{\"name\":\"AdminSettings\"}...]}}}",
 			RawVulnJSON:        `{"template":"graphql-introspection","severity":"low","host":"api.example.com","types_exposed":45}`,
+			LastSeenAt:         threeDaysAgo,
 			CreatedAt:          oneHourAgo,
 			UpdatedAt:          oneHourAgo,
 		},
@@ -1616,14 +2275,213 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "GET /api/admin HTTP/1.1\nHost: api.example.com\nAuthorization: Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJyb2xlIjoiYWRtaW4ifQ.",
 			DetailHTTPResponse: "HTTP/1.1 200 OK\nContent-Type: application/json\n\n{\"admin_data\":\"sensitive information\"}",
 			RawVulnJSON:        `{"template":"jwt-none-algorithm","severity":"critical","host":"api.example.com","algorithm":"none"}`,
+			LastSeenAt:         twoHoursAgo,
 			CreatedAt:          twoHoursAgo,
 			UpdatedAt:          twoHoursAgo,
+		},
+		// ============================================================
+		// DIFF DEMONSTRATION VULNERABILITIES
+		// These vulnerabilities demonstrate the diff functionality
+		// ============================================================
+
+		// --- NEWLY DISCOVERED VULNERABILITIES (found recently) ---
+		{
+			Workspace:          "example.com",
+			VulnInfo:           "Newly discovered XSS in v3 portal",
+			VulnTitle:          "Stored XSS - v3 Comment Section",
+			VulnDesc:           "The new v3 portal comment section stores user input without sanitization, leading to persistent XSS.",
+			VulnPOC:            "curl -X POST 'https://v3.example.com/api/comments' -d '{\"body\":\"<script>alert(document.cookie)</script>\"}'",
+			Severity:           "high",
+			Confidence:         "certain",
+			AssetType:          "endpoint",
+			AssetValue:         "v3.example.com",
+			Tags:               []string{"xss", "stored", "new-finding"},
+			DetailHTTPRequest:  "POST /api/comments HTTP/1.1\nHost: v3.example.com\nContent-Type: application/json\n\n{\"body\":\"<script>alert(1)</script>\"}",
+			DetailHTTPResponse: "HTTP/1.1 201 Created\nContent-Type: application/json\n\n{\"id\":123,\"body\":\"<script>alert(1)</script>\"}",
+			RawVulnJSON:        `{"template":"stored-xss","severity":"high","host":"v3.example.com"}`,
+			LastSeenAt:         thirtyMinsAgo,
+			CreatedAt:          thirtyMinsAgo,  // Just discovered
+			UpdatedAt:          thirtyMinsAgo,
+		},
+		{
+			Workspace:          "example.com",
+			VulnInfo:           "New API endpoint lacks rate limiting",
+			VulnTitle:          "Missing Rate Limiting - new-api",
+			VulnDesc:           "The newly deployed API endpoint does not implement rate limiting, enabling brute force attacks.",
+			VulnPOC:            "for i in {1..1000}; do curl 'https://new-api.example.com/login' -d 'user=admin&pass=test$i'; done",
+			Severity:           "medium",
+			Confidence:         "firm",
+			AssetType:          "endpoint",
+			AssetValue:         "new-api.example.com",
+			Tags:               []string{"rate-limiting", "brute-force", "new-finding"},
+			DetailHTTPRequest:  "POST /login HTTP/1.1\nHost: new-api.example.com",
+			DetailHTTPResponse: "HTTP/1.1 401 Unauthorized (no rate limit headers)",
+			RawVulnJSON:        `{"template":"missing-rate-limit","severity":"medium","host":"new-api.example.com"}`,
+			LastSeenAt:         oneHourAgo,
+			CreatedAt:          oneHourAgo,  // Just discovered
+			UpdatedAt:          oneHourAgo,
+		},
+
+		// --- UPDATED/CHANGED VULNERABILITIES (severity or status changed) ---
+		{
+			Workspace:          "example.com",
+			VulnInfo:           "Previously low-severity issue escalated",
+			VulnTitle:          "Information Disclosure - Upgraded to Medium",
+			VulnDesc:           "Previously considered low risk, but new exploit chain discovered that increases impact. Debug endpoints expose internal configuration.",
+			VulnPOC:            "curl 'https://dashboard.example.com/debug/config'",
+			Severity:           "medium",  // Upgraded from low
+			Confidence:         "certain",
+			AssetType:          "endpoint",
+			AssetValue:         "dashboard.example.com",
+			Tags:               []string{"info-disclosure", "debug", "upgraded"},
+			DetailHTTPRequest:  "GET /debug/config HTTP/1.1\nHost: dashboard.example.com",
+			DetailHTTPResponse: "HTTP/1.1 200 OK\n\n{\"db_host\":\"internal-db.local\",\"api_keys\":{\"stripe\":\"sk_live_...\"}}",
+			RawVulnJSON:        `{"template":"debug-endpoint","severity":"medium","host":"dashboard.example.com"}`,
+			LastSeenAt:         oneHourAgo,
+			CreatedAt:          twoWeeksAgo,  // Found 2 weeks ago
+			UpdatedAt:          oneHourAgo,   // Severity upgraded today
+		},
+		{
+			Workspace:          "example.com",
+			VulnInfo:           "Auth bypass partially remediated",
+			VulnTitle:          "Partial Fix - Auth Bypass Still Exploitable",
+			VulnDesc:           "The authentication bypass was partially patched but alternative vectors remain. Updated POC after vendor patch.",
+			VulnPOC:            "curl -H 'X-Original-URL: /admin' 'https://portal.example.com/'",
+			Severity:           "high",
+			Confidence:         "firm",
+			AssetType:          "endpoint",
+			AssetValue:         "portal.example.com",
+			Tags:               []string{"auth-bypass", "partial-fix", "retest"},
+			DetailHTTPRequest:  "GET / HTTP/1.1\nHost: portal.example.com\nX-Original-URL: /admin",
+			DetailHTTPResponse: "HTTP/1.1 200 OK\n\n<h1>Admin Panel</h1>",
+			RawVulnJSON:        `{"template":"auth-bypass-variant","severity":"high","host":"portal.example.com"}`,
+			LastSeenAt:         twoHoursAgo,
+			CreatedAt:          oneWeekAgo,   // Original finding
+			UpdatedAt:          twoHoursAgo,  // Updated after retest
+		},
+
+		// --- RESOLVED/STALE VULNERABILITIES (not seen in recent scans) ---
+		{
+			Workspace:          "example.com",
+			VulnInfo:           "Vulnerability was fixed by vendor",
+			VulnTitle:          "SQLi Fixed - No Longer Reproducible",
+			VulnDesc:           "The SQL injection vulnerability in the search function has been patched. Last verified fix two weeks ago.",
+			VulnPOC:            "curl 'https://old-portal.example.com/search?q=1%27+OR+1=1--'",
+			Severity:           "critical",
+			Confidence:         "historical",
+			AssetType:          "endpoint",
+			AssetValue:         "old-portal.example.com",
+			Tags:               []string{"sqli", "fixed", "historical"},
+			DetailHTTPRequest:  "GET /search?q=1'+OR+1=1-- HTTP/1.1\nHost: old-portal.example.com",
+			DetailHTTPResponse: "HTTP/1.1 400 Bad Request (now blocked)",
+			RawVulnJSON:        `{"template":"sqli-fixed","severity":"critical","host":"old-portal.example.com","status":"fixed"}`,
+			LastSeenAt:         twoWeeksAgo,  // Not seen since fix verified
+			CreatedAt:          oneMonthAgo,
+			UpdatedAt:          twoWeeksAgo,
+		},
+		{
+			Workspace:          "example.com",
+			VulnInfo:           "Asset decommissioned - vuln no longer applicable",
+			VulnTitle:          "Deprecated API - IDOR No Longer Relevant",
+			VulnDesc:           "The IDOR vulnerability is no longer relevant as the deprecated-api service has been fully decommissioned.",
+			VulnPOC:            "curl 'https://deprecated-api.example.com/users/1'",
+			Severity:           "high",
+			Confidence:         "historical",
+			AssetType:          "endpoint",
+			AssetValue:         "deprecated-api.example.com",
+			Tags:               []string{"idor", "decommissioned", "historical"},
+			DetailHTTPRequest:  "GET /users/1 HTTP/1.1\nHost: deprecated-api.example.com",
+			DetailHTTPResponse: "HTTP/1.1 503 Service Unavailable",
+			RawVulnJSON:        `{"template":"idor-historical","severity":"high","host":"deprecated-api.example.com","status":"decommissioned"}`,
+			LastSeenAt:         twoWeeksAgo,  // Service taken down
+			CreatedAt:          oneMonthAgo,
+			UpdatedAt:          twoWeeksAgo,
 		},
 	}
 
 	for _, vuln := range vulnerabilities {
 		if _, err := db.NewInsert().Model(&vuln).Exec(ctx); err != nil {
 			return fmt.Errorf("failed to insert vulnerability: %w", err)
+		}
+	}
+
+	// Seed AssetDiffSnapshots - showing changes detected over time
+	assetDiffs := []AssetDiffSnapshot{
+		{
+			WorkspaceName: "example.com",
+			FromTime:      oneWeekAgo,
+			ToTime:        threeDaysAgo,
+			TotalAdded:    12,
+			TotalRemoved:  3,
+			TotalChanged:  5,
+			DiffData:      `{"added":[{"asset_value":"new-api.example.com","host_ip":"192.168.1.50"},{"asset_value":"staging.example.com","host_ip":"192.168.1.51"}],"removed":[{"asset_value":"old-portal.example.com"}],"changed":[{"asset_value":"api.example.com","changes":{"status_code":{"from":200,"to":301}}}]}`,
+			CreatedAt:     threeDaysAgo,
+		},
+		{
+			WorkspaceName: "example.com",
+			FromTime:      threeDaysAgo,
+			ToTime:        oneDayAgo,
+			TotalAdded:    5,
+			TotalRemoved:  1,
+			TotalChanged:  2,
+			DiffData:      `{"added":[{"asset_value":"cdn.example.com","host_ip":"192.168.1.60"}],"removed":[],"changed":[{"asset_value":"blog.example.com","changes":{"title":{"from":"Blog","to":"Example Blog"}}}]}`,
+			CreatedAt:     oneDayAgo,
+		},
+		{
+			WorkspaceName: "testsite.io",
+			FromTime:      twoWeeksAgo,
+			ToTime:        oneWeekAgo,
+			TotalAdded:    8,
+			TotalRemoved:  0,
+			TotalChanged:  3,
+			DiffData:      `{"added":[{"asset_value":"app.testsite.io","host_ip":"10.0.0.20"},{"asset_value":"docs.testsite.io","host_ip":"10.0.0.21"}],"removed":[],"changed":[]}`,
+			CreatedAt:     oneWeekAgo,
+		},
+	}
+
+	for _, diff := range assetDiffs {
+		if _, err := db.NewInsert().Model(&diff).Exec(ctx); err != nil {
+			return fmt.Errorf("failed to insert asset diff: %w", err)
+		}
+	}
+
+	// Seed VulnDiffSnapshots - showing vulnerability changes over time
+	vulnDiffs := []VulnDiffSnapshot{
+		{
+			WorkspaceName: "example.com",
+			FromTime:      oneWeekAgo,
+			ToTime:        threeDaysAgo,
+			TotalAdded:    4,
+			TotalRemoved:  2,
+			TotalChanged:  1,
+			DiffData:      `{"added":[{"vuln_title":"SQL Injection - Authentication Bypass","severity":"critical","asset_value":"api.example.com"},{"vuln_title":"Reflected XSS - Search Parameter","severity":"high","asset_value":"blog.example.com"}],"removed":[{"vuln_title":"Outdated jQuery Version","severity":"low"}],"changed":[{"vuln_title":"Missing X-Frame-Options Header","changes":{"confidence":{"from":"tentative","to":"firm"}}}]}`,
+			CreatedAt:     threeDaysAgo,
+		},
+		{
+			WorkspaceName: "example.com",
+			FromTime:      threeDaysAgo,
+			ToTime:        oneDayAgo,
+			TotalAdded:    2,
+			TotalRemoved:  1,
+			TotalChanged:  0,
+			DiffData:      `{"added":[{"vuln_title":"Information Disclosure - Config File","severity":"high","asset_value":"dev.example.com"}],"removed":[{"vuln_title":"TLS 1.0 Enabled","severity":"low","asset_value":"legacy.example.com"}],"changed":[]}`,
+			CreatedAt:     oneDayAgo,
+		},
+		{
+			WorkspaceName: "testsite.io",
+			FromTime:      twoWeeksAgo,
+			ToTime:        oneWeekAgo,
+			TotalAdded:    3,
+			TotalRemoved:  0,
+			TotalChanged:  0,
+			DiffData:      `{"added":[{"vuln_title":"Open Redirect","severity":"medium","asset_value":"auth.testsite.io"},{"vuln_title":"CORS Misconfiguration","severity":"medium","asset_value":"api.testsite.io"}],"removed":[],"changed":[]}`,
+			CreatedAt:     oneWeekAgo,
+		},
+	}
+
+	for _, diff := range vulnDiffs {
+		if _, err := db.NewInsert().Model(&diff).Exec(ctx); err != nil {
+			return fmt.Errorf("failed to insert vuln diff: %w", err)
 		}
 	}
 
@@ -1647,6 +2505,8 @@ func CleanDatabase(ctx context.Context) error {
 		(*Workspace)(nil),
 		(*Vulnerability)(nil),
 		(*WorkflowMeta)(nil),
+		(*AssetDiffSnapshot)(nil),
+		(*VulnDiffSnapshot)(nil),
 	}
 
 	for _, table := range tables {
@@ -1665,8 +2525,8 @@ func timePtr(t time.Time) *time.Time {
 
 // TableInfo holds information about a database table
 type TableInfo struct {
-	Name     string
-	RowCount int
+	Name     string `json:"name"`
+	RowCount int    `json:"row_count"`
 }
 
 // TableRecords holds paginated records from a table
@@ -1680,7 +2540,7 @@ type TableRecords struct {
 
 // ValidTableNames returns the list of valid table names
 func ValidTableNames() []string {
-	return []string{"runs", "step_results", "artifacts", "assets", "event_logs", "schedules", "workspaces", "vulnerabilities"}
+	return []string{"runs", "step_results", "artifacts", "assets", "event_logs", "schedules", "workspaces", "vulnerabilities", "asset_diffs", "vuln_diffs"}
 }
 
 // ListTables returns information about all database tables
@@ -1701,6 +2561,8 @@ func ListTables(ctx context.Context) ([]TableInfo, error) {
 		{"schedules", (*Schedule)(nil)},
 		{"workspaces", (*Workspace)(nil)},
 		{"vulnerabilities", (*Vulnerability)(nil)},
+		{"asset_diffs", (*AssetDiffSnapshot)(nil)},
+		{"vuln_diffs", (*VulnDiffSnapshot)(nil)},
 	}
 
 	var result []TableInfo
@@ -1721,31 +2583,35 @@ func ListTables(ctx context.Context) ([]TableInfo, error) {
 
 // tableSearchColumns defines which columns to search for each table
 var tableSearchColumns = map[string][]string{
-	"runs":            {"id", "run_id", "workflow_name", "target", "status", "error_message"},
+	"runs":            {"id", "run_id", "job_id", "workflow_name", "target", "status", "error_message"},
 	"step_results":    {"id", "run_id", "step_name", "step_type", "status", "command", "output", "error_message"},
 	"artifacts":       {"id", "run_id", "name", "path", "type", "description"},
 	"assets":          {"workspace", "asset_value", "url", "title", "host_ip", "source", "labels"},
 	"event_logs":      {"event_id", "topic", "name", "source", "workspace", "run_id", "workflow_name", "data"},
 	"schedules":       {"id", "name", "workflow_name", "trigger_name", "schedule"},
-	"workspaces":      {"name", "local_path", "run_workflow"},
-	"vulnerabilities": {"workspace", "vuln_title", "vuln_info", "severity", "asset_value", "asset_type"},
+	"workspaces":      {"name", "local_path", "data_source", "run_workflow"},
+	"vulnerabilities": {"workspace", "vuln_title", "vuln_info", "severity", "confidence", "asset_value", "asset_type"},
+	"asset_diffs":     {"workspace_name", "diff_data"},
+	"vuln_diffs":      {"workspace_name", "diff_data"},
 }
 
 // tableDisplayColumns defines which columns to display by default for each table (ordered)
 var tableDisplayColumns = map[string][]string{
-	"runs":            {"run_id", "workflow_name", "target", "status", "started_at", "completed_at"},
+	"runs":            {"run_id", "job_id", "workflow_name", "target", "status", "started_at", "completed_at"},
 	"step_results":    {"step_name", "step_type", "status", "duration_ms", "command"},
 	"artifacts":       {"name", "path", "type", "size_bytes", "line_count"},
-	"assets":          {"asset_value", "host_ip", "title", "status_code", "url"},
+	"assets":          {"asset_value", "host_ip", "title", "status_code", "last_seen_at", "url"},
 	"event_logs":      {"topic", "name", "source", "workspace", "created_at"},
 	"schedules":       {"name", "workflow_name", "trigger_type", "schedule", "is_enabled"},
-	"workspaces":      {"name", "total_assets", "total_vulns", "risk_score", "last_run"},
-	"vulnerabilities": {"vuln_title", "severity", "asset_value", "workspace", "created_at"},
+	"workspaces":      {"name", "data_source", "total_assets", "total_ips", "total_vulns", "risk_score", "last_run"},
+	"vulnerabilities": {"vuln_title", "severity", "confidence", "asset_value", "last_seen_at", "workspace"},
+	"asset_diffs":     {"workspace_name", "from_time", "to_time", "total_added", "total_removed", "total_changed", "created_at"},
+	"vuln_diffs":      {"workspace_name", "from_time", "to_time", "total_added", "total_removed", "total_changed", "created_at"},
 }
 
 // tableAllColumns defines ALL columns for each table (ordered, matching model structs)
 var tableAllColumns = map[string][]string{
-	"runs": {"id", "run_id", "workflow_name", "workflow_kind", "target", "params",
+	"runs": {"id", "run_id", "job_id", "workflow_name", "workflow_kind", "target", "params",
 		"status", "workspace_path", "started_at", "completed_at", "error_message",
 		"schedule_id", "trigger_type", "trigger_name", "total_steps",
 		"completed_steps", "created_at", "updated_at"},
@@ -1757,7 +2623,7 @@ var tableAllColumns = map[string][]string{
 	"assets": {"id", "workspace", "asset_value", "url", "input", "scheme", "method", "path",
 		"status_code", "content_type", "content_length", "title", "words",
 		"lines", "host_ip", "dns_records", "tls", "asset_type", "technologies",
-		"response_time", "labels", "source", "created_at", "updated_at"},
+		"response_time", "labels", "source", "last_seen_at", "created_at", "updated_at"},
 	"event_logs": {"id", "topic", "event_id", "name", "source", "data_type", "data",
 		"workspace", "run_id", "workflow_name", "processed", "processed_at",
 		"error", "created_at"},
@@ -1765,14 +2631,19 @@ var tableAllColumns = map[string][]string{
 		"trigger_type", "schedule", "event_topic", "watch_path",
 		"input_config", "is_enabled", "last_run", "next_run", "run_count",
 		"created_at", "updated_at"},
-	"workspaces": {"id", "name", "local_path", "total_assets", "total_subdomains",
-		"total_urls", "total_vulns", "vuln_critical", "vuln_high",
-		"vuln_medium", "vuln_low", "vuln_potential", "risk_score", "tags",
-		"last_run", "run_workflow", "created_at", "updated_at"},
-	"vulnerabilities": {"id", "workspace", "vuln_info", "vuln_title", "vuln_desc",
-		"vuln_poc", "severity", "asset_type", "asset_value", "tags",
-		"detail_http_request", "detail_http_response", "raw_vuln_json",
+	"workspaces": {"id", "name", "local_path", "data_source", "total_assets", "total_subdomains",
+		"total_urls", "total_ips", "total_links", "total_content", "total_archive",
+		"total_vulns", "vuln_critical", "vuln_high", "vuln_medium", "vuln_low",
+		"vuln_potential", "risk_score", "tags", "last_run", "run_workflow",
 		"created_at", "updated_at"},
+	"vulnerabilities": {"id", "workspace", "vuln_info", "vuln_title", "vuln_desc",
+		"vuln_poc", "severity", "confidence", "asset_type", "asset_value", "tags",
+		"detail_http_request", "detail_http_response", "raw_vuln_json",
+		"last_seen_at", "created_at", "updated_at"},
+	"asset_diffs": {"id", "workspace_name", "from_time", "to_time", "total_added",
+		"total_removed", "total_changed", "diff_data", "created_at"},
+	"vuln_diffs": {"id", "workspace_name", "from_time", "to_time", "total_added",
+		"total_removed", "total_changed", "diff_data", "created_at"},
 }
 
 // GetAllTableColumns returns ALL columns for a table (for column selection UI)
@@ -1940,6 +2811,36 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 
 	case "vulnerabilities":
 		var records []Vulnerability
+		countQuery := applyFilters(db.NewSelect().Model(&records))
+		count, err := countQuery.Count(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to count records: %w", err)
+		}
+		result.TotalCount = count
+		fetchQuery := applyFilters(db.NewSelect().Model(&records))
+		err = fetchQuery.Order("created_at DESC").Offset(offset).Limit(limit).Scan(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch records: %w", err)
+		}
+		result.Records = records
+
+	case "asset_diffs":
+		var records []AssetDiffSnapshot
+		countQuery := applyFilters(db.NewSelect().Model(&records))
+		count, err := countQuery.Count(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to count records: %w", err)
+		}
+		result.TotalCount = count
+		fetchQuery := applyFilters(db.NewSelect().Model(&records))
+		err = fetchQuery.Order("created_at DESC").Offset(offset).Limit(limit).Scan(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch records: %w", err)
+		}
+		result.Records = records
+
+	case "vuln_diffs":
+		var records []VulnDiffSnapshot
 		countQuery := applyFilters(db.NewSelect().Model(&records))
 		count, err := countQuery.Count(ctx)
 		if err != nil {
@@ -2839,17 +3740,23 @@ func GetRunsByJobID(ctx context.Context, jobID string) ([]*Run, error) {
 	return runs, nil
 }
 
-// CreateRun creates a new run record in the database
+// CreateRun creates a new run record in the database.
+// In distributed worker mode, this sends the run to the master via Redis instead.
 func CreateRun(ctx context.Context, run *Run) error {
-	if db == nil {
-		return fmt.Errorf("database not connected")
-	}
-
 	now := time.Now()
 	run.CreatedAt = now
 	run.UpdatedAt = now
 	if run.Status == "" {
 		run.Status = "pending"
+	}
+
+	// In distributed worker mode, send to Redis instead of local DB
+	if trySendRunToRedis(ctx, run) {
+		return nil
+	}
+
+	if db == nil {
+		return fmt.Errorf("database not connected")
 	}
 
 	_, err := db.NewInsert().Model(run).Exec(ctx)

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -232,6 +233,14 @@ func isNonRetryableError(err error) bool {
 // GoGetterInstallOutput stores the last go-getter install output for display
 var GoGetterInstallOutput string
 
+// redactSensitiveParams redacts sensitive query parameters from URLs for logging
+// Currently redacts: sshkey (base64-encoded SSH private keys)
+func redactSensitiveParams(url string) string {
+	// Redact sshkey parameter (matches sshkey=<base64-content> until next & or end of string)
+	sshkeyPattern := regexp.MustCompile(`([?&])sshkey=[^&]*`)
+	return sshkeyPattern.ReplaceAllString(url, "${1}sshkey=[REDACTED]")
+}
+
 // GetViaGoGetter downloads/clones using go-getter without requiring Go toolchain
 // Supports HashiCorp go-getter URL formats:
 //   - github.com/user/repo.git?ref=main&depth=1  (git clone with branch and depth)
@@ -270,11 +279,13 @@ func GetViaGoGetter(src, dest string) error {
 	defer cancel()
 
 	logger.Get().Info("Downloading via go-getter",
-		zap.String("src", src),
+		zap.String("src", redactSensitiveParams(src)),
 		zap.String("dest", dest))
 
 	if _, err := gc.Get(ctx, dest, src); err != nil {
-		return fmt.Errorf("failed to download: %w", err)
+		// Redact sensitive params from error message
+		redactedErr := redactSensitiveParams(err.Error())
+		return fmt.Errorf("failed to download: %s", redactedErr)
 	}
 
 	logger.Get().Info("Download completed successfully",

@@ -1,0 +1,19 @@
+name: test-multi-type-variable
+kind: module
+description: Test comma-separated types in dependencies.variables
+tags: test,dependencies,multi-type
+
+params:
+  - name: target
+    required: true
+
+dependencies:
+  variables:
+    - name: Target
+      type: domain,url
+      required: true
+
+steps:
+  - name: echo-ok
+    type: bash
+    command: echo "OK for {{target}}"

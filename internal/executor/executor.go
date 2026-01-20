@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,6 +30,18 @@ import (
 	"go.uber.org/zap"
 )
 
+// TargetTypeMismatchError represents a target type validation error.
+// This error is used to provide a single, nicely formatted error message
+// when target type validation fails.
+type TargetTypeMismatchError struct {
+	Supplied     string
+	ExpectedType string
+}
+
+func (e *TargetTypeMismatchError) Error() string {
+	return fmt.Sprintf("target type mismatch: supplied %s, expected type %s", e.Supplied, e.ExpectedType)
+}
+
 // StepCompletedCallback is called after each step completes
 type StepCompletedCallback func(ctx context.Context, runID string)
 
@@ -46,10 +60,13 @@ type Executor struct {
 	serverMode            bool // true when invoked via server API, enables file logging
 	progressBar           *terminal.ProgressBar
 	disableWorkflowState  bool                  // disable writing workflow YAML to output directory
+	skipValidation        bool                  // skip target type validation from dependencies.variables
 	dbRunID               string                // database run ID for tracking progress
 	onStepCompleted       StepCompletedCallback // callback after each step completes
 	loader                *parser.Loader        // workflow loader for loading nested modules in flows
 	consoleCapture        *console.Capture      // console output capture for run-console.log
+	stepResultBuffer      *database.StepResultBuffer  // buffer for batch step result insertion
+	progressTracker       *database.ProgressTracker   // tracker for batch progress updates
 }
 
 // NewExecutor creates a new workflow executor
@@ -101,6 +118,11 @@ func (e *Executor) SetDisableWorkflowState(disable bool) {
 	e.disableWorkflowState = disable
 }
 
+// SetSkipValidation enables or disables target type validation
+func (e *Executor) SetSkipValidation(skip bool) {
+	e.skipValidation = skip
+}
+
 // SetProgressBar sets the progress bar for execution display
 func (e *Executor) SetProgressBar(pb *terminal.ProgressBar) {
 	e.progressBar = pb
@@ -109,6 +131,9 @@ func (e *Executor) SetProgressBar(pb *terminal.ProgressBar) {
 // SetDBRunID sets the database run ID for progress tracking
 func (e *Executor) SetDBRunID(runID string) {
 	e.dbRunID = runID
+	// Initialize batch buffers for database operations
+	e.stepResultBuffer = database.NewStepResultBuffer(runID, nil)
+	e.progressTracker = database.NewProgressTracker(runID, nil)
 }
 
 // SetOnStepCompleted sets the callback for step completion
@@ -242,6 +267,9 @@ func (e *Executor) injectBuiltinVariables(cfg *config.Config, params map[string]
 	execCtx.SetVariable("StateWorkflowFile", filepath.Join(output, "run-workflow.yaml"))
 	execCtx.SetVariable("StateWorkflowFolder", filepath.Join(output, "run-modules"))
 
+	// Module/Workflow name variable
+	execCtx.SetVariable("ModuleName", execCtx.WorkflowName)
+
 	// Auto-generated variables
 	execCtx.SetVariable("TaskDate", now.Format("2006-01-02"))
 	execCtx.SetVariable("TaskID", execCtx.RunID)
@@ -249,6 +277,33 @@ func (e *Executor) injectBuiltinVariables(cfg *config.Config, params map[string]
 	execCtx.SetVariable("CurrentTime", now.Format("2006-01-02T15:04:05"))
 	execCtx.SetVariable("Today", now.Format("2006-01-02"))
 	execCtx.SetVariable("RandomString", generateRandomString(8))
+
+	// Chunk-related variables (when running in chunk mode)
+	if v, ok := params["chunk_index"]; ok && v != "" {
+		if chunkIndex, err := strconv.Atoi(v); err == nil {
+			execCtx.SetVariable("ChunkIndex", chunkIndex)
+		}
+	}
+	if v, ok := params["chunk_size"]; ok && v != "" {
+		if chunkSize, err := strconv.Atoi(v); err == nil {
+			execCtx.SetVariable("ChunkSize", chunkSize)
+		}
+	}
+	if v, ok := params["total_chunks"]; ok && v != "" {
+		if totalChunks, err := strconv.Atoi(v); err == nil {
+			execCtx.SetVariable("TotalChunks", totalChunks)
+		}
+	}
+	if v, ok := params["chunk_start"]; ok && v != "" {
+		if chunkStart, err := strconv.Atoi(v); err == nil {
+			execCtx.SetVariable("ChunkStart", chunkStart)
+		}
+	}
+	if v, ok := params["chunk_end"]; ok && v != "" {
+		if chunkEnd, err := strconv.Atoi(v); err == nil {
+			execCtx.SetVariable("ChunkEnd", chunkEnd)
+		}
+	}
 }
 
 func (e *Executor) debugLogTargetVariables(execCtx *core.ExecutionContext) {
@@ -478,31 +533,41 @@ func (e *Executor) checkDependencies(deps *core.Dependencies, execCtx *core.Exec
 		return nil
 	}
 
-	// Check target type dependencies
-	if len(deps.TargetTypes) > 0 {
-		matched := false
-		var unknown []string
-		for _, t := range deps.TargetTypes {
-			ok, err := core.MatchesTargetType(execCtx.Target, t)
-			if err != nil {
-				unknown = append(unknown, string(t))
-				continue
-			}
-			if ok {
-				matched = true
-				break
-			}
-		}
-		if len(unknown) > 0 {
-			return fmt.Errorf("unknown target_types: %s", strings.Join(unknown, ", "))
-		}
-		if !matched {
-			required := make([]string, 0, len(deps.TargetTypes))
+	// Skip target type validation if flag is set (still check commands and function conditions)
+	if !e.skipValidation {
+		// Check target type dependencies (target_types field)
+		if len(deps.TargetTypes) > 0 {
+			matched := false
+			var unknown []string
 			for _, t := range deps.TargetTypes {
-				required = append(required, string(t))
+				ok, err := core.MatchesTargetType(execCtx.Target, t)
+				if err != nil {
+					unknown = append(unknown, string(t))
+					continue
+				}
+				if ok {
+					matched = true
+					break
+				}
 			}
-			return fmt.Errorf("target '%s' does not match any of required types: %s", execCtx.Target, strings.Join(required, ", "))
+			if len(unknown) > 0 {
+				return fmt.Errorf("unknown target_types: %s", strings.Join(unknown, ", "))
+			}
+			if !matched {
+				required := make([]string, 0, len(deps.TargetTypes))
+				for _, t := range deps.TargetTypes {
+					required = append(required, string(t))
+				}
+				return fmt.Errorf("target '%s' does not match any of required types: %s", execCtx.Target, strings.Join(required, ", "))
+			}
 		}
+
+		// Check dependencies.variables for Target type validation
+		if err := e.validateTargetVariable(deps, execCtx); err != nil {
+			return err
+		}
+	} else {
+		e.logger.Debug("Skipping target type validation (--skip-validation)")
 	}
 
 	// Check command dependencies
@@ -532,6 +597,50 @@ func (e *Executor) checkDependencies(deps *core.Dependencies, execCtx *core.Exec
 				return fmt.Errorf("function condition failed: %s", condition)
 			}
 		}
+	}
+
+	return nil
+}
+
+// validateTargetVariable checks if the target matches required type from dependencies.variables.
+// Supports comma-separated types (e.g., "domain,url") where matching any type is sufficient.
+func (e *Executor) validateTargetVariable(deps *core.Dependencies, execCtx *core.ExecutionContext) error {
+	if len(deps.Variables) == 0 {
+		return nil
+	}
+
+	// Find Target variable requirement
+	for _, v := range deps.Variables {
+		if !strings.EqualFold(v.Name, "Target") {
+			continue
+		}
+
+		if v.Type == "" {
+			continue // No type specified, skip validation
+		}
+
+		// Get the target value from execution context
+		target := execCtx.Target
+		if target == "" {
+			return nil // No target to validate
+		}
+
+		// Convert VariableType to TargetType and validate
+		// Use MatchesAnyTargetType to support comma-separated types
+		targetType := core.TargetType(v.Type)
+		matches, err := core.MatchesAnyTargetType(target, targetType)
+		if err != nil {
+			return fmt.Errorf("target type validation error: %w", err)
+		}
+
+		if !matches {
+			return &TargetTypeMismatchError{
+				Supplied:     target,
+				ExpectedType: string(v.Type),
+			}
+		}
+
+		break // Only check first Target variable
 	}
 
 	return nil
@@ -706,7 +815,10 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	// Check dependencies (including function conditions)
 	if module.Dependencies != nil {
 		if err := e.checkDependencies(module.Dependencies, execCtx, cfg.BinariesPath); err != nil {
-			execCtx.Logger.Error("Dependency check failed", zap.Error(err))
+			// Don't log TargetTypeMismatchError - it will be handled specially in CLI
+			if _, ok := err.(*TargetTypeMismatchError); !ok {
+				execCtx.Logger.Error("Dependency check failed", zap.Error(err))
+			}
 			result.Status = core.RunStatusFailed
 			result.Error = fmt.Errorf("dependency check failed: %w", err)
 			result.EndTime = time.Now()
@@ -751,102 +863,132 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	e.logger.Debug("Starting step execution loop",
 		zap.Int("total_steps", len(module.Steps)),
 	)
-	completedCount := 0
-	currentStep := 0
-	for currentStep < len(module.Steps) {
-		select {
-		case <-ctx.Done():
-			if e.progressBar != nil {
-				e.progressBar.Abort()
-			}
-			result.Status = core.RunStatusCancelled
+
+	// Check if any step has dependencies - use DAG execution if so
+	if hasAnyStepDependencies(module.Steps) {
+		// Validate dependencies
+		if err := validateStepDependencies(module.Steps); err != nil {
+			result.Status = core.RunStatusFailed
+			result.Error = err
 			result.EndTime = time.Now()
 			metrics.RecordWorkflowEnd(module.Name, string(core.KindModule), string(result.Status), result.EndTime.Sub(result.StartTime).Seconds())
-			return result, ctx.Err()
-		default:
+			return result, err
+		}
+		if err := detectStepCycles(module.Steps); err != nil {
+			result.Status = core.RunStatusFailed
+			result.Error = err
+			result.EndTime = time.Now()
+			metrics.RecordWorkflowEnd(module.Name, string(core.KindModule), string(result.Status), result.EndTime.Sub(result.StartTime).Seconds())
+			return result, err
 		}
 
-		step := &module.Steps[currentStep]
-
-		e.logger.Debug("Executing step",
-			zap.Int("step_index", currentStep),
-			zap.String("step_name", step.Name),
-			zap.String("step_type", string(step.Type)),
-		)
-
-		stepResult, err := e.executeStep(ctx, step, execCtx)
-		result.Steps = append(result.Steps, stepResult)
-
-		// Update progress bar with completed step
-		if e.progressBar != nil {
-			symbol := terminal.StepTypeSymbol(string(step.Type), string(step.StepRunner))
-			status := "success"
-			switch stepResult.Status {
-			case core.StepStatusFailed:
-				status = "failed"
-			case core.StepStatusSkipped:
-				status = "skipped"
-			}
-			e.progressBar.AddCompletedStep(step.Name, symbol, string(step.Type), status, stepResult.Duration, getStepCommand(step), stepResult.Output)
-			e.progressBar.Add(1)
+		// DAG-based execution
+		if err := e.executeStepsDAG(ctx, module.Steps, execCtx, result); err != nil {
+			metrics.RecordWorkflowEnd(module.Name, string(core.KindModule), string(result.Status), result.EndTime.Sub(result.StartTime).Seconds())
+			return result, err
 		}
-
-		if stepResult.Status == core.StepStatusSuccess {
-			completedCount++
-		}
-
-		// Call step completed callback (for database progress tracking)
-		if e.onStepCompleted != nil && e.dbRunID != "" {
-			e.onStepCompleted(ctx, e.dbRunID)
-		}
-
-		e.logger.Debug("Step execution result",
-			zap.String("step", step.Name),
-			zap.String("status", string(stepResult.Status)),
-			zap.Duration("duration", stepResult.Duration),
-		)
-
-		// Record step duration metrics
-		metrics.RecordStepDuration(string(step.Type), string(stepResult.Status), stepResult.Duration.Seconds())
-
-		if err != nil {
-			execCtx.Logger.Error("Step failed",
-				zap.String("step", step.Name),
-				zap.Error(err),
-			)
-
-			// Record step failure metrics
-			metrics.RecordStepFailure(step.Name, string(step.Type), "execution_error")
-
-			// Check if we should continue on error
-			if !e.shouldContinueOnError(step) {
-				result.Status = core.RunStatusFailed
-				result.Error = err
+	} else {
+		// Original sequential execution (backwards compatible)
+		currentStep := 0
+		for currentStep < len(module.Steps) {
+			select {
+			case <-ctx.Done():
+				if e.progressBar != nil {
+					e.progressBar.Abort()
+				}
+				result.Status = core.RunStatusCancelled
 				result.EndTime = time.Now()
 				metrics.RecordWorkflowEnd(module.Name, string(core.KindModule), string(result.Status), result.EndTime.Sub(result.StartTime).Seconds())
-				return result, err
+				return result, ctx.Err()
+			default:
 			}
-		}
 
-		// Handle decision routing
-		if stepResult.NextStep != "" {
-			if stepResult.NextStep == "_end" {
-				break
-			}
-			// Find next step by name
-			nextIdx := e.findStepIndex(module.Steps, stepResult.NextStep)
-			if nextIdx >= 0 {
-				currentStep = nextIdx
-				continue
-			}
-		}
+			step := &module.Steps[currentStep]
 
-		currentStep++
+			e.logger.Debug("Executing step",
+				zap.Int("step_index", currentStep),
+				zap.String("step_name", step.Name),
+				zap.String("step_type", string(step.Type)),
+			)
+
+			stepResult, err := e.executeStep(ctx, step, execCtx)
+			result.Steps = append(result.Steps, stepResult)
+
+			// Update progress bar with completed step
+			if e.progressBar != nil {
+				symbol := terminal.StepTypeSymbol(string(step.Type), string(step.StepRunner))
+				status := "success"
+				switch stepResult.Status {
+				case core.StepStatusFailed:
+					status = "failed"
+				case core.StepStatusSkipped:
+					status = "skipped"
+				}
+				e.progressBar.AddCompletedStep(step.Name, symbol, string(step.Type), status, stepResult.Duration, getStepCommand(step), stepResult.Output)
+				e.progressBar.Add(1)
+			}
+
+			// Call step completed callback (for database progress tracking)
+			if e.onStepCompleted != nil && e.dbRunID != "" {
+				e.onStepCompleted(ctx, e.dbRunID)
+			}
+
+			e.logger.Debug("Step execution result",
+				zap.String("step", step.Name),
+				zap.String("status", string(stepResult.Status)),
+				zap.Duration("duration", stepResult.Duration),
+			)
+
+			// Record step duration metrics
+			metrics.RecordStepDuration(string(step.Type), string(stepResult.Status), stepResult.Duration.Seconds())
+
+			if err != nil {
+				execCtx.Logger.Error("Step failed",
+					zap.String("step", step.Name),
+					zap.Error(err),
+				)
+
+				// Record step failure metrics
+				metrics.RecordStepFailure(step.Name, string(step.Type), "execution_error")
+
+				// Check if we should continue on error
+				if !e.shouldContinueOnError(step) {
+					result.Status = core.RunStatusFailed
+					result.Error = err
+					result.EndTime = time.Now()
+					metrics.RecordWorkflowEnd(module.Name, string(core.KindModule), string(result.Status), result.EndTime.Sub(result.StartTime).Seconds())
+					return result, err
+				}
+			}
+
+			// Handle decision routing
+			if stepResult.NextStep != "" {
+				if stepResult.NextStep == "_end" {
+					break
+				}
+				// Find next step by name
+				nextIdx := e.findStepIndex(module.Steps, stepResult.NextStep)
+				if nextIdx >= 0 {
+					currentStep = nextIdx
+					continue
+				}
+			}
+
+			currentStep++
+		}
 	}
 
 	result.Status = core.RunStatusCompleted
 	result.EndTime = time.Now()
 	result.Exports = execCtx.Exports
+
+	// Count completed steps from results
+	completedCount := 0
+	for _, stepResult := range result.Steps {
+		if stepResult.Status == core.StepStatusSuccess {
+			completedCount++
+		}
+	}
 
 	execCtx.Logger.Info("Module execution completed",
 		zap.Int("total_steps", len(module.Steps)),
@@ -891,7 +1033,235 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 		}
 	}
 
+	// Flush batch buffers at workflow completion
+	if e.stepResultBuffer != nil {
+		if err := e.stepResultBuffer.Flush(context.Background()); err != nil {
+			execCtx.Logger.Warn("Failed to flush step result buffer", zap.Error(err))
+		}
+	}
+	if e.progressTracker != nil {
+		e.progressTracker.Stop()
+	}
+
 	return result, nil
+}
+
+// executeStepsDAG executes steps using DAG-based parallel execution
+// Uses condition variables instead of polling for efficient step coordination
+func (e *Executor) executeStepsDAG(ctx context.Context, steps []core.Step, execCtx *core.ExecutionContext, result *core.WorkflowResult) error {
+	dependents, inDegree := buildStepDependencyGraph(steps)
+	stepMap := buildStepMap(steps)
+
+	var mu sync.Mutex
+	cond := sync.NewCond(&mu) // Condition variable for signaling
+	executed := make(map[string]bool)
+	failed := make(map[string]bool)
+	var firstError error
+	var completedCount int32        // Atomic counter for O(1) completion check
+	totalSteps := int32(len(steps)) // Total steps to execute
+
+	// Initialize ready queue with steps that have no dependencies
+	ready := make([]string, 0)
+	for name, degree := range inDegree {
+		if degree == 0 {
+			ready = append(ready, name)
+		}
+	}
+
+	// Semaphore for concurrency limit
+	maxConcurrency := 8
+	sem := make(chan struct{}, maxConcurrency)
+	var wg sync.WaitGroup
+
+	for {
+		mu.Lock()
+
+		// O(1) completion check using atomic counter
+		if atomic.LoadInt32(&completedCount) == totalSteps {
+			mu.Unlock()
+			break
+		}
+
+		// Wait for signal instead of polling when no ready steps
+		for len(ready) == 0 && atomic.LoadInt32(&completedCount) < totalSteps {
+			cond.Wait()
+		}
+
+		// Re-check completion after wake
+		if atomic.LoadInt32(&completedCount) == totalSteps {
+			mu.Unlock()
+			break
+		}
+
+		// Get next ready step
+		if len(ready) == 0 {
+			mu.Unlock()
+			continue
+		}
+
+		stepName := ready[0]
+		ready = ready[1:]
+
+		if executed[stepName] {
+			mu.Unlock()
+			continue
+		}
+
+		// Check if dependency failed
+		step := stepMap[stepName]
+		shouldSkip := false
+		for _, dep := range step.DependsOn {
+			if failed[dep] {
+				shouldSkip = true
+				break
+			}
+		}
+
+		if shouldSkip {
+			executed[stepName] = true
+			failed[stepName] = true
+			atomic.AddInt32(&completedCount, 1)
+			// Unblock dependents
+			for _, dependent := range dependents[stepName] {
+				inDegree[dependent]--
+				if inDegree[dependent] == 0 {
+					ready = append(ready, dependent)
+				}
+			}
+			cond.Signal() // Wake main loop
+			mu.Unlock()
+			continue
+		}
+		mu.Unlock()
+
+		// Execute step
+		wg.Add(1)
+		sem <- struct{}{}
+
+		go func(s *core.Step, sName string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			// Check context
+			select {
+			case <-ctx.Done():
+				mu.Lock()
+				executed[sName] = true
+				atomic.AddInt32(&completedCount, 1)
+				cond.Signal()
+				mu.Unlock()
+				return
+			default:
+			}
+
+			stepResult, err := e.executeStep(ctx, s, execCtx)
+
+			mu.Lock()
+			defer mu.Unlock()
+
+			result.Steps = append(result.Steps, stepResult)
+			executed[sName] = true
+			atomic.AddInt32(&completedCount, 1)
+
+			// Update progress bar
+			if e.progressBar != nil {
+				symbol := terminal.StepTypeSymbol(string(s.Type), string(s.StepRunner))
+				var status string
+				switch stepResult.Status {
+				case core.StepStatusFailed:
+					status = "failed"
+				case core.StepStatusSkipped:
+					status = "skipped"
+				default:
+					status = "success"
+				}
+				e.progressBar.AddCompletedStep(s.Name, symbol, string(s.Type), status, stepResult.Duration, getStepCommand(s), stepResult.Output)
+				e.progressBar.Add(1)
+			}
+
+			// Callback
+			if e.onStepCompleted != nil && e.dbRunID != "" {
+				e.onStepCompleted(ctx, e.dbRunID)
+			}
+
+			if err != nil {
+				failed[sName] = true
+				if firstError == nil && !e.shouldContinueOnError(s) {
+					firstError = err
+				}
+				metrics.RecordStepFailure(s.Name, string(s.Type), "execution_error")
+			}
+
+			metrics.RecordStepDuration(string(s.Type), string(stepResult.Status), stepResult.Duration.Seconds())
+
+			// Unblock dependents
+			for _, dependent := range dependents[sName] {
+				inDegree[dependent]--
+				if inDegree[dependent] == 0 && !executed[dependent] {
+					ready = append(ready, dependent)
+				}
+			}
+
+			cond.Signal() // Wake main loop to process newly ready steps
+		}(step, stepName)
+	}
+
+	wg.Wait()
+
+	if firstError != nil {
+		result.Status = core.RunStatusFailed
+		result.Error = firstError
+		result.EndTime = time.Now()
+		return firstError
+	}
+
+	return nil
+}
+
+// preloadModules loads all flow modules in parallel for faster startup.
+// Returns a map of module name to loaded workflow. Modules that fail to load
+// are logged but not included in the result (will be loaded on-demand during execution).
+func (e *Executor) preloadModules(ctx context.Context, modules []core.ModuleRef) map[string]*core.Workflow {
+	result := make(map[string]*core.Workflow)
+	if len(modules) == 0 || e.loader == nil {
+		return result
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	sem := make(chan struct{}, 8) // Limit concurrent loads to avoid file descriptor exhaustion
+
+	for i := range modules {
+		modRef := &modules[i]
+		wg.Add(1)
+		go func(ref *core.ModuleRef) {
+			defer wg.Done()
+
+			select {
+			case <-ctx.Done():
+				return
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+			}
+
+			workflow, err := e.loader.LoadWorkflowByPath(ref.Path)
+			if err != nil {
+				e.logger.Warn("Module preload failed",
+					zap.String("module", ref.Name),
+					zap.String("path", ref.Path),
+					zap.Error(err),
+				)
+				return
+			}
+
+			mu.Lock()
+			result[ref.Name] = workflow
+			mu.Unlock()
+		}(modRef)
+	}
+
+	wg.Wait()
+	return result
 }
 
 // ExecuteFlow executes a flow workflow
@@ -1018,7 +1388,10 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	// Check dependencies (including function conditions)
 	if flow.Dependencies != nil {
 		if err := e.checkDependencies(flow.Dependencies, execCtx, cfg.BinariesPath); err != nil {
-			execCtx.Logger.Error("Dependency check failed", zap.Error(err))
+			// Don't log TargetTypeMismatchError - it will be handled specially in CLI
+			if _, ok := err.(*TargetTypeMismatchError); !ok {
+				execCtx.Logger.Error("Dependency check failed", zap.Error(err))
+			}
 			result.Status = core.RunStatusFailed
 			result.Error = fmt.Errorf("dependency check failed: %w", err)
 			result.EndTime = time.Now()
@@ -1054,6 +1427,15 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 
 	// Parse excluded modules
 	excludeList := parseExcludeList(params["exclude_modules"])
+
+	// Pre-load all modules in parallel for faster startup
+	execCtx.Logger.Debug("Pre-loading modules", zap.Int("count", len(flow.Modules)))
+	preloadStart := time.Now()
+	preloaded := e.preloadModules(ctx, flow.Modules)
+	execCtx.Logger.Debug("Modules pre-loaded",
+		zap.Int("loaded", len(preloaded)),
+		zap.Duration("duration", time.Since(preloadStart)),
+	)
 
 	// Build dependency graph using Kahn's algorithm for O(V+E) execution
 	// instead of O(n²) naive loop restart
@@ -1129,17 +1511,25 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 			zap.String("path", modRef.Path),
 		)
 
-		// Load the module workflow
-		module, err := e.loader.LoadWorkflowByPath(modRef.Path)
-		if err != nil {
-			execCtx.Logger.Error("Failed to load module",
-				zap.String("module", modRef.Name),
-				zap.String("path", modRef.Path),
-				zap.Error(err))
-			result.Status = core.RunStatusFailed
-			result.Error = fmt.Errorf("failed to load module %s: %w", modRef.Name, err)
-			result.EndTime = time.Now()
-			return result, result.Error
+		// Use preloaded module if available, else load on-demand
+		var module *core.Workflow
+		var err error
+		if preloadedMod, ok := preloaded[modRef.Name]; ok {
+			module = preloadedMod
+			execCtx.Logger.Debug("Using preloaded module", zap.String("module", modRef.Name))
+		} else {
+			// Load the module workflow on-demand (fallback for failed preloads)
+			module, err = e.loader.LoadWorkflowByPath(modRef.Path)
+			if err != nil {
+				execCtx.Logger.Error("Failed to load module",
+					zap.String("module", modRef.Name),
+					zap.String("path", modRef.Path),
+					zap.Error(err))
+				result.Status = core.RunStatusFailed
+				result.Error = fmt.Errorf("failed to load module %s: %w", modRef.Name, err)
+				result.EndTime = time.Now()
+				return result, result.Error
+			}
 		}
 
 		// Merge flow variables (params + exports) with module-specific params
@@ -1285,6 +1675,16 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 		if err := RegisterArtifacts(flow, execCtx, execCtx.Logger); err != nil {
 			execCtx.Logger.Warn("Failed to register artifacts", zap.Error(err))
 		}
+	}
+
+	// Flush batch buffers at workflow completion
+	if e.stepResultBuffer != nil {
+		if err := e.stepResultBuffer.Flush(context.Background()); err != nil {
+			execCtx.Logger.Warn("Failed to flush step result buffer", zap.Error(err))
+		}
+	}
+	if e.progressTracker != nil {
+		e.progressTracker.Stop()
 	}
 
 	return result, nil
@@ -1523,6 +1923,24 @@ func (e *Executor) executeStep(ctx context.Context, step *core.Step, execCtx *co
 		zap.String("output", result.Output),
 	)
 
+	// Buffer step result for batch insertion
+	if e.stepResultBuffer != nil && !e.dryRun {
+		startedAt := result.StartTime
+		completedAt := result.EndTime
+		errorMsg := ""
+		if result.Error != nil {
+			errorMsg = result.Error.Error()
+		}
+		_ = e.stepResultBuffer.Add(ctx, step.Name, string(step.Type), string(result.Status),
+			stepCommand, result.Output, errorMsg, result.Exports,
+			result.Duration.Milliseconds(), &startedAt, &completedAt)
+	}
+
+	// Increment progress tracker
+	if e.progressTracker != nil && !e.dryRun {
+		e.progressTracker.IncrementSteps(1)
+	}
+
 	return result, nil
 }
 
@@ -1646,6 +2064,99 @@ func buildModuleMap(modules []core.ModuleRef) map[string]*core.ModuleRef {
 		moduleMap[modules[i].Name] = &modules[i]
 	}
 	return moduleMap
+}
+
+// hasAnyStepDependencies checks if any step has depends_on defined
+func hasAnyStepDependencies(steps []core.Step) bool {
+	for i := range steps {
+		if len(steps[i].DependsOn) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// buildStepDependencyGraph builds dependency graph for steps using Kahn's algorithm
+func buildStepDependencyGraph(steps []core.Step) (dependents map[string][]string, inDegree map[string]int) {
+	dependents = make(map[string][]string)
+	inDegree = make(map[string]int)
+
+	for i := range steps {
+		inDegree[steps[i].Name] = 0
+	}
+
+	for i := range steps {
+		step := &steps[i]
+		for _, dep := range step.DependsOn {
+			dependents[dep] = append(dependents[dep], step.Name)
+			inDegree[step.Name]++
+		}
+	}
+	return dependents, inDegree
+}
+
+// buildStepMap creates name -> *Step lookup
+func buildStepMap(steps []core.Step) map[string]*core.Step {
+	m := make(map[string]*core.Step, len(steps))
+	for i := range steps {
+		m[steps[i].Name] = &steps[i]
+	}
+	return m
+}
+
+// detectStepCycles detects circular dependencies using DFS
+func detectStepCycles(steps []core.Step) error {
+	stepMap := make(map[string][]string)
+	for i := range steps {
+		stepMap[steps[i].Name] = steps[i].DependsOn
+	}
+
+	visited := make(map[string]bool)
+	recStack := make(map[string]bool)
+
+	var dfs func(name string, path []string) error
+	dfs = func(name string, path []string) error {
+		visited[name] = true
+		recStack[name] = true
+		path = append(path, name)
+
+		for _, dep := range stepMap[name] {
+			if !visited[dep] {
+				if err := dfs(dep, path); err != nil {
+					return err
+				}
+			} else if recStack[dep] {
+				return fmt.Errorf("circular dependency: %s", strings.Join(append(path, dep), " -> "))
+			}
+		}
+		recStack[name] = false
+		return nil
+	}
+
+	for i := range steps {
+		if !visited[steps[i].Name] {
+			if err := dfs(steps[i].Name, nil); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// validateStepDependencies checks for invalid dependency references
+func validateStepDependencies(steps []core.Step) error {
+	names := make(map[string]bool)
+	for i := range steps {
+		names[steps[i].Name] = true
+	}
+	for i := range steps {
+		for _, dep := range steps[i].DependsOn {
+			if !names[dep] {
+				return fmt.Errorf("step '%s' depends on non-existent step '%s'", steps[i].Name, dep)
+			}
+		}
+	}
+	return nil
 }
 
 // evaluateDecision evaluates decision routing and returns the next step.

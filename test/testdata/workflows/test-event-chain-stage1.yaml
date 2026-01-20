@@ -1,0 +1,22 @@
+name: test-event-chain-stage1
+kind: module
+description: Stage 1 of event chain - discovery
+tags: test,event,chain
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: discover
+    type: bash
+    command: |
+      echo "Discovering subdomains for {{target}}..."
+      echo "api.{{target}}" > {{Output}}/discovered.txt
+      echo "www.{{target}}" >> {{Output}}/discovered.txt
+
+  - name: emit-discoveries
+    type: function
+    function: |
+      generate_event_from_file("stage1.complete", "chain-stage1", "subdomain", "{{Output}}/discovered.txt")
+      log_info("Stage 1 complete - emitted discovery events")

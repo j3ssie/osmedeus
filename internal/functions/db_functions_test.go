@@ -55,8 +55,11 @@ func TestDbImportAssetFromFile(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// http-data.jsonl has 3 lines
-	assert.Equal(t, int64(3), result)
+	// http-data.jsonl has 3 lines - result is now a map with stats
+	stats, ok := result.(map[string]interface{})
+	require.True(t, ok, "result should be a map")
+	assert.Equal(t, 3, stats["new"])
+	assert.Equal(t, 3, stats["total"])
 
 	// Verify assets were imported
 	ctx := context.Background()
@@ -181,8 +184,11 @@ func TestDbImportVulnFromFile(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// vuln-data.jsonl has 13 lines
-	assert.Equal(t, int64(13), result)
+	// vuln-data.jsonl has 13 lines - result is now a map with stats
+	stats, ok := result.(map[string]interface{})
+	require.True(t, ok, "result should be a map")
+	assert.Equal(t, 13, stats["new"])
+	assert.Equal(t, 13, stats["total"])
 
 	// Verify vulnerabilities were imported
 	ctx := context.Background()
@@ -252,7 +258,10 @@ func TestDbImportAssetFromFile_Upsert(t *testing.T) {
 		map[string]interface{}{},
 	)
 	require.NoError(t, err)
-	assert.Equal(t, int64(2), result) // Both lines processed
+	// Result is now a map with stats - 1 new, 1 updated (same asset with different data)
+	stats, ok := result.(map[string]interface{})
+	require.True(t, ok, "result should be a map")
+	assert.Equal(t, 2, stats["total"]) // Both lines processed
 
 	// Verify only one asset exists (upsert)
 	ctx := context.Background()

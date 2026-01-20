@@ -1277,6 +1277,17 @@ func ensureBinariesPathInEnv(printer *terminal.Printer, binariesFolder string, s
 		return true
 	}
 
+	// Skip shell config modification in test environments
+	if os.Getenv("OSM_SKIP_PATH_SETUP") == "1" {
+		// Still add to current process PATH
+		if !pathContainsDir(os.Getenv("PATH"), binariesFolder) {
+			currentPath := os.Getenv("PATH")
+			newPath := binariesFolder + string(os.PathListSeparator) + currentPath
+			_ = os.Setenv("PATH", newPath)
+		}
+		return true
+	}
+
 	// Check if already in PATH
 	if pathContainsDir(os.Getenv("PATH"), binariesFolder) {
 		return true
@@ -1330,6 +1341,11 @@ func ensureNixProfileBinInProcess(printer *terminal.Printer) {
 }
 
 func ensureNixProfileBinInShell(printer *terminal.Printer) {
+	// Skip in test environments
+	if os.Getenv("OSM_SKIP_PATH_SETUP") == "1" {
+		return
+	}
+
 	nixBinDir := "/nix/var/nix/profiles/default/bin"
 	if _, err := os.Stat(filepath.Join(nixBinDir, "nix")); err != nil {
 		return

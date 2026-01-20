@@ -1,0 +1,16 @@
+kind: module
+name: child-replace-steps
+description: Child that replaces all steps
+extends: base-module
+
+override:
+  steps:
+    mode: replace
+    steps:
+      - name: new-step-one
+        type: bash
+        command: echo "Completely new step one"
+
+      - name: new-step-two
+        type: bash
+        command: echo "Completely new step two"

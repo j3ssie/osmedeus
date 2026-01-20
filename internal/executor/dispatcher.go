@@ -20,10 +20,12 @@ var functionCallPattern = regexp.MustCompile(`\w+\s*\(`)
 // StepDispatcher dispatches steps to appropriate executors
 type StepDispatcher struct {
 	registry         *PluginRegistry
-	templateEngine   *template.Engine
+	templateEngine   template.TemplateEngine
+	batchRenderer    template.BatchRenderer // For optimized batch rendering
 	functionRegistry *functions.Registry
 	dryRun           bool
 	runner           runner.Runner
+	enableBatch      bool // Enable batch template rendering
 	// Keep direct references to executors that need special configuration
 	bashExecutor *BashExecutor
 	llmExecutor  *LLMExecutor
@@ -45,25 +47,68 @@ func (d *StepDispatcher) SetRunner(r runner.Runner) {
 	d.bashExecutor.SetRunner(r)
 }
 
-// NewStepDispatcher creates a new step dispatcher
+// StepDispatcherConfig holds configuration for the step dispatcher
+type StepDispatcherConfig struct {
+	UseShardedEngine bool // Use sharded template engine for better concurrency
+	EnableBatch      bool // Enable batch template rendering
+	ShardCount       int  // Number of shards (default: 16)
+	ShardCacheSize   int  // Cache size per shard (default: 64)
+}
+
+// DefaultStepDispatcherConfig returns the default configuration
+func DefaultStepDispatcherConfig() StepDispatcherConfig {
+	return StepDispatcherConfig{
+		UseShardedEngine: true, // Default to sharded engine for better performance
+		EnableBatch:      true, // Default to batch rendering
+		ShardCount:       16,
+		ShardCacheSize:   64,
+	}
+}
+
+// NewStepDispatcher creates a new step dispatcher with default configuration
 func NewStepDispatcher() *StepDispatcher {
+	return NewStepDispatcherWithConfig(DefaultStepDispatcherConfig())
+}
+
+// NewStepDispatcherWithConfig creates a new step dispatcher with custom configuration
+func NewStepDispatcherWithConfig(cfg StepDispatcherConfig) *StepDispatcher {
+	var engine template.TemplateEngine
+	var batchRenderer template.BatchRenderer
+
+	if cfg.UseShardedEngine {
+		shardedCfg := template.ShardedEngineConfig{
+			ShardCount:     cfg.ShardCount,
+			ShardCacheSize: cfg.ShardCacheSize,
+			EnablePooling:  true,
+		}
+		shardedEngine := template.NewShardedEngineWithConfig(shardedCfg)
+		engine = shardedEngine
+		batchRenderer = shardedEngine
+	} else {
+		stdEngine := template.NewEngine()
+		engine = stdEngine
+		batchRenderer = stdEngine
+	}
+
 	d := &StepDispatcher{
 		registry:         NewPluginRegistry(),
-		templateEngine:   template.NewEngine(),
+		templateEngine:   engine,
+		batchRenderer:    batchRenderer,
 		functionRegistry: functions.NewRegistry(),
+		enableBatch:      cfg.EnableBatch,
 	}
 
 	// Create executors
-	d.bashExecutor = NewBashExecutor(d.templateEngine)
-	d.llmExecutor = NewLLMExecutor(d.templateEngine)
+	d.bashExecutor = NewBashExecutor(engine)
+	d.llmExecutor = NewLLMExecutor(engine)
 
 	// Register all built-in plugins
 	d.registry.Register(d.bashExecutor)
-	d.registry.Register(NewFunctionExecutor(d.templateEngine, d.functionRegistry))
+	d.registry.Register(NewFunctionExecutor(engine, d.functionRegistry))
 	d.registry.Register(NewParallelExecutor(d))
-	d.registry.Register(NewForeachExecutor(d, d.templateEngine))
-	d.registry.Register(NewRemoteBashExecutor(d.templateEngine))
-	d.registry.Register(NewHTTPExecutor(d.templateEngine))
+	d.registry.Register(NewForeachExecutor(d, engine))
+	d.registry.Register(NewRemoteBashExecutor(engine))
+	d.registry.Register(NewHTTPExecutor(engine))
 	d.registry.Register(d.llmExecutor)
 
 	return d
@@ -184,10 +229,318 @@ func (d *StepDispatcher) Dispatch(ctx context.Context, step *core.Step, execCtx 
 	return result, nil
 }
 
+// collectRenderRequests gathers all non-empty template strings from a step
+func collectRenderRequests(step *core.Step) []template.RenderRequest {
+	var requests []template.RenderRequest
+	add := func(key, tmpl string) {
+		if tmpl != "" {
+			requests = append(requests, template.RenderRequest{Key: key, Template: tmpl})
+		}
+	}
+
+	// String fields
+	add("Command", step.Command)
+	add("SpeedArgs", step.SpeedArgs)
+	add("ConfigArgs", step.ConfigArgs)
+	add("InputArgs", step.InputArgs)
+	add("OutputArgs", step.OutputArgs)
+	add("StdFile", step.StdFile)
+	add("Function", step.Function)
+	add("Input", step.Input)
+	add("Log", step.Log)
+	add("Timeout", string(step.Timeout))
+	add("Threads", string(step.Threads))
+	add("URL", step.URL)
+	add("Method", step.Method)
+	add("RequestBody", step.RequestBody)
+	add("StepRunner", string(step.StepRunner))
+	add("StepRemoteFile", step.StepRemoteFile)
+	add("HostOutputFile", step.HostOutputFile)
+
+	// Slice fields
+	for i, cmd := range step.Commands {
+		add(fmt.Sprintf("Commands[%d]", i), cmd)
+	}
+	for i, cmd := range step.ParallelCommands {
+		add(fmt.Sprintf("ParallelCommands[%d]", i), cmd)
+	}
+	for i, fn := range step.Functions {
+		add(fmt.Sprintf("Functions[%d]", i), fn)
+	}
+	for i, fn := range step.ParallelFunctions {
+		add(fmt.Sprintf("ParallelFunctions[%d]", i), fn)
+	}
+	for i, input := range step.EmbeddingInput {
+		add(fmt.Sprintf("EmbeddingInput[%d]", i), input)
+	}
+
+	// Map fields
+	for k, v := range step.Headers {
+		add(fmt.Sprintf("Headers[%s]", k), v)
+	}
+
+	// RunnerConfig fields
+	if step.StepRunnerConfig != nil && step.StepRunnerConfig.RunnerConfig != nil {
+		cfg := step.StepRunnerConfig.RunnerConfig
+		add("RunnerConfig.Image", cfg.Image)
+		add("RunnerConfig.Host", cfg.Host)
+		add("RunnerConfig.User", cfg.User)
+		add("RunnerConfig.Password", cfg.Password)
+		add("RunnerConfig.KeyFile", cfg.KeyFile)
+		add("RunnerConfig.WorkDir", cfg.WorkDir)
+		add("RunnerConfig.Network", cfg.Network)
+		for k, v := range cfg.Env {
+			add(fmt.Sprintf("RunnerConfig.Env[%s]", k), v)
+		}
+		for i, v := range cfg.Volumes {
+			add(fmt.Sprintf("RunnerConfig.Volumes[%d]", i), v)
+		}
+	}
+
+	return requests
+}
+
 // renderStep renders all template fields in a step
 func (d *StepDispatcher) renderStep(step *core.Step, execCtx *core.ExecutionContext) (*core.Step, error) {
 	vars := execCtx.GetVariables()
 
+	// Use batch rendering if enabled and available
+	if d.enableBatch && d.batchRenderer != nil {
+		return d.renderStepBatch(step, vars)
+	}
+
+	return d.renderStepSequential(step, vars)
+}
+
+// renderStepBatch renders step templates using batch mode for fewer lock acquisitions
+func (d *StepDispatcher) renderStepBatch(step *core.Step, vars map[string]any) (*core.Step, error) {
+	requests := collectRenderRequests(step)
+	if len(requests) == 0 {
+		// No templates to render, but still need to handle LLM messages
+		if len(step.Messages) > 0 {
+			rendered := *step
+			if err := d.renderLLMMessages(&rendered, vars); err != nil {
+				return nil, err
+			}
+			return &rendered, nil
+		}
+		return step, nil
+	}
+
+	results, err := d.batchRenderer.RenderBatch(requests, vars)
+	if err != nil {
+		return nil, err
+	}
+
+	rendered := *step
+	get := func(key string) string { return results[key] }
+
+	// Apply results to string fields
+	if v := get("Command"); v != "" {
+		rendered.Command = v
+	}
+	if v := get("SpeedArgs"); v != "" {
+		rendered.SpeedArgs = v
+	}
+	if v := get("ConfigArgs"); v != "" {
+		rendered.ConfigArgs = v
+	}
+	if v := get("InputArgs"); v != "" {
+		rendered.InputArgs = v
+	}
+	if v := get("OutputArgs"); v != "" {
+		rendered.OutputArgs = v
+	}
+	if v := get("StdFile"); v != "" {
+		rendered.StdFile = v
+	}
+	if v := get("Function"); v != "" {
+		rendered.Function = v
+	}
+	if v := get("Input"); v != "" {
+		rendered.Input = v
+	}
+	if v := get("Log"); v != "" {
+		rendered.Log = v
+	}
+	if v := get("Timeout"); v != "" {
+		rendered.Timeout = core.StepTimeout(v)
+	}
+	if v := get("Threads"); v != "" {
+		rendered.Threads = core.StepThreads(v)
+	}
+	if v := get("URL"); v != "" {
+		rendered.URL = v
+	}
+	if v := get("Method"); v != "" {
+		rendered.Method = v
+	}
+	if v := get("RequestBody"); v != "" {
+		rendered.RequestBody = v
+	}
+	if v := get("StepRunner"); v != "" {
+		rendered.StepRunner = core.RunnerType(v)
+	}
+	if v := get("StepRemoteFile"); v != "" {
+		rendered.StepRemoteFile = v
+	}
+	if v := get("HostOutputFile"); v != "" {
+		rendered.HostOutputFile = v
+	}
+
+	// Apply results to slice fields
+	if len(step.Commands) > 0 {
+		rendered.Commands = make([]string, len(step.Commands))
+		for i := range step.Commands {
+			rendered.Commands[i] = get(fmt.Sprintf("Commands[%d]", i))
+		}
+	}
+	if len(step.ParallelCommands) > 0 {
+		rendered.ParallelCommands = make([]string, len(step.ParallelCommands))
+		for i := range step.ParallelCommands {
+			rendered.ParallelCommands[i] = get(fmt.Sprintf("ParallelCommands[%d]", i))
+		}
+	}
+	if len(step.Functions) > 0 {
+		rendered.Functions = make([]string, len(step.Functions))
+		for i := range step.Functions {
+			rendered.Functions[i] = get(fmt.Sprintf("Functions[%d]", i))
+		}
+	}
+	if len(step.ParallelFunctions) > 0 {
+		rendered.ParallelFunctions = make([]string, len(step.ParallelFunctions))
+		for i := range step.ParallelFunctions {
+			rendered.ParallelFunctions[i] = get(fmt.Sprintf("ParallelFunctions[%d]", i))
+		}
+	}
+	if len(step.EmbeddingInput) > 0 {
+		rendered.EmbeddingInput = make([]string, len(step.EmbeddingInput))
+		for i := range step.EmbeddingInput {
+			rendered.EmbeddingInput[i] = get(fmt.Sprintf("EmbeddingInput[%d]", i))
+		}
+	}
+
+	// Apply results to map fields
+	if len(step.Headers) > 0 {
+		rendered.Headers = make(map[string]string, len(step.Headers))
+		for k := range step.Headers {
+			rendered.Headers[k] = get(fmt.Sprintf("Headers[%s]", k))
+		}
+	}
+
+	// Apply results to RunnerConfig
+	if step.StepRunnerConfig != nil && step.StepRunnerConfig.RunnerConfig != nil {
+		cfg := *step.StepRunnerConfig.RunnerConfig
+		if v := get("RunnerConfig.Image"); v != "" {
+			cfg.Image = v
+		}
+		if v := get("RunnerConfig.Host"); v != "" {
+			cfg.Host = v
+		}
+		if v := get("RunnerConfig.User"); v != "" {
+			cfg.User = v
+		}
+		if v := get("RunnerConfig.Password"); v != "" {
+			cfg.Password = v
+		}
+		if v := get("RunnerConfig.KeyFile"); v != "" {
+			cfg.KeyFile = v
+		}
+		if v := get("RunnerConfig.WorkDir"); v != "" {
+			cfg.WorkDir = v
+		}
+		if v := get("RunnerConfig.Network"); v != "" {
+			cfg.Network = v
+		}
+		// Apply Env map
+		if len(step.StepRunnerConfig.Env) > 0 {
+			cfg.Env = make(map[string]string, len(step.StepRunnerConfig.Env))
+			for k := range step.StepRunnerConfig.Env {
+				cfg.Env[k] = get(fmt.Sprintf("RunnerConfig.Env[%s]", k))
+			}
+		}
+		// Apply Volumes slice
+		if len(step.StepRunnerConfig.Volumes) > 0 {
+			cfg.Volumes = make([]string, len(step.StepRunnerConfig.Volumes))
+			for i := range step.StepRunnerConfig.Volumes {
+				cfg.Volumes[i] = get(fmt.Sprintf("RunnerConfig.Volumes[%d]", i))
+			}
+		}
+		rendered.StepRunnerConfig = &core.StepRunnerConfig{RunnerConfig: &cfg}
+	}
+
+	// LLM messages handled separately (complex nested structure)
+	if len(step.Messages) > 0 {
+		if err := d.renderLLMMessages(&rendered, vars); err != nil {
+			return nil, err
+		}
+	}
+
+	return &rendered, nil
+}
+
+// renderLLMMessages renders LLM message templates (complex nested structure)
+func (d *StepDispatcher) renderLLMMessages(rendered *core.Step, vars map[string]any) error {
+	renderedMessages := make([]core.LLMMessage, len(rendered.Messages))
+	for i, msg := range rendered.Messages {
+		renderedMsg := msg
+
+		// Render content (can be string or []interface{})
+		switch content := msg.Content.(type) {
+		case string:
+			renderedContent, err := d.templateEngine.Render(content, vars)
+			if err != nil {
+				return fmt.Errorf("error rendering message content: %w", err)
+			}
+			renderedMsg.Content = renderedContent
+		case []interface{}:
+			// Handle multimodal content parts
+			renderedParts := make([]interface{}, len(content))
+			for j, part := range content {
+				if partMap, ok := part.(map[string]interface{}); ok {
+					renderedPartMap := make(map[string]interface{})
+					for k, v := range partMap {
+						renderedPartMap[k] = v
+					}
+					// Render text field
+					if text, ok := partMap["text"].(string); ok {
+						renderedText, err := d.templateEngine.Render(text, vars)
+						if err != nil {
+							return fmt.Errorf("error rendering content part text: %w", err)
+						}
+						renderedPartMap["text"] = renderedText
+					}
+					// Render image_url.url if present
+					if imgURL, ok := partMap["image_url"].(map[string]interface{}); ok {
+						renderedImgURL := make(map[string]interface{})
+						for k, v := range imgURL {
+							renderedImgURL[k] = v
+						}
+						if url, ok := imgURL["url"].(string); ok {
+							renderedURL, err := d.templateEngine.Render(url, vars)
+							if err != nil {
+								return fmt.Errorf("error rendering image URL: %w", err)
+							}
+							renderedImgURL["url"] = renderedURL
+						}
+						renderedPartMap["image_url"] = renderedImgURL
+					}
+					renderedParts[j] = renderedPartMap
+				} else {
+					renderedParts[j] = part
+				}
+			}
+			renderedMsg.Content = renderedParts
+		}
+
+		renderedMessages[i] = renderedMsg
+	}
+	rendered.Messages = renderedMessages
+	return nil
+}
+
+// renderStepSequential renders step templates sequentially (original implementation)
+func (d *StepDispatcher) renderStepSequential(step *core.Step, vars map[string]any) (*core.Step, error) {
 	// Create a copy of the step
 	rendered := *step
 
@@ -453,61 +806,9 @@ func (d *StepDispatcher) renderStep(step *core.Step, execCtx *core.ExecutionCont
 
 	// Render LLM step fields
 	if len(step.Messages) > 0 {
-		renderedMessages := make([]core.LLMMessage, len(step.Messages))
-		for i, msg := range step.Messages {
-			renderedMsg := msg
-
-			// Render content (can be string or []interface{})
-			switch content := msg.Content.(type) {
-			case string:
-				renderedContent, err := d.templateEngine.Render(content, vars)
-				if err != nil {
-					return nil, fmt.Errorf("error rendering message content: %w", err)
-				}
-				renderedMsg.Content = renderedContent
-			case []interface{}:
-				// Handle multimodal content parts
-				renderedParts := make([]interface{}, len(content))
-				for j, part := range content {
-					if partMap, ok := part.(map[string]interface{}); ok {
-						renderedPartMap := make(map[string]interface{})
-						for k, v := range partMap {
-							renderedPartMap[k] = v
-						}
-						// Render text field
-						if text, ok := partMap["text"].(string); ok {
-							renderedText, err := d.templateEngine.Render(text, vars)
-							if err != nil {
-								return nil, fmt.Errorf("error rendering content part text: %w", err)
-							}
-							renderedPartMap["text"] = renderedText
-						}
-						// Render image_url.url if present
-						if imgURL, ok := partMap["image_url"].(map[string]interface{}); ok {
-							renderedImgURL := make(map[string]interface{})
-							for k, v := range imgURL {
-								renderedImgURL[k] = v
-							}
-							if url, ok := imgURL["url"].(string); ok {
-								renderedURL, err := d.templateEngine.Render(url, vars)
-								if err != nil {
-									return nil, fmt.Errorf("error rendering image URL: %w", err)
-								}
-								renderedImgURL["url"] = renderedURL
-							}
-							renderedPartMap["image_url"] = renderedImgURL
-						}
-						renderedParts[j] = renderedPartMap
-					} else {
-						renderedParts[j] = part
-					}
-				}
-				renderedMsg.Content = renderedParts
-			}
-
-			renderedMessages[i] = renderedMsg
+		if err := d.renderLLMMessages(&rendered, vars); err != nil {
+			return nil, err
 		}
-		rendered.Messages = renderedMessages
 	}
 
 	// Render embedding input
@@ -528,6 +829,6 @@ func (d *StepDispatcher) GetFunctionRegistry() *functions.Registry {
 }
 
 // GetTemplateEngine returns the template engine
-func (d *StepDispatcher) GetTemplateEngine() *template.Engine {
+func (d *StepDispatcher) GetTemplateEngine() template.TemplateEngine {
 	return d.templateEngine
 }

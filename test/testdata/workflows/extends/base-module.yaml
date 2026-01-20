@@ -1,0 +1,33 @@
+kind: module
+name: base-module
+description: Base module for testing inheritance
+
+params:
+  - name: target
+    type: string
+    required: true
+  - name: threads
+    type: string
+    default: "10"
+  - name: timeout
+    type: string
+    default: "3600"
+
+dependencies:
+  commands:
+    - echo
+  files:
+    - /bin/bash
+
+steps:
+  - name: step-one
+    type: bash
+    command: echo "Step one for {{target}}"
+
+  - name: step-two
+    type: bash
+    command: echo "Step two with threads={{threads}}"
+
+  - name: step-three
+    type: bash
+    command: echo "Step three"

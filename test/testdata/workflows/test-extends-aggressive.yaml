@@ -1,0 +1,14 @@
+name: test-extends-aggressive
+kind: module
+description: Aggressive variant - extends base with higher resource usage
+tags: test,extends,aggressive
+extends: test-extends-base
+
+override:
+  params:
+    threads:
+      default: "50"
+    rate_limit:
+      default: "500"
+    verbose:
+      default: "true"

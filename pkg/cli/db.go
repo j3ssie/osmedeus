@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -36,8 +37,14 @@ var defaultHiddenColumns = []string{"id", "created_at", "updated_at", "completed
 
 // tableDefaultColumns defines default columns for specific tables
 var tableDefaultColumns = map[string][]string{
-	"assets":          {"asset_value", "host_ip", "title", "status_code", "words", "tech"},
-	"vulnerabilities": {"asset_value", "asset_type", "severity", "confidence", "vuln_title", "vuln_info"},
+	"runs":            {"run_id", "job_id", "workflow_name", "target", "status", "started_at"},
+	"step_results":    {"step_name", "step_type", "status", "duration_ms", "command"},
+	"artifacts":       {"name", "path", "type", "size_bytes", "line_count"},
+	"assets":          {"asset_value", "host_ip", "title", "status_code", "last_seen_at", "technologies"},
+	"event_logs":      {"topic", "source", "processed", "data_type", "workspace", "data"},
+	"schedules":       {"name", "workflow_name", "trigger_type", "schedule", "is_enabled", "run_count"},
+	"workspaces":      {"name", "data_source", "total_assets", "total_ips", "total_vulns", "risk_score"},
+	"vulnerabilities": {"vuln_title", "severity", "confidence", "asset_value", "last_seen_at", "workspace"},
 }
 
 // dbCmd - parent command for database management
@@ -190,26 +197,55 @@ func runDBClean(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("operation aborted: use --force to confirm")
 	}
 
-	printer.Info("Connecting to database...")
-
-	// Connect to database
-	db, err := database.Connect(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-	defer func() { _ = database.Close() }()
-
 	ctx := context.Background()
 
-	printer.Info("Cleaning database...")
+	if cfg.IsSQLite() {
+		// SQLite: Delete the file and recreate
+		dbPath := cfg.GetDBPath()
 
-	// Clean the database
-	if err := database.CleanDatabase(ctx); err != nil {
-		return fmt.Errorf("failed to clean database: %w", err)
+		// Close existing connection if any
+		_ = database.Close()
+
+		// Delete the database file
+		if err := os.Remove(dbPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to delete database file: %w", err)
+		}
+		printer.Info("Deleted database file: %s", dbPath)
+
+		// Reconnect and migrate
+		_, err := database.Connect(cfg)
+		if err != nil {
+			return fmt.Errorf("failed to reconnect to database: %w", err)
+		}
+		defer func() { _ = database.Close() }()
+
+		if err := database.Migrate(ctx); err != nil {
+			return fmt.Errorf("failed to run migrations: %w", err)
+		}
+		printer.Success("Database recreated with fresh schema")
+	} else {
+		// PostgreSQL: Clean tables and run migrate
+		printer.Info("Connecting to database...")
+
+		db, err := database.Connect(cfg)
+		if err != nil {
+			return fmt.Errorf("failed to connect to database: %w", err)
+		}
+		defer func() { _ = database.Close() }()
+
+		printer.Info("Cleaning database...")
+		if err := database.CleanDatabase(ctx); err != nil {
+			return fmt.Errorf("failed to clean database: %w", err)
+		}
+
+		printer.Info("Running migrations...")
+		if err := database.Migrate(ctx); err != nil {
+			return fmt.Errorf("failed to run migrations: %w", err)
+		}
+
+		printer.Success("Database cleaned and schema updated")
+		printer.Info("Database: %s", getDatabaseInfo(cfg, db))
 	}
-
-	printer.Success("Database cleaned successfully")
-	printer.Info("Database: %s", getDatabaseInfo(cfg, db))
 
 	return nil
 }

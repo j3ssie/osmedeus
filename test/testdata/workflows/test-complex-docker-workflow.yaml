@@ -87,7 +87,7 @@ steps:
   - name: verify-ports-file
     type: function
     log: "Verifying ports file exists"
-    function: fileExists("{{ports_file}}")
+    function: file_exists("{{ports_file}}")
     exports:
       ports_verified: "output"
 
@@ -150,7 +150,7 @@ steps:
   - name: read-subdomain-results
     type: function
     log: "Reading subdomain scan results"
-    function: readFile("{{output_dir}}/subdomain-results.txt")
+    function: read_file("{{output_dir}}/subdomain-results.txt")
     exports:
       scan_results: "output"
 
@@ -200,8 +200,8 @@ steps:
     type: function
     log: "Getting file statistics"
     parallel_functions:
-      - fileLength("{{output_dir}}/report.txt")
-      - fileExists("{{output_dir}}/all-ports.txt")
+      - file_length("{{output_dir}}/report.txt")
+      - file_exists("{{output_dir}}/all-ports.txt")
       - trim("  {{target}}  ")
     exports:
       file_stats: "output"

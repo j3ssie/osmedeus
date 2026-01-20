@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/core"
+	"github.com/j3ssie/osmedeus/v5/internal/database"
 	"github.com/j3ssie/osmedeus/v5/internal/executor"
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
@@ -67,6 +68,13 @@ func (w *Worker) Run(ctx context.Context) error {
 	if err := w.register(ctx); err != nil {
 		return fmt.Errorf("failed to register worker: %w", err)
 	}
+
+	// Set worker mode in config
+	config.SetWorkerMode(true, w.ID)
+
+	// Register distributed hooks for database writes
+	w.registerDistributedHooks()
+	defer w.unregisterDistributedHooks()
 
 	w.printer.Success("Worker %s joined successfully", w.ID)
 	w.printer.Info("Waiting for tasks...")
@@ -263,4 +271,67 @@ func (w *Worker) cleanup(ctx context.Context) {
 // GetID returns the worker ID
 func (w *Worker) GetID() string {
 	return w.ID
+}
+
+// GetClient returns the Redis client
+func (w *Worker) GetClient() *Client {
+	return w.client
+}
+
+// =============================================================================
+// Data Queue Methods - Send data to master via Redis
+// =============================================================================
+
+// SendRunData sends run data to the master via Redis queue
+func (w *Worker) SendRunData(ctx context.Context, run *database.Run) error {
+	return w.client.PushData(ctx, KeyDataRuns, "run", run, w.ID)
+}
+
+// SendStepResult sends step result data to the master via Redis queue
+func (w *Worker) SendStepResult(ctx context.Context, step *database.StepResult) error {
+	return w.client.PushData(ctx, KeyDataSteps, "step", step, w.ID)
+}
+
+// SendEventLog sends event log data to the master via Redis queue
+func (w *Worker) SendEventLog(ctx context.Context, eventLog *database.EventLog) error {
+	return w.client.PushData(ctx, KeyDataEvents, "event", eventLog, w.ID)
+}
+
+// SendArtifact sends artifact data to the master via Redis queue
+func (w *Worker) SendArtifact(ctx context.Context, artifact *database.Artifact) error {
+	return w.client.PushData(ctx, KeyDataArtifacts, "artifact", artifact, w.ID)
+}
+
+// =============================================================================
+// Distributed Hooks Registration
+// =============================================================================
+
+// registerDistributedHooks registers callbacks for database writes to use Redis queues
+func (w *Worker) registerDistributedHooks() {
+	hooks := &database.DistributedHooks{
+		SendRun: func(ctx context.Context, run *database.Run) error {
+			return w.SendRunData(ctx, run)
+		},
+		SendStepResult: func(ctx context.Context, step *database.StepResult) error {
+			return w.SendStepResult(ctx, step)
+		},
+		SendEventLog: func(ctx context.Context, event *database.EventLog) error {
+			return w.SendEventLog(ctx, event)
+		},
+		SendArtifact: func(ctx context.Context, artifact *database.Artifact) error {
+			return w.SendArtifact(ctx, artifact)
+		},
+		ShouldUseRedis: func() bool {
+			return config.ShouldUseRedisDataQueues()
+		},
+	}
+	database.RegisterDistributedHooks(hooks)
+	w.logger.Info("registered distributed hooks for database writes")
+}
+
+// unregisterDistributedHooks removes the distributed hooks
+func (w *Worker) unregisterDistributedHooks() {
+	database.UnregisterDistributedHooks()
+	config.SetWorkerMode(false, "")
+	w.logger.Info("unregistered distributed hooks")
 }

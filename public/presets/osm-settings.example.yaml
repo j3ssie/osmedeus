@@ -113,6 +113,14 @@ server:
   # License type shown in HTTP Server header and /server-info endpoint
   license: "open-source"
 
+  # Enable Prometheus metrics endpoint at /metrics (default: true)
+  # Set to false to disable metrics collection and endpoint
+  enable_metrics: true
+
+  # CORS allowed origins (default: "*" allows all origins)
+  # Use comma-separated list for multiple origins: "https://example.com,https://app.example.com"
+  cors_allowed_origins: "*"
+
   # API Key Authentication (alternative to JWT login flow)
   # When enabled, all API requests must include header: x-osm-api-key: <your-key>
   # This takes priority over JWT authentication when enabled
@@ -259,15 +267,21 @@ notification:
 # Cloud Storage Configuration (Optional)
 # =============================================================================
 # S3-compatible storage for backing up scan results
-# Supports AWS S3, MinIO, Google Cloud Storage, DigitalOcean Spaces, etc.
+# Supports AWS S3, MinIO, Cloudflare R2, Google Cloud Storage, DigitalOcean Spaces, Oracle OCI
 storage:
-  # Storage provider: "s3", "minio", "gcs", "spaces", etc.
+  # Storage provider: "s3", "minio", "r2", "gcs", "spaces", "oci"
+  # The provider determines endpoint resolution and default settings
   provider: s3
 
-  # Storage endpoint URL
-  # AWS S3: Leave empty or use region-specific endpoint
-  # MinIO: "http://localhost:9000"
-  # DigitalOcean: "https://nyc3.digitaloceanspaces.com"
+  # Storage endpoint URL (auto-resolved for most providers)
+  # Leave empty to auto-resolve based on provider and region/account_id
+  # Explicit examples:
+  #   AWS S3: "s3.us-east-1.amazonaws.com"
+  #   MinIO: "localhost:9000"
+  #   R2: Will auto-resolve from account_id
+  #   GCS: "storage.googleapis.com"
+  #   Spaces: Will auto-resolve from region (e.g., "nyc3.digitaloceanspaces.com")
+  #   OCI: Will auto-resolve from account_id (namespace) and region
   endpoint: ""
 
   # Access credentials
@@ -278,13 +292,92 @@ storage:
   bucket: ""
 
   # Cloud region (e.g., us-east-1, eu-west-1)
+  # Required for: s3, spaces, oci
   region: us-east-1
 
-  # Use SSL/TLS for connections
+  # Account ID or Namespace (provider-specific)
+  # R2: Your Cloudflare account ID
+  # OCI: Your Object Storage namespace
+  account_id: ""
+
+  # Use SSL/TLS for connections (default: true for cloud providers)
   use_ssl: true
+
+  # Force path-style URLs (auto-configured per provider)
+  # Set true for MinIO, R2, OCI; false for S3, GCS, Spaces
+  path_style: false
+
+  # Default presigned URL expiry (e.g., "1h", "30m", "24h")
+  # Used by cdnGetPresignedURL when no expiry is specified
+  presign_expiry: "1h"
 
   # Enable cloud storage uploads
   enabled: false
+
+# -----------------------------------------------------------------------------
+# Provider-specific examples (uncomment and configure one):
+# -----------------------------------------------------------------------------
+
+# AWS S3 Example:
+# storage:
+#   provider: s3
+#   region: us-east-1
+#   access_key_id: "AKIAIOSFODNN7EXAMPLE"
+#   secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+#   bucket: "osmedeus-scans"
+#   use_ssl: true
+#   enabled: true
+
+# Cloudflare R2 Example:
+# storage:
+#   provider: r2
+#   account_id: "your-cloudflare-account-id"
+#   access_key_id: "your-r2-access-key"
+#   secret_access_key: "your-r2-secret-key"
+#   bucket: "osmedeus-scans"
+#   use_ssl: true
+#   enabled: true
+
+# Google Cloud Storage (HMAC) Example:
+# storage:
+#   provider: gcs
+#   access_key_id: "your-hmac-access-key"
+#   secret_access_key: "your-hmac-secret"
+#   bucket: "osmedeus-scans"
+#   use_ssl: true
+#   enabled: true
+
+# DigitalOcean Spaces Example:
+# storage:
+#   provider: spaces
+#   region: "nyc3"
+#   access_key_id: "your-spaces-key"
+#   secret_access_key: "your-spaces-secret"
+#   bucket: "osmedeus-scans"
+#   use_ssl: true
+#   enabled: true
+
+# Oracle Cloud OCI Object Storage Example:
+# storage:
+#   provider: oci
+#   account_id: "your-namespace"
+#   region: "us-ashburn-1"
+#   access_key_id: "your-customer-access-key"
+#   secret_access_key: "your-secret-key"
+#   bucket: "osmedeus-scans"
+#   use_ssl: true
+#   enabled: true
+
+# MinIO (local/self-hosted) Example:
+# storage:
+#   provider: minio
+#   endpoint: "localhost:9000"
+#   access_key_id: "minioadmin"
+#   secret_access_key: "minioadmin"
+#   bucket: "osmedeus-scans"
+#   use_ssl: false
+#   path_style: true
+#   enabled: true
 
 # =============================================================================
 # LLM Configuration (Optional)

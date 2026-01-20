@@ -1677,7 +1677,7 @@ func (vf *vmFunc) dbSelectToJSONL(call goja.FunctionCall) goja.Value {
 }
 
 // dbImportAssetFromFile imports assets from a JSONL file (httpx format)
-// Usage: db_import_asset_from_file(workspace, file_path) -> int (count of imported records)
+// Usage: db_import_asset_from_file(workspace, file_path) -> map with stats {new, updated, unchanged, errors, total}
 func (vf *vmFunc) dbImportAssetFromFile(call goja.FunctionCall) goja.Value {
 	logger.Get().Debug("Calling " + terminal.HiGreen("dbImportAssetFromFile"))
 
@@ -1709,12 +1709,14 @@ func (vf *vmFunc) dbImportAssetFromFile(call goja.FunctionCall) goja.Value {
 	defer func() { _ = file.Close() }()
 
 	ctx := context.Background()
-	count := 0
+	stats := database.ImportStats{}
 
 	// Use scanner with larger buffer for large JSONL files
 	scanner := bufio.NewScanner(file)
 	buf := make([]byte, 0, 10*1024*1024) // 10MB buffer
 	scanner.Buffer(buf, 10*1024*1024)
+
+	now := time.Now()
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -1726,47 +1728,108 @@ func (vf *vmFunc) dbImportAssetFromFile(call goja.FunctionCall) goja.Value {
 		var data map[string]interface{}
 		if err := json.Unmarshal([]byte(line), &data); err != nil {
 			logger.Get().Debug("skipping invalid JSON line", zap.Error(err))
+			stats.Errors++
 			continue
 		}
 
 		// Map httpx fields to Asset model
 		asset := mapJSONToAsset(data, workspace, line)
+		asset.LastSeenAt = now
 
-		// Upsert into database
-		_, err := db.NewInsert().Model(&asset).
-			On("CONFLICT (workspace, asset_value, url) DO UPDATE").
-			Set("updated_at = EXCLUDED.updated_at").
-			Set("status_code = EXCLUDED.status_code").
-			Set("title = EXCLUDED.title").
-			Set("technologies = EXCLUDED.technologies").
-			Set("content_type = EXCLUDED.content_type").
-			Set("content_length = EXCLUDED.content_length").
-			Set("words = EXCLUDED.words").
-			Set("lines = EXCLUDED.lines").
-			Set("host_ip = EXCLUDED.host_ip").
-			Set("dns_records = EXCLUDED.dns_records").
-			Set("tls = EXCLUDED.tls").
-			Set("response_time = EXCLUDED.response_time").
-			Set("raw_json_data = EXCLUDED.raw_json_data").
-			Exec(ctx)
+		// Check if asset already exists
+		var existing database.Asset
+		selectErr := db.NewSelect().Model(&existing).
+			Where("workspace = ?", workspace).
+			Where("asset_value = ?", asset.AssetValue).
+			Where("url = ?", asset.URL).
+			Scan(ctx)
 
-		if err != nil {
-			logger.Get().Debug("failed to upsert asset", zap.Error(err))
-			continue
+		if selectErr != nil {
+			// New asset - insert
+			asset.CreatedAt = now
+			asset.UpdatedAt = now
+			_, insertErr := db.NewInsert().Model(&asset).Exec(ctx)
+			if insertErr != nil {
+				logger.Get().Debug("failed to insert asset", zap.Error(insertErr))
+				stats.Errors++
+				continue
+			}
+			stats.New++
+		} else if hasAssetChanged(&existing, &asset) {
+			// Changed - full update
+			asset.ID = existing.ID
+			asset.CreatedAt = existing.CreatedAt
+			asset.UpdatedAt = now
+			_, updateErr := db.NewUpdate().Model(&asset).WherePK().Exec(ctx)
+			if updateErr != nil {
+				logger.Get().Debug("failed to update asset", zap.Error(updateErr))
+				stats.Errors++
+				continue
+			}
+			stats.Updated++
+		} else {
+			// Unchanged - only update last_seen_at
+			_, updateErr := db.NewUpdate().Model((*database.Asset)(nil)).
+				Set("last_seen_at = ?", now).
+				Where("id = ?", existing.ID).
+				Exec(ctx)
+			if updateErr != nil {
+				logger.Get().Debug("failed to update last_seen_at", zap.Error(updateErr))
+				stats.Errors++
+				continue
+			}
+			stats.Unchanged++
 		}
-		count++
 	}
 
 	if err := scanner.Err(); err != nil {
 		return vf.errorValue(fmt.Sprintf("error reading file: %v", err))
 	}
 
+	total := stats.New + stats.Updated + stats.Unchanged
 	logger.Get().Debug("dbImportAssetFromFile completed",
 		zap.String("workspace", workspace),
 		zap.String("file", filePath),
-		zap.Int("count", count))
+		zap.Int("new", stats.New),
+		zap.Int("updated", stats.Updated),
+		zap.Int("unchanged", stats.Unchanged),
+		zap.Int("errors", stats.Errors),
+		zap.Int("total", total))
 
-	return vf.vm.ToValue(count)
+	// Return stats as a map
+	return vf.vm.ToValue(map[string]interface{}{
+		"new":       stats.New,
+		"updated":   stats.Updated,
+		"unchanged": stats.Unchanged,
+		"errors":    stats.Errors,
+		"total":     total,
+	})
+}
+
+// hasAssetChanged compares two assets for meaningful changes
+func hasAssetChanged(existing, new *database.Asset) bool {
+	return existing.StatusCode != new.StatusCode ||
+		existing.Title != new.Title ||
+		existing.ContentType != new.ContentType ||
+		existing.ContentLength != new.ContentLength ||
+		existing.HostIP != new.HostIP ||
+		existing.TLS != new.TLS ||
+		existing.Words != new.Words ||
+		existing.Lines != new.Lines ||
+		!slicesEqual(existing.Technologies, new.Technologies)
+}
+
+// slicesEqual compares two string slices for equality
+func slicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // mapJSONToAsset maps httpx JSON fields to Asset model
@@ -1928,7 +1991,7 @@ func (vf *vmFunc) dbImportVuln(call goja.FunctionCall) goja.Value {
 }
 
 // dbImportVulnFromFile imports vulnerabilities from a JSONL file (nuclei format)
-// Usage: db_import_vuln_from_file(workspace, file_path) -> int (count of imported records)
+// Usage: db_import_vuln_from_file(workspace, file_path) -> map with stats {new, updated, unchanged, errors, total}
 func (vf *vmFunc) dbImportVulnFromFile(call goja.FunctionCall) goja.Value {
 	logger.Get().Debug("Calling " + terminal.HiGreen("dbImportVulnFromFile"))
 
@@ -1960,12 +2023,14 @@ func (vf *vmFunc) dbImportVulnFromFile(call goja.FunctionCall) goja.Value {
 	defer func() { _ = file.Close() }()
 
 	ctx := context.Background()
-	count := 0
+	stats := database.ImportStats{}
 
 	// Use scanner with larger buffer for large JSONL files
 	scanner := bufio.NewScanner(file)
 	buf := make([]byte, 0, 10*1024*1024) // 10MB buffer
 	scanner.Buffer(buf, 10*1024*1024)
+
+	now := time.Now()
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -1977,11 +2042,13 @@ func (vf *vmFunc) dbImportVulnFromFile(call goja.FunctionCall) goja.Value {
 		var data map[string]interface{}
 		if err := json.Unmarshal([]byte(line), &data); err != nil {
 			logger.Get().Debug("skipping invalid JSON line", zap.Error(err))
+			stats.Errors++
 			continue
 		}
 
 		// Map nuclei fields to Vulnerability model
 		vuln := mapJSONToVuln(data, workspace, line)
+		vuln.LastSeenAt = now
 
 		// Check if vulnerability already exists
 		var existing database.Vulnerability
@@ -1991,34 +2058,75 @@ func (vf *vmFunc) dbImportVulnFromFile(call goja.FunctionCall) goja.Value {
 			Where("asset_value = ?", vuln.AssetValue).
 			Scan(ctx)
 
-		var insertErr error
-		if selectErr == nil {
-			// Vulnerability exists, update it
+		if selectErr != nil {
+			// New vulnerability - insert
+			vuln.CreatedAt = now
+			vuln.UpdatedAt = now
+			_, insertErr := db.NewInsert().Model(&vuln).Exec(ctx)
+			if insertErr != nil {
+				logger.Get().Debug("failed to insert vulnerability", zap.Error(insertErr))
+				stats.Errors++
+				continue
+			}
+			stats.New++
+		} else if hasVulnChanged(&existing, &vuln) {
+			// Changed - full update
 			vuln.ID = existing.ID
 			vuln.CreatedAt = existing.CreatedAt
-			_, insertErr = db.NewUpdate().Model(&vuln).WherePK().Exec(ctx)
+			vuln.UpdatedAt = now
+			_, updateErr := db.NewUpdate().Model(&vuln).WherePK().Exec(ctx)
+			if updateErr != nil {
+				logger.Get().Debug("failed to update vulnerability", zap.Error(updateErr))
+				stats.Errors++
+				continue
+			}
+			stats.Updated++
 		} else {
-			// Insert new vulnerability
-			_, insertErr = db.NewInsert().Model(&vuln).Exec(ctx)
+			// Unchanged - only update last_seen_at
+			_, updateErr := db.NewUpdate().Model((*database.Vulnerability)(nil)).
+				Set("last_seen_at = ?", now).
+				Where("id = ?", existing.ID).
+				Exec(ctx)
+			if updateErr != nil {
+				logger.Get().Debug("failed to update last_seen_at", zap.Error(updateErr))
+				stats.Errors++
+				continue
+			}
+			stats.Unchanged++
 		}
-
-		if insertErr != nil {
-			logger.Get().Debug("failed to upsert vulnerability", zap.Error(insertErr))
-			continue
-		}
-		count++
 	}
 
 	if err := scanner.Err(); err != nil {
 		return vf.errorValue(fmt.Sprintf("error reading file: %v", err))
 	}
 
+	total := stats.New + stats.Updated + stats.Unchanged
 	logger.Get().Debug("dbImportVulnFromFile completed",
 		zap.String("workspace", workspace),
 		zap.String("file", filePath),
-		zap.Int("count", count))
+		zap.Int("new", stats.New),
+		zap.Int("updated", stats.Updated),
+		zap.Int("unchanged", stats.Unchanged),
+		zap.Int("errors", stats.Errors),
+		zap.Int("total", total))
 
-	return vf.vm.ToValue(count)
+	// Return stats as a map
+	return vf.vm.ToValue(map[string]interface{}{
+		"new":       stats.New,
+		"updated":   stats.Updated,
+		"unchanged": stats.Unchanged,
+		"errors":    stats.Errors,
+		"total":     total,
+	})
+}
+
+// hasVulnChanged compares two vulnerabilities for meaningful changes
+func hasVulnChanged(existing, new *database.Vulnerability) bool {
+	return existing.Severity != new.Severity ||
+		existing.VulnTitle != new.VulnTitle ||
+		existing.VulnDesc != new.VulnDesc ||
+		existing.Confidence != new.Confidence ||
+		!slicesEqual(existing.Tags, new.Tags)
 }
 
 // mapJSONToVuln maps nuclei JSON fields to Vulnerability model
@@ -2088,4 +2196,329 @@ func mapJSONToVuln(data map[string]interface{}, workspace, rawLine string) datab
 	}
 
 	return vuln
+}
+
+// getAssetDiffInternal is a helper that retrieves asset diff data
+func (vf *vmFunc) getAssetDiffInternal(workspace string) (*database.AssetDiff, error) {
+	db := database.GetDB()
+	if db == nil {
+		return nil, fmt.Errorf("database not connected")
+	}
+
+	ctx := context.Background()
+
+	// Get workspace to determine fromTime
+	var fromTime time.Time
+	ws, err := database.GetWorkspaceByName(ctx, workspace)
+	if err == nil && ws != nil {
+		fromTime = ws.CreatedAt
+	} else {
+		// Fallback: use oldest asset's created_at or 24 hours ago
+		var oldestAsset database.Asset
+		err := db.NewSelect().Model(&oldestAsset).
+			Where("workspace = ?", workspace).
+			Order("created_at ASC").
+			Limit(1).
+			Scan(ctx)
+		if err == nil {
+			fromTime = oldestAsset.CreatedAt
+		} else {
+			// Default to 24 hours ago if no data
+			fromTime = time.Now().Add(-24 * time.Hour)
+		}
+	}
+
+	toTime := time.Now()
+
+	logger.Get().Debug(terminal.HiGreen("db_asset_diff")+" params",
+		zap.String("workspace", workspace),
+		zap.Time("from_time", fromTime),
+		zap.Time("to_time", toTime))
+
+	return database.GetAssetDiff(ctx, workspace, fromTime, toTime)
+}
+
+// assetDiffToJSONL converts asset diff to JSONL format string
+func assetDiffToJSONL(diff *database.AssetDiff) string {
+	var sb strings.Builder
+
+	// Write added assets
+	for _, asset := range diff.Added {
+		row := assetToMap(&asset)
+		row["diff_type"] = "added"
+		row["workspace_name"] = diff.WorkspaceName
+		if jsonBytes, err := json.Marshal(row); err == nil {
+			sb.Write(jsonBytes)
+			sb.WriteString("\n")
+		}
+	}
+
+	// Write removed assets
+	for _, asset := range diff.Removed {
+		row := assetToMap(&asset)
+		row["diff_type"] = "removed"
+		row["workspace_name"] = diff.WorkspaceName
+		if jsonBytes, err := json.Marshal(row); err == nil {
+			sb.Write(jsonBytes)
+			sb.WriteString("\n")
+		}
+	}
+
+	// Write changed assets
+	for _, change := range diff.Changed {
+		row := map[string]interface{}{
+			"diff_type":      "changed",
+			"workspace_name": diff.WorkspaceName,
+			"asset_id":       change.AssetID,
+			"asset_value":    change.AssetValue,
+			"url":            change.URL,
+			"changes":        fieldChangeSliceToMaps(change.Changes),
+		}
+		if jsonBytes, err := json.Marshal(row); err == nil {
+			sb.Write(jsonBytes)
+			sb.WriteString("\n")
+		}
+	}
+
+	return sb.String()
+}
+
+// dbAssetDiff gets asset diff with auto-populated time range
+// Usage: db_asset_diff(workspace) -> string (JSONL format)
+// workspace: workspace name
+// Returns: JSONL string with each line containing diff_type (added/removed/changed)
+func (vf *vmFunc) dbAssetDiff(call goja.FunctionCall) goja.Value {
+	logger.Get().Debug("Calling " + terminal.HiGreen("db_asset_diff"))
+
+	if len(call.Arguments) < 1 {
+		return vf.errorValue("db_asset_diff requires 1 argument: workspace")
+	}
+
+	workspace := call.Argument(0).String()
+	if workspace == "" || workspace == "undefined" {
+		return vf.errorValue("workspace cannot be empty")
+	}
+
+	diff, err := vf.getAssetDiffInternal(workspace)
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to get asset diff: %v", err))
+	}
+
+	return vf.vm.ToValue(assetDiffToJSONL(diff))
+}
+
+// dbAssetDiffToFile gets asset diff and writes to file
+// Usage: db_asset_diff_to_file(workspace, dest) -> bool
+// workspace: workspace name
+// dest: output file path
+func (vf *vmFunc) dbAssetDiffToFile(call goja.FunctionCall) goja.Value {
+	logger.Get().Debug("Calling " + terminal.HiGreen("db_asset_diff_to_file"))
+
+	if len(call.Arguments) < 2 {
+		return vf.errorValue("db_asset_diff_to_file requires 2 arguments: workspace, dest")
+	}
+
+	workspace := call.Argument(0).String()
+	dest := call.Argument(1).String()
+
+	if workspace == "" || workspace == "undefined" {
+		return vf.errorValue("workspace cannot be empty")
+	}
+	if dest == "" || dest == "undefined" {
+		return vf.errorValue("dest cannot be empty")
+	}
+
+	diff, err := vf.getAssetDiffInternal(workspace)
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to get asset diff: %v", err))
+	}
+
+	jsonl := assetDiffToJSONL(diff)
+
+	// Ensure dest directory exists
+	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to create dest directory: %v", err))
+	}
+
+	// Write to file
+	if err := os.WriteFile(dest, []byte(jsonl), 0644); err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to write file: %v", err))
+	}
+
+	logger.Get().Debug("db_asset_diff_to_file completed",
+		zap.String("dest", dest),
+		zap.Int("added", diff.Summary.TotalAdded),
+		zap.Int("removed", diff.Summary.TotalRemoved),
+		zap.Int("changed", diff.Summary.TotalChanged))
+
+	return vf.vm.ToValue(true)
+}
+
+// getVulnDiffInternal is a helper that retrieves vulnerability diff data
+func (vf *vmFunc) getVulnDiffInternal(workspace string) (*database.VulnerabilityDiff, error) {
+	db := database.GetDB()
+	if db == nil {
+		return nil, fmt.Errorf("database not connected")
+	}
+
+	ctx := context.Background()
+
+	// Get workspace to determine fromTime
+	var fromTime time.Time
+	ws, err := database.GetWorkspaceByName(ctx, workspace)
+	if err == nil && ws != nil {
+		fromTime = ws.CreatedAt
+	} else {
+		// Fallback: use oldest vulnerability's created_at or 24 hours ago
+		var oldestVuln database.Vulnerability
+		err := db.NewSelect().Model(&oldestVuln).
+			Where("workspace = ?", workspace).
+			Order("created_at ASC").
+			Limit(1).
+			Scan(ctx)
+		if err == nil {
+			fromTime = oldestVuln.CreatedAt
+		} else {
+			// Default to 24 hours ago if no data
+			fromTime = time.Now().Add(-24 * time.Hour)
+		}
+	}
+
+	toTime := time.Now()
+
+	logger.Get().Debug(terminal.HiGreen("db_vuln_diff")+" params",
+		zap.String("workspace", workspace),
+		zap.Time("from_time", fromTime),
+		zap.Time("to_time", toTime))
+
+	return database.GetVulnerabilityDiff(ctx, workspace, fromTime, toTime)
+}
+
+// vulnDiffToJSONL converts vulnerability diff to JSONL format string
+func vulnDiffToJSONL(diff *database.VulnerabilityDiff) string {
+	var sb strings.Builder
+
+	// Write added vulnerabilities
+	for _, vuln := range diff.Added {
+		row := vulnerabilityToMap(&vuln)
+		row["diff_type"] = "added"
+		row["workspace_name"] = diff.WorkspaceName
+		if jsonBytes, err := json.Marshal(row); err == nil {
+			sb.Write(jsonBytes)
+			sb.WriteString("\n")
+		}
+	}
+
+	// Write removed vulnerabilities
+	for _, vuln := range diff.Removed {
+		row := vulnerabilityToMap(&vuln)
+		row["diff_type"] = "removed"
+		row["workspace_name"] = diff.WorkspaceName
+		if jsonBytes, err := json.Marshal(row); err == nil {
+			sb.Write(jsonBytes)
+			sb.WriteString("\n")
+		}
+	}
+
+	// Write changed vulnerabilities
+	for _, change := range diff.Changed {
+		row := map[string]interface{}{
+			"diff_type":      "changed",
+			"workspace_name": diff.WorkspaceName,
+			"vuln_id":        change.VulnID,
+			"vuln_info":      change.VulnInfo,
+			"asset_value":    change.AssetValue,
+			"changes":        fieldChangeSliceToMaps(change.Changes),
+		}
+		if jsonBytes, err := json.Marshal(row); err == nil {
+			sb.Write(jsonBytes)
+			sb.WriteString("\n")
+		}
+	}
+
+	return sb.String()
+}
+
+// dbVulnDiff gets vulnerability diff with auto-populated time range
+// Usage: db_vuln_diff(workspace) -> string (JSONL format)
+// workspace: workspace name
+// Returns: JSONL string with each line containing diff_type (added/removed/changed)
+func (vf *vmFunc) dbVulnDiff(call goja.FunctionCall) goja.Value {
+	logger.Get().Debug("Calling " + terminal.HiGreen("db_vuln_diff"))
+
+	if len(call.Arguments) < 1 {
+		return vf.errorValue("db_vuln_diff requires 1 argument: workspace")
+	}
+
+	workspace := call.Argument(0).String()
+	if workspace == "" || workspace == "undefined" {
+		return vf.errorValue("workspace cannot be empty")
+	}
+
+	diff, err := vf.getVulnDiffInternal(workspace)
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to get vulnerability diff: %v", err))
+	}
+
+	return vf.vm.ToValue(vulnDiffToJSONL(diff))
+}
+
+// dbVulnDiffToFile gets vulnerability diff and writes to file
+// Usage: db_vuln_diff_to_file(workspace, dest) -> bool
+// workspace: workspace name
+// dest: output file path
+func (vf *vmFunc) dbVulnDiffToFile(call goja.FunctionCall) goja.Value {
+	logger.Get().Debug("Calling " + terminal.HiGreen("db_vuln_diff_to_file"))
+
+	if len(call.Arguments) < 2 {
+		return vf.errorValue("db_vuln_diff_to_file requires 2 arguments: workspace, dest")
+	}
+
+	workspace := call.Argument(0).String()
+	dest := call.Argument(1).String()
+
+	if workspace == "" || workspace == "undefined" {
+		return vf.errorValue("workspace cannot be empty")
+	}
+	if dest == "" || dest == "undefined" {
+		return vf.errorValue("dest cannot be empty")
+	}
+
+	diff, err := vf.getVulnDiffInternal(workspace)
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to get vulnerability diff: %v", err))
+	}
+
+	jsonl := vulnDiffToJSONL(diff)
+
+	// Ensure dest directory exists
+	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to create dest directory: %v", err))
+	}
+
+	// Write to file
+	if err := os.WriteFile(dest, []byte(jsonl), 0644); err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to write file: %v", err))
+	}
+
+	logger.Get().Debug("db_vuln_diff_to_file completed",
+		zap.String("dest", dest),
+		zap.Int("added", diff.Summary.TotalAdded),
+		zap.Int("removed", diff.Summary.TotalRemoved),
+		zap.Int("changed", diff.Summary.TotalChanged))
+
+	return vf.vm.ToValue(true)
+}
+
+// fieldChangeSliceToMaps converts a slice of FieldChanges to slice of maps
+func fieldChangeSliceToMaps(changes []database.FieldChange) []map[string]interface{} {
+	result := make([]map[string]interface{}, len(changes))
+	for i, change := range changes {
+		result[i] = map[string]interface{}{
+			"field":     change.Field,
+			"old_value": change.OldValue,
+			"new_value": change.NewValue,
+		}
+	}
+	return result
 }

@@ -1,0 +1,129 @@
+name: test-cdn-functions
+kind: module
+description: Test CDN/Storage utility functions
+tags: test,cdn,storage,functions
+
+params:
+  - name: target
+    required: true
+
+steps:
+  # Test cdn_list with empty prefix (should return empty array when no storage configured)
+  - name: test-cdn-list-empty
+    type: function
+    function: cdn_list("")
+    exports:
+      list_result: "output"
+
+  # Test cdn_list with prefix
+  - name: test-cdn-list-prefix
+    type: function
+    function: cdn_list("scans/")
+    exports:
+      list_prefix_result: "output"
+
+  # Test cdn_stat with non-existent file (should return null)
+  - name: test-cdn-stat-missing
+    type: function
+    function: cdn_stat("nonexistent/file.txt")
+    exports:
+      stat_result: "output"
+
+  # Test cdn_exists with non-existent file
+  - name: test-cdn-exists-missing
+    type: function
+    function: cdn_exists("nonexistent/file.txt")
+    exports:
+      exists_result: "output"
+
+  # Test cdn_get_presigned_url with empty path (should return empty string)
+  - name: test-cdn-presigned-empty
+    type: function
+    function: cdn_get_presigned_url("")
+    exports:
+      presigned_empty: "output"
+
+  # Test cdn_get_presigned_url with path and expiry
+  - name: test-cdn-presigned-with-expiry
+    type: function
+    function: cdn_get_presigned_url("test/file.txt", 60)
+    exports:
+      presigned_result: "output"
+
+  # Test cdn_sync_upload with empty directory (should handle gracefully)
+  - name: test-cdn-sync-upload-empty
+    type: function
+    function: cdn_sync_upload("", "remote/prefix/")
+    exports:
+      sync_upload_empty: "output"
+
+  # Test cdn_sync_download with empty local directory (should handle gracefully)
+  - name: test-cdn-sync-download-empty
+    type: function
+    function: cdn_sync_download("remote/prefix/", "")
+    exports:
+      sync_download_empty: "output"
+
+  # Test cdn_upload with empty paths
+  - name: test-cdn-upload-empty
+    type: function
+    function: cdn_upload("", "")
+    exports:
+      upload_empty: "output"
+
+  # Test cdn_download with empty paths
+  - name: test-cdn-download-empty
+    type: function
+    function: cdn_download("", "")
+    exports:
+      download_empty: "output"
+
+  # Test cdn_delete with empty path
+  - name: test-cdn-delete-empty
+    type: function
+    function: cdn_delete("")
+    exports:
+      delete_empty: "output"
+
+  # Create local test directory for sync testing
+  - name: create-test-dir
+    type: bash
+    command: |
+      mkdir -p /tmp/cdn-test-{{target}}
+      echo "file1 content" > /tmp/cdn-test-{{target}}/file1.txt
+      echo "file2 content" > /tmp/cdn-test-{{target}}/file2.txt
+      mkdir -p /tmp/cdn-test-{{target}}/subdir
+      echo "subfile content" > /tmp/cdn-test-{{target}}/subdir/subfile.txt
+
+  # Test cdn_sync_upload with actual directory (will fail if no storage, but should not crash)
+  - name: test-cdn-sync-upload-dir
+    type: function
+    function: cdn_sync_upload("/tmp/cdn-test-{{target}}", "test-sync/{{target}}/")
+    exports:
+      sync_upload_result: "output"
+
+  # Test cdn_sync_download to actual directory
+  - name: test-cdn-sync-download-dir
+    type: function
+    function: cdn_sync_download("test-sync/{{target}}/", "/tmp/cdn-download-{{target}}")
+    exports:
+      sync_download_result: "output"
+
+  # Cleanup
+  - name: cleanup
+    type: bash
+    command: |
+      rm -rf /tmp/cdn-test-{{target}}
+      rm -rf /tmp/cdn-download-{{target}}
+
+  # Log results summary
+  - name: log-results
+    type: function
+    function: |
+      log_info("CDN Function Test Results:");
+      log_info("  cdn_list empty: " + JSON.stringify({{list_result}}));
+      log_info("  cdn_stat missing: " + ({{stat_result}} === null ? "null" : JSON.stringify({{stat_result}})));
+      log_info("  cdn_exists missing: " + {{exists_result}});
+      log_info("  cdn_sync_upload result: " + JSON.stringify({{sync_upload_result}}));
+      log_info("  cdn_sync_download result: " + JSON.stringify({{sync_download_result}}));
+      true

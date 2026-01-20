@@ -21,7 +21,7 @@ steps:
   # Foreach with templated input path
   - name: foreach-with-templates
     type: foreach
-    pre_condition: 'fileExists("{{inputFile}}")'
+    pre_condition: 'file_exists("{{inputFile}}")'
     input: "{{inputFile}}"
     variable: item
     threads: 2
@@ -34,7 +34,7 @@ steps:
   # Verify results
   - name: verify-foreach
     type: bash
-    pre_condition: 'fileExists("{{outputDir}}/item1.txt")'
+    pre_condition: 'file_exists("{{outputDir}}/item1.txt")'
     command: |
       echo "=== Foreach Verification ==="
       echo "Foreach completed for {{Target}}"

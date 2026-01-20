@@ -17,7 +17,7 @@ steps:
     parallel_functions:
       - trim("  hello  ")
       - contains("hello world", "world")
-      - fileExists("/tmp/parallel-func-test.txt")
+      - file_exists("/tmp/parallel-func-test.txt")
     exports:
       func_results: "output"
 

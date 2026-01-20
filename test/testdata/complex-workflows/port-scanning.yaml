@@ -70,7 +70,7 @@ steps:
   - name: analyze-results
     type: function
     script: |
-      var portCount = fileLength("{{open_ports}}");
+      var portCount = file_length("{{open_ports}}");
       log_info("Total open ports found: " + portCount);
       if (portCount == 0) {
         return "no_ports";
@@ -108,7 +108,7 @@ steps:
   # Step 7: bash - Batch service detection for many ports
   - name: batch-service-detection
     type: bash
-    pre_condition: "fileLength('{{open_ports}}') > 100"
+    pre_condition: "file_length('{{open_ports}}') > 100"
     command: "{{Binaries}}/nmap -sV --version-intensity 5 -iL {{open_ports}} -oN {{services_dir}}/batch-scan.txt"
     timeout: 7200
     exports:

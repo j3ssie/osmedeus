@@ -31,8 +31,8 @@ steps:
   - name: validate-dependencies
     type: function
     function: |
-      fileExists("{{Binaries}}/metabigor") &&
-      fileExists("{{Binaries}}/httpx")
+      file_exists("{{Binaries}}/metabigor") &&
+      file_exists("{{Binaries}}/httpx")
     exports:
       deps_valid: "output"
     on_error:
@@ -63,14 +63,14 @@ steps:
 
   - name: clean-portscan-results
     type: function
-    pre_condition: 'fileExists("{{output_dir}}/raw-open-ports.txt")'
+    pre_condition: 'file_exists("{{output_dir}}/raw-open-ports.txt")'
     function: CleanRustScan("{{output_dir}}/raw-open-ports.txt", "{{output_dir}}/open-ports.txt")
     exports:
       clean_ports_file: "{{output_dir}}/open-ports.txt"
 
   - name: count-open-ports
     type: function
-    function: fileLength("{{output_dir}}/open-ports.txt")
+    function: file_length("{{output_dir}}/open-ports.txt")
     exports:
       open_port_count: "output"
 
@@ -102,12 +102,12 @@ steps:
 
   - name: sort-http-results
     type: function
-    pre_condition: 'fileExists("{{httpFile}}")'
+    pre_condition: 'file_exists("{{httpFile}}")'
     function: SortU("{{httpFile}}")
 
   - name: count-http-hosts
     type: function
-    function: fileLength("{{httpFile}}")
+    function: file_length("{{httpFile}}")
     exports:
       http_host_count: "output"
 
@@ -116,7 +116,7 @@ steps:
   # ============================================================
   - name: http-fingerprinting
     type: parallel-steps
-    pre_condition: 'parseInt("{{http_host_count}}") > 0'
+    pre_condition: 'parse_int("{{http_host_count}}") > 0'
     parallel_steps:
       - name: httpx-json-fingerprint
         type: bash
@@ -139,14 +139,14 @@ steps:
   # ============================================================
   - name: clean-http-json
     type: function
-    pre_condition: 'fileExists("{{output_dir}}/{{Workspace}}-http-overview.txt")'
+    pre_condition: 'file_exists("{{output_dir}}/{{Workspace}}-http-overview.txt")'
     function: CleanJSONHttpx("{{output_dir}}/{{Workspace}}-http-overview.txt", "{{output_dir}}/{{Workspace}}-raw-overview.txt")
     exports:
       raw_overview: "{{output_dir}}/{{Workspace}}-raw-overview.txt"
 
   - name: beautify-results
     type: bash
-    pre_condition: 'fileExists("{{output_dir}}/{{Workspace}}-raw-overview.txt")'
+    pre_condition: 'file_exists("{{output_dir}}/{{Workspace}}-raw-overview.txt")'
     command: "cat {{output_dir}}/{{Workspace}}-raw-overview.txt | csvtk pretty --no-header-row -I -s ' | ' -W 75 > {{output_dir}}/beautify-{{Workspace}}-http.txt"
     on_error:
       - action: log
@@ -156,7 +156,7 @@ steps:
 
   - name: fallback-beautify
     type: bash
-    pre_condition: '!fileExists("{{output_dir}}/beautify-{{Workspace}}-http.txt")'
+    pre_condition: '!file_exists("{{output_dir}}/beautify-{{Workspace}}-http.txt")'
     command: "cp {{output_dir}}/{{Workspace}}-raw-overview.txt {{output_dir}}/beautify-{{Workspace}}-http.txt 2>/dev/null || touch {{output_dir}}/beautify-{{Workspace}}-http.txt"
 
   # ============================================================
@@ -164,7 +164,7 @@ steps:
   # ============================================================
   - name: detailed-host-analysis
     type: foreach
-    pre_condition: 'parseInt("{{http_host_count}}") > 0 && parseInt("{{http_host_count}}") < 100'
+    pre_condition: 'parse_int("{{http_host_count}}") > 0 && parse_int("{{http_host_count}}") < 100'
     input: "{{httpFile}}"
     variable: host
     threads: 5
@@ -199,7 +199,7 @@ steps:
 
   - name: generate-markdown-report
     type: function
-    pre_condition: 'fileExists("{{Data}}/markdown/simple-template.md")'
+    pre_condition: 'file_exists("{{Data}}/markdown/simple-template.md")'
     function: GenMarkdownReport("{{Data}}/markdown/simple-template.md", "{{Output}}/summary.html")
     on_error:
       - action: log
@@ -222,10 +222,10 @@ steps:
   # ============================================================
   - name: final-sort
     type: function
-    pre_condition: 'fileExists("{{httpFile}}")'
+    pre_condition: 'file_exists("{{httpFile}}")'
     function: SortU("{{httpFile}}")
 
   - name: notify-completion
     type: function
-    pre_condition: 'parseInt("{{open_port_count}}") > 0'
+    pre_condition: 'parse_int("{{open_port_count}}") > 0'
     function: printf("CIDR scan complete: {{open_port_count}} open ports, {{http_host_count}} HTTP hosts")

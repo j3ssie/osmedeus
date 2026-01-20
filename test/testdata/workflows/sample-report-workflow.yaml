@@ -52,7 +52,7 @@ steps:
       ## String Functions Demo
 
       ```osm-func
-      "Uppercase target: " + toUpperCase("{{Target}}")
+      "Uppercase target: " + to_upper_case("{{Target}}")
       ```
 
       ```osm-func
@@ -73,7 +73,7 @@ steps:
       uuid()
       ``` |
       | Random String | ```osm-func
-      randomString(8)
+      random_string(8)
       ``` |
       | Contains 'example' | ```osm-func
       contains("{{Target}}", "example")
@@ -100,7 +100,7 @@ steps:
   # Step 4: Verify the report was created
   - name: verify-report
     type: function
-    function: 'fileExists("{{Output}}/security-report.md")'
+    function: 'file_exists("{{Output}}/security-report.md")'
 
   # Step 5: Display report path
   - name: show-report-path

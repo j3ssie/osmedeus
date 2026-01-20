@@ -16,11 +16,11 @@ import (
 // ForeachExecutor executes foreach steps
 type ForeachExecutor struct {
 	dispatcher     *StepDispatcher
-	templateEngine *template.Engine
+	templateEngine template.TemplateEngine
 }
 
 // NewForeachExecutor creates a new foreach executor
-func NewForeachExecutor(dispatcher *StepDispatcher, engine *template.Engine) *ForeachExecutor {
+func NewForeachExecutor(dispatcher *StepDispatcher, engine template.TemplateEngine) *ForeachExecutor {
 	return &ForeachExecutor{
 		dispatcher:     dispatcher,
 		templateEngine: engine,

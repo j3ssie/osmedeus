@@ -73,6 +73,11 @@ func (p *Parser) Validate(w *core.Workflow) error {
 		return err
 	}
 
+	// Validate override if present
+	if err := p.validateOverride(w); err != nil {
+		return err
+	}
+
 	// Validate based on kind
 	if w.IsModule() {
 		return p.validateModule(w)
@@ -82,7 +87,9 @@ func (p *Parser) Validate(w *core.Workflow) error {
 
 // validateModule validates module-specific fields
 func (p *Parser) validateModule(w *core.Workflow) error {
-	if len(w.Steps) == 0 {
+	// Modules must have at least one step, unless they extend another workflow
+	// (in which case they will inherit steps after resolution)
+	if len(w.Steps) == 0 && w.Extends == "" {
 		return &ValidationError{
 			Field:   "steps",
 			Message: "module must have at least one step",
@@ -101,7 +108,9 @@ func (p *Parser) validateModule(w *core.Workflow) error {
 
 // validateFlow validates flow-specific fields
 func (p *Parser) validateFlow(w *core.Workflow) error {
-	if len(w.Modules) == 0 {
+	// Flows must have at least one module, unless they extend another workflow
+	// (in which case they will inherit modules after resolution)
+	if len(w.Modules) == 0 && w.Extends == "" {
 		return &ValidationError{
 			Field:   "modules",
 			Message: "flow must have at least one module reference",
@@ -140,6 +149,81 @@ func (p *Parser) validatePreferences(prefs *core.Preferences) error {
 			return &ValidationError{
 				Field:   "preferences.heuristics_check",
 				Message: fmt.Sprintf("invalid value: %s, must be 'none', 'basic', or 'advanced'", *prefs.HeuristicsCheck),
+			}
+		}
+	}
+
+	return nil
+}
+
+// validateOverride validates the override section of a workflow
+func (p *Parser) validateOverride(w *core.Workflow) error {
+	if w.Override == nil {
+		return nil
+	}
+
+	// Validate steps override mode
+	if w.Override.Steps != nil {
+		if !core.IsValidOverrideMode(w.Override.Steps.Mode) {
+			return &ValidationError{
+				Field:   "override.steps.mode",
+				Message: fmt.Sprintf("invalid mode: %s, must be 'replace', 'prepend', 'append', or 'merge'", w.Override.Steps.Mode),
+			}
+		}
+
+		// Validate that steps override is only used with module workflows
+		if w.IsFlow() {
+			return &ValidationError{
+				Field:   "override.steps",
+				Message: "steps override can only be used with module workflows",
+			}
+		}
+
+		// Validate steps in override
+		for i, step := range w.Override.Steps.Steps {
+			if err := p.validateStep(&step, i); err != nil {
+				return &ValidationError{
+					Field:   fmt.Sprintf("override.steps.steps[%d]", i),
+					Message: err.Error(),
+				}
+			}
+		}
+
+		// Validate replacement steps
+		for i, step := range w.Override.Steps.Replace {
+			if err := p.validateStep(&step, i); err != nil {
+				return &ValidationError{
+					Field:   fmt.Sprintf("override.steps.replace[%d]", i),
+					Message: err.Error(),
+				}
+			}
+		}
+	}
+
+	// Validate modules override mode
+	if w.Override.Modules != nil {
+		if !core.IsValidOverrideMode(w.Override.Modules.Mode) {
+			return &ValidationError{
+				Field:   "override.modules.mode",
+				Message: fmt.Sprintf("invalid mode: %s, must be 'replace', 'prepend', 'append', or 'merge'", w.Override.Modules.Mode),
+			}
+		}
+
+		// Validate that modules override is only used with flow workflows
+		if w.IsModule() {
+			return &ValidationError{
+				Field:   "override.modules",
+				Message: "modules override can only be used with flow workflows",
+			}
+		}
+	}
+
+	// Validate preferences in override
+	if w.Override.Preferences != nil {
+		if err := p.validatePreferences(w.Override.Preferences); err != nil {
+			return &ValidationError{
+				Field:   "override.preferences",
+				Message: err.Error(),
 			}
 		}
 	}

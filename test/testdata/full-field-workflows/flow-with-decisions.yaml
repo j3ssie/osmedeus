@@ -1,0 +1,154 @@
+# Comprehensive example demonstrating flow with decision routing between modules
+kind: flow
+name: flow-with-decisions
+description: Flow with decision routing between modules based on conditions
+tags: example, flow, decisions, comprehensive
+
+params:
+  - name: target
+    required: true
+  - name: scan_depth
+    default: "standard"
+  - name: enable_notifications
+    type: bool
+    default: true
+
+# Triggers for automated execution
+trigger:
+  - name: manual-trigger
+    on: manual
+    enabled: true
+  - name: scheduled-scan
+    on: cron
+    schedule: "0 2 * * *"
+    enabled: false
+    input:
+      type: file
+      path: "{{BaseDir}}/targets.txt"
+
+modules:
+  # Initial reconnaissance module
+  - name: recon
+    path: test-with-fragment
+    params:
+      domain: "{{target}}"
+    on_success:
+      - action: log
+        message: "Recon completed for {{target}}"
+      - action: export
+        name: recon_complete
+        value: true
+    on_error:
+      - action: log
+        message: "Recon failed for {{target}}"
+      - action: abort
+    decision:
+      switch: "{{scan_depth}}"
+      cases:
+        "quick":
+          goto: quick-scan-module
+        "standard":
+          goto: standard-scan-module
+        "deep":
+          goto: deep-scan-module
+      default:
+        goto: standard-scan-module
+
+  # Quick scan path
+  - name: quick-scan-module
+    path: test-fragment-nested-steps
+    params:
+      target: "{{target}}"
+    depends_on:
+      - recon
+    condition: "{{scan_depth}} == 'quick'"
+    decision:
+      switch: "{{enable_notifications}}"
+      cases:
+        "true":
+          goto: notify-module
+      default:
+        goto: _end
+
+  # Standard scan path
+  - name: standard-scan-module
+    path: test-fragment-multi-chain
+    params:
+      target: "{{target}}"
+    depends_on:
+      - recon
+    condition: "{{scan_depth}} == 'standard'"
+    on_success:
+      - action: log
+        message: "Standard scan completed"
+    decision:
+      switch: "{{enable_notifications}}"
+      cases:
+        "true":
+          goto: notify-module
+      default:
+        goto: _end
+
+  # Deep scan path with additional modules
+  - name: deep-scan-module
+    path: test-fragment-with-dependencies
+    params:
+      target: "{{target}}"
+    depends_on:
+      - recon
+    condition: "{{scan_depth}} == 'deep'"
+    on_success:
+      - action: export
+        name: deep_scan_done
+        value: true
+    decision:
+      switch: "true"
+      cases:
+        "true":
+          goto: vulnerability-scan
+
+  # Additional vulnerability scanning for deep mode
+  - name: vulnerability-scan
+    path: test-fragment-nested-steps
+    params:
+      target: "{{target}}"
+    depends_on:
+      - deep-scan-module
+    on_success:
+      - action: log
+        message: "Vulnerability scan completed"
+    decision:
+      switch: "{{enable_notifications}}"
+      cases:
+        "true":
+          goto: notify-module
+      default:
+        goto: _end
+
+  # Notification module (optional, based on enable_notifications)
+  - name: notify-module
+    path: test-with-fragment
+    params:
+      domain: "{{target}}"
+    on_success:
+      - action: notify
+        notify: "Scan completed for {{target}} with depth {{scan_depth}}"
+    on_error:
+      - action: log
+        message: "Notification failed but scan was successful"
+      - action: continue
+
+  # Module demonstrating explicit _end routing
+  - name: cleanup-module
+    path: test-step-dependencies
+    params:
+      target: "{{target}}"
+    depends_on:
+      - notify-module
+    decision:
+      switch: "true"
+      cases:
+        "true":
+          goto: _end
+      default:
+        goto: _end

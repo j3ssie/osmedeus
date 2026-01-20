@@ -1,0 +1,52 @@
+# Simple Event Emitter Workflow
+# This workflow demonstrates how to emit events that can trigger other workflows
+name: simple-emitter
+kind: module
+description: Simple workflow that emits events for discovered assets
+tags: event,emitter,example
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: log-start
+    type: function
+    functions:
+      - 'print_green("Starting discovery for {{target}}")'
+
+  - name: discover-assets
+    type: bash
+    command: |
+      echo "api.{{target}}" > {{Output}}/assets.txt
+      echo "www.{{target}}" >> {{Output}}/assets.txt
+      echo "mail.{{target}}" >> {{Output}}/assets.txt
+
+  - name: emit-single-event
+    type: function
+    description: Emit a single event for a specific asset
+    functions:
+      - 'generate_event("{{Workspace}}", "discovery.asset", "simple-emitter", "subdomain", "new.{{target}}")'
+      - 'print_blue("Emitted single event for new.{{target}}")'
+
+  - name: emit-events-from-file
+    type: function
+    description: Emit events for each line in a file
+    functions:
+      - 'set_var("count", generate_event_from_file("{{Workspace}}", "discovery.asset", "simple-emitter", "subdomain", "{{Output}}/assets.txt"))'
+      - 'print_green("Emitted " + get_var("count") + " events from file")'
+
+  - name: emit-structured-event
+    type: function
+    description: Emit an event with structured JSON data
+    function: |
+      generate_event("{{Workspace}}", "discovery.complete", "simple-emitter", "summary", {
+        target: "{{target}}",
+        asset_count: 3,
+        status: "completed"
+      })
+
+  - name: log-complete
+    type: function
+    functions:
+      - 'print_green("Discovery complete for {{target}}")'

@@ -1,0 +1,43 @@
+name: test-event-emitter
+kind: module
+description: Test workflow that emits events
+tags: test,event,emitter
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: generate-subdomains
+    type: bash
+    command: |
+      echo "api.{{target}}" > {{Output}}/subdomains.txt
+      echo "www.{{target}}" >> {{Output}}/subdomains.txt
+      echo "admin.{{target}}" >> {{Output}}/subdomains.txt
+
+  - name: emit-single-event
+    type: function
+    function: |
+      generate_event("{{Workspace}}", "assets.new", "test-emitter", "subdomain", "single.{{target}}")
+
+  - name: emit-events-from-file
+    type: function
+    function: |
+      generate_event_from_file("{{Workspace}}", "assets.new", "test-emitter", "subdomain", "{{Output}}/subdomains.txt")
+    exports:
+      emitted_count: "{{result}}"
+
+  - name: emit-complex-event
+    type: function
+    function: |
+      generate_event("{{Workspace}}", "vulnerabilities.new", "test-scanner", "finding", {
+        url: "https://{{target}}/admin",
+        severity: "high",
+        template: "exposed-admin-panel",
+        matched: "/admin"
+      })
+
+  - name: log-result
+    type: function
+    function: |
+      log_info("Emitted events for {{target}}, file event count: " + "{{emitted_count}}")

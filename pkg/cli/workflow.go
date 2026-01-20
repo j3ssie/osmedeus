@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/core"
+	"github.com/j3ssie/osmedeus/v5/internal/linter"
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
 	"github.com/spf13/cobra"
@@ -64,13 +65,14 @@ var workflowListCmd = &cobra.Command{
 		if len(flows) > 0 || len(modules) > 0 {
 			// Collect all workflow data first to calculate column widths
 			type workflowRow struct {
-				name      string
-				colorName string // name with color codes
-				wfType    string
-				desc      string
-				reqParams string
-				steps     string // step/module count
-				tags      string
+				name        string
+				colorName   string // name with color codes
+				wfType      string
+				desc        string
+				reqParams   string
+				steps       string // step/module count
+				tags        string
+				targetTypes string
 			}
 			var rows []workflowRow
 			uniqueTags := make(map[string]bool) // Collect unique tags across all workflows
@@ -81,12 +83,17 @@ var workflowListCmd = &cobra.Command{
 				err  error
 			}
 			var workflowErrors []workflowError
+			hasTargetRequired := false // Track if any workflow has required Target
 
 			// Load flows
 			for _, f := range flows {
 				wf, err := loader.LoadWorkflow(f)
 				if err != nil {
 					workflowErrors = append(workflowErrors, workflowError{name: f, err: err})
+					continue
+				}
+				// Skip hidden workflows
+				if wf.Hidden {
 					continue
 				}
 				// Skip if tags filter is specified and workflow doesn't match
@@ -98,6 +105,10 @@ var workflowListCmd = &cobra.Command{
 					desc = truncateString(wf.Description, 50)
 				}
 				reqParams := getRequiredParams(wf)
+				// Track if any workflow has required Target
+				if workflowHasRequiredTarget(wf) {
+					hasTargetRequired = true
+				}
 				steps := "-"
 				// Count modules for flows
 				if len(wf.Modules) > 0 {
@@ -111,13 +122,14 @@ var workflowListCmd = &cobra.Command{
 						uniqueTags[tag] = true
 					}
 				}
+				targetTypes := getTargetTypes(wf)
 				name := f
 				colorName := f
 				if f == "general" {
 					name = f + " (default)"
 					colorName = terminal.Green(name)
 				}
-				rows = append(rows, workflowRow{name, colorName, "flow", desc, reqParams, steps, tags})
+				rows = append(rows, workflowRow{name, colorName, "flow", desc, reqParams, steps, tags, targetTypes})
 			}
 
 			// Load modules
@@ -125,6 +137,10 @@ var workflowListCmd = &cobra.Command{
 				wf, err := loader.LoadWorkflow(m)
 				if err != nil {
 					workflowErrors = append(workflowErrors, workflowError{name: m, err: err})
+					continue
+				}
+				// Skip hidden workflows
+				if wf.Hidden {
 					continue
 				}
 				// Skip if tags filter is specified and workflow doesn't match
@@ -136,6 +152,10 @@ var workflowListCmd = &cobra.Command{
 					desc = truncateString(wf.Description, 50)
 				}
 				reqParams := getRequiredParams(wf)
+				// Track if any workflow has required Target
+				if workflowHasRequiredTarget(wf) {
+					hasTargetRequired = true
+				}
 				steps := "-"
 				// Count steps for modules
 				if len(wf.Steps) > 0 {
@@ -149,7 +169,8 @@ var workflowListCmd = &cobra.Command{
 						uniqueTags[tag] = true
 					}
 				}
-				rows = append(rows, workflowRow{m, m, "module", desc, reqParams, steps, tags})
+				targetTypes := getTargetTypes(wf)
+				rows = append(rows, workflowRow{m, m, "module", desc, reqParams, steps, tags, targetTypes})
 			}
 
 			// Check if any workflows matched the filter
@@ -167,6 +188,7 @@ var workflowListCmd = &cobra.Command{
 			paramsWidth := len("Required Params")
 			stepsWidth := len("Steps")
 			tagsWidth := len("Tags")
+			targetTypesWidth := len("Target Types")
 
 			for _, r := range rows {
 				if len(r.name) > nameWidth {
@@ -187,79 +209,99 @@ var workflowListCmd = &cobra.Command{
 				if showTags && len(r.tags) > tagsWidth {
 					tagsWidth = len(r.tags)
 				}
+				if len(r.targetTypes) > targetTypesWidth {
+					targetTypesWidth = len(r.targetTypes)
+				}
 			}
 
 			// Print markdown table with styled headers
 			fmt.Println()
 			if showTags {
 				// With Tags column
+				fmt.Printf("| %s%s | %s%s | %s%s | %s%s | %s%s | %s%s | %s%s |\n",
+					terminal.Bold("Name"), strings.Repeat(" ", nameWidth-4),
+					terminal.Bold("Type"), strings.Repeat(" ", typeWidth-4),
+					terminal.Bold("Description"), strings.Repeat(" ", descWidth-11),
+					terminal.Bold("Required Params"), strings.Repeat(" ", paramsWidth-15),
+					terminal.Bold("Steps"), strings.Repeat(" ", stepsWidth-5),
+					terminal.Bold("Target Types"), strings.Repeat(" ", targetTypesWidth-12),
+					terminal.Bold("Tags"), strings.Repeat(" ", tagsWidth-4))
+				fmt.Printf("|-%s-|-%s-|-%s-|-%s-|-%s-|-%s-|-%s-|\n",
+					strings.Repeat("-", nameWidth), strings.Repeat("-", typeWidth),
+					strings.Repeat("-", descWidth), strings.Repeat("-", paramsWidth),
+					strings.Repeat("-", stepsWidth), strings.Repeat("-", targetTypesWidth),
+					strings.Repeat("-", tagsWidth))
+			} else {
+				// Without Tags column (default)
 				fmt.Printf("| %s%s | %s%s | %s%s | %s%s | %s%s | %s%s |\n",
 					terminal.Bold("Name"), strings.Repeat(" ", nameWidth-4),
 					terminal.Bold("Type"), strings.Repeat(" ", typeWidth-4),
 					terminal.Bold("Description"), strings.Repeat(" ", descWidth-11),
 					terminal.Bold("Required Params"), strings.Repeat(" ", paramsWidth-15),
 					terminal.Bold("Steps"), strings.Repeat(" ", stepsWidth-5),
-					terminal.Bold("Tags"), strings.Repeat(" ", tagsWidth-4))
+					terminal.Bold("Target Types"), strings.Repeat(" ", targetTypesWidth-12))
 				fmt.Printf("|-%s-|-%s-|-%s-|-%s-|-%s-|-%s-|\n",
 					strings.Repeat("-", nameWidth), strings.Repeat("-", typeWidth),
 					strings.Repeat("-", descWidth), strings.Repeat("-", paramsWidth),
-					strings.Repeat("-", stepsWidth), strings.Repeat("-", tagsWidth))
-			} else {
-				// Without Tags column (default)
-				fmt.Printf("| %s%s | %s%s | %s%s | %s%s | %s%s |\n",
-					terminal.Bold("Name"), strings.Repeat(" ", nameWidth-4),
-					terminal.Bold("Type"), strings.Repeat(" ", typeWidth-4),
-					terminal.Bold("Description"), strings.Repeat(" ", descWidth-11),
-					terminal.Bold("Required Params"), strings.Repeat(" ", paramsWidth-15),
-					terminal.Bold("Steps"), strings.Repeat(" ", stepsWidth-5))
-				fmt.Printf("|-%s-|-%s-|-%s-|-%s-|-%s-|\n",
-					strings.Repeat("-", nameWidth), strings.Repeat("-", typeWidth),
-					strings.Repeat("-", descWidth), strings.Repeat("-", paramsWidth),
-					strings.Repeat("-", stepsWidth))
+					strings.Repeat("-", stepsWidth), strings.Repeat("-", targetTypesWidth))
 			}
 
 			for _, r := range rows {
 				// Calculate padding needed (color codes don't take visual space)
 				namePad := nameWidth - len(r.name)
 				var colorType string
-				if r.wfType == "flow" {
+				switch r.wfType {
+				case "flow":
 					colorType = terminal.Cyan(r.wfType)
-				} else {
+				default:
 					colorType = terminal.Yellow(r.wfType)
 				}
 				typePad := typeWidth - len(r.wfType)
 				colorSteps := terminal.Gray(r.steps)
 				stepsPad := stepsWidth - len(r.steps)
+				colorTargetTypes := terminal.Magenta(r.targetTypes)
+				targetTypesPad := targetTypesWidth - len(r.targetTypes)
+				// Highlight "Target" in blue within reqParams
+				colorReqParams := strings.ReplaceAll(r.reqParams, "Target", terminal.HiBlue("Target"))
+				paramsPad := paramsWidth - len(r.reqParams)
 
 				if showTags {
 					colorTags := terminal.Gray(r.tags)
 					tagsPad := tagsWidth - len(r.tags)
-					fmt.Printf("| %s%s | %s%s | %-*s | %-*s | %s%s | %s%s |\n",
+					fmt.Printf("| %s%s | %s%s | %-*s | %s%s | %s%s | %s%s | %s%s |\n",
 						r.colorName, strings.Repeat(" ", namePad),
 						colorType, strings.Repeat(" ", typePad),
 						descWidth, r.desc,
-						paramsWidth, r.reqParams,
+						colorReqParams, strings.Repeat(" ", paramsPad),
 						colorSteps, strings.Repeat(" ", stepsPad),
+						colorTargetTypes, strings.Repeat(" ", targetTypesPad),
 						colorTags, strings.Repeat(" ", tagsPad))
 				} else {
-					fmt.Printf("| %s%s | %s%s | %-*s | %-*s | %s%s |\n",
+					fmt.Printf("| %s%s | %s%s | %-*s | %s%s | %s%s | %s%s |\n",
 						r.colorName, strings.Repeat(" ", namePad),
 						colorType, strings.Repeat(" ", typePad),
 						descWidth, r.desc,
-						paramsWidth, r.reqParams,
-						colorSteps, strings.Repeat(" ", stepsPad))
+						colorReqParams, strings.Repeat(" ", paramsPad),
+						colorSteps, strings.Repeat(" ", stepsPad),
+						colorTargetTypes, strings.Repeat(" ", targetTypesPad))
 				}
 			}
 
 			fmt.Println()
 
+			// Show tip about Target parameter if any workflow requires it
+			if hasTargetRequired {
+				fmt.Printf("%s %s\n\n", terminal.HiBlue("ℹ"), terminal.HiBlue("\"Target\" in Required Params is supplied via -t flag (e.g., -t example.com) or each line from -T list-of-targets.txt"))
+			}
+
 			// Count flows and modules in filtered results
 			flowCount := 0
 			moduleCount := 0
 			for _, r := range rows {
-				if r.wfType == "flow" {
+				switch r.wfType {
+				case "flow":
 					flowCount++
-				} else {
+				default:
 					moduleCount++
 				}
 			}
@@ -282,15 +324,20 @@ var workflowListCmd = &cobra.Command{
 
 			// Summary with colors
 			if len(filterTags) > 0 {
-				fmt.Printf("◆ Matching: %s flows, %s modules (filtered by tags: %s)\n",
-					terminal.Green(fmt.Sprintf("%d", flowCount)),
-					terminal.Yellow(fmt.Sprintf("%d", moduleCount)),
+				summaryParts := []string{
+					terminal.Green(fmt.Sprintf("%d", flowCount)) + " flows",
+					terminal.Yellow(fmt.Sprintf("%d", moduleCount)) + " modules",
+				}
+				fmt.Printf("◆ Matching: %s (filtered by tags: %s)\n",
+					strings.Join(summaryParts, ", "),
 					terminal.Cyan(strings.Join(filterTags, ", ")))
 			} else {
-				fmt.Printf("◆ Total: %s flows, %s modules, %s unique tags\n",
-					terminal.Green(fmt.Sprintf("%d", flowCount)),
-					terminal.Yellow(fmt.Sprintf("%d", moduleCount)),
-					terminal.Cyan(fmt.Sprintf("%d", len(tagList))))
+				summaryParts := []string{
+					terminal.Green(fmt.Sprintf("%d", flowCount)) + " flows",
+					terminal.Yellow(fmt.Sprintf("%d", moduleCount)) + " modules",
+				}
+				summaryParts = append(summaryParts, terminal.Cyan(fmt.Sprintf("%d", len(tagList)))+" unique tags")
+				fmt.Printf("◆ Total: %s\n", strings.Join(summaryParts, ", "))
 			}
 
 			// Show available tags
@@ -322,7 +369,6 @@ var workflowListCmd = &cobra.Command{
 			// Example run usage
 			fmt.Println()
 			fmt.Println("◌ " + terminal.Bold("Example Run Usage:"))
-			fmt.Println()
 			fmt.Printf("  %s run -f %s -t <target>\n", terminal.Cyan(binaryPath), terminal.Yellow("<flow_name>"))
 			fmt.Printf("  %s run -f general -T list_of_targets.txt\n", terminal.Cyan(binaryPath))
 			fmt.Printf("  %s run --threads-hold 10 -t sample.com\n", terminal.Cyan(binaryPath))
@@ -331,6 +377,9 @@ var workflowListCmd = &cobra.Command{
 				terminal.Cyan(binaryPath),
 				terminal.Yellow("<module_name>"),
 				terminal.Gray("<key=value>"))
+
+			fmt.Println()
+			fmt.Printf("%s Tip: %s %s\n", terminal.Gray(terminal.SymbolLightning), terminal.Cyan("osmedeus run --help"), terminal.Gray("for more usage and options"))
 			fmt.Println()
 
 			// Show workflow errors if verbose mode
@@ -361,15 +410,88 @@ func truncateString(s string, maxLen int) string {
 // getRequiredParams returns a comma-separated list of required parameter names
 func getRequiredParams(wf *core.Workflow) string {
 	var required []string
+
+	// Check dependencies.variables for required Target
+	if wf.Dependencies != nil {
+		for _, v := range wf.Dependencies.Variables {
+			if v.Required && strings.EqualFold(v.Name, "Target") {
+				required = append(required, "Target")
+				break
+			}
+		}
+	}
+
+	// Check params (existing logic, but skip if already added Target)
 	for _, p := range wf.Params {
 		if p.Required {
+			// Skip if it's a target param and we already added from dependencies
+			if strings.EqualFold(p.Name, "Target") && containsTargetParam(required) {
+				continue
+			}
 			required = append(required, p.Name)
 		}
 	}
+
 	if len(required) == 0 {
 		return "-"
 	}
 	return strings.Join(required, ", ")
+}
+
+// containsTargetParam checks if required list already has Target entry
+func containsTargetParam(required []string) bool {
+	for _, r := range required {
+		if strings.EqualFold(r, "Target") {
+			return true
+		}
+	}
+	return false
+}
+
+// workflowHasRequiredTarget checks if a workflow has a required Target in dependencies.variables
+func workflowHasRequiredTarget(wf *core.Workflow) bool {
+	if wf.Dependencies == nil {
+		return false
+	}
+	for _, v := range wf.Dependencies.Variables {
+		if v.Required && strings.EqualFold(v.Name, "Target") {
+			return true
+		}
+	}
+	return false
+}
+
+// getTargetTypes returns a comma-separated list of target types from dependencies
+func getTargetTypes(wf *core.Workflow) string {
+	if wf.Dependencies == nil {
+		return "-"
+	}
+
+	var types []string
+	seen := make(map[string]bool)
+
+	// First check dependencies.target_types if available
+	for _, t := range wf.Dependencies.TargetTypes {
+		typeStr := string(t)
+		if typeStr != "" && !seen[typeStr] {
+			types = append(types, typeStr)
+			seen[typeStr] = true
+		}
+	}
+
+	// Then check dependencies.variables[].type
+	for _, v := range wf.Dependencies.Variables {
+		typeStr := string(v.Type)
+		if typeStr != "" && !seen[typeStr] {
+			types = append(types, typeStr)
+			seen[typeStr] = true
+		}
+	}
+
+	if len(types) == 0 {
+		return "-"
+	}
+	return strings.Join(types, ", ")
 }
 
 // stripAnsi removes ANSI escape codes for length calculation
@@ -1013,20 +1135,32 @@ var workflowShowCmd = &cobra.Command{
 // workflowValidateCmd validates a workflow
 var workflowValidateCmd = &cobra.Command{
 	Use:     "validate [name|path|folder]",
-	Aliases: []string{"val"},
-	Short:   "Validate workflow(s) - accepts workflow name, file path, or folder",
-	Long: `Validate workflow YAML file(s).
+	Aliases: []string{"val", "lint", "fmt"},
+	Short:   "Validate and lint workflow(s) - accepts workflow name, file path, or folder",
+	Long: `Validate and lint workflow YAML file(s).
 
 Accepts:
   - Workflow name (looks up in workflows directory)
   - Path to a YAML file
   - Path to a folder (recursively validates all workflow YAMLs)
 
+The linter checks for:
+  - Missing required fields (name, kind, type)
+  - Undefined variables (referenced but not defined)
+  - Unused variables (exported but never used)
+  - Invalid goto/depends_on references
+  - Circular dependencies
+  - Empty steps
+  - Duplicate step names
+
 Examples:
   osmedeus workflow validate test-echo
-  osmedeus workflow validate ./my-workflow.yaml
+  osmedeus workflow lint ./my-workflow.yaml
   osmedeus workflow validate /path/to/workflows/
-  osmedeus workflow validate . --fail-fast`,
+  osmedeus workflow validate . --fail-fast
+  osmedeus workflow lint my-workflow.yaml --check --format json
+  osmedeus workflow validate . --disable unused-variable
+  osmedeus workflow lint my-workflow.yaml --severity error`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := config.Get()
@@ -1041,11 +1175,11 @@ Examples:
 
 		switch inputType {
 		case "file":
-			return validateFile(resolvedPath, cfg, printer)
+			return lintFile(resolvedPath, cfg, printer)
 		case "folder":
-			return validateFolder(resolvedPath, cfg, printer, validateFailFast)
+			return lintFolder(resolvedPath, cfg, printer, validateFailFast)
 		case "name":
-			return validateByName(input, cfg, printer)
+			return lintByName(input, cfg, printer)
 		}
 
 		return nil
@@ -1058,6 +1192,12 @@ var showYaml bool
 var showTags bool
 var validateFailFast bool
 
+// Linter flags
+var lintCheck bool
+var lintFormat string
+var lintDisable []string
+var lintSeverity string
+
 func init() {
 	workflowShowCmd.Flags().BoolVarP(&showVerbose, "verbose", "v", false, "show detailed variable descriptions")
 	workflowShowCmd.Flags().BoolVar(&showYaml, "yaml", false, "show raw YAML instead of table format")
@@ -1065,6 +1205,10 @@ func init() {
 	workflowListCmd.Flags().BoolVar(&showTags, "show-tags", false, "show tags column in output")
 	workflowListCmd.Flags().BoolVarP(&showVerbose, "verbose", "v", false, "show workflows with errors")
 	workflowValidateCmd.Flags().BoolVar(&validateFailFast, "fail-fast", false, "stop on first validation failure")
+	workflowValidateCmd.Flags().BoolVar(&lintCheck, "check", false, "exit with error code if issues found (for CI)")
+	workflowValidateCmd.Flags().StringVar(&lintFormat, "format", "pretty", "output format: pretty, json, github")
+	workflowValidateCmd.Flags().StringSliceVar(&lintDisable, "disable", []string{}, "disable specific rules (comma-separated)")
+	workflowValidateCmd.Flags().StringVar(&lintSeverity, "severity", "info", "minimum severity level: info, warning, error")
 	workflowCmd.AddCommand(workflowListCmd)
 	workflowCmd.AddCommand(workflowShowCmd)
 	workflowCmd.AddCommand(workflowValidateCmd)
@@ -1146,49 +1290,17 @@ func findWorkflowFiles(dir string) ([]string, error) {
 	return files, err
 }
 
-// ValidationResult holds the result of validating a single workflow
-type ValidationResult struct {
-	Path   string
-	Name   string
-	Kind   string
-	Status string // "valid", "failed", "warning"
-	Error  error
+// createLinter creates a linter with the current CLI options
+func createLinter() *linter.Linter {
+	opts := linter.LinterOptions{
+		DisabledRules: lintDisable,
+		MinSeverity:   linter.ParseSeverity(lintSeverity),
+	}
+	return linter.NewLinter(opts)
 }
 
-// validateSingleFile validates a single workflow file
-func validateSingleFile(path string, cfg *config.Config) ValidationResult {
-	result := ValidationResult{Path: path, Status: "failed"}
-
-	p := parser.NewParser()
-	workflow, err := p.Parse(path)
-	if err != nil {
-		result.Error = err
-		return result
-	}
-
-	result.Name = workflow.Name
-	result.Kind = string(workflow.Kind)
-
-	if err := p.Validate(workflow); err != nil {
-		result.Error = err
-		return result
-	}
-
-	depChecker := parser.NewDependencyChecker()
-	if workflow.Dependencies != nil {
-		if err := depChecker.CheckCommands(workflow.Dependencies.Commands, cfg.BinariesPath); err != nil {
-			result.Error = err
-			result.Status = "warning"
-			return result
-		}
-	}
-
-	result.Status = "valid"
-	return result
-}
-
-// validateByName validates workflow by name (original behavior)
-func validateByName(name string, cfg *config.Config, printer *terminal.Printer) error {
+// lintByName lints a workflow by name
+func lintByName(name string, cfg *config.Config, printer *terminal.Printer) error {
 	loader := parser.NewLoader(cfg.WorkflowsPath)
 	workflow, err := loader.LoadWorkflow(name)
 	if err != nil {
@@ -1200,24 +1312,16 @@ func validateByName(name string, cfg *config.Config, printer *terminal.Printer) 
 		return err
 	}
 
-	if err := parser.Validate(workflow); err != nil {
-		printer.Error("Validation failed: %s", err)
-		return err
+	// Use the FilePath from the parsed workflow
+	if workflow.FilePath == "" {
+		return fmt.Errorf("could not determine workflow file path for: %s", name)
 	}
 
-	depChecker := parser.NewDependencyChecker()
-	if workflow.Dependencies != nil {
-		if err := depChecker.CheckCommands(workflow.Dependencies.Commands, cfg.BinariesPath); err != nil {
-			printer.Warning("Dependency warning: %s", err)
-		}
-	}
-
-	printer.Success("Workflow '%s' is valid", workflow.Name)
-	return nil
+	return lintWorkflowFile(workflow.FilePath, workflow, printer)
 }
 
-// validateFile validates a single workflow file
-func validateFile(path string, cfg *config.Config, printer *terminal.Printer) error {
+// lintFile lints a single workflow file
+func lintFile(path string, _ *config.Config, printer *terminal.Printer) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return fmt.Errorf("file not found: %s", path)
 	}
@@ -1227,22 +1331,57 @@ func validateFile(path string, cfg *config.Config, printer *terminal.Printer) er
 		return fmt.Errorf("not a workflow file")
 	}
 
-	result := validateSingleFile(path, cfg)
-
-	if result.Status == "valid" || result.Status == "warning" {
-		printer.Success("Workflow '%s' (%s) is valid", result.Name, result.Kind)
-		if result.Status == "warning" && result.Error != nil {
-			printer.Warning("Dependency warning: %s", result.Error)
-		}
-		return nil
+	// Parse the workflow first
+	p := parser.NewParser()
+	workflow, err := p.Parse(path)
+	if err != nil {
+		printer.Error("Parse error: %s", err)
+		return err
 	}
 
-	printer.Error("Validation failed for %s: %s", path, result.Error)
-	return result.Error
+	return lintWorkflowFile(path, workflow, printer)
 }
 
-// validateFolder validates all workflow files in a folder
-func validateFolder(dir string, cfg *config.Config, printer *terminal.Printer, failFast bool) error {
+// lintWorkflowFile lints a parsed workflow file
+func lintWorkflowFile(path string, workflow *core.Workflow, printer *terminal.Printer) error {
+	// Read source for context display
+	source, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %w", err)
+	}
+
+	// Create and run linter
+	l := createLinter()
+	result, err := l.LintContent(source, path)
+	if err != nil {
+		printer.Error("Lint error: %s", err)
+		return err
+	}
+
+	// Format and print results
+	format := linter.ParseOutputFormat(lintFormat)
+	formatter := linter.GetFormatter(format, true)
+
+	if result.HasIssues() {
+		output := formatter.Format(result, source)
+		fmt.Println()
+		fmt.Print(output)
+		fmt.Println(formatter.FormatSummary([]*linter.LintResult{result}))
+		fmt.Println()
+	} else {
+		printer.Success("Workflow '%s' (%s) passed all lint checks", workflow.Name, workflow.Kind)
+	}
+
+	// Return error if --check mode and errors found
+	if lintCheck && result.HasErrors() {
+		return fmt.Errorf("lint check failed with %d error(s)", result.Errors)
+	}
+
+	return nil
+}
+
+// lintFolder lints all workflow files in a folder
+func lintFolder(dir string, _ *config.Config, printer *terminal.Printer, failFast bool) error {
 	fmt.Println()
 	printer.Info("Scanning for workflow files in: %s", terminal.Cyan(dir))
 
@@ -1259,76 +1398,76 @@ func validateFolder(dir string, cfg *config.Config, printer *terminal.Printer, f
 	printer.Info("Found %d workflow file(s)", len(files))
 	fmt.Println()
 
-	var results []ValidationResult
-	validCount, failedCount, warningCount := 0, 0, 0
+	l := createLinter()
+	format := linter.ParseOutputFormat(lintFormat)
+	formatter := linter.GetFormatter(format, true)
+
+	var results []*linter.LintResult
+	var hasErrors bool
 
 	for _, file := range files {
-		result := validateSingleFile(file, cfg)
+		source, readErr := os.ReadFile(file)
+		if readErr != nil {
+			printer.Warning("Could not read %s: %s", file, readErr)
+			continue
+		}
+
+		result, lintErr := l.LintContent(source, file)
+		if lintErr != nil {
+			// Parse errors become error issues
+			result = &linter.LintResult{
+				FilePath: file,
+				Issues: []linter.LintIssue{{
+					Rule:     "parse-error",
+					Severity: linter.SeverityError,
+					Message:  lintErr.Error(),
+					Line:     1,
+					Column:   1,
+				}},
+				Errors: 1,
+			}
+		}
+
 		results = append(results, result)
 
-		switch result.Status {
-		case "valid":
-			validCount++
-		case "warning":
-			warningCount++
-		case "failed":
-			failedCount++
+		if result.HasIssues() {
+			output := formatter.Format(result, source)
+			fmt.Print(output)
+		}
+
+		if result.HasErrors() {
+			hasErrors = true
 			if failFast {
-				printValidationTable(results, dir)
-				return fmt.Errorf("validation failed")
+				fmt.Println()
+				fmt.Println(formatter.FormatSummary(results))
+				return fmt.Errorf("lint check failed")
 			}
 		}
 	}
 
-	printValidationTable(results, dir)
-
 	fmt.Println()
-	printer.Info("Summary: %s valid, %s failed, %s warnings",
-		terminal.Green(fmt.Sprintf("%d", validCount)),
-		terminal.Red(fmt.Sprintf("%d", failedCount)),
-		terminal.Yellow(fmt.Sprintf("%d", warningCount)))
+	fmt.Println(formatter.FormatSummary(results))
+	fmt.Println()
 
-	if failedCount > 0 {
-		return fmt.Errorf("%d workflow(s) failed validation", failedCount)
+	// Summary stats
+	totalErrors := linter.TotalErrors(results)
+	totalWarnings := linter.TotalWarnings(results)
+	filesWithIssues := 0
+	for _, r := range results {
+		if r.HasIssues() {
+			filesWithIssues++
+		}
+	}
+
+	printer.Info("Linted %d file(s): %s errors, %s warnings in %d file(s)",
+		len(files),
+		terminal.Red(fmt.Sprintf("%d", totalErrors)),
+		terminal.Yellow(fmt.Sprintf("%d", totalWarnings)),
+		filesWithIssues)
+
+	if lintCheck && hasErrors {
+		return fmt.Errorf("lint check failed with %d error(s)", totalErrors)
 	}
 
 	return nil
-}
-
-// printValidationTable prints validation results as a table
-func printValidationTable(results []ValidationResult, baseDir string) {
-	var rows [][]string
-	for _, r := range results {
-		relPath, _ := filepath.Rel(baseDir, r.Path)
-		if relPath == "" {
-			relPath = r.Path
-		}
-
-		kind := r.Kind
-		if kind == "" {
-			kind = "-"
-		}
-
-		statusColor := terminal.Green
-		switch r.Status {
-		case "failed":
-			statusColor = terminal.Red
-		case "warning":
-			statusColor = terminal.Yellow
-		}
-
-		errMsg := "-"
-		if r.Error != nil {
-			errMsg = truncateString(r.Error.Error(), 40)
-		}
-
-		rows = append(rows, []string{
-			relPath,
-			terminal.TypeBadge(kind),
-			statusColor(r.Status),
-			errMsg,
-		})
-	}
-
-	printMarkdownTable([]string{"File", "Kind", "Status", "Details"}, rows)
 }

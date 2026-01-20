@@ -1,0 +1,12 @@
+kind: module
+name: chain-a
+description: Chain test - root
+
+params:
+  - name: param-a
+    default: "from-a"
+
+steps:
+  - name: step-from-a
+    type: bash
+    command: echo "from chain-a"

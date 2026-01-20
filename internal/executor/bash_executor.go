@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/j3ssie/osmedeus/v5/internal/core"
+	"github.com/j3ssie/osmedeus/v5/internal/metrics"
 	"github.com/j3ssie/osmedeus/v5/internal/runner"
 	"github.com/j3ssie/osmedeus/v5/internal/template"
 	"go.uber.org/zap"
@@ -19,12 +20,12 @@ import (
 
 // BashExecutor executes bash steps
 type BashExecutor struct {
-	templateEngine *template.Engine
+	templateEngine template.TemplateEngine
 	runner         runner.Runner
 }
 
 // NewBashExecutor creates a new bash executor
-func NewBashExecutor(engine *template.Engine) *BashExecutor {
+func NewBashExecutor(engine template.TemplateEngine) *BashExecutor {
 	return &BashExecutor{
 		templateEngine: engine,
 	}
@@ -73,6 +74,16 @@ func writeStdFile(path, content string) error {
 		}
 	}
 	return os.WriteFile(path, []byte(content), 0644)
+}
+
+// extractToolName extracts the tool/binary name from a command string.
+// Returns the base name of the first word in the command.
+func extractToolName(command string) string {
+	parts := strings.Fields(command)
+	if len(parts) == 0 {
+		return "unknown"
+	}
+	return filepath.Base(parts[0])
 }
 
 // Execute executes a bash step
@@ -134,6 +145,10 @@ func (e *BashExecutor) Execute(ctx context.Context, step *core.Step, execCtx *co
 // executeCommand executes a single command
 
 func (e *BashExecutor) executeCommand(ctx context.Context, command string, timeout time.Duration) (string, error) {
+	// Track execution timing for metrics
+	startTime := time.Now()
+	toolName := extractToolName(command)
+
 	// Apply timeout if specified
 	if timeout > 0 {
 		var cancel context.CancelFunc
@@ -144,15 +159,20 @@ func (e *BashExecutor) executeCommand(ctx context.Context, command string, timeo
 	// Use runner if available, otherwise fall back to local execution
 	if e.runner != nil {
 		result, err := e.runner.Execute(ctx, command)
+		duration := time.Since(startTime).Seconds()
 		if err != nil {
 			if ctx.Err() == context.DeadlineExceeded {
+				metrics.RecordToolExecution(toolName, "timeout", duration)
 				return result.Output, fmt.Errorf("command timed out after %s", timeout)
 			}
+			metrics.RecordToolExecution(toolName, "error", duration)
 			return result.Output, fmt.Errorf("command failed: %w", err)
 		}
 		if result.ExitCode != 0 {
+			metrics.RecordToolExecution(toolName, "failed", duration)
 			return result.Output, fmt.Errorf("command exited with code %d", result.ExitCode)
 		}
+		metrics.RecordToolExecution(toolName, "success", duration)
 		return strings.TrimSpace(result.Output), nil
 	}
 
@@ -165,6 +185,7 @@ func (e *BashExecutor) executeCommand(ctx context.Context, command string, timeo
 	cmd.Stderr = &stderr
 
 	err := cmd.Run()
+	duration := time.Since(startTime).Seconds()
 
 	output := stdout.String()
 	if stderr.Len() > 0 {
@@ -173,11 +194,14 @@ func (e *BashExecutor) executeCommand(ctx context.Context, command string, timeo
 
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
+			metrics.RecordToolExecution(toolName, "timeout", duration)
 			return output, fmt.Errorf("command timed out after %s", timeout)
 		}
+		metrics.RecordToolExecution(toolName, "error", duration)
 		return output, fmt.Errorf("command failed: %w\nstderr: %s", err, stderr.String())
 	}
 
+	metrics.RecordToolExecution(toolName, "success", duration)
 	return strings.TrimSpace(output), nil
 }
 

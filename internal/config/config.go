@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 // exampleConfigYAML contains the default configuration template
@@ -111,21 +112,34 @@ server:
   workspace_prefix_key: ""
 
   # Authentication credentials (map of username:password)
-  # Supports multiple users
+  # Supports multiple users (password auto-generated if empty)
   simple_user_map_key:
-    osmedeus: osmedeus-admin
+    osmedeus: ""
 
   # JWT (JSON Web Token) settings
   jwt:
-    # Secret key for signing JWT tokens
-    # IMPORTANT: Use a strong, unique secret in production!
-    secret_signing_key: change-this-secret-in-production
+    # Secret key for signing JWT tokens (auto-generated if empty)
+    secret_signing_key: ""
 
     # Token expiration time in minutes
     expiration_minutes: 60
 
   # License type shown in HTTP Server header and /server-info endpoint
   license: "open-source"
+
+  # Enable Prometheus metrics endpoint at /metrics (default: true)
+  # Set to false to disable metrics collection and endpoint
+  enable_metrics: true
+
+  # CORS allowed origins (default: "*" allows all origins)
+  # Use comma-separated list for multiple origins: "https://example.com,https://app.example.com"
+  cors_allowed_origins: "*"
+
+  # API Key Authentication (alternative to JWT login flow)
+  # When enabled, all API requests must include header: x-osm-api-key: <your-key>
+  # This takes priority over JWT authentication when enabled
+  enabled_auth_api: true
+  auth_api_key: ""
 
 # =============================================================================
 # Scan Tactic Configuration
@@ -235,15 +249,13 @@ notification:
 # Cloud Storage Configuration (Optional)
 # =============================================================================
 # S3-compatible storage for backing up scan results
-# Supports AWS S3, MinIO, Google Cloud Storage, DigitalOcean Spaces, etc.
+# Supports AWS S3, MinIO, Cloudflare R2, Google Cloud Storage, DigitalOcean Spaces, Oracle OCI
 storage:
-  # Storage provider: "s3", "minio", "gcs", "spaces", etc.
+  # Storage provider: "s3", "minio", "r2", "gcs", "spaces", "oci"
   provider: s3
 
-  # Storage endpoint URL
-  # AWS S3: Leave empty or use region-specific endpoint
-  # MinIO: "http://localhost:9000"
-  # DigitalOcean: "https://nyc3.digitaloceanspaces.com"
+  # Storage endpoint URL (auto-resolved for most providers)
+  # Leave empty to auto-resolve based on provider and region/account_id
   endpoint: ""
 
   # Access credentials
@@ -256,8 +268,17 @@ storage:
   # Cloud region (e.g., us-east-1, eu-west-1)
   region: us-east-1
 
+  # Account ID or Namespace (R2: account ID, OCI: namespace)
+  account_id: ""
+
   # Use SSL/TLS for connections
   use_ssl: true
+
+  # Force path-style URLs
+  path_style: false
+
+  # Default presigned URL expiry (e.g., "1h", "30m")
+  presign_expiry: "1h"
 
   # Enable cloud storage uploads
   enabled: false
@@ -424,6 +445,41 @@ type ServerConfig struct {
 	License            string            `yaml:"license"`              // License type shown in ServerHeader and /server-info
 	EnabledAuthAPI     bool              `yaml:"enabled_auth_api"`     // Enable API key authentication (default: false)
 	AuthAPIKey         string            `yaml:"auth_api_key"`         // API key for x-osm-api-key header authentication
+	EnableMetrics      *bool             `yaml:"enable_metrics,omitempty"`       // Enable Prometheus metrics endpoint (default: true)
+	CORSAllowedOrigins string            `yaml:"cors_allowed_origins,omitempty"` // CORS allowed origins (default: "*")
+	EventReceiverURL   string            `yaml:"event_receiver_url,omitempty"`   // URL for event receiver (auto-resolved from host:port if empty)
+}
+
+// IsMetricsEnabled returns true if the metrics endpoint should be enabled.
+// Defaults to true if not explicitly set.
+func (c *ServerConfig) IsMetricsEnabled() bool {
+	if c.EnableMetrics == nil {
+		return true
+	}
+	return *c.EnableMetrics
+}
+
+// GetCORSAllowedOrigins returns the configured CORS allowed origins.
+// Defaults to "*" (all origins) if not explicitly set.
+func (c *ServerConfig) GetCORSAllowedOrigins() string {
+	if c.CORSAllowedOrigins == "" {
+		return "*"
+	}
+	return c.CORSAllowedOrigins
+}
+
+// GetEventReceiverURL returns the event receiver URL.
+// If EventReceiverURL is explicitly set, returns that.
+// Otherwise, constructs URL from Host and Port if both are set.
+// Returns empty string if neither option is available.
+func (c *ServerConfig) GetEventReceiverURL() string {
+	if c.EventReceiverURL != "" {
+		return c.EventReceiverURL
+	}
+	if c.Host == "" || c.Port == 0 {
+		return ""
+	}
+	return fmt.Sprintf("http://%s:%d", c.Host, c.Port)
 }
 
 // ScanTacticConfig holds scan aggressiveness levels
@@ -469,7 +525,7 @@ type WebhookConfig struct {
 
 // StorageConfig holds cloud storage settings (S3-compatible)
 type StorageConfig struct {
-	Provider        string `yaml:"provider"` // s3, minio, gcs, etc.
+	Provider        string `yaml:"provider"` // s3, minio, gcs, r2, spaces, oci
 	Endpoint        string `yaml:"endpoint"`
 	AccessKeyID     string `yaml:"access_key_id"`
 	SecretAccessKey string `yaml:"secret_access_key"`
@@ -477,6 +533,178 @@ type StorageConfig struct {
 	Region          string `yaml:"region"`
 	UseSSL          bool   `yaml:"use_ssl"`
 	Enabled         bool   `yaml:"enabled"`
+
+	// New fields for provider-specific configuration
+	AccountID     string `yaml:"account_id,omitempty"`     // For R2 (account ID) or OCI (namespace)
+	PathStyle     bool   `yaml:"path_style,omitempty"`     // Force path-style URLs (needed for some providers)
+	PresignExpiry string `yaml:"presign_expiry,omitempty"` // Default presign expiry (e.g., "1h", "30m")
+}
+
+// ProviderEndpoint holds endpoint template and defaults for a storage provider
+type ProviderEndpoint struct {
+	EndpointTemplate string
+	UseSSL           bool
+	PathStyle        bool
+}
+
+// ProviderEndpoints maps provider names to their endpoint configurations
+var ProviderEndpoints = map[string]ProviderEndpoint{
+	"r2":     {"%s.r2.cloudflarestorage.com", true, true},        // account_id
+	"gcs":    {"storage.googleapis.com", true, false},            // HMAC keys
+	"spaces": {"%s.digitaloceanspaces.com", true, false},         // region
+	"oci":    {"%s.compat.objectstorage.%s.oraclecloud.com", true, true}, // namespace, region
+	"s3":     {"s3.%s.amazonaws.com", true, false},               // region
+	"minio":  {"", false, true},                                  // user-provided
+}
+
+// ResolveEndpoint resolves the endpoint URL based on provider type
+func (c *StorageConfig) ResolveEndpoint() string {
+	// If endpoint is explicitly set, use it
+	if c.Endpoint != "" {
+		return c.Endpoint
+	}
+
+	providerInfo, ok := ProviderEndpoints[c.Provider]
+	if !ok {
+		return c.Endpoint
+	}
+
+	switch c.Provider {
+	case "r2":
+		if c.AccountID != "" {
+			return fmt.Sprintf(providerInfo.EndpointTemplate, c.AccountID)
+		}
+	case "gcs":
+		return providerInfo.EndpointTemplate
+	case "spaces":
+		if c.Region != "" {
+			return fmt.Sprintf(providerInfo.EndpointTemplate, c.Region)
+		}
+	case "oci":
+		if c.AccountID != "" && c.Region != "" {
+			return fmt.Sprintf(providerInfo.EndpointTemplate, c.AccountID, c.Region)
+		}
+	case "s3":
+		if c.Region != "" {
+			return fmt.Sprintf(providerInfo.EndpointTemplate, c.Region)
+		}
+	}
+
+	return c.Endpoint
+}
+
+// GetPresignExpiry returns the presign expiry duration with default of 1 hour
+func (c *StorageConfig) GetPresignExpiry() time.Duration {
+	if c.PresignExpiry == "" {
+		return time.Hour
+	}
+
+	d, err := time.ParseDuration(c.PresignExpiry)
+	if err != nil {
+		return time.Hour
+	}
+	return d
+}
+
+// ShouldUseSSL returns the SSL setting, considering provider defaults
+func (c *StorageConfig) ShouldUseSSL() bool {
+	// If explicitly set in config, use that
+	if c.UseSSL {
+		return true
+	}
+
+	// Check provider defaults
+	if providerInfo, ok := ProviderEndpoints[c.Provider]; ok {
+		return providerInfo.UseSSL
+	}
+
+	return c.UseSSL
+}
+
+// ShouldUsePathStyle returns whether path-style URLs should be used
+func (c *StorageConfig) ShouldUsePathStyle() bool {
+	// If explicitly set in config, use that
+	if c.PathStyle {
+		return true
+	}
+
+	// Check provider defaults
+	if providerInfo, ok := ProviderEndpoints[c.Provider]; ok {
+		return providerInfo.PathStyle
+	}
+
+	return c.PathStyle
+}
+
+// TemplateEngineConfig holds configuration for the template engine
+type TemplateEngineConfig struct {
+	// UseShardedEngine enables the sharded template engine for better concurrency
+	// under high parallelism (foreach loops with multiple workers, parallel steps)
+	// Default: true
+	UseShardedEngine *bool `yaml:"use_sharded_engine,omitempty"`
+
+	// ShardCount is the number of cache shards (must be power of 2)
+	// Higher values reduce lock contention but increase memory usage
+	// Default: 16
+	ShardCount int `yaml:"shard_count,omitempty"`
+
+	// ShardCacheSize is the LRU cache size per shard
+	// Total cache capacity = ShardCount * ShardCacheSize
+	// Default: 64 (total 1024 templates)
+	ShardCacheSize int `yaml:"shard_cache_size,omitempty"`
+
+	// EnablePooling enables sync.Pool for context map reuse
+	// Reduces GC pressure during high-throughput rendering
+	// Default: true
+	EnablePooling *bool `yaml:"enable_pooling,omitempty"`
+
+	// EnableBatch enables batch template rendering optimization
+	// Groups templates by shard to minimize lock acquisitions
+	// Default: true
+	EnableBatch *bool `yaml:"enable_batch,omitempty"`
+}
+
+// IsShardedEngineEnabled returns whether sharded engine should be used
+// Defaults to true if not explicitly set
+func (c *TemplateEngineConfig) IsShardedEngineEnabled() bool {
+	if c.UseShardedEngine == nil {
+		return true
+	}
+	return *c.UseShardedEngine
+}
+
+// IsPoolingEnabled returns whether context pooling is enabled
+// Defaults to true if not explicitly set
+func (c *TemplateEngineConfig) IsPoolingEnabled() bool {
+	if c.EnablePooling == nil {
+		return true
+	}
+	return *c.EnablePooling
+}
+
+// IsBatchEnabled returns whether batch rendering is enabled
+// Defaults to true if not explicitly set
+func (c *TemplateEngineConfig) IsBatchEnabled() bool {
+	if c.EnableBatch == nil {
+		return true
+	}
+	return *c.EnableBatch
+}
+
+// GetShardCount returns the shard count with default
+func (c *TemplateEngineConfig) GetShardCount() int {
+	if c.ShardCount <= 0 {
+		return 16
+	}
+	return c.ShardCount
+}
+
+// GetShardCacheSize returns the shard cache size with default
+func (c *TemplateEngineConfig) GetShardCacheSize() int {
+	if c.ShardCacheSize <= 0 {
+		return 64
+	}
+	return c.ShardCacheSize
 }
 
 // LLMProvider holds configuration for a single LLM provider endpoint
@@ -629,9 +857,50 @@ func (c *Config) IsRedisConfigured() bool {
 	return c.Redis.Host != "" && c.Redis.Port > 0
 }
 
+// IsDistributedMode returns true if Redis is configured (distributed mode enabled)
+func (c *Config) IsDistributedMode() bool {
+	return c.IsRedisConfigured()
+}
+
 // GetRedisAddr returns the Redis address in host:port format
 func (c *Config) GetRedisAddr() string {
 	return fmt.Sprintf("%s:%d", c.Redis.Host, c.Redis.Port)
+}
+
+// =============================================================================
+// Distributed Mode State
+// =============================================================================
+
+// WorkerModeState tracks whether we're running as a distributed worker
+var workerModeState struct {
+	isWorker bool
+	workerID string
+}
+
+// SetWorkerMode sets the distributed worker mode flag
+func SetWorkerMode(isWorker bool, workerID string) {
+	workerModeState.isWorker = isWorker
+	workerModeState.workerID = workerID
+}
+
+// IsWorkerMode returns true if running as a distributed worker
+func IsWorkerMode() bool {
+	return workerModeState.isWorker
+}
+
+// GetWorkerID returns the worker ID if in worker mode
+func GetWorkerID() string {
+	return workerModeState.workerID
+}
+
+// ShouldUseRedisDataQueues returns true if database writes should be routed to Redis queues.
+// This is true when: Redis is configured AND we're running in worker mode.
+func ShouldUseRedisDataQueues() bool {
+	cfg := Get()
+	if cfg == nil {
+		return false
+	}
+	return cfg.IsDistributedMode() && IsWorkerMode()
 }
 
 // GetDSN returns the PostgreSQL connection string
@@ -841,13 +1110,15 @@ func DefaultConfig() *Config {
 			UIPath:             "{{base_folder}}/ui/",
 			WorkspacePrefixKey: generateRandomString(16),
 			SimpleUserMapKey: map[string]string{
-				"osmedeus": "osmedeus-admin",
+				"osmedeus": generateRandomString(12),
 			},
 			JWT: JWTConfig{
-				SecretSigningKey:  "change-this-secret-in-production",
+				SecretSigningKey:  generateRandomString(64),
 				ExpirationMinutes: 60,
 			},
-			License: "open-source",
+			License:        "open-source",
+			EnabledAuthAPI: true,
+			AuthAPIKey:     generateRandomString(32),
 		},
 		ScanTactic: ScanTacticConfig{
 			Aggressive: 40,
@@ -928,11 +1199,29 @@ func EnsureConfigExists(baseFolder string) error {
 		return err
 	}
 
-	// Generate random workspace_prefix_key and replace blank value in template
+	// Generate random values and replace blank placeholders in template
 	configContent := string(exampleConfigYAML)
 	configContent = strings.Replace(configContent,
 		"workspace_prefix_key: \"\"",
 		fmt.Sprintf("workspace_prefix_key: \"%s\"", generateRandomString(16)),
+		1)
+
+	// Generate random auth_api_key (32 chars)
+	configContent = strings.Replace(configContent,
+		"auth_api_key: \"\"",
+		fmt.Sprintf("auth_api_key: \"%s\"", generateRandomString(32)),
+		1)
+
+	// Generate random secret_signing_key (64 chars)
+	configContent = strings.Replace(configContent,
+		"secret_signing_key: \"\"",
+		fmt.Sprintf("secret_signing_key: \"%s\"", generateRandomString(64)),
+		1)
+
+	// Generate random password for default osmedeus user (12 chars)
+	configContent = strings.Replace(configContent,
+		"osmedeus: \"\"",
+		fmt.Sprintf("osmedeus: \"%s\"", generateRandomString(12)),
 		1)
 
 	// Write the config file with generated values

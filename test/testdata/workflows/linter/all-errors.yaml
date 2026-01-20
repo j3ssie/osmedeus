@@ -1,0 +1,59 @@
+name: all-errors
+kind: module
+description: A workflow with all types of lint errors for testing
+tags: test,linter,errors
+
+params:
+  - name: target
+    required: true
+
+steps:
+  # Error: undefined-variable - Taget is misspelled
+  - name: undefined-var-step
+    type: bash
+    command: echo "{{Taget}}"
+
+  # Error: duplicate-step-name
+  - name: duplicate-step
+    type: bash
+    command: echo "first"
+
+  - name: duplicate-step
+    type: bash
+    command: echo "second duplicate"
+
+  # Error: empty-step - bash step with no command
+  - name: empty-bash-step
+    type: bash
+
+  # Error: invalid-goto - references non-existent step
+  - name: decision-step
+    type: bash
+    command: echo "decision"
+    decision:
+      switch: "{{target}}"
+      cases:
+        "skip":
+          goto: nonexistent-step
+      default:
+        goto: _end
+
+  # Error: invalid-depends-on - references non-existent step
+  - name: invalid-dep-step
+    type: bash
+    command: echo "depends"
+    depends_on:
+      - step-that-does-not-exist
+
+  # Error: circular-dependency - creates a cycle
+  - name: cycle-step-a
+    type: bash
+    command: echo "a"
+    depends_on:
+      - cycle-step-b
+
+  - name: cycle-step-b
+    type: bash
+    command: echo "b"
+    depends_on:
+      - cycle-step-a

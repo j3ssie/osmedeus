@@ -223,8 +223,9 @@ type Asset struct {
 	ScreenshotBase64Data string   `bun:"screenshot_base64_data" json:"screenshot_base64_data,omitempty"`
 
 	// Timestamps
-	CreatedAt time.Time `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt time.Time `bun:"updated_at,notnull,default:current_timestamp" json:"updated_at"`
+	CreatedAt  time.Time `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt  time.Time `bun:"updated_at,notnull,default:current_timestamp" json:"updated_at"`
+	LastSeenAt time.Time `bun:"last_seen_at" json:"last_seen_at,omitempty"`
 }
 
 // Workspace represents a scan workspace with aggregated statistics
@@ -283,6 +284,7 @@ type WorkflowMeta struct {
 	FilePath    string   `bun:"file_path,notnull" json:"file_path"`
 	Checksum    string   `bun:"checksum" json:"checksum"` // SHA256 for change detection
 	Tags        []string `bun:"tags,type:json" json:"tags"`
+	Hidden      bool     `bun:"hidden,default:false" json:"hidden"`
 
 	// Metadata
 	StepCount   int    `bun:"step_count" json:"step_count"`
@@ -315,6 +317,37 @@ type Vulnerability struct {
 	RawVulnJSON        string   `bun:"raw_vuln_json" json:"raw_vuln_json"`
 
 	// Timestamps
-	CreatedAt time.Time `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt time.Time `bun:"updated_at,notnull,default:current_timestamp" json:"updated_at"`
+	CreatedAt  time.Time `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt  time.Time `bun:"updated_at,notnull,default:current_timestamp" json:"updated_at"`
+	LastSeenAt time.Time `bun:"last_seen_at" json:"last_seen_at,omitempty"`
+}
+
+// AssetDiffSnapshot stores a point-in-time diff calculation for assets
+type AssetDiffSnapshot struct {
+	bun.BaseModel `bun:"table:asset_diffs,alias:ad"`
+
+	ID            int64     `bun:"id,pk,autoincrement" json:"id"`
+	WorkspaceName string    `bun:"workspace_name,notnull" json:"workspace_name"`
+	FromTime      time.Time `bun:"from_time,notnull" json:"from_time"`
+	ToTime        time.Time `bun:"to_time,notnull" json:"to_time"`
+	TotalAdded    int       `bun:"total_added" json:"total_added"`
+	TotalRemoved  int       `bun:"total_removed" json:"total_removed"`
+	TotalChanged  int       `bun:"total_changed" json:"total_changed"`
+	DiffData      string    `bun:"diff_data,type:text" json:"diff_data"` // JSON serialized AssetDiff
+	CreatedAt     time.Time `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
+}
+
+// VulnDiffSnapshot stores a point-in-time vulnerability diff calculation
+type VulnDiffSnapshot struct {
+	bun.BaseModel `bun:"table:vuln_diffs,alias:vd"`
+
+	ID            int64     `bun:"id,pk,autoincrement" json:"id"`
+	WorkspaceName string    `bun:"workspace_name,notnull" json:"workspace_name"`
+	FromTime      time.Time `bun:"from_time,notnull" json:"from_time"`
+	ToTime        time.Time `bun:"to_time,notnull" json:"to_time"`
+	TotalAdded    int       `bun:"total_added" json:"total_added"`
+	TotalRemoved  int       `bun:"total_removed" json:"total_removed"`
+	TotalChanged  int       `bun:"total_changed" json:"total_changed"`
+	DiffData      string    `bun:"diff_data,type:text" json:"diff_data"` // JSON serialized VulnerabilityDiff
+	CreatedAt     time.Time `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
 }

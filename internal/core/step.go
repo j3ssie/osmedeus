@@ -178,7 +178,8 @@ type StepRunnerConfig struct {
 type Step struct {
 	Name         string      `yaml:"name"`
 	Type         StepType    `yaml:"type"`
-	StepRunner   RunnerType  `yaml:"step_runner"` // Runner for this step: local (default), docker, ssh
+	DependsOn    []string    `yaml:"depends_on,omitempty"` // Step dependencies for DAG execution
+	StepRunner   RunnerType  `yaml:"step_runner"`          // Runner for this step: local (default), docker, ssh
 	PreCondition string      `yaml:"pre_condition"`
 	Log          string      `yaml:"log"`
 	Timeout      StepTimeout `yaml:"timeout,omitempty"`
@@ -337,6 +338,11 @@ func (s *Step) HasDecision() bool {
 // HasExports returns true if step exports variables
 func (s *Step) HasExports() bool {
 	return len(s.Exports) > 0
+}
+
+// HasDependencies returns true if step has depends_on defined
+func (s *Step) HasDependencies() bool {
+	return len(s.DependsOn) > 0
 }
 
 // GetCommands returns the list of commands to execute

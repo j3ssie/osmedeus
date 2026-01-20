@@ -36,7 +36,7 @@ steps:
 
   - name: verify-parallel
     type: bash
-    pre_condition: 'fileExists("{{parallelOutput}}/bash1.txt")'
+    pre_condition: 'file_exists("{{parallelOutput}}/bash1.txt")'
     command: |
       echo "=== Parallel Steps Verification ==="
       echo "parallel_dir={{parallel_dir}}"

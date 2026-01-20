@@ -70,14 +70,16 @@ func (c *DependencyChecker) CheckVariables(deps []core.VariableDep, ctx map[stri
 	return nil
 }
 
-// validateType validates a value against a variable type
+// validateType validates a value against a variable type.
+// Supports comma-separated types (e.g., "domain,url") where matching any type is sufficient.
 func (c *DependencyChecker) validateType(name string, value interface{}, varType core.VariableType) error {
 	str, ok := value.(string)
 	if !ok {
 		return fmt.Errorf("variable '%s' must be a string", name)
 	}
 
-	ok, err := core.MatchesVariableType(str, varType)
+	// Use MatchesAnyVariableType to support comma-separated types
+	ok, err := core.MatchesAnyVariableType(str, varType)
 	if err != nil {
 		return fmt.Errorf("variable '%s' has invalid type: %w", name, err)
 	}

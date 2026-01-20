@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/j3ssie/osmedeus/v5/internal/config"
@@ -125,3 +126,74 @@ func redactSensitiveFields(content string) string {
 // 		})
 // 	}
 // }
+
+// ReloadConfig forces a configuration reload (hot reload must be enabled)
+// @Summary Force config reload
+// @Description Forces an immediate reload of the configuration file. Hot reload must be enabled.
+// @Tags Settings
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Configuration reloaded successfully"
+// @Failure 400 {object} map[string]interface{} "Hot reload not enabled"
+// @Failure 500 {object} map[string]interface{} "Failed to reload configuration"
+// @Security BearerAuth
+// @Router /osm/api/settings/reload [post]
+func ReloadConfig(hotConfig *config.HotReloadableConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if hotConfig == nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":   true,
+				"message": "Hot reload is not enabled. Start server with --hot-reload flag.",
+			})
+		}
+
+		startTime := time.Now()
+		if err := hotConfig.Reload(); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   true,
+				"message": fmt.Sprintf("Failed to reload config: %v", err),
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"message":     "Configuration reloaded successfully",
+			"version":     hotConfig.GetVersion(),
+			"reload_time": time.Since(startTime).String(),
+		})
+	}
+}
+
+// GetConfigStatus returns the current configuration status including hot reload info
+// @Summary Get config status
+// @Description Returns the current configuration version and hot reload status
+// @Tags Settings
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Configuration status"
+// @Security BearerAuth
+// @Router /osm/api/settings/status [get]
+func GetConfigStatus(hotConfig *config.HotReloadableConfig) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if hotConfig == nil {
+			return c.JSON(fiber.Map{
+				"hot_reload_enabled": false,
+				"version":            core.VERSION,
+			})
+		}
+
+		cfg := hotConfig.Get()
+		return c.JSON(fiber.Map{
+			"hot_reload_enabled":  true,
+			"config_version":      hotConfig.GetVersion(),
+			"config_path":         hotConfig.GetConfigPath(),
+			"watcher_running":     hotConfig.IsRunning(),
+			"callback_count":      hotConfig.CallbackCount(),
+			"server_version":      core.VERSION,
+			"base_folder":         cfg.BaseFolder,
+			"server_port":         cfg.Server.Port,
+			"database_engine":     cfg.Database.DBEngine,
+			"redis_configured":    cfg.IsRedisConfigured(),
+			"storage_configured":  cfg.IsStorageConfigured(),
+			"llm_configured":      cfg.IsLLMConfigured(),
+			"telegram_configured": cfg.IsTelegramConfigured(),
+		})
+	}
+}

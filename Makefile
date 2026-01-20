@@ -294,8 +294,6 @@ snapshot-release:
 	@echo "$(PREFIX) Install script copied to dist/install.sh"
 	cp ../osmedeus-registry/install.sh dist/install.sh
 	@echo "$(PREFIX) Prepare registry-metadata-direct-fetch.json"
-	cp ../osmedeus-registry/registry-metadata-direct-fetch.json dist/registry-metadata-direct-fetch.json
-
 	
 github-release:
 	@echo "$(PREFIX) Building and publishing GitHub release..."

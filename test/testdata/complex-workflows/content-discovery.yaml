@@ -33,7 +33,7 @@ steps:
     script: |
       var target = "{{Target}}";
       var wordlist = "{{wordlist_small}}";
-      var threadCount = parseInt("{{threads}}");
+      var threadCount = parse_int("{{threads}}");
 
       // Use larger wordlist for known targets
       if (target.includes(".com") || target.includes(".org")) {
@@ -90,7 +90,7 @@ steps:
   - name: log-statistics
     type: function
     script: |
-      var count = fileLength("{{all_endpoints}}");
+      var count = file_length("{{all_endpoints}}");
       log_info("Total unique endpoints discovered: " + count);
 
       if (count == 0) {
@@ -105,7 +105,7 @@ steps:
   # Step 6: foreach - Probe each endpoint for parameters
   - name: parameter-discovery
     type: foreach
-    pre_condition: "fileLength('{{all_endpoints}}') > 0"
+    pre_condition: "file_length('{{all_endpoints}}') > 0"
     input: "{{all_endpoints}}"
     variable: endpoint
     threads: "{{threads}}"

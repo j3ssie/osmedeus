@@ -1,0 +1,177 @@
+# Comprehensive example demonstrating all HTTP step fields
+kind: module
+name: module-http-comprehensive
+description: Module demonstrating all HTTP step fields with various methods and exports
+tags: example, http, comprehensive
+
+params:
+  - name: api_base
+    default: "https://api.example.com"
+  - name: auth_token
+    default: ""
+  - name: target_id
+    default: "12345"
+
+steps:
+  # GET request with headers and exports
+  - name: http-get
+    type: http
+    url: "{{api_base}}/targets/{{target_id}}"
+    method: GET
+    headers:
+      Accept: application/json
+      Authorization: "Bearer {{auth_token}}"
+      X-Request-ID: "{{uuid()}}"
+    timeout: 30
+    exports:
+      get_status: "{{response.status_code}}"
+      target_data: "{{response.body}}"
+      content_type: "{{response.headers.Content-Type}}"
+
+  # POST request with JSON body
+  - name: http-post
+    type: http
+    url: "{{api_base}}/scans"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{auth_token}}"
+    request_body: |
+      {
+        "target_id": "{{target_id}}",
+        "scan_type": "comprehensive",
+        "options": {
+          "deep_scan": true,
+          "follow_redirects": true
+        }
+      }
+    timeout: 60
+    exports:
+      post_status: "{{response.status_code}}"
+      scan_id: "{{response.body}}"
+
+  # PUT request for updates
+  - name: http-put
+    type: http
+    url: "{{api_base}}/targets/{{target_id}}"
+    method: PUT
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{auth_token}}"
+    request_body: |
+      {
+        "status": "active",
+        "last_scanned": "{{currentDate()}}"
+      }
+    exports:
+      put_status: "{{response.status_code}}"
+
+  # PATCH request for partial updates
+  - name: http-patch
+    type: http
+    url: "{{api_base}}/targets/{{target_id}}"
+    method: PATCH
+    headers:
+      Content-Type: application/json-patch+json
+      Authorization: "Bearer {{auth_token}}"
+    request_body: |
+      [
+        {"op": "replace", "path": "/status", "value": "scanned"}
+      ]
+    exports:
+      patch_status: "{{response.status_code}}"
+
+  # DELETE request
+  - name: http-delete
+    type: http
+    url: "{{api_base}}/scans/old-scan-id"
+    method: DELETE
+    headers:
+      Authorization: "Bearer {{auth_token}}"
+    exports:
+      delete_status: "{{response.status_code}}"
+
+  # HTTP with contains() in exports
+  - name: http-check-contains
+    type: http
+    url: "{{api_base}}/health"
+    method: GET
+    exports:
+      is_healthy: "contains({{response.body}}, 'healthy')"
+      has_version: "contains({{response.body}}, 'version')"
+
+  # HTTP with regex_match() in exports
+  - name: http-regex-extract
+    type: http
+    url: "{{api_base}}/version"
+    method: GET
+    exports:
+      version_number: "regex_match({{response.body}}, 'v(\\d+\\.\\d+\\.\\d+)')"
+      is_valid_format: "regex_match({{response.body}}, '^v\\d+\\.\\d+')"
+
+  # HTTP with jq() pattern for JSON extraction
+  - name: http-jq-extract
+    type: http
+    url: "{{api_base}}/results"
+    method: GET
+    headers:
+      Accept: application/json
+    exports:
+      total_findings: "jq({{response.body}}, '.total')"
+      critical_count: "jq({{response.body}}, '.findings | map(select(.severity == \"critical\")) | length')"
+      first_finding: "jq({{response.body}}, '.findings[0].title')"
+
+  # HTTP with error handling
+  - name: http-with-error-handling
+    type: http
+    url: "{{api_base}}/risky-endpoint"
+    method: POST
+    headers:
+      Content-Type: application/json
+    request_body: |
+      {"action": "test"}
+    timeout: 10
+    exports:
+      risky_status: "{{response.status_code}}"
+    on_error:
+      - action: log
+        message: "HTTP request failed: {{error}}"
+      - action: continue
+    on_success:
+      - action: log
+        message: "Request succeeded with status {{response.status_code}}"
+
+  # HTTP step with decision routing based on response
+  - name: http-with-decision
+    type: http
+    url: "{{api_base}}/status"
+    method: GET
+    exports:
+      status_code: "{{response.status_code}}"
+    decision:
+      switch: "{{status_code}}"
+      cases:
+        "200":
+          goto: process-success
+        "404":
+          goto: handle-not-found
+        "500":
+          goto: handle-server-error
+      default:
+        goto: handle-unknown
+
+  - name: process-success
+    type: bash
+    command: echo "Status check succeeded"
+
+  - name: handle-not-found
+    type: bash
+    command: echo "Resource not found"
+
+  - name: handle-server-error
+    type: bash
+    command: echo "Server error occurred"
+
+  - name: handle-unknown
+    type: bash
+    command: echo "Unknown status received"

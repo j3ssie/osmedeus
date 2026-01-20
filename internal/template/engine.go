@@ -44,7 +44,7 @@ func NewEngineWithCacheSize(cacheSize int) *Engine {
 
 // Render renders a template string with the given context
 // Uses LRU cache to avoid re-parsing the same template strings
-func (e *Engine) Render(template string, ctx map[string]interface{}) (string, error) {
+func (e *Engine) Render(template string, ctx map[string]any) (string, error) {
 	// Quick path: no template variables present
 	if !strings.Contains(template, "{{") {
 		return template, nil
@@ -82,8 +82,8 @@ func (e *Engine) Render(template string, ctx map[string]interface{}) (string, er
 
 // normalizeBoolsForTemplate converts bool values to lowercase strings for template rendering
 // This ensures consistent "true"/"false" output instead of pongo2's "True"/"False"
-func normalizeBoolsForTemplate(ctx map[string]interface{}) map[string]interface{} {
-	result := make(map[string]interface{}, len(ctx))
+func normalizeBoolsForTemplate(ctx map[string]any) map[string]any {
+	result := make(map[string]any, len(ctx))
 	for k, v := range ctx {
 		if b, ok := v.(bool); ok {
 			if b {
@@ -131,7 +131,7 @@ func fixIncompleteExpressions(s string) string {
 }
 
 // RenderMap renders all template values in a map
-func (e *Engine) RenderMap(m map[string]string, ctx map[string]interface{}) (map[string]string, error) {
+func (e *Engine) RenderMap(m map[string]string, ctx map[string]any) (map[string]string, error) {
 	result := make(map[string]string, len(m))
 	for k, v := range m {
 		rendered, err := e.Render(v, ctx)
@@ -144,7 +144,7 @@ func (e *Engine) RenderMap(m map[string]string, ctx map[string]interface{}) (map
 }
 
 // RenderSlice renders all template values in a slice
-func (e *Engine) RenderSlice(s []string, ctx map[string]interface{}) ([]string, error) {
+func (e *Engine) RenderSlice(s []string, ctx map[string]any) ([]string, error) {
 	result := make([]string, len(s))
 	for i, v := range s {
 		rendered, err := e.Render(v, ctx)
@@ -158,7 +158,7 @@ func (e *Engine) RenderSlice(s []string, ctx map[string]interface{}) ([]string, 
 
 // RenderSecondary renders templates using [[ ]] delimiters
 // Used for variables that only exist at runtime (e.g., foreach loop variables)
-func (e *Engine) RenderSecondary(template string, ctx map[string]interface{}) (string, error) {
+func (e *Engine) RenderSecondary(template string, ctx map[string]any) (string, error) {
 	// Quick path: no secondary delimiters
 	if !strings.Contains(template, "[[") {
 		return template, nil
@@ -267,3 +267,26 @@ func ExtractVariables(s string) []string {
 	}
 	return vars
 }
+
+// RenderBatch renders multiple templates in a single operation.
+// For the standard Engine, this simply iterates through requests.
+// Use ShardedEngine for optimized batch rendering.
+func (e *Engine) RenderBatch(requests []RenderRequest, ctx map[string]any) (map[string]string, error) {
+	if len(requests) == 0 {
+		return make(map[string]string), nil
+	}
+
+	results := make(map[string]string, len(requests))
+	for _, req := range requests {
+		rendered, err := e.Render(req.Template, ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error rendering %s: %w", req.Key, err)
+		}
+		results[req.Key] = rendered
+	}
+	return results, nil
+}
+
+// Verify interface compliance at compile time
+var _ TemplateEngine = (*Engine)(nil)
+var _ BatchRenderer = (*Engine)(nil)

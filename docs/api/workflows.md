@@ -15,7 +15,7 @@ curl http://localhost:8002/osm/api/workflows \
 |-----------|------|---------|-------------|
 | `source` | string | `db` | Data source: `db` (database) or `filesystem` (direct file scan) |
 | `tags` | string | - | Comma-separated list of tags to filter by |
-| `kind` | string | - | Filter by workflow kind: `flow` or `module` |
+| `kind` | string | - | Filter by workflow kind: `flow`, `module` |
 | `search` | string | - | Search in workflow name and description |
 | `offset` | int | 0 | Pagination offset |
 | `limit` | int | 50 | Maximum records to return |
@@ -27,9 +27,10 @@ curl http://localhost:8002/osm/api/workflows \
 curl "http://localhost:8002/osm/api/workflows?tags=recon,subdomain" \
   -H "Authorization: Bearer $TOKEN"
 
-# Filter by kind
+# Filter by kind (module)
 curl "http://localhost:8002/osm/api/workflows?kind=module" \
   -H "Authorization: Bearer $TOKEN"
+
 
 # Search workflows
 curl "http://localhost:8002/osm/api/workflows?search=enum" \
@@ -249,3 +250,34 @@ steps:
   }
 }
 ```
+
+**Step Dependencies:**
+
+Steps can have dependencies on other steps using the `depends_on` field:
+```json
+{
+  "steps": [
+    {
+      "index": 0,
+      "name": "step-a",
+      "type": "bash",
+      "command": "echo A"
+    },
+    {
+      "index": 1,
+      "name": "step-b",
+      "type": "bash",
+      "command": "echo B",
+      "depends_on": ["step-a"]
+    },
+    {
+      "index": 2,
+      "name": "step-c",
+      "type": "bash",
+      "command": "echo C",
+      "depends_on": ["step-a", "step-b"]
+    }
+  ]
+}
+```
+

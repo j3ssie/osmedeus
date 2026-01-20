@@ -169,7 +169,7 @@ steps:
   - name: check-alive-hosts
     type: function
     log: "Checking alive hosts count"
-    function: fileLength("{{Output}}/enumeration/httpx.json")
+    function: file_length("{{Output}}/enumeration/httpx.json")
     exports:
       alive_count: "output"
     decision:

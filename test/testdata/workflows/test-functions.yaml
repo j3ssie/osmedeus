@@ -17,13 +17,13 @@ steps:
 
   - name: check-file
     type: function
-    function: fileExists("/tmp/test-{{target}}.txt")
+    function: file_exists("/tmp/test-{{target}}.txt")
     exports:
       exists: "output"
 
   - name: read-file
     type: function
-    function: readFile("/tmp/test-{{target}}.txt")
+    function: read_file("/tmp/test-{{target}}.txt")
     exports:
       content: "output"
 

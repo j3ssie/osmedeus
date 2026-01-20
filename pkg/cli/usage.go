@@ -81,6 +81,15 @@ func UsageRun() string {
   ` + terminal.Green("# Run module from stdin (pipe YAML)") + `
   cat module.yaml | osmedeus run ` + terminal.Yellow("--std-module") + ` ` + terminal.Yellow("-t") + ` example.com
 
+  ` + terminal.Green("# Run module from URL") + `
+  osmedeus run ` + terminal.Yellow("--module-url") + ` https://example.com/module.yaml ` + terminal.Yellow("-t") + ` example.com
+
+  ` + terminal.Green("# Run module from GitHub (public)") + `
+  osmedeus run ` + terminal.Yellow("--module-url") + ` https://raw.githubusercontent.com/user/repo/main/module.yaml ` + terminal.Yellow("-t") + ` example.com
+
+  ` + terminal.Green("# Run module from private GitHub repo (requires GH_TOKEN or GITHUB_API_KEY)") + `
+  osmedeus run ` + terminal.Yellow("--module-url") + ` https://github.com/user/private-repo/blob/main/module.yaml ` + terminal.Yellow("-t") + ` example.com
+
   ` + terminal.Green("# Load parameters from YAML/JSON file") + `
   osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-t") + ` example.com ` + terminal.Yellow("--params-file") + ` params.yaml
 
@@ -92,6 +101,19 @@ func UsageRun() string {
 
   ` + terminal.Green("# Concurrent targets from file") + `
   osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--concurrency") + ` 5
+
+  ` + terminal.Green("# View chunk info for target file") + `
+  osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--chunk-size") + ` 100
+
+  ` + terminal.Green("# Run specific chunk (0-indexed)") + `
+  osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--chunk-size") + ` 100 ` + terminal.Yellow("--chunk-part") + ` 2
+
+  ` + terminal.Green("# Split into 4 equal chunks and run chunk 0") + `
+  osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--chunk-count") + ` 4 ` + terminal.Yellow("--chunk-part") + ` 0
+
+  ` + terminal.Green("# Distributed processing across machines") + `
+  osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--chunk-size") + ` 250 ` + terminal.Yellow("--chunk-part") + ` 0  ` + terminal.Gray("# Machine 1") + `
+  osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--chunk-size") + ` 250 ` + terminal.Yellow("--chunk-part") + ` 1  ` + terminal.Gray("# Machine 2") + `
 
 ` + docsFooter()
 }
@@ -260,6 +282,19 @@ func UsageFunctionEval() string {
 
   ` + terminal.Green("# Alternative stdin syntax") + `
   echo 'log_info("hello")' | osmedeus func e -
+
+` + terminal.BoldCyan("▷ Bulk Processing") + `
+  ` + terminal.Green("# Process multiple targets from file") + `
+  osmedeus func e 'log_info("Processing: " + target)' ` + terminal.Yellow("-T") + ` targets.txt
+
+  ` + terminal.Green("# Function from file with targets") + `
+  osmedeus func e ` + terminal.Yellow("--function-file") + ` check.js ` + terminal.Yellow("-T") + ` targets.txt
+
+  ` + terminal.Green("# With concurrency") + `
+  osmedeus func e 'httpGet("https://" + target)' ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("-c") + ` 10
+
+  ` + terminal.Green("# Combined with params") + `
+  osmedeus func e 'log_info(prefix + target)' ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--params") + ` 'prefix=test_' ` + terminal.Yellow("-c") + ` 5
 
 ` + docsFooter()
 }
@@ -605,6 +640,12 @@ func UsageAllExamples() string {
   ` + terminal.Green("# Run module from stdin YAML") + `
   cat module.yaml | osmedeus run ` + terminal.Yellow("--std-module") + ` ` + terminal.Yellow("-t") + ` example.com
 
+  ` + terminal.Green("# Run module from URL") + `
+  osmedeus run ` + terminal.Yellow("--module-url") + ` https://example.com/module.yaml ` + terminal.Yellow("-t") + ` example.com
+
+  ` + terminal.Green("# Run module from private GitHub repo") + `
+  osmedeus run ` + terminal.Yellow("--module-url") + ` https://github.com/user/private/blob/main/module.yaml ` + terminal.Yellow("-t") + ` example.com
+
   ` + terminal.Green("# Custom workspace") + `
   osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-t") + ` example.com ` + terminal.Yellow("--workspace") + ` /path/to/workspace
 
@@ -622,6 +663,15 @@ func UsageAllExamples() string {
 
   ` + terminal.Green("# Concurrent targets") + `
   osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--concurrency") + ` 5
+
+  ` + terminal.Green("# View chunk info") + `
+  osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--chunk-size") + ` 100
+
+  ` + terminal.Green("# Run specific chunk") + `
+  osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--chunk-size") + ` 100 ` + terminal.Yellow("--chunk-part") + ` 2
+
+  ` + terminal.Green("# Split into 4 equal chunks and run chunk 0") + `
+  osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--chunk-count") + ` 4 ` + terminal.Yellow("--chunk-part") + ` 0
 
 ` + terminal.BoldYellow("★ Function Eval (Powerful Scripting)") + `
   ` + terminal.Green("# Print markdown file") + `
@@ -748,6 +798,7 @@ func UsageFullExample() string {
   ` + terminal.Yellow("-f, --flow") + `             Flow workflow name to execute
   ` + terminal.Yellow("-m, --module") + `           Module workflow(s) to execute (can specify multiple)
   ` + terminal.Yellow("--std-module") + `           Read module YAML from stdin
+  ` + terminal.Yellow("--module-url") + `           URL to fetch module YAML from (supports GitHub private repos)
 
 ` + terminal.Cyan("  Target Selection:") + `
   ` + terminal.Yellow("-t, --target") + `           Target(s) to run against (can specify multiple)
@@ -767,6 +818,12 @@ func UsageFullExample() string {
   ` + terminal.Yellow("--repeat-wait-time") + `     Wait time between repeats (default: 1h)
   ` + terminal.Yellow("--dry-run") + `              Show what would be executed without running
   ` + terminal.Yellow("-G, --progress-bar") + `     Show progress bar during execution
+
+` + terminal.Cyan("  Chunk Mode:") + `
+  ` + terminal.Yellow("--chunk-size") + `           Split targets into chunks of N targets each (0 = disabled)
+  ` + terminal.Yellow("--chunk-count") + `          Split targets into N equal chunks (0 = disabled)
+  ` + terminal.Yellow("--chunk-part") + `           Execute only chunk M (0-indexed, requires --chunk-size or --chunk-count)
+  ` + terminal.Yellow("--chunk-threads") + `        Override concurrency within chunk (0 = use -c value)
 
 ` + terminal.Cyan("  Workspace:") + `
   ` + terminal.Yellow("-w, --workspace") + `        Custom workspace path
@@ -815,6 +872,9 @@ func UsageFullExample() string {
   ` + terminal.Yellow("-t, --target") + `           Target value for {{target}} variable
   ` + terminal.Yellow("--params") + `               Additional parameters (key=value format)
   ` + terminal.Yellow("--stdin") + `                Read script from stdin
+  ` + terminal.Yellow("-T, --targets") + `          File containing targets (one per line)
+  ` + terminal.Yellow("--function-file") + `        File containing the function/script to execute
+  ` + terminal.Yellow("-c, --concurrency") + `      Number of concurrent executions (default: 1)
 
 ` + terminal.BoldYellow("WORKER COMMAND") + ` - Distributed worker management
 ` + terminal.Gray("───────────────────────────────────────────────────────────────────") + `

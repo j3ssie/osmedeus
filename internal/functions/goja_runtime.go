@@ -82,7 +82,11 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnRegexMatch, vf.regexMatch)
 	_ = vm.Set(FnCutWithDelim, vf.cutWithDelim)
 	_ = vm.Set(FnNormalizePath, vf.normalizePath)
+	_ = vm.Set(FnNormalPath, vf.normalPath)
 	_ = vm.Set(FnCleanSub, vf.cleanSub)
+
+	// Type detection functions
+	_ = vm.Set(FnGetTypes, vf.getTypes)
 
 	// Type conversion
 	_ = vm.Set(FnParseInt, vf.parseInt)
@@ -99,6 +103,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnExit, vf.exit)
 	_ = vm.Set(FnExecCmd, vf.execCmd)
 	_ = vm.Set(FnSleep, vf.sleep)
+	_ = vm.Set(FnCommandExists, vf.commandExists)
 
 	// Logging functions
 	_ = vm.Set(FnLogDebug, vf.logDebug)
@@ -106,10 +111,21 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnLogWarn, vf.logWarn)
 	_ = vm.Set(FnLogError, vf.logError)
 
+	// Color printing functions
+	_ = vm.Set(FnPrintGreen, vf.printGreen)
+	_ = vm.Set(FnPrintBlue, vf.printBlue)
+	_ = vm.Set(FnPrintYellow, vf.printYellow)
+	_ = vm.Set(FnPrintRed, vf.printRed)
+
+	// Runtime variable functions
+	_ = vm.Set(FnSetVar, vf.setVar)
+	_ = vm.Set(FnGetVar, vf.getVar)
+
 	// HTTP and network functions
 	_ = vm.Set(FnHttpRequest, vf.httpRequest)
 	_ = vm.Set(FnHttpGet, vf.httpGet)
 	_ = vm.Set(FnHttpPost, vf.httpPost)
+	_ = vm.Set(FnGetIP, vf.getIP)
 
 	// Generation functions
 	_ = vm.Set(FnRandomString, vf.randomString)
@@ -129,11 +145,20 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnNotifyWebhook, vf.notifyWebhook)
 	_ = vm.Set(FnSendWebhookEvent, vf.sendWebhookEvent)
 
+	// Event generation functions
+	_ = vm.Set(FnGenerateEvent, vf.generateEvent)
+	_ = vm.Set(FnGenerateEventFromFile, vf.generateEventFromFile)
+
 	// CDN/Storage functions
 	_ = vm.Set(FnCdnUpload, vf.cdnUpload)
 	_ = vm.Set(FnCdnDownload, vf.cdnDownload)
 	_ = vm.Set(FnCdnExists, vf.cdnExists)
 	_ = vm.Set(FnCdnDelete, vf.cdnDelete)
+	_ = vm.Set(FnCdnSyncUpload, vf.cdnSyncUpload)
+	_ = vm.Set(FnCdnSyncDownload, vf.cdnSyncDownload)
+	_ = vm.Set(FnCdnGetPresignedURL, vf.cdnGetPresignedURL)
+	_ = vm.Set(FnCdnList, vf.cdnList)
+	_ = vm.Set(FnCdnStat, vf.cdnStat)
 
 	// Unix command wrappers
 	_ = vm.Set(FnSortUnix, vf.sortUnix)
@@ -214,6 +239,21 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnDBImportVuln, vf.dbImportVuln)
 	_ = vm.Set(FnDBImportVulnFromFile, vf.dbImportVulnFromFile)
 
+	// Database diff functions
+	_ = vm.Set(FnDBAssetDiff, vf.dbAssetDiff)
+	_ = vm.Set(FnDBVulnDiff, vf.dbVulnDiff)
+	_ = vm.Set(FnDBAssetDiffToFile, vf.dbAssetDiffToFile)
+	_ = vm.Set(FnDBVulnDiffToFile, vf.dbVulnDiffToFile)
+
+	// Installer functions
+	_ = vm.Set(FnGoGetter, vf.goGetter)
+	_ = vm.Set(FnGoGetterWithSSHKey, vf.goGetterWithSSHKey)
+	_ = vm.Set(FnNixInstall, vf.nixInstall)
+
+	// Environment functions
+	_ = vm.Set(FnOsGetenv, vf.osGetenv)
+	_ = vm.Set(FnOsSetenv, vf.osSetenv)
+
 	// Console for debugging
 	_ = vm.Set("console", map[string]interface{}{
 		"log": func(call goja.FunctionCall) goja.Value {
@@ -225,6 +265,8 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 
 // Execute executes a JavaScript expression with context.
 // Uses VM pooling for parallel execution without global mutex.
+// Note: Uses full variable loading because functions like render_markdown_report()
+// access variables via vm.Get() internally, not just from the expression text.
 func (r *GojaRuntime) Execute(expr string, ctx map[string]interface{}) (interface{}, error) {
 	// Get VM from pool (no global lock!)
 	vmCtx := r.pool.Get()
@@ -233,7 +275,9 @@ func (r *GojaRuntime) Execute(expr string, ctx map[string]interface{}) (interfac
 	// Set context fields on this VM's context
 	vmCtx.SetContext(ctx)
 
-	// Set context variables on the VM
+	// Set all context variables on the VM
+	// Cannot use lazy loading here because functions may access variables
+	// via vm.Get() internally (e.g., render_markdown_report reads Target, Output, etc.)
 	if err := vmCtx.SetVariables(ctx); err != nil {
 		return nil, fmt.Errorf("error setting variables: %w", err)
 	}
@@ -252,13 +296,15 @@ func (r *GojaRuntime) Execute(expr string, ctx map[string]interface{}) (interfac
 
 // EvaluateCondition evaluates a boolean condition.
 // Uses VM pooling for parallel execution without global mutex.
+// Employs lazy variable loading - only sets variables actually referenced in the condition.
 func (r *GojaRuntime) EvaluateCondition(condition string, ctx map[string]interface{}) (bool, error) {
 	// Get VM from pool (no global lock!)
 	vmCtx := r.pool.Get()
 	defer r.pool.Put(vmCtx)
 
-	// Set context variables on the VM
-	if err := vmCtx.SetVariables(ctx); err != nil {
+	// Use lazy loading - only set variables referenced in the condition
+	// This is 50-80% faster for simple conditions with large contexts
+	if err := vmCtx.SetVariablesLazy(ctx, condition); err != nil {
 		return false, fmt.Errorf("error setting variables: %w", err)
 	}
 

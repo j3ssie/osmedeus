@@ -37,9 +37,9 @@ steps:
   - name: validate-dependencies
     type: function
     function: |
-      fileExists("{{Binaries}}/subfinder") &&
-      fileExists("{{Binaries}}/assetfinder") &&
-      fileExists("{{Binaries}}/httpx")
+      file_exists("{{Binaries}}/subfinder") &&
+      file_exists("{{Binaries}}/assetfinder") &&
+      file_exists("{{Binaries}}/httpx")
     exports:
       deps_valid: "output"
     on_error:
@@ -90,7 +90,7 @@ steps:
   - name: count-subdomains
     type: function
     function: |
-      var count = fileLength("{{subdomains_file}}");
+      var count = file_length("{{subdomains_file}}");
       return count > 0 ? "true" : "false";
     exports:
       subdomain_count: "{{Result}}"
@@ -125,14 +125,14 @@ steps:
 
   - name: fallback-probing
     type: bash
-    pre_condition: "!fileExists('{{Output}}/web-recon/probing/live-{{Workspace}}.txt')"
+    pre_condition: "!file_exists('{{Output}}/web-recon/probing/live-{{Workspace}}.txt')"
     command: "cat {{subdomains_file}} | xargs -I {} curl -s -o /dev/null -w '%{http_code} {}\\n' http://{} 2>/dev/null | grep '^200' | awk '{print $2}' > {{Output}}/web-recon/probing/live-{{Workspace}}.txt"
     exports:
       live_hosts_file: "{{Output}}/web-recon/probing/live-{{Workspace}}.txt"
 
   - name: count-live-hosts
     type: function
-    function: fileLength("{{live_hosts_file}}")
+    function: file_length("{{live_hosts_file}}")
     exports:
       live_host_count: "output"
 
@@ -145,7 +145,7 @@ steps:
       # Screenshot capture using Docker
       - name: capture-screenshots
         type: remote-bash
-        pre_condition: '"{{enableScreenshots}}" == "true" && parseInt("{{live_host_count}}") > 0'
+        pre_condition: '"{{enableScreenshots}}" == "true" && parse_int("{{live_host_count}}") > 0'
         step_runner: docker
         step_runner_config:
           image: projectdiscovery/katana:latest
@@ -166,7 +166,7 @@ steps:
       # Nuclei vulnerability scanning using Docker
       - name: nuclei-scan
         type: remote-bash
-        pre_condition: '"{{enableNuclei}}" == "true" && parseInt("{{live_host_count}}") > 0'
+        pre_condition: '"{{enableNuclei}}" == "true" && parse_int("{{live_host_count}}") > 0'
         step_runner: docker
         step_runner_config:
           image: projectdiscovery/nuclei:latest
@@ -195,7 +195,7 @@ steps:
   # ============================================================
   - name: detailed-host-analysis
     type: foreach
-    pre_condition: 'parseInt("{{live_host_count}}") > 0 && parseInt("{{live_host_count}}") < 50'
+    pre_condition: 'parse_int("{{live_host_count}}") > 0 && parse_int("{{live_host_count}}") < 50'
     input: "{{live_hosts_file}}"
     variable: host
     threads: 5
@@ -213,7 +213,7 @@ steps:
   # ============================================================
   - name: process-nuclei-results
     type: function
-    pre_condition: 'fileExists("{{Output}}/web-recon/nuclei/results-{{Workspace}}.json")'
+    pre_condition: 'file_exists("{{Output}}/web-recon/nuclei/results-{{Workspace}}.json")'
     parallel_functions:
       - db_vuln_critical("{{Output}}/web-recon/nuclei/results-{{Workspace}}.json")
       - db_vuln_high("{{Output}}/web-recon/nuclei/results-{{Workspace}}.json")
@@ -259,5 +259,5 @@ steps:
 
   - name: notify-completion
     type: function
-    pre_condition: 'parseInt("{{subdomain_count}}") > 0'
+    pre_condition: 'parse_int("{{subdomain_count}}") > 0'
     function: printf("Scan complete: {{subdomain_count}} subdomains, {{live_host_count}} live hosts")

@@ -5,21 +5,21 @@ package functions
 
 // File Functions - Operations on files and directories
 const (
-	FnFileExists      = "fileExists"   // fileExists(path) -> bool
-	FnFileLength      = "fileLength"   // fileLength(path) -> int (non-empty line count)
-	FnDirLength       = "dirLength"    // dirLength(path) -> int (entry count)
-	FnFileContains    = "fileContains" // fileContains(path, pattern) -> bool
-	FnRegexExtract    = "regexExtract" // regexExtract(path, pattern) -> []string
-	FnReadFile        = "readFile"     // readFile(path) -> string
-	FnReadLines       = "readLines"    // readLines(path) -> []string
-	FnRemoveFile      = "removeFile"   // removeFile(path) -> bool
-	FnRemoveFolder    = "removeFolder" // removeFolder(path) -> bool
+	FnFileExists      = "file_exists"   // file_exists(path) -> bool
+	FnFileLength      = "file_length"   // file_length(path) -> int (non-empty line count)
+	FnDirLength       = "dir_length"    // dir_length(path) -> int (entry count)
+	FnFileContains    = "file_contains" // file_contains(path, pattern) -> bool
+	FnRegexExtract    = "regex_extract" // regex_extract(path, pattern) -> []string
+	FnReadFile        = "read_file"     // read_file(path) -> string
+	FnReadLines       = "read_lines"    // read_lines(path) -> []string
+	FnRemoveFile      = "remove_file"   // remove_file(path) -> bool
+	FnRemoveFolder    = "remove_folder" // remove_folder(path) -> bool
 	FnRmRF            = "rm_rf"
 	FnRemoveAllExcept = "remove_all_except"
-	FnCreateFolder    = "createFolder" // createFolder(path) -> bool
-	FnAppendFile      = "appendFile"   // appendFile(dest, source) -> bool
-	FnMoveFile        = "moveFile"     // moveFile(source, dest) -> bool
-	FnGlob            = "glob"         // glob(pattern) -> []string
+	FnCreateFolder    = "create_folder" // create_folder(path) -> bool
+	FnAppendFile      = "append_file"   // append_file(dest, source) -> bool
+	FnMoveFile        = "move_file"     // move_file(source, dest) -> bool
+	FnGlob            = "glob"          // glob(pattern) -> []string
 
 	FnGrepStringToFile = "grep_string_to_file" // grep_string_to_file(dest, source, str) -> bool
 	FnGrepRegexToFile  = "grep_regex_to_file"  // grep_regex_to_file(dest, source, pattern) -> bool
@@ -35,35 +35,42 @@ const (
 	FnJoin          = "join"           // join(arr, delim) -> string
 	FnReplace       = "replace"        // replace(str, old, new) -> string
 	FnContains      = "contains"       // contains(str, substr) -> bool
-	FnStartsWith    = "startsWith"     // startsWith(str, prefix) -> bool
-	FnEndsWith      = "endsWith"       // endsWith(str, suffix) -> bool
-	FnToLowerCase   = "toLowerCase"    // toLowerCase(str) -> string
-	FnToUpperCase   = "toUpperCase"    // toUpperCase(str) -> string
+	FnStartsWith    = "starts_with"    // starts_with(str, prefix) -> bool
+	FnEndsWith      = "ends_with"      // ends_with(str, suffix) -> bool
+	FnToLowerCase   = "to_lower_case"  // to_lower_case(str) -> string
+	FnToUpperCase   = "to_upper_case"  // to_upper_case(str) -> string
 	FnMatch         = "match"          // match(str, pattern) -> bool
 	FnRegexMatch    = "regex_match"    // regex_match(pattern, str) -> bool (pattern first)
 	FnCutWithDelim  = "cut_with_delim" // cut_with_delim(input, delim, field) -> string (1-indexed like cut)
 	FnNormalizePath = "normalize_path" // normalize_path(input) -> string (replace / | : etc with _)
+	FnNormalPath    = "normal_path"    // normal_path(input) -> string (same as {{TargetSpace}}: sanitize + truncate)
 	FnCleanSub      = "clean_sub"      // clean_sub(path, target?) -> bool (clean and deduplicate subdomains in file)
+)
+
+// Type Detection Functions - Detect input types
+const (
+	FnGetTypes = "get_types" // get_types(input) -> string (file, folder, cidr, ip, url, domain, string)
 )
 
 // Type Conversion Functions - Convert between types
 const (
-	FnParseInt   = "parseInt"   // parseInt(str) -> int
-	FnParseFloat = "parseFloat" // parseFloat(str) -> float
-	FnToString   = "toString"   // toString(val) -> string
-	FnToBoolean  = "toBoolean"  // toBoolean(val) -> bool
+	FnParseInt   = "parse_int"   // parse_int(str) -> int
+	FnParseFloat = "parse_float" // parse_float(str) -> float
+	FnToString   = "to_string"   // to_string(val) -> string
+	FnToBoolean  = "to_boolean"  // to_boolean(val) -> bool
 )
 
 // Utility Functions - General utility operations
 const (
-	FnLen        = "len"        // len(val) -> int
-	FnIsEmpty    = "isEmpty"    // isEmpty(val) -> bool
-	FnIsNotEmpty = "isNotEmpty" // isNotEmpty(val) -> bool
-	FnPrintf     = "printf"     // printf(message) -> void (print message to stdout)
-	FnCatFile    = "cat_file"   // cat_file(path) -> void (print file content to stdout)
-	FnExit       = "exit"       // exit(code) -> void (exit scan with code)
-	FnExecCmd    = "exec_cmd"   // exec_cmd(command) -> string (execute bash command, return stdout)
-	FnSleep      = "sleep"      // sleep(seconds) -> void (pause for n seconds)
+	FnLen           = "len"            // len(val) -> int
+	FnIsEmpty       = "is_empty"       // is_empty(val) -> bool
+	FnIsNotEmpty    = "is_not_empty"   // is_not_empty(val) -> bool
+	FnPrintf        = "printf"         // printf(message) -> void (print message to stdout)
+	FnCatFile       = "cat_file"       // cat_file(path) -> void (print file content to stdout)
+	FnExit          = "exit"           // exit(code) -> void (exit scan with code)
+	FnExecCmd       = "exec_cmd"       // exec_cmd(command) -> string (execute bash command, return stdout)
+	FnSleep         = "sleep"          // sleep(seconds) -> void (pause for n seconds)
+	FnCommandExists = "command_exists" // command_exists(command) -> bool (check if command exists in PATH)
 )
 
 // Logging Functions - Log messages with level prefixes
@@ -74,23 +81,38 @@ const (
 	FnLogError = "log_error"
 )
 
+// Color Printing Functions - Print messages with colored output
+const (
+	FnPrintGreen  = "print_green"  // print_green(message) -> string (print in green)
+	FnPrintBlue   = "print_blue"   // print_blue(message) -> string (print in blue)
+	FnPrintYellow = "print_yellow" // print_yellow(message) -> string (print in yellow)
+	FnPrintRed    = "print_red"    // print_red(message) -> string (print in red)
+)
+
+// Runtime Variable Functions - Set and get variables at runtime
+const (
+	FnSetVar = "set_var" // set_var(name, value) -> string (set runtime variable)
+	FnGetVar = "get_var" // get_var(name) -> string (get runtime variable)
+)
+
 // HTTP and Network Functions
 const (
-	FnHttpRequest = "httpRequest" // httpRequest(url, method, headers, body) -> {statusCode, body, headers}
-	FnHttpGet     = "http_get"    // http_get(url) -> structured JSON response
-	FnHttpPost    = "http_post"   // http_post(url, body) -> structured JSON response
+	FnHttpRequest = "http_request" // http_request(url, method, headers, body) -> {statusCode, body, headers}
+	FnHttpGet     = "http_get"     // http_get(url) -> structured JSON response
+	FnHttpPost    = "http_post"    // http_post(url, body) -> structured JSON response
+	FnGetIP       = "get_ip"       // get_ip(domain_or_url) -> string (resolved IP address)
 )
 
 // Generation Functions - Generate random values
 const (
-	FnRandomString = "randomString" // randomString(length) -> string
-	FnUUID         = "uuid"         // uuid() -> string (UUID v4)
+	FnRandomString = "random_string" // random_string(length) -> string
+	FnUUID         = "uuid"          // uuid() -> string (UUID v4)
 )
 
 // Encoding Functions - Encode/decode data
 const (
-	FnBase64Encode = "base64Encode" // base64Encode(str) -> string
-	FnBase64Decode = "base64Decode" // base64Decode(str) -> string
+	FnBase64Encode = "base64_encode" // base64_encode(str) -> string
+	FnBase64Decode = "base64_decode" // base64_decode(str) -> string
 )
 
 // Data Query Functions - Query structured data
@@ -101,32 +123,56 @@ const (
 
 // Notification Functions - Send notifications via various channels
 const (
-	FnNotifyTelegram   = "notifyTelegram"   // notifyTelegram(message) -> bool
-	FnSendTelegramFile = "sendTelegramFile" // sendTelegramFile(path, caption?) -> bool
-	FnNotifyWebhook    = "notifyWebhook"    // notifyWebhook(message) -> bool
-	FnSendWebhookEvent = "sendWebhookEvent" // sendWebhookEvent(eventType, data) -> bool
+	FnNotifyTelegram   = "notify_telegram"    // notify_telegram(message) -> bool
+	FnSendTelegramFile = "send_telegram_file" // send_telegram_file(path, caption?) -> bool
+	FnNotifyWebhook    = "notify_webhook"     // notify_webhook(message) -> bool
+	FnSendWebhookEvent = "send_webhook_event" // send_webhook_event(eventType, data) -> bool
+)
+
+// Event Generation Functions - Generate structured events
+const (
+	FnGenerateEvent         = "generate_event"           // generate_event(topic, source, data_type, data) -> bool
+	FnGenerateEventFromFile = "generate_event_from_file" // generate_event_from_file(topic, source, data_type, path) -> int
 )
 
 // CDN/Storage Functions - Cloud storage operations
 const (
-	FnCdnUpload   = "cdnUpload"   // cdnUpload(localPath, remotePath) -> bool
-	FnCdnDownload = "cdnDownload" // cdnDownload(remotePath, localPath) -> bool
-	FnCdnExists   = "cdnExists"   // cdnExists(remotePath) -> bool
-	FnCdnDelete   = "cdnDelete"   // cdnDelete(remotePath) -> bool
+	FnCdnUpload          = "cdn_upload"           // cdn_upload(localPath, remotePath) -> bool
+	FnCdnDownload        = "cdn_download"         // cdn_download(remotePath, localPath) -> bool
+	FnCdnExists          = "cdn_exists"           // cdn_exists(remotePath) -> bool
+	FnCdnDelete          = "cdn_delete"           // cdn_delete(remotePath) -> bool
+	FnCdnSyncUpload      = "cdn_sync_upload"      // cdn_sync_upload(localDir, remotePrefix) -> object
+	FnCdnSyncDownload    = "cdn_sync_download"    // cdn_sync_download(remotePrefix, localDir) -> object
+	FnCdnGetPresignedURL = "cdn_get_presigned_url" // cdn_get_presigned_url(remotePath, expiryMins?) -> string
+	FnCdnList            = "cdn_list"             // cdn_list(prefix?) -> []object
+	FnCdnStat            = "cdn_stat"             // cdn_stat(remotePath) -> object|null
 )
 
 // Unix Command Wrappers - Wrappers around common Unix commands
 const (
-	FnSortUnix         = "sortUnix"           // sortUnix(inputFile, outputFile?) -> bool (LC_ALL=C sort -u)
-	FnWgetUnix         = "wgetUnix"           // wgetUnix(url, outputPath?) -> bool
-	FnGitClone         = "gitClone"           // gitClone(repo, dest?) -> bool
-	FnZipUnix          = "zipUnix"            // zipUnix(source, dest) -> bool (zip -r dest source)
-	FnUnzipUnix        = "unzipUnix"          // unzipUnix(source, dest?) -> bool (unzip source -d dest)
-	FnTarUnix          = "tarUnix"            // tarUnix(source, dest) -> bool (tar -czf dest source)
-	FnUntarUnix        = "untarUnix"          // untarUnix(source, dest?) -> bool (tar -xzf source -C dest)
-	FnDiffUnix         = "diffUnix"           // diffUnix(file1, file2, output?) -> string
+	FnSortUnix         = "sort_unix"          // sort_unix(inputFile, outputFile?) -> bool (LC_ALL=C sort -u)
+	FnWgetUnix         = "wget_unix"          // wget_unix(url, outputPath?) -> bool
+	FnGitClone         = "git_clone"          // git_clone(repo, dest?) -> bool
+	FnZipUnix          = "zip_unix"           // zip_unix(source, dest) -> bool (zip -r dest source)
+	FnUnzipUnix        = "unzip_unix"         // unzip_unix(source, dest?) -> bool (unzip source -d dest)
+	FnTarUnix          = "tar_unix"           // tar_unix(source, dest) -> bool (tar -czf dest source)
+	FnUntarUnix        = "untar_unix"         // untar_unix(source, dest?) -> bool (tar -xzf source -C dest)
+	FnDiffUnix         = "diff_unix"          // diff_unix(file1, file2, output?) -> string
 	FnSedStringReplace = "sed_string_replace" // sed_string_replace(sed_syntax, source, dest) -> bool
 	FnSedRegexReplace  = "sed_regex_replace"  // sed_regex_replace(sed_syntax, source, dest) -> bool
+)
+
+// Installer Functions - Download and install packages
+const (
+	FnGoGetter           = "go_getter"            // go_getter(url, dest) -> bool
+	FnGoGetterWithSSHKey = "go_getter_with_sshkey" // go_getter_with_sshkey(ssh_key_path, git_url, dest) -> bool
+	FnNixInstall         = "nix_install"          // nix_install(package, dest?) -> bool
+)
+
+// Environment Functions - Environment variable operations
+const (
+	FnOsGetenv = "os_getenv" // os_getenv(name) -> string
+	FnOsSetenv = "os_setenv" // os_setenv(name, value) -> bool
 )
 
 // Archive Functions - Go implementations for zip/unzip
@@ -137,7 +183,7 @@ const (
 
 // Diff Functions - Compare files
 const (
-	FnExtractDiff = "extractDiff" // extractDiff(file1, file2) -> string (lines only in file2)
+	FnExtractDiff = "extract_diff" // extract_diff(file1, file2) -> string (lines only in file2)
 )
 
 // Output Functions - Save content to files
@@ -206,6 +252,12 @@ const (
 	FnDBImportAssetFromFile = "db_import_asset_from_file" // db_import_asset_from_file(workspace, file_path) -> int (count)
 	FnDBImportVuln          = "db_import_vuln"            // db_import_vuln(workspace, json_data) -> bool
 	FnDBImportVulnFromFile  = "db_import_vuln_from_file"  // db_import_vuln_from_file(workspace, file_path) -> int (count)
+
+	// Diff functions - asset and vulnerability change tracking
+	FnDBAssetDiff       = "db_asset_diff"         // db_asset_diff(workspace) -> string (JSONL)
+	FnDBVulnDiff        = "db_vuln_diff"          // db_vuln_diff(workspace) -> string (JSONL)
+	FnDBAssetDiffToFile = "db_asset_diff_to_file" // db_asset_diff_to_file(workspace, dest) -> bool
+	FnDBVulnDiffToFile  = "db_vuln_diff_to_file"  // db_vuln_diff_to_file(workspace, dest) -> bool
 )
 
 // AllFunctions returns a list of all available function names
@@ -247,7 +299,11 @@ func AllFunctions() []string {
 		FnRegexMatch,
 		FnCutWithDelim,
 		FnNormalizePath,
+		FnNormalPath,
 		FnCleanSub,
+
+		// Type Detection Functions
+		FnGetTypes,
 
 		// Type Conversion Functions
 		FnParseInt,
@@ -264,6 +320,7 @@ func AllFunctions() []string {
 		FnExit,
 		FnExecCmd,
 		FnSleep,
+		FnCommandExists,
 
 		// Logging Functions
 		FnLogDebug,
@@ -271,10 +328,21 @@ func AllFunctions() []string {
 		FnLogWarn,
 		FnLogError,
 
+		// Color Printing Functions
+		FnPrintGreen,
+		FnPrintBlue,
+		FnPrintYellow,
+		FnPrintRed,
+
+		// Runtime Variable Functions
+		FnSetVar,
+		FnGetVar,
+
 		// HTTP Functions
 		FnHttpRequest,
 		FnHttpGet,
 		FnHttpPost,
+		FnGetIP,
 
 		// Generation Functions
 		FnRandomString,
@@ -294,11 +362,20 @@ func AllFunctions() []string {
 		FnNotifyWebhook,
 		FnSendWebhookEvent,
 
+		// Event Generation Functions
+		FnGenerateEvent,
+		FnGenerateEventFromFile,
+
 		// CDN/Storage Functions
 		FnCdnUpload,
 		FnCdnDownload,
 		FnCdnExists,
 		FnCdnDelete,
+		FnCdnSyncUpload,
+		FnCdnSyncDownload,
+		FnCdnGetPresignedURL,
+		FnCdnList,
+		FnCdnStat,
 
 		// Unix Command Wrappers
 		FnSortUnix,
@@ -376,6 +453,21 @@ func AllFunctions() []string {
 		FnDBImportAssetFromFile,
 		FnDBImportVuln,
 		FnDBImportVulnFromFile,
+
+		// Diff functions
+		FnDBAssetDiff,
+		FnDBVulnDiff,
+		FnDBAssetDiffToFile,
+		FnDBVulnDiffToFile,
+
+		// Installer functions
+		FnGoGetter,
+		FnGoGetterWithSSHKey,
+		FnNixInstall,
+
+		// Environment functions
+		FnOsGetenv,
+		FnOsSetenv,
 	}
 }
 
@@ -390,24 +482,30 @@ type FunctionInfo struct {
 
 // Category keys for function registry
 const (
-	CategoryFile           = "file"
-	CategoryString         = "string"
-	CategoryTypeConversion = "type_conversion"
-	CategoryUtility        = "utility"
-	CategoryLogging        = "logging"
-	CategoryHTTP           = "http"
-	CategoryGeneration     = "generation"
-	CategoryEncoding       = "encoding"
-	CategoryDataQuery      = "data_query"
-	CategoryNotification   = "notification"
-	CategoryCDNStorage     = "cdn_storage"
-	CategoryUnixCommands   = "unix_commands"
-	CategoryArchive        = "archive"
-	CategoryDiff           = "diff"
-	CategoryOutput         = "output"
-	CategoryURLProcessing  = "url_processing"
-	CategoryMarkdown       = "markdown"
-	CategoryDatabase       = "database"
+	CategoryFile            = "file"
+	CategoryString          = "string"
+	CategoryTypeConversion  = "type_conversion"
+	CategoryUtility         = "utility"
+	CategoryLogging         = "logging"
+	CategoryColorPrinting   = "color_printing"
+	CategoryRuntimeVars     = "runtime_vars"
+	CategoryHTTP            = "http"
+	CategoryGeneration      = "generation"
+	CategoryEncoding        = "encoding"
+	CategoryDataQuery       = "data_query"
+	CategoryNotification    = "notification"
+	CategoryEventGeneration = "event_generation"
+	CategoryCDNStorage      = "cdn_storage"
+	CategoryUnixCommands    = "unix_commands"
+	CategoryArchive         = "archive"
+	CategoryDiff            = "diff"
+	CategoryOutput          = "output"
+	CategoryURLProcessing   = "url_processing"
+	CategoryMarkdown        = "markdown"
+	CategoryDatabase        = "database"
+	CategoryInstaller       = "installer"
+	CategoryEnvironment     = "environment"
+	CategoryTypeDetection   = "type_detection"
 )
 
 // CategoryInfo provides display metadata for a function category
@@ -425,11 +523,14 @@ func CategoryOrder() []CategoryInfo {
 		{CategoryTypeConversion, "Type Conversion", "Type"},
 		{CategoryUtility, "Utility Functions", "Utility"},
 		{CategoryLogging, "Logging Functions", "Logging"},
+		{CategoryColorPrinting, "Color Printing Functions", "Color"},
+		{CategoryRuntimeVars, "Runtime Variable Functions", "Runtime Vars"},
 		{CategoryHTTP, "HTTP Functions", "HTTP"},
 		{CategoryGeneration, "Generation Functions", "Generation"},
 		{CategoryEncoding, "Encoding Functions", "Encoding"},
 		{CategoryDataQuery, "Data Query Functions", "Data Query"},
 		{CategoryNotification, "Notification Functions", "Notification"},
+		{CategoryEventGeneration, "Event Generation Functions", "Event"},
 		{CategoryCDNStorage, "CDN/Storage Functions", "CDN/Storage"},
 		{CategoryUnixCommands, "Unix Command Wrappers", "Unix"},
 		{CategoryArchive, "Archive Functions (Go)", "Archive"},
@@ -438,6 +539,9 @@ func CategoryOrder() []CategoryInfo {
 		{CategoryURLProcessing, "URL Processing Functions", "URL"},
 		{CategoryMarkdown, "Markdown Functions", "Markdown"},
 		{CategoryDatabase, "Database Functions", "Database"},
+		{CategoryInstaller, "Installer Functions", "Installer"},
+		{CategoryEnvironment, "Environment Functions", "Environment"},
+		{CategoryTypeDetection, "Type Detection Functions", "Type Detection"},
 	}
 }
 
@@ -445,20 +549,20 @@ func CategoryOrder() []CategoryInfo {
 func FunctionRegistry() map[string][]FunctionInfo {
 	return map[string][]FunctionInfo{
 		CategoryFile: {
-			{FnFileExists, "fileExists(path)", "Check if file exists", "bool", "fileExists('/tmp/test.txt')"},
-			{FnFileLength, "fileLength(path)", "Count non-empty lines in file", "int", "fileLength('{{Output}}/subdomains.txt')"},
-			{FnDirLength, "dirLength(path)", "Count entries in directory", "int", "dirLength('{{Output}}/screenshots')"},
-			{FnFileContains, "fileContains(path, pattern)", "Check if file contains pattern", "bool", "fileContains('{{Output}}/urls.txt', 'admin')"},
-			{FnRegexExtract, "regexExtract(path, pattern)", "Extract matching lines from file", "[]string", "regexExtract('{{Output}}/urls.txt', '.*api.*')"},
-			{FnReadFile, "readFile(path)", "Read entire file contents", "string", "readFile('{{Output}}/config.json')"},
-			{FnReadLines, "readLines(path)", "Read file as array of lines", "[]string", "readLines('{{Output}}/subdomains.txt')"},
-			{FnRemoveFile, "removeFile(path)", "Delete a file", "bool", "removeFile('{{Output}}/temp.txt')"},
-			{FnRemoveFolder, "removeFolder(path)", "Delete folder recursively", "bool", "removeFolder('{{Output}}/cache')"},
+			{FnFileExists, "file_exists(path)", "Check if file exists", "bool", "file_exists('/tmp/test.txt')"},
+			{FnFileLength, "file_length(path)", "Count non-empty lines in file", "int", "file_length('{{Output}}/subdomains.txt')"},
+			{FnDirLength, "dir_length(path)", "Count entries in directory", "int", "dir_length('{{Output}}/screenshots')"},
+			{FnFileContains, "file_contains(path, pattern)", "Check if file contains pattern", "bool", "file_contains('{{Output}}/urls.txt', 'admin')"},
+			{FnRegexExtract, "regex_extract(path, pattern)", "Extract matching lines from file", "[]string", "regex_extract('{{Output}}/urls.txt', '.*api.*')"},
+			{FnReadFile, "read_file(path)", "Read entire file contents", "string", "read_file('{{Output}}/config.json')"},
+			{FnReadLines, "read_lines(path)", "Read file as array of lines", "[]string", "read_lines('{{Output}}/subdomains.txt')"},
+			{FnRemoveFile, "remove_file(path)", "Delete a file", "bool", "remove_file('{{Output}}/temp.txt')"},
+			{FnRemoveFolder, "remove_folder(path)", "Delete folder recursively", "bool", "remove_folder('{{Output}}/cache')"},
 			{FnRmRF, "rm_rf(path)", "Delete file or folder recursively", "bool", "rm_rf('{{Output}}/tmp')"},
 			{FnRemoveAllExcept, "remove_all_except(folder, keep_file)", "Remove everything under folder except keep_file", "bool", "remove_all_except('{{Output}}', '{{Output}}/keep.txt')"},
-			{FnCreateFolder, "createFolder(path)", "Create folder recursively", "bool", "createFolder('{{Output}}/new-folder')"},
-			{FnAppendFile, "appendFile(dest, source)", "Append source file content into destination file", "bool", "appendFile('{{Output}}/all.txt', '{{Output}}/part.txt')"},
-			{FnMoveFile, "moveFile(source, dest)", "Move file from source to destination (rename or copy+delete)", "bool", "moveFile('{{Output}}/raw.txt', '{{Output}}/processed.txt')"},
+			{FnCreateFolder, "create_folder(path)", "Create folder recursively", "bool", "create_folder('{{Output}}/new-folder')"},
+			{FnAppendFile, "append_file(dest, source)", "Append source file content into destination file", "bool", "append_file('{{Output}}/all.txt', '{{Output}}/part.txt')"},
+			{FnMoveFile, "move_file(source, dest)", "Move file from source to destination (rename or copy+delete)", "bool", "move_file('{{Output}}/raw.txt', '{{Output}}/processed.txt')"},
 			{FnGlob, "glob(pattern)", "List filenames matching glob pattern", "[]string", "glob('{{Output}}/*.txt')"},
 			{FnGrepStringToFile, "grep_string_to_file(dest, source, str)", "Write lines containing string to destination file", "bool", "grep_string_to_file('{{Output}}/out.txt', '{{Output}}/in.txt', 'admin')"},
 			{FnGrepRegexToFile, "grep_regex_to_file(dest, source, pattern)", "Write lines matching regex to destination file", "bool", "grep_regex_to_file('{{Output}}/out.txt', '{{Output}}/in.txt', '.*api.*')"},
@@ -472,31 +576,33 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnJoin, "join(arr, delim)", "Join array with delimiter", "string", "join(['a','b','c'], ',')"},
 			{FnReplace, "replace(str, old, new)", "Replace all occurrences", "string", "replace('hello', 'l', 'L')"},
 			{FnContains, "contains(str, substr)", "Check if string contains substring", "bool", "contains('hello', 'ell')"},
-			{FnStartsWith, "startsWith(str, prefix)", "Check if string starts with prefix", "bool", "startsWith('hello', 'he')"},
-			{FnEndsWith, "endsWith(str, suffix)", "Check if string ends with suffix", "bool", "endsWith('hello.txt', '.txt')"},
-			{FnToLowerCase, "toLowerCase(str)", "Convert to lowercase", "string", "toLowerCase('HELLO')"},
-			{FnToUpperCase, "toUpperCase(str)", "Convert to uppercase", "string", "toUpperCase('hello')"},
+			{FnStartsWith, "starts_with(str, prefix)", "Check if string starts with prefix", "bool", "starts_with('hello', 'he')"},
+			{FnEndsWith, "ends_with(str, suffix)", "Check if string ends with suffix", "bool", "ends_with('hello.txt', '.txt')"},
+			{FnToLowerCase, "to_lower_case(str)", "Convert to lowercase", "string", "to_lower_case('HELLO')"},
+			{FnToUpperCase, "to_upper_case(str)", "Convert to uppercase", "string", "to_upper_case('hello')"},
 			{FnMatch, "match(str, pattern)", "Check if string matches regex", "bool", "match('test123', '[0-9]+')"},
 			{FnRegexMatch, "regex_match(pattern, str)", "Check if string matches regex (pattern first)", "bool", "regex_match('[0-9]+', 'test123')"},
 			{FnCutWithDelim, "cut_with_delim(input, delim, field)", "Extract field by delimiter (1-indexed)", "string", "cut_with_delim('a:b:c', ':', 2)"},
 			{FnNormalizePath, "normalize_path(input)", "Replace special chars with underscore", "string", "normalize_path('test/path:file')"},
+			{FnNormalPath, "normal_path(input)", "Normalize to path-friendly format (same as {{TargetSpace}})", "string", "normal_path('https://example.com/path')"},
 			{FnCleanSub, "clean_sub(path, target?)", "Clean and deduplicate subdomains in file, optionally filter by target domain", "bool", "clean_sub('{{Output}}/subdomains.txt', 'example.com')"},
 		},
 		CategoryTypeConversion: {
-			{FnParseInt, "parseInt(str)", "Parse string to integer", "int", "parseInt('42')"},
-			{FnParseFloat, "parseFloat(str)", "Parse string to float", "float", "parseFloat('3.14')"},
-			{FnToString, "toString(val)", "Convert value to string", "string", "toString(123)"},
-			{FnToBoolean, "toBoolean(val)", "Convert value to boolean", "bool", "toBoolean('true')"},
+			{FnParseInt, "parse_int(str)", "Parse string to integer", "int", "parse_int('42')"},
+			{FnParseFloat, "parse_float(str)", "Parse string to float", "float", "parse_float('3.14')"},
+			{FnToString, "to_string(val)", "Convert value to string", "string", "to_string(123)"},
+			{FnToBoolean, "to_boolean(val)", "Convert value to boolean", "bool", "to_boolean('true')"},
 		},
 		CategoryUtility: {
 			{FnLen, "len(val)", "Get length of string or array", "int", "len('hello')"},
-			{FnIsEmpty, "isEmpty(val)", "Check if value is empty", "bool", "isEmpty('')"},
-			{FnIsNotEmpty, "isNotEmpty(val)", "Check if value is not empty", "bool", "isNotEmpty('test')"},
+			{FnIsEmpty, "is_empty(val)", "Check if value is empty", "bool", "is_empty('')"},
+			{FnIsNotEmpty, "is_not_empty(val)", "Check if value is not empty", "bool", "is_not_empty('test')"},
 			{FnPrintf, "printf(message)", "Print message to stdout", "void", "printf('Scan started')"},
 			{FnCatFile, "cat_file(path)", "Print file content to stdout", "void", "cat_file('{{Output}}/results.txt')"},
 			{FnExit, "exit(code)", "Exit scan with code", "void", "exit(1)"},
 			{FnExecCmd, "exec_cmd(command)", "Execute bash command and return output", "string", "exec_cmd('whoami')"},
 			{FnSleep, "sleep(seconds)", "Pause for n seconds", "void", "sleep(5)"},
+			{FnCommandExists, "command_exists(command)", "Check if command exists in PATH", "bool", "command_exists('nmap')"},
 		},
 		CategoryLogging: {
 			{FnLogDebug, "log_debug(message)", "Log debug message with [DEBUG] prefix", "void", "log_debug('Processing target')"},
@@ -504,44 +610,64 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnLogWarn, "log_warn(message)", "Log warning message with [WARN] prefix", "void", "log_warn('Timeout hit')"},
 			{FnLogError, "log_error(message)", "Log error message with [ERROR] prefix", "void", "log_error('Request failed')"},
 		},
+		CategoryColorPrinting: {
+			{FnPrintGreen, "print_green(message)", "Print message in green color", "string", "print_green('Success!')"},
+			{FnPrintBlue, "print_blue(message)", "Print message in blue color", "string", "print_blue('Processing {{Target}}')"},
+			{FnPrintYellow, "print_yellow(message)", "Print message in yellow color", "string", "print_yellow('Warning: Rate limit')"},
+			{FnPrintRed, "print_red(message)", "Print message in red color", "string", "print_red('Error occurred')"},
+		},
+		CategoryRuntimeVars: {
+			{FnSetVar, "set_var(name, value)", "Set a runtime variable for later retrieval", "string", "set_var('api_url', 'https://api.example.com')"},
+			{FnGetVar, "get_var(name)", "Get a runtime variable value", "string", "get_var('api_url')"},
+		},
 		CategoryHTTP: {
-			{FnHttpRequest, "httpRequest(url, method, headers, body)", "Make HTTP request", "object", "httpRequest('https://api.example.com', 'GET', {}, '')"},
+			{FnHttpRequest, "http_request(url, method, headers, body)", "Make HTTP request", "object", "http_request('https://api.example.com', 'GET', {}, '')"},
 			{FnHttpGet, "http_get(url)", "HTTP GET request with structured response", "object", "http_get('https://api.example.com/data')"},
 			{FnHttpPost, "http_post(url, body)", "HTTP POST request with structured response", "object", "http_post('https://api.example.com', '{\"key\":\"value\"}')"},
+			{FnGetIP, "get_ip(domain_or_url)", "Resolve domain/URL to IP address (auto-parses URL hostname)", "string", "get_ip('https://example.com/path')"},
 		},
 		CategoryGeneration: {
-			{FnRandomString, "randomString(length)", "Generate random alphanumeric string", "string", "randomString(16)"},
+			{FnRandomString, "random_string(length)", "Generate random alphanumeric string", "string", "random_string(16)"},
 			{FnUUID, "uuid()", "Generate UUID v4", "string", "uuid()"},
 		},
 		CategoryEncoding: {
-			{FnBase64Encode, "base64Encode(str)", "Encode string to base64", "string", "base64Encode('hello')"},
-			{FnBase64Decode, "base64Decode(str)", "Decode base64 string", "string", "base64Decode('aGVsbG8=')"},
+			{FnBase64Encode, "base64_encode(str)", "Encode string to base64", "string", "base64_encode('hello')"},
+			{FnBase64Decode, "base64_decode(str)", "Decode base64 string", "string", "base64_decode('aGVsbG8=')"},
 		},
 		CategoryDataQuery: {
 			{FnJQ, "jq(jsonData, query)", "Extract data using jq syntax", "any", "jq('{\"name\":\"test\"}', '.name')"},
 			{FnJQFromFile, "jq_from_file(path, query)", "Extract data using jq from JSON file", "any", "jq_from_file('{{Output}}/data.json', '.name')"},
 		},
 		CategoryNotification: {
-			{FnNotifyTelegram, "notifyTelegram(message)", "Send message to Telegram", "bool", "notifyTelegram('Scan finished for {{Target}}')"},
-			{FnSendTelegramFile, "sendTelegramFile(path, caption?)", "Send file to Telegram", "bool", "sendTelegramFile('{{Output}}/report.pdf', 'Scan report')"},
-			{FnNotifyWebhook, "notifyWebhook(message)", "Send message to all webhooks", "bool", "notifyWebhook('Scan finished for {{Target}}')"},
-			{FnSendWebhookEvent, "sendWebhookEvent(eventType, data)", "Send event to all webhooks", "bool", "sendWebhookEvent('scan_complete', {target: '{{Target}}'})"},
+			{FnNotifyTelegram, "notify_telegram(message)", "Send message to Telegram", "bool", "notify_telegram('Scan finished for {{Target}}')"},
+			{FnSendTelegramFile, "send_telegram_file(path, caption?)", "Send file to Telegram", "bool", "send_telegram_file('{{Output}}/report.pdf', 'Scan report')"},
+			{FnNotifyWebhook, "notify_webhook(message)", "Send message to all webhooks", "bool", "notify_webhook('Scan finished for {{Target}}')"},
+			{FnSendWebhookEvent, "send_webhook_event(eventType, data)", "Send event to all webhooks", "bool", "send_webhook_event('scan_complete', {target: '{{Target}}'})"},
+		},
+		CategoryEventGeneration: {
+			{FnGenerateEvent, "generate_event(topic, source, data_type, data)", "Generate structured event with metadata", "bool", "generate_event('discovery', 'subdomain-scan', 'domain', 'api.example.com')"},
+			{FnGenerateEventFromFile, "generate_event_from_file(topic, source, data_type, path)", "Generate events from file (one per line)", "int", "generate_event_from_file('discovery', 'amass', 'subdomain', '{{Output}}/subdomains.txt')"},
 		},
 		CategoryCDNStorage: {
-			{FnCdnUpload, "cdnUpload(localPath, remotePath)", "Upload file to cloud storage", "bool", "cdnUpload('{{Output}}/report.zip', 'scans/{{Target}}/report.zip')"},
-			{FnCdnDownload, "cdnDownload(remotePath, localPath)", "Download file from cloud storage", "bool", "cdnDownload('wordlists/common.txt', '/tmp/common.txt')"},
-			{FnCdnExists, "cdnExists(remotePath)", "Check if file exists in cloud storage", "bool", "cdnExists('scans/{{Target}}/report.zip')"},
-			{FnCdnDelete, "cdnDelete(remotePath)", "Delete file from cloud storage", "bool", "cdnDelete('scans/{{Target}}/old-report.zip')"},
+			{FnCdnUpload, "cdn_upload(localPath, remotePath)", "Upload file to cloud storage", "bool", "cdn_upload('{{Output}}/report.zip', 'scans/{{Target}}/report.zip')"},
+			{FnCdnDownload, "cdn_download(remotePath, localPath)", "Download file from cloud storage", "bool", "cdn_download('wordlists/common.txt', '/tmp/common.txt')"},
+			{FnCdnExists, "cdn_exists(remotePath)", "Check if file exists in cloud storage", "bool", "cdn_exists('scans/{{Target}}/report.zip')"},
+			{FnCdnDelete, "cdn_delete(remotePath)", "Delete file from cloud storage", "bool", "cdn_delete('scans/{{Target}}/old-report.zip')"},
+			{FnCdnSyncUpload, "cdn_sync_upload(localDir, remotePrefix)", "Sync local directory to cloud storage (delta)", "object", "cdn_sync_upload('{{Output}}', 'scans/{{Target}}/')"},
+			{FnCdnSyncDownload, "cdn_sync_download(remotePrefix, localDir)", "Sync cloud storage to local directory (delta)", "object", "cdn_sync_download('base-setup/', '{{BaseFolder}}')"},
+			{FnCdnGetPresignedURL, "cdn_get_presigned_url(remotePath, expiryMins?)", "Generate presigned URL for file access", "string", "cdn_get_presigned_url('report.zip', 60)"},
+			{FnCdnList, "cdn_list(prefix?)", "List files with metadata from cloud storage", "[]object", "cdn_list('scans/')"},
+			{FnCdnStat, "cdn_stat(remotePath)", "Get file metadata from cloud storage", "object|null", "cdn_stat('scans/target/report.zip')"},
 		},
 		CategoryUnixCommands: {
-			{FnSortUnix, "sortUnix(input, output?)", "Sort file with LC_ALL=C sort -u", "bool", "sortUnix('{{Output}}/urls.txt')"},
-			{FnWgetUnix, "wgetUnix(url, output?)", "Download file with wget", "bool", "wgetUnix('https://example.com/file.txt', '/tmp/file.txt')"},
-			{FnGitClone, "gitClone(repo, dest?)", "Clone git repository (shallow)", "bool", "gitClone('https://github.com/user/repo', '/tmp/repo')"},
-			{FnZipUnix, "zipUnix(source, dest)", "Create zip archive (zip -r)", "bool", "zipUnix('{{Output}}', '{{Output}}/archive.zip')"},
-			{FnUnzipUnix, "unzipUnix(source, dest?)", "Extract zip archive (unzip)", "bool", "unzipUnix('/tmp/archive.zip', '/tmp/extracted')"},
-			{FnTarUnix, "tarUnix(source, dest)", "Create tar.gz archive (tar -czf)", "bool", "tarUnix('{{Output}}', '{{Output}}/archive.tar.gz')"},
-			{FnUntarUnix, "untarUnix(source, dest?)", "Extract tar.gz archive (tar -xzf)", "bool", "untarUnix('/tmp/archive.tar.gz', '/tmp/extracted')"},
-			{FnDiffUnix, "diffUnix(file1, file2, output?)", "Compare files with diff command", "string", "diffUnix('old.txt', 'new.txt', 'diff.txt')"},
+			{FnSortUnix, "sort_unix(input, output?)", "Sort file with LC_ALL=C sort -u", "bool", "sort_unix('{{Output}}/urls.txt')"},
+			{FnWgetUnix, "wget_unix(url, output?)", "Download file with wget", "bool", "wget_unix('https://example.com/file.txt', '/tmp/file.txt')"},
+			{FnGitClone, "git_clone(repo, dest?)", "Clone git repository (shallow)", "bool", "git_clone('https://github.com/user/repo', '/tmp/repo')"},
+			{FnZipUnix, "zip_unix(source, dest)", "Create zip archive (zip -r)", "bool", "zip_unix('{{Output}}', '{{Output}}/archive.zip')"},
+			{FnUnzipUnix, "unzip_unix(source, dest?)", "Extract zip archive (unzip)", "bool", "unzip_unix('/tmp/archive.zip', '/tmp/extracted')"},
+			{FnTarUnix, "tar_unix(source, dest)", "Create tar.gz archive (tar -czf)", "bool", "tar_unix('{{Output}}', '{{Output}}/archive.tar.gz')"},
+			{FnUntarUnix, "untar_unix(source, dest?)", "Extract tar.gz archive (tar -xzf)", "bool", "untar_unix('/tmp/archive.tar.gz', '/tmp/extracted')"},
+			{FnDiffUnix, "diff_unix(file1, file2, output?)", "Compare files with diff command", "string", "diff_unix('old.txt', 'new.txt', 'diff.txt')"},
 			{FnSedStringReplace, "sed_string_replace(sed_syntax, source, dest)", "String replacement with sed s/old/new/g syntax", "bool", "sed_string_replace('s/http/https/g', '{{Output}}/urls.txt', '{{Output}}/urls-fixed.txt')"},
 			{FnSedRegexReplace, "sed_regex_replace(sed_syntax, source, dest)", "Regex replacement with sed s/pattern/repl/g syntax", "bool", "sed_regex_replace('s/[0-9]+/NUM/g', '{{Output}}/data.txt', '{{Output}}/data-clean.txt')"},
 		},
@@ -550,7 +676,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnUnzipDir, "unzip_dir(source, dest)", "Unzip archive using Go archive/zip", "bool", "unzip_dir('/tmp/archive.zip', '/tmp/extracted')"},
 		},
 		CategoryDiff: {
-			{FnExtractDiff, "extractDiff(file1, file2)", "Lines only in file2 (new content)", "string", "extractDiff('{{Output}}/old-subs.txt', '{{Output}}/new-subs.txt')"},
+			{FnExtractDiff, "extract_diff(file1, file2)", "Lines only in file2 (new content)", "string", "extract_diff('{{Output}}/old-subs.txt', '{{Output}}/new-subs.txt')"},
 		},
 		CategoryOutput: {
 			{FnSaveContent, "save_content(content, path)", "Save string content to file", "bool", "save_content('hello', '{{Output}}/greeting.txt')"},
@@ -607,6 +733,22 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnDBImportAssetFromFile, "db_import_asset_from_file(workspace, file_path)", "Import assets from JSONL file (httpx format)", "int", "db_import_asset_from_file('{{Workspace}}', '{{Output}}/httpx.jsonl')"},
 			{FnDBImportVuln, "db_import_vuln(workspace, json_data)", "Import single vulnerability from JSON (nuclei format)", "bool", "db_import_vuln('{{Workspace}}', '{\"template-id\":\"...\",\"info\":{\"name\":\"...\",\"severity\":\"high\"}}')"},
 			{FnDBImportVulnFromFile, "db_import_vuln_from_file(workspace, file_path)", "Import vulnerabilities from JSONL file (nuclei format)", "int", "db_import_vuln_from_file('{{Workspace}}', '{{Output}}/nuclei.jsonl')"},
+			{FnDBAssetDiff, "db_asset_diff(workspace)", "Get asset diff as JSONL string", "string", "db_asset_diff('{{Workspace}}')"},
+			{FnDBVulnDiff, "db_vuln_diff(workspace)", "Get vulnerability diff as JSONL string", "string", "db_vuln_diff('{{Workspace}}')"},
+			{FnDBAssetDiffToFile, "db_asset_diff_to_file(workspace, dest)", "Write asset diff to JSONL file", "bool", "db_asset_diff_to_file('{{Workspace}}', '{{Output}}/asset-diff.jsonl')"},
+			{FnDBVulnDiffToFile, "db_vuln_diff_to_file(workspace, dest)", "Write vulnerability diff to JSONL file", "bool", "db_vuln_diff_to_file('{{Workspace}}', '{{Output}}/vuln-diff.jsonl')"},
+		},
+		CategoryInstaller: {
+			{FnGoGetter, "go_getter(url, dest)", "Download files/repos using go-getter", "bool", "go_getter('https://github.com/user/repo.git?ref=main', '{{Output}}/repo')"},
+			{FnGoGetterWithSSHKey, "go_getter_with_sshkey(ssh_key_path, git_url, dest)", "Clone git repo via SSH with auto-encoded key", "bool", "go_getter_with_sshkey('~/.ssh/id_rsa', 'git@github.com:user/private-repo.git', '{{Output}}/repo')"},
+			{FnNixInstall, "nix_install(package, dest?)", "Install package via Nix", "bool", "nix_install('nuclei', '{{Binaries}}')"},
+		},
+		CategoryEnvironment: {
+			{FnOsGetenv, "os_getenv(name)", "Get environment variable", "string", "os_getenv('HOME')"},
+			{FnOsSetenv, "os_setenv(name, value)", "Set environment variable", "bool", "os_setenv('API_KEY', 'secret')"},
+		},
+		CategoryTypeDetection: {
+			{FnGetTypes, "get_types(input)", "Detect input type (file, folder, cidr, ip, url, domain, string)", "string", "get_types('192.168.1.0/24')"},
 		},
 	}
 }

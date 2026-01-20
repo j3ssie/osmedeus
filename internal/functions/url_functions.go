@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/sha1"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -235,4 +236,92 @@ func genSHA1(text string) string {
 	h := sha1.New()
 	h.Write([]byte(text))
 	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+// getIP resolves a domain or URL to its IP address.
+// If input is a URL, extracts the hostname first.
+// Usage: get_ip(domain_or_url) -> string (IP address or empty string on failure)
+func (vf *vmFunc) getIP(call goja.FunctionCall) goja.Value {
+	input := call.Argument(0).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("get_ip"),
+		zap.String("input", input))
+
+	if input == "undefined" || input == "" {
+		logger.Get().Warn("get_ip: empty input provided")
+		return vf.vm.ToValue("")
+	}
+
+	// Try to extract hostname from URL if input looks like a URL
+	hostname := extractHostname(input)
+
+	// Resolve the hostname to IP
+	ip := resolveToIP(hostname)
+	if ip == "" {
+		logger.Get().Debug("get_ip: failed to resolve",
+			zap.String("hostname", hostname))
+	} else {
+		logger.Get().Debug(terminal.HiGreen("get_ip")+" result",
+			zap.String("input", input),
+			zap.String("hostname", hostname),
+			zap.String("ip", ip))
+	}
+
+	return vf.vm.ToValue(ip)
+}
+
+// extractHostname extracts the hostname from a URL or returns the input as-is if it's a domain.
+// Handles: URLs (http://example.com/path), domains (example.com), domains with port (example.com:8080)
+func extractHostname(input string) string {
+	input = strings.TrimSpace(input)
+
+	// If it looks like a URL (has scheme), parse it
+	if strings.Contains(input, "://") {
+		u, err := url.Parse(input)
+		if err == nil && u.Hostname() != "" {
+			return u.Hostname()
+		}
+	}
+
+	// Check if it's a domain with port (example.com:8080)
+	if strings.Contains(input, ":") && !strings.Contains(input, "/") {
+		parts := strings.SplitN(input, ":", 2)
+		if len(parts) > 0 && parts[0] != "" {
+			return parts[0]
+		}
+	}
+
+	// Remove any trailing path if present (e.g., example.com/path)
+	if idx := strings.Index(input, "/"); idx > 0 {
+		input = input[:idx]
+	}
+
+	return input
+}
+
+// resolveToIP resolves a hostname to its first IPv4 address.
+// Returns empty string on failure.
+func resolveToIP(hostname string) string {
+	if hostname == "" {
+		return ""
+	}
+
+	// Use net.LookupIP for DNS resolution
+	ips, err := net.LookupIP(hostname)
+	if err != nil {
+		return ""
+	}
+
+	// Return the first IPv4 address found
+	for _, ip := range ips {
+		if ipv4 := ip.To4(); ipv4 != nil {
+			return ipv4.String()
+		}
+	}
+
+	// If no IPv4 found, return first IPv6
+	for _, ip := range ips {
+		return ip.String()
+	}
+
+	return ""
 }

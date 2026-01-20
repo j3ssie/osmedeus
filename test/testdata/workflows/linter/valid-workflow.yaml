@@ -1,0 +1,33 @@
+name: valid-workflow
+kind: module
+description: A valid workflow with no lint issues
+tags: test,linter
+
+params:
+  - name: target
+    required: true
+  - name: threads
+    default: 10
+
+steps:
+  - name: step-one
+    type: bash
+    command: echo "Target is {{target}}"
+    timeout: 5m
+    exports:
+      output_one: "output"
+
+  - name: step-two
+    type: bash
+    command: echo "Output is {{output_one}}"
+    depends_on:
+      - step-one
+    timeout: 5m
+    exports:
+      final_output: "output"
+
+  - name: step-three
+    type: function
+    function: 'log_info("Final: {{final_output}}")'
+    depends_on:
+      - step-two

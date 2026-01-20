@@ -26,7 +26,7 @@ steps:
   # 2. Function step with templated function calls
   - name: function-with-templates
     type: function
-    pre_condition: 'fileExists("{{bash_output_path}}")'
+    pre_condition: 'file_exists("{{bash_output_path}}")'
     function: 'log_info("Processing {{Target}} with path {{customPath}}")'
     exports:
       function_result: "processed-{{Target}}"
@@ -50,7 +50,7 @@ steps:
   # 5. Final verification step
   - name: verify-all-templates
     type: bash
-    pre_condition: 'fileExists("{{customPath}}")'
+    pre_condition: 'file_exists("{{customPath}}")'
     command: |
       echo "=== Template Rendering Verification ==="
       echo "bash_output_path={{bash_output_path}}"

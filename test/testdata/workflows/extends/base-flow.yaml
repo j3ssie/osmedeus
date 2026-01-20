@@ -1,0 +1,17 @@
+kind: flow
+name: base-flow
+description: Base flow for testing inheritance
+
+params:
+  - name: target
+    type: string
+    required: true
+
+modules:
+  - name: module-a
+    path: base-module
+
+  - name: module-b
+    path: base-module
+    depends_on:
+      - module-a

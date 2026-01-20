@@ -19,8 +19,8 @@ import (
 
 // TableInfo represents a database table with row count (matching database.TableInfo)
 type TableInfo struct {
-	Name     string
-	RowCount int
+	Name     string `json:"name"`
+	RowCount int    `json:"row_count"`
 }
 
 // TableRecords represents paginated records from a table
@@ -410,7 +410,7 @@ func (m dbTUIModel) updateTableList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // assetsDefaultColumns are the columns selected by default for assets table
 var assetsDefaultColumns = map[string]bool{
-	"host": true, "host_ip": true, "title": true, "status_code": true,
+	"asset_value": true, "host": true, "host_ip": true, "title": true, "status_code": true,
 	"words": true, "technologies": true, "labels": true, "source": true,
 }
 

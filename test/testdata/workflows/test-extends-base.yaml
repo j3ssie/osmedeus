@@ -1,0 +1,26 @@
+name: test-extends-base
+kind: module
+description: Base workflow for testing extends functionality
+tags: test,extends,base
+
+params:
+  - name: target
+    required: true
+  - name: threads
+    type: string
+    default: "10"
+  - name: rate_limit
+    type: string
+    default: "100"
+  - name: verbose
+    type: string
+    default: "false"
+
+steps:
+  - name: show-config
+    type: bash
+    command: echo "Target={{target}} Threads={{threads}} RateLimit={{rate_limit}} Verbose={{verbose}}"
+
+  - name: scan-step
+    type: bash
+    command: echo "Running scan with {{threads}} threads at rate {{rate_limit}}"

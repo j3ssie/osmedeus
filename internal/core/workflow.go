@@ -29,6 +29,7 @@ type Workflow struct {
 	Name         string        `yaml:"name"`
 	Description  string        `yaml:"description"`
 	Tags         TagList       `yaml:"tags,omitempty"`
+	Hidden       bool          `yaml:"hidden,omitempty"`
 	Params       []Param       `yaml:"params"`
 	Triggers     []Trigger     `yaml:"trigger"`
 	Dependencies *Dependencies `yaml:"dependencies"`
@@ -47,9 +48,14 @@ type Workflow struct {
 	// Flow-specific fields
 	Modules []ModuleRef `yaml:"modules,omitempty"`
 
+	// Inheritance support
+	Extends  string            `yaml:"extends,omitempty"`
+	Override *WorkflowOverride `yaml:"override,omitempty"`
+
 	// Internal metadata
-	FilePath string `yaml:"-"`
-	Checksum string `yaml:"-"`
+	FilePath     string `yaml:"-"`
+	Checksum     string `yaml:"-"`
+	ResolvedFrom string `yaml:"-"` // Tracks the parent workflow name if extended
 }
 
 // RunnerConfig holds configuration for different runner types

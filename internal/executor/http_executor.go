@@ -15,12 +15,12 @@ import (
 
 // HTTPExecutor executes HTTP steps
 type HTTPExecutor struct {
-	templateEngine *template.Engine
+	templateEngine template.TemplateEngine
 	client         *http.Client
 }
 
 // NewHTTPExecutor creates a new HTTP executor with pooled connections
-func NewHTTPExecutor(engine *template.Engine) *HTTPExecutor {
+func NewHTTPExecutor(engine template.TemplateEngine) *HTTPExecutor {
 	transport := &http.Transport{
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 10,

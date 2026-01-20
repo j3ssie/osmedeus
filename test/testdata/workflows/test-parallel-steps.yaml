@@ -27,7 +27,7 @@ steps:
 
   - name: verify-files
     type: function
-    function: fileExists("/tmp/parallel-steps-test/sub1.txt")
+    function: file_exists("/tmp/parallel-steps-test/sub1.txt")
     exports:
       file_exists: "output"
 

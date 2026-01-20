@@ -1211,3 +1211,407 @@ func TestExecutionContext_CloneForLoop_EmptyLoopVar(t *testing.T) {
 	_, ok = clone.GetVariable("")
 	assert.False(t, ok)
 }
+
+// Tests for step dependencies (DAG-style execution)
+
+func TestHasAnyStepDependencies(t *testing.T) {
+	t.Run("no dependencies", func(t *testing.T) {
+		steps := []core.Step{
+			{Name: "step-a", Type: core.StepTypeBash, Command: "echo a"},
+			{Name: "step-b", Type: core.StepTypeBash, Command: "echo b"},
+		}
+		assert.False(t, hasAnyStepDependencies(steps))
+	})
+
+	t.Run("has dependencies", func(t *testing.T) {
+		steps := []core.Step{
+			{Name: "step-a", Type: core.StepTypeBash, Command: "echo a"},
+			{Name: "step-b", Type: core.StepTypeBash, Command: "echo b", DependsOn: []string{"step-a"}},
+		}
+		assert.True(t, hasAnyStepDependencies(steps))
+	})
+}
+
+func TestBuildStepDependencyGraph(t *testing.T) {
+	t.Run("no dependencies", func(t *testing.T) {
+		steps := []core.Step{
+			{Name: "step-a"},
+			{Name: "step-b"},
+			{Name: "step-c"},
+		}
+
+		dependents, inDegree := buildStepDependencyGraph(steps)
+
+		assert.Equal(t, 0, inDegree["step-a"])
+		assert.Equal(t, 0, inDegree["step-b"])
+		assert.Equal(t, 0, inDegree["step-c"])
+		assert.Empty(t, dependents["step-a"])
+		assert.Empty(t, dependents["step-b"])
+		assert.Empty(t, dependents["step-c"])
+	})
+
+	t.Run("linear chain", func(t *testing.T) {
+		// A -> B -> C
+		steps := []core.Step{
+			{Name: "step-a"},
+			{Name: "step-b", DependsOn: []string{"step-a"}},
+			{Name: "step-c", DependsOn: []string{"step-b"}},
+		}
+
+		dependents, inDegree := buildStepDependencyGraph(steps)
+
+		assert.Equal(t, 0, inDegree["step-a"])
+		assert.Equal(t, 1, inDegree["step-b"])
+		assert.Equal(t, 1, inDegree["step-c"])
+		assert.Contains(t, dependents["step-a"], "step-b")
+		assert.Contains(t, dependents["step-b"], "step-c")
+	})
+
+	t.Run("diamond pattern", func(t *testing.T) {
+		// A -> B, A -> C, B -> D, C -> D
+		steps := []core.Step{
+			{Name: "step-a"},
+			{Name: "step-b", DependsOn: []string{"step-a"}},
+			{Name: "step-c", DependsOn: []string{"step-a"}},
+			{Name: "step-d", DependsOn: []string{"step-b", "step-c"}},
+		}
+
+		dependents, inDegree := buildStepDependencyGraph(steps)
+
+		assert.Equal(t, 0, inDegree["step-a"])
+		assert.Equal(t, 1, inDegree["step-b"])
+		assert.Equal(t, 1, inDegree["step-c"])
+		assert.Equal(t, 2, inDegree["step-d"])
+		assert.Len(t, dependents["step-a"], 2)
+		assert.Contains(t, dependents["step-a"], "step-b")
+		assert.Contains(t, dependents["step-a"], "step-c")
+	})
+}
+
+func TestBuildStepMap(t *testing.T) {
+	steps := []core.Step{
+		{Name: "step-a", Type: core.StepTypeBash, Command: "echo a"},
+		{Name: "step-b", Type: core.StepTypeBash, Command: "echo b"},
+		{Name: "step-c", Type: core.StepTypeBash, Command: "echo c"},
+	}
+
+	stepMap := buildStepMap(steps)
+
+	assert.Len(t, stepMap, 3)
+	assert.Equal(t, "echo a", stepMap["step-a"].Command)
+	assert.Equal(t, "echo b", stepMap["step-b"].Command)
+	assert.Equal(t, "echo c", stepMap["step-c"].Command)
+}
+
+func TestValidateStepDependencies(t *testing.T) {
+	t.Run("valid dependencies", func(t *testing.T) {
+		steps := []core.Step{
+			{Name: "step-a"},
+			{Name: "step-b", DependsOn: []string{"step-a"}},
+			{Name: "step-c", DependsOn: []string{"step-a", "step-b"}},
+		}
+
+		err := validateStepDependencies(steps)
+		assert.NoError(t, err)
+	})
+
+	t.Run("invalid reference", func(t *testing.T) {
+		steps := []core.Step{
+			{Name: "step-a"},
+			{Name: "step-b", DependsOn: []string{"nonexistent"}},
+		}
+
+		err := validateStepDependencies(steps)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "non-existent step")
+		assert.Contains(t, err.Error(), "nonexistent")
+	})
+}
+
+func TestDetectStepCycles(t *testing.T) {
+	t.Run("no cycles", func(t *testing.T) {
+		steps := []core.Step{
+			{Name: "step-a"},
+			{Name: "step-b", DependsOn: []string{"step-a"}},
+			{Name: "step-c", DependsOn: []string{"step-b"}},
+		}
+
+		err := detectStepCycles(steps)
+		assert.NoError(t, err)
+	})
+
+	t.Run("self cycle", func(t *testing.T) {
+		steps := []core.Step{
+			{Name: "step-a", DependsOn: []string{"step-a"}},
+		}
+
+		err := detectStepCycles(steps)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "circular dependency")
+	})
+
+	t.Run("two step cycle", func(t *testing.T) {
+		steps := []core.Step{
+			{Name: "step-a", DependsOn: []string{"step-b"}},
+			{Name: "step-b", DependsOn: []string{"step-a"}},
+		}
+
+		err := detectStepCycles(steps)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "circular dependency")
+	})
+
+	t.Run("three step cycle", func(t *testing.T) {
+		steps := []core.Step{
+			{Name: "step-a", DependsOn: []string{"step-c"}},
+			{Name: "step-b", DependsOn: []string{"step-a"}},
+			{Name: "step-c", DependsOn: []string{"step-b"}},
+		}
+
+		err := detectStepCycles(steps)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "circular dependency")
+	})
+}
+
+func TestExecutor_StepDependencies_Diamond(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	// Diamond pattern: A -> B, A -> C, B -> D, C -> D
+	module := &core.Workflow{
+		Name: "test-step-deps-diamond",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "step-a",
+				Type:    core.StepTypeBash,
+				Command: "echo A",
+			},
+			{
+				Name:      "step-b",
+				Type:      core.StepTypeBash,
+				Command:   "echo B",
+				DependsOn: []string{"step-a"},
+			},
+			{
+				Name:      "step-c",
+				Type:      core.StepTypeBash,
+				Command:   "echo C",
+				DependsOn: []string{"step-a"},
+			},
+			{
+				Name:      "step-d",
+				Type:      core.StepTypeBash,
+				Command:   "echo D",
+				DependsOn: []string{"step-b", "step-c"},
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{
+		"target": "test",
+	}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	assert.Len(t, result.Steps, 4)
+
+	// All steps should have succeeded
+	for _, step := range result.Steps {
+		assert.Equal(t, core.StepStatusSuccess, step.Status)
+	}
+}
+
+func TestExecutor_StepDependencies_NoDeps_Sequential(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	// No depends_on = sequential execution (backwards compatible)
+	module := &core.Workflow{
+		Name: "test-no-deps-sequential",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "step-a",
+				Type:    core.StepTypeBash,
+				Command: "echo A",
+			},
+			{
+				Name:    "step-b",
+				Type:    core.StepTypeBash,
+				Command: "echo B",
+			},
+			{
+				Name:    "step-c",
+				Type:    core.StepTypeBash,
+				Command: "echo C",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{
+		"target": "test",
+	}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	assert.Len(t, result.Steps, 3)
+
+	// Verify steps ran in order (sequential)
+	assert.Equal(t, "step-a", result.Steps[0].StepName)
+	assert.Equal(t, "step-b", result.Steps[1].StepName)
+	assert.Equal(t, "step-c", result.Steps[2].StepName)
+}
+
+func TestExecutor_StepDependencies_CircularDetection(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	// A -> B -> C -> A (circular)
+	module := &core.Workflow{
+		Name: "test-circular-deps",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:      "step-a",
+				Type:      core.StepTypeBash,
+				Command:   "echo A",
+				DependsOn: []string{"step-c"},
+			},
+			{
+				Name:      "step-b",
+				Type:      core.StepTypeBash,
+				Command:   "echo B",
+				DependsOn: []string{"step-a"},
+			},
+			{
+				Name:      "step-c",
+				Type:      core.StepTypeBash,
+				Command:   "echo C",
+				DependsOn: []string{"step-b"},
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	_, err := executor.ExecuteModule(ctx, module, map[string]string{
+		"target": "test",
+	}, cfg)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "circular dependency")
+}
+
+func TestExecutor_StepDependencies_InvalidRef(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	// depends_on references non-existent step
+	module := &core.Workflow{
+		Name: "test-invalid-ref",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "step-a",
+				Type:    core.StepTypeBash,
+				Command: "echo A",
+			},
+			{
+				Name:      "step-b",
+				Type:      core.StepTypeBash,
+				Command:   "echo B",
+				DependsOn: []string{"nonexistent"},
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	_, err := executor.ExecuteModule(ctx, module, map[string]string{
+		"target": "test",
+	}, cfg)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "non-existent step")
+}
+
+func TestExecutor_StepDependencies_FailedDep_SkipsDependent(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	// A fails, B depends on A, B should be skipped
+	module := &core.Workflow{
+		Name: "test-failed-dep",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "step-a",
+				Type:    core.StepTypeBash,
+				Command: "exit 1", // This will fail
+				OnError: []core.Action{
+					{Action: core.ActionContinue}, // Continue on error so workflow doesn't abort
+				},
+			},
+			{
+				Name:      "step-b",
+				Type:      core.StepTypeBash,
+				Command:   "echo B",
+				DependsOn: []string{"step-a"},
+			},
+			{
+				Name:    "step-c",
+				Type:    core.StepTypeBash,
+				Command: "echo C", // No dependency, should still run
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{
+		"target": "test",
+	}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+
+	// Should have step-a (failed), step-c (success)
+	// step-b depends on step-a which failed, so it should be skipped
+	assert.GreaterOrEqual(t, len(result.Steps), 2)
+
+	// Find step statuses
+	var stepAStatus, stepBExists, stepCStatus core.StepStatus
+	for _, step := range result.Steps {
+		switch step.StepName {
+		case "step-a":
+			stepAStatus = step.Status
+		case "step-b":
+			stepBExists = step.Status
+		case "step-c":
+			stepCStatus = step.Status
+		}
+	}
+
+	assert.Equal(t, core.StepStatusFailed, stepAStatus)
+	assert.Equal(t, core.StepStatusSuccess, stepCStatus)
+	// step-b should either not exist in results or be failed (skipped due to failed dependency)
+	if stepBExists != "" {
+		assert.NotEqual(t, core.StepStatusSuccess, stepBExists)
+	}
+}

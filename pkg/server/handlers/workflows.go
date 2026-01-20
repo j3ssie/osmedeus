@@ -27,6 +27,10 @@ func ListWorkflows(cfg *config.Config) fiber.Handler {
 
 		data := make([]fiber.Map, 0, len(workflows))
 		for _, w := range workflows {
+			// Skip hidden workflows
+			if w.Hidden {
+				continue
+			}
 			data = append(data, fiber.Map{
 				"name":        w.Name,
 				"kind":        w.Kind,
@@ -146,6 +150,10 @@ func listWorkflowsFromFilesystem(c *fiber.Ctx, cfg *config.Config) error {
 
 	data := make([]fiber.Map, 0, len(workflows))
 	for _, w := range workflows {
+		// Skip hidden workflows
+		if w.Hidden {
+			continue
+		}
 		// Build params detail
 		params := make([]fiber.Map, 0, len(w.Params))
 		requiredParams := []string{}
@@ -245,6 +253,10 @@ func returnWorkflowJSON(c *fiber.Ctx, workflow *core.Workflow) error {
 			"timeout":       s.Timeout,
 			"pre_condition": s.PreCondition,
 			"step_runner":   s.StepRunner,
+		}
+		// Add depends_on if present
+		if len(s.DependsOn) > 0 {
+			stepMap["depends_on"] = s.DependsOn
 		}
 		// Add exports if present
 		if len(s.Exports) > 0 {

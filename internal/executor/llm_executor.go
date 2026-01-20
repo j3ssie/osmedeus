@@ -14,20 +14,21 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
+	"github.com/j3ssie/osmedeus/v5/internal/metrics"
 	"github.com/j3ssie/osmedeus/v5/internal/template"
 	"go.uber.org/zap"
 )
 
 // LLMExecutor executes LLM steps
 type LLMExecutor struct {
-	templateEngine *template.Engine
+	templateEngine template.TemplateEngine
 	client         *http.Client
 	config         *config.Config
 	silent         bool
 }
 
 // NewLLMExecutor creates a new LLM executor
-func NewLLMExecutor(engine *template.Engine) *LLMExecutor {
+func NewLLMExecutor(engine template.TemplateEngine) *LLMExecutor {
 	return &LLMExecutor{
 		templateEngine: engine,
 		client: &http.Client{
@@ -273,6 +274,10 @@ func (e *LLMExecutor) executeChatCompletion(
 
 		// Check if we should rotate provider
 		if isProviderError(lastErr) || isRateLimitError(response) {
+			// Record rate limit hit for metrics
+			if isRateLimitError(response) {
+				metrics.RecordRateLimitHit(provider.Provider, "llm")
+			}
 			log.Warn("Provider error, rotating",
 				zap.String("provider", provider.Provider),
 				zap.Error(lastErr),

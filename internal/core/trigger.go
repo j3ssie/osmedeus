@@ -1,5 +1,7 @@
 package core
 
+import "time"
+
 // Trigger defines when a workflow should execute
 type Trigger struct {
 	Name     string       `yaml:"name"`
@@ -7,14 +9,17 @@ type Trigger struct {
 	Schedule string       `yaml:"schedule,omitempty"` // cron expression (for cron triggers)
 	Event    *EventConfig `yaml:"event,omitempty"`    // event configuration (for event triggers)
 	Path     string       `yaml:"path,omitempty"`     // watch path (for watch triggers)
+	Debounce string       `yaml:"debounce,omitempty"` // debounce duration for watch triggers (e.g., "500ms", "1s")
 	Input    TriggerInput `yaml:"input,omitempty"`
 	Enabled  bool         `yaml:"enabled"`
 }
 
 // EventConfig holds event trigger configuration
 type EventConfig struct {
-	Topic   string   `yaml:"topic"`             // e.g., "webhook.received", "assets.new"
-	Filters []string `yaml:"filters,omitempty"` // JS expressions: ["event.name == 'discovered'"]
+	Topic        string   `yaml:"topic"`                    // e.g., "webhook.received", "assets.new"
+	Filters      []string `yaml:"filters,omitempty"`        // JS expressions: ["event.name == 'discovered'"]
+	DedupeKey    string   `yaml:"dedupe_key,omitempty"`     // template for deduplication key (e.g., "{{event.source}}-{{event.data.url}}")
+	DedupeWindow string   `yaml:"dedupe_window,omitempty"`  // duration to ignore duplicates (e.g., "5s", "1m")
 }
 
 // TriggerInput defines the input source for trigger
@@ -74,4 +79,38 @@ func (t *Trigger) GetFilters() []string {
 		return nil
 	}
 	return t.Event.Filters
+}
+
+// GetDebounceDuration parses and returns the debounce duration for watch triggers
+func (t *Trigger) GetDebounceDuration() time.Duration {
+	if t.Debounce == "" {
+		return 0
+	}
+	d, err := time.ParseDuration(t.Debounce)
+	if err != nil {
+		return 0
+	}
+	return d
+}
+
+// HasDebounce returns true if the trigger has debounce configured
+func (t *Trigger) HasDebounce() bool {
+	return t.GetDebounceDuration() > 0
+}
+
+// GetDedupeWindow parses and returns the deduplication window duration
+func (e *EventConfig) GetDedupeWindow() time.Duration {
+	if e == nil || e.DedupeWindow == "" {
+		return 0
+	}
+	d, err := time.ParseDuration(e.DedupeWindow)
+	if err != nil {
+		return 0
+	}
+	return d
+}
+
+// HasDeduplication returns true if the event config has deduplication configured
+func (e *EventConfig) HasDeduplication() bool {
+	return e != nil && e.DedupeKey != "" && e.GetDedupeWindow() > 0
 }

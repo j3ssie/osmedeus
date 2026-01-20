@@ -1,0 +1,50 @@
+name: test-event-receiver
+kind: module
+description: Test workflow that receives events via trigger
+tags: test,event,receiver,trigger
+
+trigger:
+  - name: on-new-subdomain
+    on: event
+    event:
+      topic: "assets.new"
+      filters:
+        - "event.source == 'test-emitter'"
+        - "event.data_type == 'subdomain'"
+    input:
+      type: event_data
+      field: "value"
+      name: target
+    enabled: true
+
+  - name: on-vulnerability
+    on: event
+    event:
+      topic: "vulnerabilities.new"
+      filters:
+        - "event.source == 'test-scanner'"
+        - "event.data.severity == 'high' || event.data.severity == 'critical'"
+    input:
+      type: function
+      function: 'jq("{{event.data}}", ".url")'
+      name: target
+    enabled: true
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: log-received
+    type: function
+    function: |
+      log_info("Event received for target: {{target}}")
+
+  - name: process-target
+    type: bash
+    command: echo "Processing event target: {{target}}" > {{Output}}/processed.txt
+
+  - name: mark-complete
+    type: function
+    function: |
+      appendFile("{{Output}}/events.log", "Processed: {{target}}\n")

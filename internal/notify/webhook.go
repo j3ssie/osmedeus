@@ -20,6 +20,15 @@ type WebhookPayload struct {
 	Data      map[string]interface{} `json:"data"`
 }
 
+// EventPayload represents a structured event with topic, source, and data type metadata
+type EventPayload struct {
+	Topic     string      `json:"topic"`
+	Source    string      `json:"source"`
+	DataType  string      `json:"data_type"`
+	Data      interface{} `json:"data"`
+	Timestamp time.Time   `json:"timestamp"`
+}
+
 // WebhookClient handles sending notifications to webhook endpoints
 type WebhookClient struct {
 	url        string
@@ -247,6 +256,102 @@ func SendWebhookEvent(eventType string, data map[string]interface{}) error {
 		}
 
 		if err := client.SendEvent(eventType, data); err != nil {
+			lastErr = fmt.Errorf("webhook %d: %w", i, err)
+			continue
+		}
+		successCount++
+	}
+
+	if successCount == 0 && lastErr != nil {
+		return lastErr
+	}
+	return nil
+}
+
+// SendEventPayload sends an EventPayload to the webhook endpoint
+func (c *WebhookClient) SendEventPayload(payload EventPayload) error {
+	// Check event filter using topic as the event type
+	if !c.ShouldTrigger(payload.Topic) {
+		return nil
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	var lastErr error
+	for attempt := 0; attempt < c.retries; attempt++ {
+		if attempt > 0 {
+			// Exponential backoff: 1s, 2s, 4s...
+			time.Sleep(time.Duration(1<<attempt) * time.Second)
+		}
+
+		req, err := http.NewRequest(http.MethodPost, c.url, bytes.NewReader(data))
+		if err != nil {
+			lastErr = fmt.Errorf("failed to create request: %w", err)
+			continue
+		}
+
+		// Set default content type
+		req.Header.Set("Content-Type", "application/json")
+
+		// Set custom headers
+		for k, v := range c.headers {
+			req.Header.Set(k, v)
+		}
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("request failed: %w", err)
+			continue
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		// Success if 2xx status code
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			return nil
+		}
+
+		lastErr = fmt.Errorf("webhook returned status %d", resp.StatusCode)
+	}
+
+	return fmt.Errorf("webhook failed after %d attempts: %w", c.retries, lastErr)
+}
+
+// SendStructuredEvent sends a structured event to all enabled webhooks using global config
+func SendStructuredEvent(topic, source, dataType string, data interface{}) error {
+	cfg := config.Get()
+	if cfg == nil {
+		return fmt.Errorf("global config not loaded")
+	}
+	if !cfg.Notification.Enabled || len(cfg.Notification.Webhooks) == 0 {
+		return fmt.Errorf("webhooks not configured")
+	}
+
+	payload := EventPayload{
+		Topic:     topic,
+		Source:    source,
+		DataType:  dataType,
+		Data:      data,
+		Timestamp: time.Now().UTC(),
+	}
+
+	var lastErr error
+	successCount := 0
+
+	for i, whCfg := range cfg.Notification.Webhooks {
+		if !whCfg.Enabled {
+			continue
+		}
+
+		client, err := NewWebhookClient(&whCfg)
+		if err != nil {
+			lastErr = fmt.Errorf("webhook %d: %w", i, err)
+			continue
+		}
+
+		if err := client.SendEventPayload(payload); err != nil {
 			lastErr = fmt.Errorf("webhook %d: %w", i, err)
 			continue
 		}

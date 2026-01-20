@@ -27,7 +27,7 @@ steps:
     type: function
     script: |
       log_info("Starting subdomain enumeration for: {{Target}}");
-      if (isEmpty("{{Target}}")) {
+      if (is_empty("{{Target}}")) {
         log_error("Target is empty");
         return false;
       }
@@ -61,7 +61,7 @@ steps:
   - name: check-results
     type: function
     script: |
-      var count = fileLength("{{all_subdomains}}");
+      var count = file_length("{{all_subdomains}}");
       log_info("Found " + count + " unique subdomains");
       if (count == 0) {
         log_warn("No subdomains found, trying bruteforce");
@@ -73,7 +73,7 @@ steps:
   # Step 6: bash with pre_condition - Active bruteforce if passive found few results
   - name: active-bruteforce
     type: bash
-    pre_condition: "fileLength('{{all_subdomains}}') < 50"
+    pre_condition: "file_length('{{all_subdomains}}') < 50"
     command: "{{Binaries}}/puredns bruteforce {{wordlist}} {{Target}} -r {{resolvers}} -w {{subdomain_dir}}/bruteforce.txt"
     timeout: 1800
     on_error: continue

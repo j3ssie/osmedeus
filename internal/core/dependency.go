@@ -99,6 +99,48 @@ func MatchesVariableType(value string, varType VariableType) (bool, error) {
 	}
 }
 
+// MatchesAnyVariableType checks if value matches ANY of the comma-separated types.
+// Returns true if value matches at least one type.
+func MatchesAnyVariableType(value string, typeSpec VariableType) (bool, error) {
+	types := strings.Split(string(typeSpec), ",")
+
+	for _, t := range types {
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
+		matches, err := MatchesVariableType(value, VariableType(t))
+		if err != nil {
+			return false, err
+		}
+		if matches {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// MatchesAnyTargetType checks if target matches ANY of the comma-separated types.
+// Returns true if target matches at least one type.
+func MatchesAnyTargetType(target string, typeSpec TargetType) (bool, error) {
+	types := strings.Split(string(typeSpec), ",")
+
+	for _, t := range types {
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
+		matches, err := MatchesTargetType(target, TargetType(t))
+		if err != nil {
+			return false, err
+		}
+		if matches {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func MatchesTargetType(target string, targetType TargetType) (bool, error) {
 	switch targetType {
 	case TargetTypeDomain:

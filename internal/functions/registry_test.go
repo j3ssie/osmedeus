@@ -23,7 +23,7 @@ func TestRegistry_FileExists(t *testing.T) {
 	registry := NewRegistry()
 
 	result, err := registry.Execute(
-		`fileExists("`+testFile+`")`,
+		`file_exists("`+testFile+`")`,
 		map[string]interface{}{},
 	)
 
@@ -40,7 +40,7 @@ func TestRegistry_FileLength(t *testing.T) {
 	registry := NewRegistry()
 
 	result, err := registry.Execute(
-		`fileLength("`+testFile+`")`,
+		`file_length("`+testFile+`")`,
 		map[string]interface{}{},
 	)
 
@@ -54,7 +54,7 @@ func TestRegistry_CreateFolder(t *testing.T) {
 
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`createFolder("`+newDir+`")`,
+		`create_folder("`+newDir+`")`,
 		map[string]interface{}{},
 	)
 	require.NoError(t, err)
@@ -75,7 +75,7 @@ func TestRegistry_AppendFile(t *testing.T) {
 
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`appendFile("`+dest+`", "`+src+`")`,
+		`append_file("`+dest+`", "`+src+`")`,
 		map[string]interface{}{},
 	)
 	require.NoError(t, err)

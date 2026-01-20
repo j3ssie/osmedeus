@@ -59,7 +59,7 @@ modules:
   - name: vuln-scan
     depends_on:
       - recon
-    condition: "fileLength('{{all_subdomains}}') > 0"
+    condition: "file_length('{{all_subdomains}}') > 0"
     steps:
       - name: init-vulns
         type: bash
@@ -121,18 +121,18 @@ modules:
             scan_depth: "{{scan_depth}}",
             timestamp: timestamp(),
             statistics: {
-              subdomains: fileLength("{{all_subdomains}}"),
-              http_hosts: fileLength("{{http_hosts}}"),
+              subdomains: file_length("{{all_subdomains}}"),
+              http_hosts: file_length("{{http_hosts}}"),
               critical_findings: 0,
               medium_findings: 0
             }
           };
 
-          if (fileExists("{{critical_vulns}}")) {
-            summary.statistics.critical_findings = fileLength("{{critical_vulns}}");
+          if (file_exists("{{critical_vulns}}")) {
+            summary.statistics.critical_findings = file_length("{{critical_vulns}}");
           }
-          if (fileExists("{{medium_vulns}}")) {
-            summary.statistics.medium_findings = fileLength("{{medium_vulns}}");
+          if (file_exists("{{medium_vulns}}")) {
+            summary.statistics.medium_findings = file_length("{{medium_vulns}}");
           }
 
           log_info("Assessment Summary:");

@@ -1,0 +1,15 @@
+kind: module
+name: child-override-steps
+description: Child that appends steps
+extends: base-module
+
+override:
+  params:
+    threads:
+      default: "20"
+  steps:
+    mode: append
+    steps:
+      - name: step-four
+        type: bash
+        command: echo "Step four added by child"

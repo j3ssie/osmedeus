@@ -2,11 +2,14 @@ package functions
 
 import (
 	"bufio"
+	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dop251/goja"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
@@ -242,6 +245,56 @@ func (vf *vmFunc) normalizePath(call goja.FunctionCall) goja.Value {
 	normalized := replacer.Replace(input)
 
 	return vf.vm.ToValue(normalized)
+}
+
+// normalPath normalizes input to a path-friendly format (same logic as {{TargetSpace}})
+// Replaces unsafe characters and truncates long strings with hash
+// Usage: normal_path(input) -> string
+func (vf *vmFunc) normalPath(call goja.FunctionCall) goja.Value {
+	input := call.Argument(0).String()
+	log := logger.Get()
+
+	log.Debug("Calling "+terminal.HiGreen("normal_path"), zap.String("input", input))
+
+	if input == "undefined" || input == "" {
+		return vf.vm.ToValue("")
+	}
+
+	result := sanitizeToPathFriendly(input)
+	log.Debug(terminal.HiGreen("normal_path")+" result", zap.String("result", result))
+
+	return vf.vm.ToValue(result)
+}
+
+// sanitizeToPathFriendly creates a filesystem-safe path from input
+// Same logic as sanitizeTargetSpace in executor.go
+func sanitizeToPathFriendly(input string) string {
+	// Replace unsafe characters: /\:*?"<>|
+	sanitized := strings.Map(func(r rune) rune {
+		if strings.ContainsRune(`/\:*?"<>|`, r) {
+			return '_'
+		}
+		return r
+	}, input)
+
+	// If too long (>30), truncate with random suffix and timestamp
+	if len(sanitized) > 30 {
+		timestamp := time.Now().Unix()
+		randomPart := generatePathRandomString(6)
+		return fmt.Sprintf("%s-%s-%d", sanitized[:6], randomPart, timestamp)
+	}
+
+	return sanitized
+}
+
+// generatePathRandomString generates a random alphanumeric string for path sanitization
+func generatePathRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
 }
 
 // cleanSub cleans and deduplicates subdomains in a file (in-place)

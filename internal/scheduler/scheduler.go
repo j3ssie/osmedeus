@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
-	"github.com/dop251/goja"
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/j3ssie/osmedeus/v5/internal/core"
@@ -18,6 +18,12 @@ import (
 // TriggerHandler is called when a trigger fires
 type TriggerHandler func(workflow *core.Workflow, trigger *core.Trigger, input string) error
 
+// Default configuration values
+const (
+	defaultEventQueueSize       = 1000
+	defaultBackpressureTimeout  = 5 * time.Second
+)
+
 // Scheduler manages workflow triggers and scheduling
 type Scheduler struct {
 	scheduler gocron.Scheduler
@@ -28,9 +34,73 @@ type Scheduler struct {
 	logger    *zap.Logger
 	running   bool
 
+	// Event queue configuration
+	queueSize           int           // configurable, default 1000
+	backpressureTimeout time.Duration // default 5s
+
+	// Event metrics (atomic counters)
+	eventsEnqueued int64 // total events successfully enqueued
+	eventsDropped  int64 // total events dropped due to full queue
+
 	// File watcher fields
 	watcher    *fsnotify.Watcher
 	watchPaths map[string][]*RegisteredTrigger // path → triggers mapping
+
+	// VM pool for JavaScript filter evaluation
+	vmPool *functions.VMPool
+
+	// Debounce state for watch triggers
+	debounceTimers map[string]*debounceState
+	debounceMu     sync.Mutex
+
+	// Deduplication cache for event triggers
+	dedupeCache *dedupeCache
+	stopCleanup chan struct{} // signal to stop cleanup goroutine
+}
+
+// debounceState holds the timer state for debounced triggers
+type debounceState struct {
+	timer *time.Timer
+	mu    sync.Mutex
+}
+
+// dedupeCache provides time-based deduplication for events
+type dedupeCache struct {
+	entries sync.Map // key -> expiresAt (time.Time)
+}
+
+// newDedupeCache creates a new deduplication cache
+func newDedupeCache() *dedupeCache {
+	return &dedupeCache{}
+}
+
+// IsDuplicate checks if a key already exists and hasn't expired
+func (c *dedupeCache) IsDuplicate(key string, window time.Duration) bool {
+	if v, ok := c.entries.Load(key); ok {
+		expiresAt := v.(time.Time)
+		if time.Now().Before(expiresAt) {
+			return true
+		}
+		// Entry expired, will be cleaned up or replaced
+	}
+	return false
+}
+
+// Mark records a key with the given window duration
+func (c *dedupeCache) Mark(key string, window time.Duration) {
+	c.entries.Store(key, time.Now().Add(window))
+}
+
+// cleanup removes expired entries from the cache
+func (c *dedupeCache) cleanup() {
+	now := time.Now()
+	c.entries.Range(func(key, value interface{}) bool {
+		expiresAt := value.(time.Time)
+		if now.After(expiresAt) {
+			c.entries.Delete(key)
+		}
+		return true
+	})
 }
 
 // RegisteredTrigger holds trigger information
@@ -41,8 +111,13 @@ type RegisteredTrigger struct {
 	Enabled  bool
 }
 
-// NewScheduler creates a new scheduler
+// NewScheduler creates a new scheduler with default configuration
 func NewScheduler() (*Scheduler, error) {
+	return NewSchedulerWithConfig(defaultEventQueueSize, defaultBackpressureTimeout)
+}
+
+// NewSchedulerWithConfig creates a new scheduler with custom configuration
+func NewSchedulerWithConfig(queueSize int, backpressureTimeout time.Duration) (*Scheduler, error) {
 	s, err := gocron.NewScheduler()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create scheduler: %w", err)
@@ -53,14 +128,28 @@ func NewScheduler() (*Scheduler, error) {
 		return nil, fmt.Errorf("failed to create file watcher: %w", err)
 	}
 
+	// Use defaults if invalid values provided
+	if queueSize <= 0 {
+		queueSize = defaultEventQueueSize
+	}
+	if backpressureTimeout <= 0 {
+		backpressureTimeout = defaultBackpressureTimeout
+	}
+
 	return &Scheduler{
-		scheduler:  s,
-		triggers:   make(map[string]*RegisteredTrigger),
-		handlers:   make(map[string]TriggerHandler),
-		events:     make(chan *core.Event, 100),
-		logger:     logger.Get(),
-		watcher:    watcher,
-		watchPaths: make(map[string][]*RegisteredTrigger),
+		scheduler:           s,
+		triggers:            make(map[string]*RegisteredTrigger),
+		handlers:            make(map[string]TriggerHandler),
+		events:              make(chan *core.Event, queueSize),
+		queueSize:           queueSize,
+		backpressureTimeout: backpressureTimeout,
+		logger:              logger.Get(),
+		watcher:             watcher,
+		watchPaths:          make(map[string][]*RegisteredTrigger),
+		vmPool:              functions.NewVMPool(nil), // No custom functions needed for filters
+		debounceTimers:      make(map[string]*debounceState),
+		dedupeCache:         newDedupeCache(),
+		stopCleanup:         make(chan struct{}),
 	}, nil
 }
 
@@ -203,14 +292,61 @@ func (s *Scheduler) handleFileEvent(event fsnotify.Event) {
 
 	for _, reg := range triggers {
 		if reg.Enabled {
-			s.logger.Info("File change detected, triggering workflow",
+			s.logger.Debug("File change detected",
 				zap.String("path", event.Name),
 				zap.String("trigger", reg.Trigger.Name),
 				zap.String("op", event.Op.String()),
 			)
-			go s.handleTrigger(reg)
+
+			// Check if debounce is configured
+			if reg.Trigger.HasDebounce() {
+				s.handleDebouncedTrigger(reg)
+			} else {
+				s.logger.Info("Triggering workflow (no debounce)",
+					zap.String("path", event.Name),
+					zap.String("trigger", reg.Trigger.Name),
+				)
+				go s.handleTrigger(reg)
+			}
 		}
 	}
+}
+
+// handleDebouncedTrigger handles a trigger with debounce
+func (s *Scheduler) handleDebouncedTrigger(reg *RegisteredTrigger) {
+	triggerKey := fmt.Sprintf("%s:%s", reg.Workflow.Name, reg.Trigger.Name)
+	debounceDuration := reg.Trigger.GetDebounceDuration()
+
+	s.debounceMu.Lock()
+	state, exists := s.debounceTimers[triggerKey]
+	if !exists {
+		state = &debounceState{}
+		s.debounceTimers[triggerKey] = state
+	}
+	s.debounceMu.Unlock()
+
+	state.mu.Lock()
+	defer state.mu.Unlock()
+
+	// Stop existing timer if any
+	if state.timer != nil {
+		state.timer.Stop()
+	}
+
+	// Create new timer
+	state.timer = time.AfterFunc(debounceDuration, func() {
+		s.logger.Info("Debounce timer fired, triggering workflow",
+			zap.String("trigger", reg.Trigger.Name),
+			zap.String("workflow", reg.Workflow.Name),
+			zap.Duration("debounce", debounceDuration),
+		)
+		s.handleTrigger(reg)
+	})
+
+	s.logger.Debug("Debounce timer reset",
+		zap.String("trigger", triggerKey),
+		zap.Duration("debounce", debounceDuration),
+	)
 }
 
 // handleTrigger handles a trigger firing
@@ -290,8 +426,26 @@ func (s *Scheduler) Start() error {
 	// Start event listener
 	go s.eventListener()
 
+	// Start dedupe cache cleanup goroutine
+	go s.dedupeCleanupLoop()
+
 	s.logger.Info("Scheduler started")
 	return nil
+}
+
+// dedupeCleanupLoop periodically cleans up expired dedupe entries
+func (s *Scheduler) dedupeCleanupLoop() {
+	ticker := time.NewTicker(30 * time.Second) // Cleanup every 30 seconds
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			s.dedupeCache.cleanup()
+		case <-s.stopCleanup:
+			return
+		}
+	}
 }
 
 // Stop stops the scheduler
@@ -314,6 +468,20 @@ func (s *Scheduler) Stop() error {
 		}
 	}
 
+	// Stop cleanup goroutine
+	close(s.stopCleanup)
+
+	// Stop all debounce timers
+	s.debounceMu.Lock()
+	for _, state := range s.debounceTimers {
+		state.mu.Lock()
+		if state.timer != nil {
+			state.timer.Stop()
+		}
+		state.mu.Unlock()
+	}
+	s.debounceMu.Unlock()
+
 	s.running = false
 	close(s.events)
 
@@ -321,7 +489,9 @@ func (s *Scheduler) Stop() error {
 	return nil
 }
 
-// EmitEvent emits a core.Event to trigger workflows
+// EmitEvent emits a core.Event to trigger workflows with backpressure support.
+// Fast path: non-blocking send if queue has space.
+// Slow path: waits up to backpressureTimeout before dropping the event.
 func (s *Scheduler) EmitEvent(event *core.Event) error {
 	if !s.running {
 		return fmt.Errorf("scheduler not running")
@@ -332,15 +502,40 @@ func (s *Scheduler) EmitEvent(event *core.Event) error {
 		event.Timestamp = time.Now()
 	}
 
+	// Fast path: non-blocking send
 	select {
 	case s.events <- event:
+		atomic.AddInt64(&s.eventsEnqueued, 1)
 		s.logger.Debug("Event emitted",
 			zap.String("topic", event.Topic),
 			zap.String("name", event.Name),
 		)
 		return nil
 	default:
-		return fmt.Errorf("event queue full")
+		// Queue full - apply backpressure
+	}
+
+	// Backpressure: wait with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), s.backpressureTimeout)
+	defer cancel()
+
+	select {
+	case s.events <- event:
+		atomic.AddInt64(&s.eventsEnqueued, 1)
+		s.logger.Debug("Event queued after backpressure",
+			zap.String("topic", event.Topic),
+			zap.String("name", event.Name),
+		)
+		return nil
+	case <-ctx.Done():
+		atomic.AddInt64(&s.eventsDropped, 1)
+		s.logger.Warn("Event dropped - queue full",
+			zap.String("topic", event.Topic),
+			zap.String("name", event.Name),
+			zap.Int("queue_size", s.queueSize),
+			zap.Duration("timeout", s.backpressureTimeout),
+		)
+		return fmt.Errorf("event queue full after %v", s.backpressureTimeout)
 	}
 }
 
@@ -353,6 +548,17 @@ func (s *Scheduler) EmitEventSimple(topic, name string, data map[string]interfac
 		ParsedData: data,
 	}
 	return s.EmitEvent(event)
+}
+
+// GetEventMetrics returns event queue metrics (enqueued and dropped counts).
+// These are atomic counters that track total events processed since scheduler start.
+func (s *Scheduler) GetEventMetrics() (enqueued, dropped int64) {
+	return atomic.LoadInt64(&s.eventsEnqueued), atomic.LoadInt64(&s.eventsDropped)
+}
+
+// GetQueueStats returns current queue configuration and status
+func (s *Scheduler) GetQueueStats() (queueSize int, currentLen int, backpressureTimeout time.Duration) {
+	return s.queueSize, len(s.events), s.backpressureTimeout
 }
 
 // eventListener listens for events and triggers workflows
@@ -384,15 +590,74 @@ func (s *Scheduler) matchesEventTrigger(trigger *core.Trigger, event *core.Event
 
 	// Evaluate filters if defined
 	if trigger.HasFilters() {
-		return s.evaluateFilters(trigger.GetFilters(), event)
+		if !s.evaluateFilters(trigger.GetFilters(), event) {
+			return false
+		}
+	}
+
+	// Check deduplication
+	if trigger.Event != nil && trigger.Event.HasDeduplication() {
+		dedupeKey := s.computeDedupeKey(trigger.Event.DedupeKey, event)
+		window := trigger.Event.GetDedupeWindow()
+
+		if s.dedupeCache.IsDuplicate(dedupeKey, window) {
+			s.logger.Debug("Event deduplicated",
+				zap.String("key", dedupeKey),
+				zap.String("topic", event.Topic),
+				zap.Duration("window", window),
+			)
+			return false
+		}
+
+		// Mark this key as seen
+		s.dedupeCache.Mark(dedupeKey, window)
 	}
 
 	return true
 }
 
-// evaluateFilters evaluates JavaScript filter expressions using Goja
+// computeDedupeKey computes the deduplication key from a template and event
+func (s *Scheduler) computeDedupeKey(template string, event *core.Event) string {
+	key := template
+
+	// Replace event fields
+	key = replaceTemplateVar(key, "event.topic", event.Topic)
+	key = replaceTemplateVar(key, "event.name", event.Name)
+	key = replaceTemplateVar(key, "event.source", event.Source)
+	key = replaceTemplateVar(key, "event.id", event.ID)
+	key = replaceTemplateVar(key, "event.data_type", event.DataType)
+
+	// Replace event.data fields if parsed data is available
+	if event.ParsedData != nil {
+		key = s.replaceDataFields(key, event.ParsedData, "event.data")
+	}
+
+	return key
+}
+
+// replaceDataFields replaces template variables with values from a nested map
+func (s *Scheduler) replaceDataFields(template string, data map[string]interface{}, prefix string) string {
+	result := template
+	for k, v := range data {
+		placeholder := fmt.Sprintf("{{%s.%s}}", prefix, k)
+		switch val := v.(type) {
+		case string:
+			result = replaceTemplateVar(result, fmt.Sprintf("%s.%s", prefix, k), val)
+		case map[string]interface{}:
+			// Handle nested maps
+			result = s.replaceDataFields(result, val, fmt.Sprintf("%s.%s", prefix, k))
+		default:
+			result = replaceTemplateVar(result, fmt.Sprintf("%s.%s", prefix, k), fmt.Sprintf("%v", v))
+		}
+		_ = placeholder // silence unused variable warning
+	}
+	return result
+}
+
+// evaluateFilters evaluates JavaScript filter expressions using pooled Goja VMs
 func (s *Scheduler) evaluateFilters(filters []string, event *core.Event) bool {
-	vm := goja.New()
+	vmCtx := s.vmPool.Get()
+	defer s.vmPool.Put(vmCtx)
 
 	// Set event object in JS context
 	eventObj := map[string]interface{}{
@@ -410,14 +675,14 @@ func (s *Scheduler) evaluateFilters(filters []string, event *core.Event) bool {
 		eventObj["data"] = event.Data
 	}
 
-	if err := vm.Set("event", eventObj); err != nil {
+	if err := vmCtx.SetVariables(map[string]interface{}{"event": eventObj}); err != nil {
 		s.logger.Warn("Failed to set event in JS context", zap.Error(err))
 		return false
 	}
 
 	// All filters must pass
 	for _, filter := range filters {
-		result, err := vm.RunString(filter)
+		result, err := vmCtx.Run(filter)
 		if err != nil {
 			s.logger.Warn("Filter evaluation failed",
 				zap.String("filter", filter),
@@ -426,8 +691,7 @@ func (s *Scheduler) evaluateFilters(filters []string, event *core.Event) bool {
 			return false
 		}
 
-		boolResult := result.ToBoolean()
-		if !boolResult {
+		if !result.ToBoolean() {
 			return false
 		}
 	}

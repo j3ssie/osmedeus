@@ -33,13 +33,13 @@ steps:
       var urls = [];
 
       // Check if target is a file or single URL
-      if (fileExists(target)) {
+      if (file_exists(target)) {
         log_info("Target is a file, reading URLs");
-        var content = readFile(target);
+        var content = read_file(target);
         urls = content.trim().split("\n").filter(function(u) { return u.length > 0; });
       } else {
         // Ensure URL has protocol
-        if (!target.startsWith("http")) {
+        if (!target.starts_with("http")) {
           target = "https://" + target;
         }
         urls = [target];
@@ -56,7 +56,7 @@ steps:
   # Step 3: bash with pre_condition - Quick probe to filter live URLs
   - name: probe-live-urls
     type: bash
-    pre_condition: "fileExists('{{url_list}}')"
+    pre_condition: "file_exists('{{url_list}}')"
     command: "{{Binaries}}/httpx -l {{url_list}} -silent -mc 200,201,301,302,307,401,403 -o {{Output}}/live-urls.txt"
     timeout: 600
     on_error: continue
@@ -66,9 +66,9 @@ steps:
   # Step 4: function - Check live URL count before proceeding
   - name: validate-live-urls
     type: function
-    pre_condition: "fileExists('{{live_urls}}')"
+    pre_condition: "file_exists('{{live_urls}}')"
     script: |
-      var count = fileLength("{{live_urls}}");
+      var count = file_length("{{live_urls}}");
       log_info("Live URLs found: " + count);
 
       if (count == 0) {
@@ -83,7 +83,7 @@ steps:
   # Step 5: foreach - Capture screenshots of each URL
   - name: capture-screenshots
     type: foreach
-    pre_condition: "fileExists('{{live_urls}}') && fileLength('{{live_urls}}') > 0"
+    pre_condition: "file_exists('{{live_urls}}') && file_length('{{live_urls}}') > 0"
     input: "{{live_urls}}"
     variable: url
     threads: "{{threads}}"
@@ -128,8 +128,8 @@ steps:
     type: function
     script: |
       var stats = {
-        total_urls: parseInt("{{url_count}}"),
-        live_urls: fileLength("{{live_urls}}"),
+        total_urls: parse_int("{{url_count}}"),
+        live_urls: file_length("{{live_urls}}"),
         screenshots: 0,
         thumbnails: 0
       };

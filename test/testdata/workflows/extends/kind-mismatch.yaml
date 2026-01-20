@@ -1,0 +1,8 @@
+kind: flow
+name: kind-mismatch
+description: This flow tries to extend a module (should fail)
+extends: base-module
+
+modules:
+  - name: module-x
+    path: base-module

@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"maps"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -17,20 +18,7 @@ type GeneratorFunc func(args ...string) (string, error)
 
 // registerBuiltinGenerators registers all built-in generator functions
 func (e *Engine) registerBuiltinGenerators() {
-	e.generators[GenUUID] = generateUUID
-	e.generators[GenCurrentDate] = generateCurrentDate
-	e.generators[GenCurrentTimestamp] = generateTimestamp
-	e.generators[GenGetEnvVar] = getEnvironmentVariable
-	e.generators[GenConcat] = concatenateStrings
-	e.generators[GenRandomInt] = generateRandomInt
-	e.generators[GenRandomString] = generateRandomString
-	e.generators[GenExecCmd] = executeCommand
-	e.generators[GenToLower] = toLower
-	e.generators[GenToUpper] = toUpper
-	e.generators[GenTrim] = trimString
-	e.generators[GenReplace] = replaceString
-	e.generators[GenSplit] = splitString
-	e.generators[GenJoin] = joinString
+	maps.Copy(e.generators, builtinGenerators)
 }
 
 // generateUUID generates a new UUID
@@ -202,6 +190,25 @@ func joinString(args ...string) (string, error) {
 	delimiter := args[0]
 	parts := args[1:]
 	return strings.Join(parts, delimiter), nil
+}
+
+// builtinGenerators is a package-level map of all built-in generator functions.
+// This allows multiple engine implementations to share the same generators.
+var builtinGenerators = map[string]GeneratorFunc{
+	GenUUID:             generateUUID,
+	GenCurrentDate:      generateCurrentDate,
+	GenCurrentTimestamp: generateTimestamp,
+	GenGetEnvVar:        getEnvironmentVariable,
+	GenConcat:           concatenateStrings,
+	GenRandomInt:        generateRandomInt,
+	GenRandomString:     generateRandomString,
+	GenExecCmd:          executeCommand,
+	GenToLower:          toLower,
+	GenToUpper:          toUpper,
+	GenTrim:             trimString,
+	GenReplace:          replaceString,
+	GenSplit:            splitString,
+	GenJoin:             joinString,
 }
 
 func init() {

@@ -14,6 +14,7 @@ This document describes the technical architecture and development practices for
 - [Template Engine](#template-engine)
 - [Function Registry](#function-registry)
 - [Scheduler System](#scheduler-system)
+- [Workflow Linter](#workflow-linter)
 - [Database Layer](#database-layer)
 - [Testing](#testing)
 - [Adding New Features](#adding-new-features)
@@ -78,6 +79,12 @@ osmedeus-ng/
 │   │   ├── heuristics.go        # Target type detection
 │   │   ├── url.go               # URL parsing
 │   │   └── domain.go            # Domain analysis
+│   ├── linter/                  # Workflow linting
+│   │   ├── linter.go            # Main linter logic
+│   │   ├── rules.go             # Linting rules (built-in variables, etc.)
+│   │   ├── formatter.go         # Output formatters (pretty, JSON, GitHub)
+│   │   ├── ast.go               # Workflow AST for position tracking
+│   │   └── types.go             # Linter types and severity levels
 │   ├── workspace/               # Workspace management
 │   │   └── workspace.go         # Workspace creation
 │   ├── snapshot/                # Workspace snapshots
@@ -135,7 +142,7 @@ Osmedeus follows a layered architecture:
 │  ┌─────────────┐ ┌──────────────┐ ┌────────────────────┐   │
 │  │  Executor   │ │  Dispatcher  │ │  Step Executors    │   │
 │  │             │ │              │ │  (bash, function,  │   │
-│  │             │ │              │ │   foreach, parallel-steps│ │
+│  │             │ │              │ │   foreach, etc.)   │   │
 │  └─────────────┘ └──────────────┘ └────────────────────┘   │
 ├─────────────────────────────────────────────────────────────┤
 │                      Runner Layer                            │
@@ -733,6 +740,127 @@ func (s *Scheduler) evaluateFilters(filters []string, event *core.Event) bool {
         }
     }
     return true
+}
+```
+
+## Workflow Linter
+
+The workflow linter (`internal/linter/`) provides static analysis of workflow YAML files to catch common issues before execution.
+
+### Usage
+
+```bash
+# Lint a single workflow
+osmedeus workflow lint my-workflow.yaml
+
+# Lint by workflow name (searches in workflows path)
+osmedeus workflow lint my-workflow
+
+# Lint all workflows in a directory
+osmedeus workflow lint /path/to/workflows/
+
+# Output formats
+osmedeus workflow lint my-workflow.yaml --format pretty   # Default, colored output
+osmedeus workflow lint my-workflow.yaml --format json     # Machine-readable JSON
+osmedeus workflow lint my-workflow.yaml --format github   # GitHub Actions annotations
+
+# Filter by severity
+osmedeus workflow lint my-workflow.yaml --severity warning  # Show warnings and above
+osmedeus workflow lint my-workflow.yaml --severity error    # Show only errors
+
+# Disable specific rules
+osmedeus workflow lint my-workflow.yaml --disable unused-variable,empty-step
+
+# CI mode (exit with error code if issues found)
+osmedeus workflow lint my-workflow.yaml --check
+```
+
+### Severity Levels
+
+| Severity | Description | Exit Code |
+|----------|-------------|-----------|
+| **info** | Best practice suggestions (e.g., unused exports) | 0 |
+| **warning** | Potential issues that may cause problems | 0 |
+| **error** | Critical issues that will likely cause failures | 1 (with --check) |
+
+### Built-in Rules
+
+| Rule | Severity | Description |
+|------|----------|-------------|
+| `missing-required-field` | warning | Detects missing required fields (name, kind, type) |
+| `duplicate-step-name` | warning | Detects multiple steps with the same name |
+| `empty-step` | warning | Detects steps with no executable content |
+| `unused-variable` | info | Detects exports that are never referenced |
+| `invalid-goto` | warning | Detects decision goto references to non-existent steps |
+| `invalid-depends-on` | warning | Detects depends_on references to non-existent steps |
+| `circular-dependency` | warning | Detects circular references in step dependencies |
+
+**Note**: The `undefined-variable` rule is available but not enabled by default as it can produce false positives for dynamically-injected variables.
+
+### Built-in Variables
+
+The linter recognizes all runtime-injected variables to avoid false positives. These include:
+
+**Path Variables**: `BaseFolder`, `Binaries`, `Data`, `ExternalData`, `ExternalConfigs`, `Workflows`, `Workspaces`, etc.
+
+**Target Variables**: `Target`, `target`, `TargetFile`, `TargetSpace`
+
+**Output Variables**: `Output`, `output`, `Workspace`, `workspace`
+
+**Metadata Variables**: `Version`, `TaskID`, `TaskDate`, `TimeStamp`, `Today`, `RandomString`
+
+**Heuristic Variables**: `TargetType`, `TargetRootDomain`, `TargetTLD`, `Org`, `TargetHost`, `TargetPort`, etc.
+
+**Chunk Variables**: `ChunkIndex`, `ChunkSize`, `TotalChunks`, `ChunkStart`, `ChunkEnd`
+
+### Linter Architecture
+
+```go
+// internal/linter/linter.go
+
+type Linter struct {
+    rules   []LinterRule
+    options LinterOptions
+}
+
+// LinterRule interface for all lint rules
+type LinterRule interface {
+    Name() string
+    Description() string
+    Severity() Severity
+    Check(ast *WorkflowAST) []LintIssue
+}
+
+func (l *Linter) Lint(path string) (*LintResult, error)
+func (l *Linter) LintContent(content []byte, filename string) (*LintResult, error)
+```
+
+### Adding a New Lint Rule
+
+1. Create the rule in `internal/linter/rules.go`:
+
+```go
+type MyNewRule struct{}
+
+func (r *MyNewRule) Name() string        { return "my-new-rule" }
+func (r *MyNewRule) Description() string { return "Detects my issue" }
+func (r *MyNewRule) Severity() Severity  { return SeverityWarning }
+
+func (r *MyNewRule) Check(wast *WorkflowAST) []LintIssue {
+    var issues []LintIssue
+    // ... implementation
+    return issues
+}
+```
+
+2. Register in `GetDefaultRules()`:
+
+```go
+func GetDefaultRules() []LinterRule {
+    return []LinterRule{
+        // ... existing rules
+        &MyNewRule{},
+    }
 }
 ```
 

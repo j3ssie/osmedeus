@@ -78,7 +78,7 @@ Runner (internal/runner) - executes commands via: HostRunner, DockerRunner, SSHR
 ### Key Types
 
 ```go
-WorkflowKind: "module" | "flow"      // module = single unit, flow = orchestrates modules
+WorkflowKind: "module" | "flow"  // module = single unit, flow = orchestrates modules
 StepType: "bash" | "function" | "parallel-steps" | "foreach" | "remote-bash" | "http" | "llm"
 RunnerType: "host" | "docker" | "ssh"
 TriggerType: "cron" | "event" | "watch" | "manual"

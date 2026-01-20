@@ -1,0 +1,34 @@
+name: test-event-chain-stage2
+kind: module
+description: Stage 2 of event chain - probing (triggered by stage1)
+tags: test,event,chain
+
+trigger:
+  - name: on-stage1-complete
+    on: event
+    event:
+      topic: "stage1.complete"
+      filters:
+        - "event.source == 'chain-stage1'"
+    input:
+      type: event_data
+      field: "value"
+      name: target
+    enabled: true
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: probe
+    type: bash
+    command: |
+      echo "Probing {{target}}..."
+      echo "{{target}} is live" > {{Output}}/probed.txt
+
+  - name: emit-probe-complete
+    type: function
+    function: |
+      generate_event("{{Workspace}}", "stage2.complete", "chain-stage2", "probed-host", "{{target}}")
+      log_info("Stage 2 complete - probed {{target}}")

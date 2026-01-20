@@ -730,6 +730,26 @@ func (vf *vmFunc) execCmd(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(strings.TrimSpace(string(output)))
 }
 
+// commandExists checks if a command is available in PATH
+// Usage: commandExists(command) -> bool
+func (vf *vmFunc) commandExists(call goja.FunctionCall) goja.Value {
+	command := call.Argument(0).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("commandExists"), zap.String("command", command))
+
+	if command == "undefined" || command == "" {
+		logger.Get().Warn("commandExists: empty command provided")
+		return vf.vm.ToValue(false)
+	}
+
+	_, err := exec.LookPath(command)
+	exists := err == nil
+
+	logger.Get().Debug(terminal.HiGreen("commandExists")+" result",
+		zap.String("command", command),
+		zap.Bool("exists", exists))
+	return vf.vm.ToValue(exists)
+}
+
 // logDebug logs a debug message with [DEBUG] prefix and returns the message
 // Usage: log_debug(message) -> string
 func (vf *vmFunc) logDebug(call goja.FunctionCall) goja.Value {
@@ -772,6 +792,109 @@ func (vf *vmFunc) logError(call goja.FunctionCall) goja.Value {
 		fmt.Printf("%s %s\n", terminal.Red("[ERROR]"), msg)
 	}
 	return vf.vm.ToValue(msg)
+}
+
+// printGreen prints a message in green color and returns the message
+// Usage: print_green(message) -> string
+func (vf *vmFunc) printGreen(call goja.FunctionCall) goja.Value {
+	msg := call.Argument(0).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("printGreen"), zap.Int("msgLength", len(msg)))
+
+	if msg != "undefined" {
+		fmt.Println(terminal.Green(msg))
+	}
+	return vf.vm.ToValue(msg)
+}
+
+// printBlue prints a message in blue color and returns the message
+// Usage: print_blue(message) -> string
+func (vf *vmFunc) printBlue(call goja.FunctionCall) goja.Value {
+	msg := call.Argument(0).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("printBlue"), zap.Int("msgLength", len(msg)))
+
+	if msg != "undefined" {
+		fmt.Println(terminal.Blue(msg))
+	}
+	return vf.vm.ToValue(msg)
+}
+
+// printYellow prints a message in yellow color and returns the message
+// Usage: print_yellow(message) -> string
+func (vf *vmFunc) printYellow(call goja.FunctionCall) goja.Value {
+	msg := call.Argument(0).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("printYellow"), zap.Int("msgLength", len(msg)))
+
+	if msg != "undefined" {
+		fmt.Println(terminal.Yellow(msg))
+	}
+	return vf.vm.ToValue(msg)
+}
+
+// printRed prints a message in red color and returns the message
+// Usage: print_red(message) -> string
+func (vf *vmFunc) printRed(call goja.FunctionCall) goja.Value {
+	msg := call.Argument(0).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("printRed"), zap.Int("msgLength", len(msg)))
+
+	if msg != "undefined" {
+		fmt.Println(terminal.Red(msg))
+	}
+	return vf.vm.ToValue(msg)
+}
+
+// setVar sets a runtime variable that can be retrieved with get_var
+// Also sets the variable on the VM for immediate access in the same execution
+// Usage: set_var(name, value) -> string (returns the value)
+func (vf *vmFunc) setVar(call goja.FunctionCall) goja.Value {
+	name := call.Argument(0).String()
+	value := call.Argument(1).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("setVar"), zap.String("name", name), zap.String("value", value))
+
+	if name == "undefined" || name == "" {
+		logger.Get().Warn("setVar: name is required")
+		return vf.vm.ToValue("")
+	}
+
+	// Handle undefined value as empty string
+	if value == "undefined" {
+		value = ""
+	}
+
+	ctx := vf.getContext()
+	if ctx != nil {
+		if ctx.RuntimeVars == nil {
+			ctx.RuntimeVars = make(map[string]string)
+		}
+		ctx.RuntimeVars[name] = value
+		// Also set on VM for immediate access in same execution
+		_ = vf.vm.Set(name, value)
+	}
+
+	logger.Get().Debug(terminal.HiGreen("setVar")+" result", zap.String("name", name), zap.String("value", value))
+	return vf.vm.ToValue(value)
+}
+
+// getVar retrieves a runtime variable set with set_var
+// Usage: get_var(name) -> string (returns empty string if not found)
+func (vf *vmFunc) getVar(call goja.FunctionCall) goja.Value {
+	name := call.Argument(0).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("getVar"), zap.String("name", name))
+
+	if name == "undefined" || name == "" {
+		logger.Get().Warn("getVar: name is required")
+		return vf.vm.ToValue("")
+	}
+
+	ctx := vf.getContext()
+	if ctx != nil && ctx.RuntimeVars != nil {
+		if val, ok := ctx.RuntimeVars[name]; ok {
+			logger.Get().Debug(terminal.HiGreen("getVar")+" result", zap.String("name", name), zap.String("value", val))
+			return vf.vm.ToValue(val)
+		}
+	}
+
+	logger.Get().Debug(terminal.HiGreen("getVar")+" result (not found)", zap.String("name", name))
+	return vf.vm.ToValue("")
 }
 
 // sleep pauses execution for the given number of seconds

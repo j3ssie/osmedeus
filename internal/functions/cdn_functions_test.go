@@ -10,7 +10,7 @@ import (
 func TestCdnUpload_EmptyLocalPath(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`cdnUpload("", "remote/path")`,
+		`cdn_upload("", "remote/path")`,
 		map[string]interface{}{},
 	)
 
@@ -21,7 +21,7 @@ func TestCdnUpload_EmptyLocalPath(t *testing.T) {
 func TestCdnUpload_EmptyRemotePath(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`cdnUpload("/local/path", "")`,
+		`cdn_upload("/local/path", "")`,
 		map[string]interface{}{},
 	)
 
@@ -32,7 +32,7 @@ func TestCdnUpload_EmptyRemotePath(t *testing.T) {
 func TestCdnUpload_UndefinedArguments(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`cdnUpload()`,
+		`cdn_upload()`,
 		map[string]interface{}{},
 	)
 
@@ -43,7 +43,7 @@ func TestCdnUpload_UndefinedArguments(t *testing.T) {
 func TestCdnDownload_EmptyRemotePath(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`cdnDownload("", "/local/path")`,
+		`cdn_download("", "/local/path")`,
 		map[string]interface{}{},
 	)
 
@@ -54,7 +54,7 @@ func TestCdnDownload_EmptyRemotePath(t *testing.T) {
 func TestCdnDownload_EmptyLocalPath(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`cdnDownload("remote/path", "")`,
+		`cdn_download("remote/path", "")`,
 		map[string]interface{}{},
 	)
 
@@ -65,7 +65,7 @@ func TestCdnDownload_EmptyLocalPath(t *testing.T) {
 func TestCdnExists_EmptyPath(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`cdnExists("")`,
+		`cdn_exists("")`,
 		map[string]interface{}{},
 	)
 
@@ -76,12 +76,228 @@ func TestCdnExists_EmptyPath(t *testing.T) {
 func TestCdnDelete_EmptyPath(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`cdnDelete("")`,
+		`cdn_delete("")`,
 		map[string]interface{}{},
 	)
 
 	require.NoError(t, err)
 	assert.Equal(t, false, result)
+}
+
+// Tests for new CDN functions
+
+func TestCdnSyncUpload_EmptyLocalDir(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_sync_upload("", "remote/prefix/")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	// Should return object with success: false
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, false, resultMap["success"])
+}
+
+func TestCdnSyncUpload_UndefinedArguments(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_sync_upload()`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, false, resultMap["success"])
+}
+
+func TestCdnSyncDownload_EmptyLocalDir(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_sync_download("remote/prefix/", "")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, false, resultMap["success"])
+}
+
+func TestCdnSyncDownload_UndefinedArguments(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_sync_download()`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, false, resultMap["success"])
+}
+
+func TestCdnGetPresignedURL_EmptyPath(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_get_presigned_url("")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, "", result)
+}
+
+func TestCdnGetPresignedURL_WithExpiry(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_get_presigned_url("test/file.txt", 60)`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	// Returns empty string when storage not configured
+	assert.Equal(t, "", result)
+}
+
+func TestCdnGetPresignedURL_NoExpiry(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_get_presigned_url("test/file.txt")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	// Returns empty string when storage not configured
+	assert.Equal(t, "", result)
+}
+
+func TestCdnList_EmptyPrefix(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_list("")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	// Should return empty array when storage not configured
+	resultSlice, ok := result.([]interface{})
+	require.True(t, ok)
+	assert.Equal(t, 0, len(resultSlice))
+}
+
+func TestCdnList_WithPrefix(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_list("scans/")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	resultSlice, ok := result.([]interface{})
+	require.True(t, ok)
+	assert.Equal(t, 0, len(resultSlice))
+}
+
+func TestCdnList_NoArguments(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_list()`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	resultSlice, ok := result.([]interface{})
+	require.True(t, ok)
+	assert.Equal(t, 0, len(resultSlice))
+}
+
+func TestCdnStat_EmptyPath(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_stat("")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	// Should return null for empty path
+	assert.Nil(t, result)
+}
+
+func TestCdnStat_NonExistentFile(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_stat("nonexistent/file.txt")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	// Should return null when storage not configured
+	assert.Nil(t, result)
+}
+
+func TestCdnStat_UndefinedArgument(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_stat()`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Nil(t, result)
+}
+
+// Test return types for sync operations
+func TestCdnSyncUpload_ReturnStructure(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_sync_upload("/nonexistent", "prefix/")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok)
+
+	// Check all expected fields exist
+	_, hasSuccess := resultMap["success"]
+	_, hasUploaded := resultMap["uploaded"]
+	_, hasSkipped := resultMap["skipped"]
+	_, hasDeleted := resultMap["deleted"]
+	_, hasErrorCount := resultMap["errorCount"]
+
+	assert.True(t, hasSuccess, "should have 'success' field")
+	assert.True(t, hasUploaded, "should have 'uploaded' field")
+	assert.True(t, hasSkipped, "should have 'skipped' field")
+	assert.True(t, hasDeleted, "should have 'deleted' field")
+	assert.True(t, hasErrorCount, "should have 'errorCount' field")
+}
+
+func TestCdnSyncDownload_ReturnStructure(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`cdn_sync_download("prefix/", "/nonexistent")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok)
+
+	// Check all expected fields exist
+	_, hasSuccess := resultMap["success"]
+	_, hasDownloaded := resultMap["downloaded"]
+	_, hasSkipped := resultMap["skipped"]
+	_, hasDeleted := resultMap["deleted"]
+	_, hasErrorCount := resultMap["errorCount"]
+
+	assert.True(t, hasSuccess, "should have 'success' field")
+	assert.True(t, hasDownloaded, "should have 'downloaded' field")
+	assert.True(t, hasSkipped, "should have 'skipped' field")
+	assert.True(t, hasDeleted, "should have 'deleted' field")
+	assert.True(t, hasErrorCount, "should have 'errorCount' field")
 }
 
 // Note: Actual CDN upload/download/delete tests require a configured

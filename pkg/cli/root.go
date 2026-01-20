@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/core"
+	"github.com/j3ssie/osmedeus/v5/internal/executor"
 	"github.com/j3ssie/osmedeus/v5/internal/installer"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
@@ -239,7 +241,11 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "%s %s\n", terminal.Red("Error:"), err)
+		// Skip printing for TargetTypeMismatchError (already printed with formatting)
+		var ttmErr *executor.TargetTypeMismatchError
+		if !errors.As(err, &ttmErr) {
+			fmt.Fprintf(os.Stderr, "%s %s\n", terminal.Red("Error:"), err)
+		}
 		os.Exit(1)
 	}
 }

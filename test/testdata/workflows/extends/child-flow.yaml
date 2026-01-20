@@ -1,0 +1,13 @@
+kind: flow
+name: child-flow
+description: Child flow that extends base flow
+extends: base-flow
+
+override:
+  modules:
+    mode: append
+    modules:
+      - name: module-c
+        path: base-module
+        depends_on:
+          - module-b

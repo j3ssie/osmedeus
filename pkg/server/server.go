@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
@@ -20,6 +23,8 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/database"
 	"github.com/j3ssie/osmedeus/v5/internal/distributed"
 	oslogger "github.com/j3ssie/osmedeus/v5/internal/logger"
+	"github.com/j3ssie/osmedeus/v5/internal/metrics"
+	"github.com/j3ssie/osmedeus/v5/internal/terminal"
 	"github.com/j3ssie/osmedeus/v5/pkg/server/handlers"
 	"github.com/j3ssie/osmedeus/v5/pkg/server/middleware"
 	"github.com/j3ssie/osmedeus/v5/public"
@@ -31,9 +36,11 @@ import (
 
 // Options contains server configuration options
 type Options struct {
-	NoAuth bool                // Disable authentication when true
-	Master *distributed.Master // Master node for distributed mode (nil if not in master mode)
-	Debug  bool                // Enable debug mode (log request bodies, detailed errors)
+	NoAuth              bool                // Disable authentication when true
+	Master              *distributed.Master // Master node for distributed mode (nil if not in master mode)
+	Debug               bool                // Enable debug mode (log request bodies, detailed errors)
+	HotReload           bool                // Enable config hot reload (watches osm-settings.yaml for changes)
+	EnableEventReceiver bool                // Enable event receiver for event-triggered workflows (default: true)
 }
 
 // cachedServerInfo holds server info read once at startup to avoid reading config on every request
@@ -48,9 +55,12 @@ var cachedServerInfo struct {
 
 // Server represents the web server
 type Server struct {
-	app     *fiber.App
-	config  *config.Config
-	options *Options
+	app            *fiber.App
+	config         *config.Config
+	configProvider handlers.ConfigProvider
+	hotConfig      *config.HotReloadableConfig // nil if hot reload is disabled
+	options        *Options
+	eventReceiver  *EventReceiver // nil if event receiver is disabled
 }
 
 // New creates a new server instance
@@ -70,7 +80,7 @@ func New(cfg *config.Config, opts *Options) (*Server, error) {
 	if err := database.Migrate(ctx); err != nil {
 		return nil, fmt.Errorf("failed to run database migrations: %w", err)
 	}
-	oslogger.Get().Info("Database initialized", zap.String("engine", cfg.Database.DBEngine))
+	oslogger.Get().Debug("Database initialized", zap.String("engine", cfg.Database.DBEngine))
 
 	// Index workflows from filesystem to database at startup
 	if cfg.WorkflowsPath != "" {
@@ -117,22 +127,25 @@ func New(cfg *config.Config, opts *Options) (*Server, error) {
 	}
 
 	app := fiber.New(fiber.Config{
-		AppName:      "Osmedeus API Server",
-		ServerHeader: fmt.Sprintf("%s %s (%s)", core.BINARY, core.VERSION, license),
-		ErrorHandler: errHandler,
+		AppName:               "Osmedeus API Server",
+		ServerHeader:          fmt.Sprintf("%s %s (%s)", core.BINARY, core.VERSION, license),
+		ErrorHandler:          errHandler,
+		DisableStartupMessage: true,
 	})
 
 	// Apply middleware
 	app.Use(recover.New())
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
+		AllowOrigins: cfg.Server.GetCORSAllowedOrigins(),
 		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS,HEAD",
 		AllowHeaders: "Origin,Content-Type,Accept,Authorization",
 	}))
 
-	// Apply Prometheus metrics middleware
-	app.Use(middleware.PrometheusMetrics())
+	// Apply Prometheus metrics middleware (conditional)
+	if cfg.Server.IsMetricsEnabled() {
+		app.Use(middleware.PrometheusMetrics())
+	}
 
 	// Apply debug middleware if debug mode is enabled
 	if opts.Debug {
@@ -147,8 +160,51 @@ func New(cfg *config.Config, opts *Options) (*Server, error) {
 		options: opts,
 	}
 
+	// Initialize config provider (hot reload or static)
+	if opts.HotReload && cfg.BaseFolder != "" {
+		hotCfg, err := config.NewHotReloadableConfig(cfg.BaseFolder)
+		if err != nil {
+			oslogger.Get().Warn("Failed to initialize hot reload config, falling back to static",
+				zap.Error(err),
+			)
+			s.configProvider = handlers.NewStaticConfigProvider(cfg)
+		} else {
+			s.hotConfig = hotCfg
+			s.configProvider = handlers.NewHotReloadConfigProvider(hotCfg)
+
+			// Start watching for config changes
+			if err := hotCfg.Watch(); err != nil {
+				oslogger.Get().Warn("Failed to start config watcher",
+					zap.Error(err),
+				)
+			} else {
+				oslogger.Get().Debug("Config hot reload enabled",
+					zap.String("config_path", hotCfg.GetConfigPath()),
+				)
+			}
+		}
+	} else {
+		s.configProvider = handlers.NewStaticConfigProvider(cfg)
+	}
+
+	// Initialize event receiver if enabled (default: true when not explicitly disabled)
+	if opts.EnableEventReceiver {
+		er, err := NewEventReceiver(cfg)
+		if err != nil {
+			oslogger.Get().Warn("Failed to initialize event receiver", zap.Error(err))
+		} else {
+			s.eventReceiver = er
+			oslogger.Get().Debug("Event receiver initialized")
+		}
+	}
+
 	// Setup routes
 	s.setupRoutes()
+
+	// Start memory metrics collector if metrics are enabled
+	if cfg.Server.IsMetricsEnabled() {
+		startMemoryMetricsCollector(context.Background(), 15*time.Second)
+	}
 
 	return s, nil
 }
@@ -165,8 +221,10 @@ func (s *Server) setupRoutes() {
 	s.app.Get("/health", handlers.HealthCheck)
 	s.app.Get("/health/ready", handlers.ReadinessCheck)
 
-	// Prometheus metrics endpoint
-	s.app.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
+	// Prometheus metrics endpoint (conditional)
+	if s.config.Server.IsMetricsEnabled() {
+		s.app.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
+	}
 
 	// Server info (JSON version info)
 	s.app.Get("/server-info", handlers.ServerInfo(s.config))
@@ -229,9 +287,11 @@ func (s *Server) setupRoutes() {
 
 	// Assets
 	api.Get("/assets", handlers.ListAssets(s.config))
+	api.Get("/assets/diff", handlers.GetAssetDiff(s.config))
 
 	// Vulnerabilities
 	api.Get("/vulnerabilities", handlers.ListVulnerabilities(s.config))
+	api.Get("/vulnerabilities/diff", handlers.GetVulnerabilityDiff(s.config))
 	api.Get("/vulnerabilities/summary", handlers.GetVulnerabilitySummary(s.config))
 	api.Get("/vulnerabilities/:id", handlers.GetVulnerability(s.config))
 	api.Post("/vulnerabilities", handlers.CreateVulnerability(s.config))
@@ -264,6 +324,8 @@ func (s *Server) setupRoutes() {
 	// Settings API
 	api.Get("/settings/yaml", handlers.GetSettingsYAML(s.config))
 	api.Get("/settings/yaml/", handlers.GetSettingsYAML(s.config))
+	api.Post("/settings/reload", handlers.ReloadConfig(s.hotConfig))
+	api.Get("/settings/status", handlers.GetConfigStatus(s.hotConfig))
 
 	// LLM endpoints (OpenAI-compatible)
 	api.Post("/llm/v1/chat/completions", handlers.LLMChat(s.config))
@@ -276,6 +338,13 @@ func (s *Server) setupRoutes() {
 		api.Get("/tasks", handlers.ListTasks(s.options.Master))
 		api.Get("/tasks/:id", handlers.GetTask(s.options.Master))
 		api.Post("/tasks", handlers.SubmitTask(s.options.Master))
+	}
+
+	// Event receiver endpoints (only available when event receiver is enabled)
+	if s.eventReceiver != nil {
+		api.Get("/event-receiver/status", handlers.GetEventReceiverStatus(s.eventReceiver))
+		api.Get("/event-receiver/workflows", handlers.ListEventReceiverWorkflows(s.eventReceiver))
+		api.Post("/events/emit", handlers.EmitEvent(s.eventReceiver))
 	}
 
 	// Serve workspace files under /ws/{workspace_prefix_key}/
@@ -341,17 +410,55 @@ func (s *Server) serveEmbeddedUI() {
 
 // Start starts the server
 func (s *Server) Start(addr string) error {
+	// Start event receiver if configured
+	if s.eventReceiver != nil {
+		if err := s.eventReceiver.Start(context.Background()); err != nil {
+			oslogger.Get().Warn("Failed to start event receiver", zap.Error(err))
+		}
+	}
 	return s.app.Listen(addr)
 }
 
 // Shutdown gracefully shuts down the server
 func (s *Server) Shutdown() error {
+	// Stop event receiver if running
+	if s.eventReceiver != nil {
+		_ = s.eventReceiver.Stop()
+	}
+	// Stop hot config watcher if enabled
+	if s.hotConfig != nil {
+		_ = s.hotConfig.Stop()
+	}
 	return s.app.Shutdown()
 }
 
 // ShutdownWithContext gracefully shuts down the server with a context for timeout
 func (s *Server) ShutdownWithContext(ctx context.Context) error {
+	// Stop event receiver if running
+	if s.eventReceiver != nil {
+		_ = s.eventReceiver.Stop()
+	}
+	// Stop hot config watcher if enabled
+	if s.hotConfig != nil {
+		_ = s.hotConfig.Stop()
+	}
 	return s.app.ShutdownWithContext(ctx)
+}
+
+// GetConfigProvider returns the config provider used by this server.
+// This can be used by handlers that need access to fresh configuration.
+func (s *Server) GetConfigProvider() handlers.ConfigProvider {
+	return s.configProvider
+}
+
+// GetHotConfig returns the hot reloadable config, or nil if hot reload is disabled.
+func (s *Server) GetHotConfig() *config.HotReloadableConfig {
+	return s.hotConfig
+}
+
+// IsHotReloadEnabled returns true if config hot reload is enabled.
+func (s *Server) IsHotReloadEnabled() bool {
+	return s.hotConfig != nil
 }
 
 // errorHandler handles errors globally
@@ -366,4 +473,67 @@ func errorHandler(c *fiber.Ctx, err error) error {
 		"error":   true,
 		"message": err.Error(),
 	})
+}
+
+// startMemoryMetricsCollector starts a background goroutine that periodically
+// collects memory statistics and updates the Prometheus metrics.
+func startMemoryMetricsCollector(ctx context.Context, interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		var m runtime.MemStats
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				runtime.ReadMemStats(&m)
+				metrics.UpdateMemoryMetrics(&m)
+			}
+		}
+	}()
+}
+
+// PrintStartupInfo prints colorized server startup information to stdout.
+// This replaces Fiber's default banner with custom messaging.
+func (s *Server) PrintStartupInfo(addr string) {
+	p := terminal.NewPrinter()
+
+	// Starting server
+	p.Info("Starting Osmedeus server %s", terminal.Cyan("http://"+addr))
+
+	// Database info
+	p.Info("Database initialized %s", terminal.Cyan(s.config.Database.DBEngine))
+
+	// Hot reload status
+	if s.hotConfig != nil {
+		p.Info("Started config hot reload watcher %s", terminal.Cyan(s.hotConfig.GetConfigPath()))
+	}
+
+	// Event receiver info
+	if s.eventReceiver != nil {
+		triggers := s.eventReceiver.GetRegisteredTriggersInfo()
+		if len(triggers) > 0 {
+			// Collect unique topics
+			topicSet := make(map[string]struct{})
+			for _, t := range triggers {
+				if t.Topic != "" {
+					topicSet[t.Topic] = struct{}{}
+				}
+			}
+			topics := make([]string, 0, len(topicSet))
+			for topic := range topicSet {
+				topics = append(topics, topic)
+			}
+			sort.Strings(topics)
+
+			p.Info("Event receiver initialized")
+			p.Info("Loaded %s workflows with event triggers: %s",
+				terminal.Cyan(fmt.Sprintf("%d", len(s.eventReceiver.GetRegisteredWorkflows()))),
+				terminal.Cyan(strings.Join(topics, ", ")))
+		} else {
+			p.Info("Event receiver initialized %s", terminal.Gray("(no event triggers)"))
+		}
+	}
 }

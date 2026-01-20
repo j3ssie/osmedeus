@@ -1,0 +1,55 @@
+# Filtered Event Receiver Workflow
+# This workflow demonstrates advanced event filtering and input extraction
+name: filtered-receiver
+kind: module
+description: Workflow with filtered event triggers and complex input extraction
+tags: event,receiver,filter,example
+
+trigger:
+  # Only trigger on high/critical severity findings
+  - name: on-high-severity-finding
+    on: event
+    event:
+      topic: "scan.finding"
+      filters:
+        - "event.data.severity == 'high' || event.data.severity == 'critical'"
+        - "event.data.confirmed == true"
+    input:
+      type: function
+      function: 'jq("{{event.data}}", ".url")'
+      name: target
+    enabled: true
+
+  # Trigger on completed scans with results
+  - name: on-scan-complete
+    on: event
+    event:
+      topic: "scan.complete"
+      filters:
+        - "event.data.finding_count > 0"
+    input:
+      type: event_data
+      field: "data.target"
+      name: target
+    enabled: true
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: log-alert
+    type: function
+    functions:
+      - 'print_red("ALERT: High severity finding for {{target}}")'
+
+  - name: notify
+    type: function
+    functions:
+      - 'print_yellow("Sending notification for {{target}}")'
+      - 'notify_webhook("High severity finding detected: {{target}}")'
+
+  - name: log-processed
+    type: function
+    functions:
+      - 'print_green("Alert processed for {{target}}")'

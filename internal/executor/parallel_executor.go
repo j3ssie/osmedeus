@@ -3,12 +3,26 @@ package executor
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 )
+
+// parallelWorkItem represents a single parallel step to execute
+type parallelWorkItem struct {
+	index int
+	step  *core.Step
+}
+
+// parallelWorkResult represents the result of executing a parallel step
+type parallelWorkResult struct {
+	index  int
+	result *core.StepResult
+	err    error
+}
 
 // ParallelExecutor executes parallel steps
 type ParallelExecutor struct {
@@ -32,7 +46,8 @@ func (e *ParallelExecutor) StepTypes() []core.StepType {
 	return []core.StepType{core.StepTypeParallel}
 }
 
-// Execute executes a parallel step
+// Execute executes a parallel step using a bounded worker pool
+// to prevent resource exhaustion when executing many parallel steps
 func (e *ParallelExecutor) Execute(ctx context.Context, step *core.Step, execCtx *core.ExecutionContext) (*core.StepResult, error) {
 	result := &core.StepResult{
 		StepName:  step.Name,
@@ -55,84 +70,77 @@ func (e *ParallelExecutor) Execute(ctx context.Context, step *core.Step, execCtx
 		return result, ctx.Err()
 	}
 
-	type stepResult struct {
-		index  int
-		result *core.StepResult
-		err    error
+	numSteps := len(step.ParallelSteps)
+
+	// Bounded worker pool: NumCPU * 2 workers (or fewer if less steps)
+	numWorkers := runtime.NumCPU() * 2
+	if numWorkers > numSteps {
+		numWorkers = numSteps
 	}
 
-	results := make(chan stepResult, len(step.ParallelSteps))
-	var wg sync.WaitGroup
+	// Bounded channels for backpressure
+	workQueue := make(chan parallelWorkItem, numWorkers*2)
+	results := make(chan parallelWorkResult, numWorkers*2)
 
-	for i := range step.ParallelSteps {
-		wg.Add(1)
-		go func(idx int, s *core.Step) {
-			defer wg.Done()
+	var workerWg sync.WaitGroup
 
-			// Check if context is cancelled before starting
-			select {
-			case <-ctx.Done():
-				results <- stepResult{index: idx, err: ctx.Err()}
-				return
-			default:
+	// Start fixed worker pool
+	for i := 0; i < numWorkers; i++ {
+		workerWg.Add(1)
+		go func() {
+			defer workerWg.Done()
+			for work := range workQueue {
+				// Check context before execution
+				if ctx.Err() != nil {
+					results <- parallelWorkResult{index: work.index, err: ctx.Err()}
+					continue
+				}
+				childCtx := execCtx.Clone()
+				r, err := e.dispatcher.Dispatch(ctx, work.step, childCtx)
+				results <- parallelWorkResult{index: work.index, result: r, err: err}
 			}
-
-			// Clone context for parallel execution
-			childCtx := execCtx.Clone()
-			r, err := e.dispatcher.Dispatch(ctx, s, childCtx)
-
-			// Send result (use select to handle cancelled context)
-			select {
-			case results <- stepResult{index: idx, result: r, err: err}:
-			case <-ctx.Done():
-				// Context cancelled, still need to send a result
-				results <- stepResult{index: idx, result: r, err: ctx.Err()}
-			}
-		}(i, &step.ParallelSteps[i])
+		}()
 	}
 
-	// Wait for all steps to complete
+	// Producer: enqueue all work items
 	go func() {
-		wg.Wait()
+		defer close(workQueue)
+		for i := range step.ParallelSteps {
+			select {
+			case workQueue <- parallelWorkItem{index: i, step: &step.ParallelSteps[i]}:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	// Collector: close results channel when all workers finish
+	go func() {
+		workerWg.Wait()
 		close(results)
 	}()
 
-	// Collect results with context awareness
-	stepResults := make([]*core.StepResult, len(step.ParallelSteps))
+	// Collect results
+	stepResults := make([]*core.StepResult, numSteps)
 	var outputs []string
 	var firstError error
-	collected := 0
 
-	for collected < len(step.ParallelSteps) {
-		select {
-		case r, ok := <-results:
-			if !ok {
-				// Channel closed
-				goto done
-			}
-			collected++
-			stepResults[r.index] = r.result
-			if r.result != nil && r.result.Output != "" {
-				outputs = append(outputs, r.result.Output)
-			}
-			if r.err != nil && firstError == nil {
-				firstError = r.err
-			}
-			// Merge exports
-			if r.result != nil && r.result.Exports != nil {
-				for k, v := range r.result.Exports {
-					result.Exports[k] = v
-				}
-			}
-		case <-ctx.Done():
-			// Context cancelled - set error and wait for remaining results
-			if firstError == nil {
-				firstError = ctx.Err()
+	for r := range results {
+		stepResults[r.index] = r.result
+		if r.result != nil && r.result.Output != "" {
+			outputs = append(outputs, r.result.Output)
+		}
+		if r.err != nil && firstError == nil {
+			firstError = r.err
+		}
+		// Merge exports
+		if r.result != nil && r.result.Exports != nil {
+			for k, v := range r.result.Exports {
+				result.Exports[k] = v
 			}
 		}
 	}
 
-done:
 	result.Output = strings.Join(outputs, "\n")
 	result.EndTime = time.Now()
 	result.Duration = result.EndTime.Sub(result.StartTime)

@@ -131,7 +131,7 @@ modules:
 
     # condition: JavaScript expression - module only runs if evaluates to true
     # Can reference exported variables from previous modules
-    condition: 'fileLength("{{Output}}/portscan/http-services.txt") > 0'
+    condition: 'file_length("{{Output}}/portscan/http-services.txt") > 0'
 
     params:
       input: "{{Output}}/portscan/http-services.txt"
@@ -145,7 +145,7 @@ modules:
     depends_on:
       - web-scanning
 
-    condition: 'fileExists("{{Output}}/webscan/endpoints.txt")'
+    condition: 'file_exists("{{Output}}/webscan/endpoints.txt")'
 
     params:
       endpoints: "{{Output}}/webscan/endpoints.txt"

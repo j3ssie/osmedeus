@@ -52,7 +52,7 @@ steps:
   - name: determine-strategy
     type: function
     script: |
-      var fileCount = fileLength("{{file_list}}");
+      var fileCount = file_length("{{file_list}}");
       log_info("Files to process: " + fileCount);
 
       if (fileCount == 0) {
@@ -158,11 +158,11 @@ steps:
       log_info("Deduplicating aggregated data");
 
       var txtFile = "{{aggregated_dir}}/all-txt.txt";
-      if (fileExists(txtFile)) {
-        var lineCount = fileLength(txtFile);
+      if (file_exists(txtFile)) {
+        var lineCount = file_length(txtFile);
         log_info("Text entries before dedup: " + lineCount);
-        sortUnix(txtFile);
-        var newCount = fileLength(txtFile);
+        sort_unix(txtFile);
+        var newCount = file_length(txtFile);
         log_info("Text entries after dedup: " + newCount);
       }
 
@@ -215,7 +215,7 @@ steps:
     script: |
       var stats = {
         processing_mode: "{{processing_mode}}",
-        files_processed: fileLength("{{file_list}}"),
+        files_processed: file_length("{{file_list}}"),
         dedup_enabled: "{{enable_dedup}}" === "true",
         output_format: "{{output_format}}",
         completion_time: timestamp()

@@ -343,6 +343,178 @@ func TestLogError(t *testing.T) {
 	})
 }
 
+func TestPrintGreen(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("prints green message", func(t *testing.T) {
+		oldStdout := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+
+		result, err := runtime.Execute(`print_green("success message")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "success message", result)
+
+		_ = w.Close()
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, r)
+		os.Stdout = oldStdout
+
+		output := buf.String()
+		assert.Contains(t, output, "success message")
+	})
+
+	t.Run("returns the message", func(t *testing.T) {
+		result, err := runtime.Execute(`print_green("test")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "test", result)
+	})
+
+	t.Run("handles empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`print_green("")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+}
+
+func TestPrintBlue(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("prints blue message", func(t *testing.T) {
+		oldStdout := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+
+		result, err := runtime.Execute(`print_blue("info message")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "info message", result)
+
+		_ = w.Close()
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, r)
+		os.Stdout = oldStdout
+
+		output := buf.String()
+		assert.Contains(t, output, "info message")
+	})
+
+	t.Run("returns the message", func(t *testing.T) {
+		result, err := runtime.Execute(`print_blue("test")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "test", result)
+	})
+}
+
+func TestPrintYellow(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("prints yellow message", func(t *testing.T) {
+		oldStdout := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+
+		result, err := runtime.Execute(`print_yellow("warning message")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "warning message", result)
+
+		_ = w.Close()
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, r)
+		os.Stdout = oldStdout
+
+		output := buf.String()
+		assert.Contains(t, output, "warning message")
+	})
+
+	t.Run("returns the message", func(t *testing.T) {
+		result, err := runtime.Execute(`print_yellow("test")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "test", result)
+	})
+}
+
+func TestPrintRed(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("prints red message", func(t *testing.T) {
+		oldStdout := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+
+		result, err := runtime.Execute(`print_red("error message")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "error message", result)
+
+		_ = w.Close()
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, r)
+		os.Stdout = oldStdout
+
+		output := buf.String()
+		assert.Contains(t, output, "error message")
+	})
+
+	t.Run("returns the message", func(t *testing.T) {
+		result, err := runtime.Execute(`print_red("test")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "test", result)
+	})
+}
+
+func TestSetGetVar(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("set and get variable", func(t *testing.T) {
+		// Set a variable
+		result, err := runtime.Execute(`set_var("my_var", "hello world")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "hello world", result)
+
+		// Get the variable - need to use same VM context, so chain in single expression
+		result, err = runtime.Execute(`set_var("test_key", "test_value"); get_var("test_key")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "test_value", result)
+	})
+
+	t.Run("get non-existent variable returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`get_var("nonexistent_var_xyz")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("set_var with empty name returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`set_var("", "value")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("get_var with empty name returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`get_var("")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("variable is available in same execution via VM", func(t *testing.T) {
+		// When set_var is called, it also sets the value on the VM
+		// so it can be accessed directly as a variable
+		result, err := runtime.Execute(`set_var("direct_access", "direct_value"); direct_access`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "direct_value", result)
+	})
+
+	t.Run("set_var overwrites existing variable", func(t *testing.T) {
+		result, err := runtime.Execute(`set_var("overwrite_test", "first"); set_var("overwrite_test", "second"); get_var("overwrite_test")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "second", result)
+	})
+
+	t.Run("set_var with undefined value sets empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`set_var("undef_test", undefined); get_var("undef_test")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+}
+
 func TestMoveFile(t *testing.T) {
 	runtime := NewOttoRuntime()
 
@@ -355,7 +527,7 @@ func TestMoveFile(t *testing.T) {
 		err := os.WriteFile(source, []byte(content), 0644)
 		require.NoError(t, err)
 
-		result, err := runtime.Execute(`moveFile("`+source+`", "`+dest+`")`, nil)
+		result, err := runtime.Execute(`move_file("`+source+`", "`+dest+`")`, nil)
 		require.NoError(t, err)
 		assert.Equal(t, true, result)
 
@@ -378,7 +550,7 @@ func TestMoveFile(t *testing.T) {
 		err := os.WriteFile(source, []byte(content), 0644)
 		require.NoError(t, err)
 
-		result, err := runtime.Execute(`moveFile("`+source+`", "`+dest+`")`, nil)
+		result, err := runtime.Execute(`move_file("`+source+`", "`+dest+`")`, nil)
 		require.NoError(t, err)
 		assert.Equal(t, true, result)
 
@@ -397,7 +569,7 @@ func TestMoveFile(t *testing.T) {
 		source := filepath.Join(tmpDir, "nonexistent.txt")
 		dest := filepath.Join(tmpDir, "dest.txt")
 
-		result, err := runtime.Execute(`moveFile("`+source+`", "`+dest+`")`, nil)
+		result, err := runtime.Execute(`move_file("`+source+`", "`+dest+`")`, nil)
 		require.NoError(t, err)
 		assert.Equal(t, false, result)
 	})
@@ -410,7 +582,7 @@ func TestMoveFile(t *testing.T) {
 		err := os.MkdirAll(sourceDir, 0755)
 		require.NoError(t, err)
 
-		result, err := runtime.Execute(`moveFile("`+sourceDir+`", "`+dest+`")`, nil)
+		result, err := runtime.Execute(`move_file("`+sourceDir+`", "`+dest+`")`, nil)
 		require.NoError(t, err)
 		assert.Equal(t, false, result)
 
@@ -424,7 +596,7 @@ func TestMoveFile(t *testing.T) {
 		tmpDir := t.TempDir()
 		dest := filepath.Join(tmpDir, "dest.txt")
 
-		result, err := runtime.Execute(`moveFile("", "`+dest+`")`, nil)
+		result, err := runtime.Execute(`move_file("", "`+dest+`")`, nil)
 		require.NoError(t, err)
 		assert.Equal(t, false, result)
 	})
@@ -436,7 +608,7 @@ func TestMoveFile(t *testing.T) {
 		err := os.WriteFile(source, []byte("content"), 0644)
 		require.NoError(t, err)
 
-		result, err := runtime.Execute(`moveFile("`+source+`", "")`, nil)
+		result, err := runtime.Execute(`move_file("`+source+`", "")`, nil)
 		require.NoError(t, err)
 		assert.Equal(t, false, result)
 
@@ -454,7 +626,7 @@ func TestMoveFile(t *testing.T) {
 		err := os.WriteFile(source, []byte(content), 0755)
 		require.NoError(t, err)
 
-		result, err := runtime.Execute(`moveFile("`+source+`", "`+dest+`")`, nil)
+		result, err := runtime.Execute(`move_file("`+source+`", "`+dest+`")`, nil)
 		require.NoError(t, err)
 		assert.Equal(t, true, result)
 

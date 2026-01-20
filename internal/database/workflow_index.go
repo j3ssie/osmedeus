@@ -119,6 +119,7 @@ func upsertWorkflowMeta(ctx context.Context, w *core.Workflow, force bool) error
 		existing.FilePath = w.FilePath
 		existing.Checksum = w.Checksum
 		existing.Tags = w.Tags
+		existing.Hidden = w.Hidden
 		existing.StepCount = len(w.Steps)
 		existing.ModuleCount = len(w.Modules)
 		existing.ParamsJSON = paramsJSON
@@ -126,6 +127,12 @@ func upsertWorkflowMeta(ctx context.Context, w *core.Workflow, force bool) error
 		existing.UpdatedAt = now
 
 		_, err = db.NewUpdate().Model(&existing).WherePK().Exec(ctx)
+		if err == nil {
+			// Invalidate cache after successful update
+			if cache := GetCache(); cache != nil {
+				cache.InvalidateWorkflowMeta(w.Name)
+			}
+		}
 		return err
 	}
 
@@ -137,6 +144,7 @@ func upsertWorkflowMeta(ctx context.Context, w *core.Workflow, force bool) error
 		FilePath:    w.FilePath,
 		Checksum:    w.Checksum,
 		Tags:        w.Tags,
+		Hidden:      w.Hidden,
 		StepCount:   len(w.Steps),
 		ModuleCount: len(w.Modules),
 		ParamsJSON:  paramsJSON,
@@ -146,6 +154,12 @@ func upsertWorkflowMeta(ctx context.Context, w *core.Workflow, force bool) error
 	}
 
 	_, err = db.NewInsert().Model(meta).Exec(ctx)
+	if err == nil {
+		// Invalidate cache after successful insert (in case of stale negative cache)
+		if cache := GetCache(); cache != nil {
+			cache.InvalidateWorkflowMeta(w.Name)
+		}
+	}
 	return err
 }
 
@@ -169,6 +183,9 @@ func ListWorkflowsFromDB(ctx context.Context, query WorkflowQuery) (*WorkflowMet
 
 	// Build base query
 	baseQuery := db.NewSelect().Model((*WorkflowMeta)(nil))
+
+	// Filter out hidden workflows by default
+	baseQuery = baseQuery.Where("hidden = ? OR hidden IS NULL", false)
 
 	// Apply filters
 	if query.Kind != "" {
@@ -208,6 +225,8 @@ func ListWorkflowsFromDB(ctx context.Context, query WorkflowQuery) (*WorkflowMet
 	err = db.NewSelect().
 		Model(&workflows).
 		Apply(func(q *bun.SelectQuery) *bun.SelectQuery {
+			// Filter out hidden workflows by default
+			q = q.Where("hidden = ? OR hidden IS NULL", false)
 			if query.Kind != "" {
 				q = q.Where("kind = ?", query.Kind)
 			}
@@ -248,10 +267,23 @@ func GetWorkflowFromDB(ctx context.Context, name string) (*WorkflowMeta, error) 
 		return nil, fmt.Errorf("database not connected")
 	}
 
+	// Try cache first
+	if cache := GetCache(); cache != nil {
+		if meta, found := cache.GetWorkflowMeta(name); found {
+			return meta, nil
+		}
+	}
+
+	// Cache miss - query database
 	var meta WorkflowMeta
 	err := db.NewSelect().Model(&meta).Where("name = ?", name).Scan(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	// Store in cache
+	if cache := GetCache(); cache != nil {
+		cache.SetWorkflowMeta(name, &meta)
 	}
 
 	return &meta, nil

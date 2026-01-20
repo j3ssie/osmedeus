@@ -185,15 +185,22 @@ func (l *TestLogger) Success(format string, args ...interface{}) {
 }
 
 // runCLIWithLog executes the CLI with given args and logs verbose output
+// Note: Only --base-folder is passed at root level. -W/--workspaces-folder is a
+// subcommand-specific flag (e.g., for 'run') and should be added by individual tests if needed.
 func runCLIWithLog(t *testing.T, log *TestLogger, args ...string) (stdout, stderr string, err error) {
 	t.Helper()
 	binary := getBinaryPath(t)
 	baseDir := t.TempDir()
+	workspacesDir := filepath.Join(baseDir, "workspaces")
+	_ = os.MkdirAll(workspacesDir, 0755)
+	// Only use --base-folder at root level (it's a persistent/global flag)
 	args = append([]string{"--base-folder", baseDir}, args...)
 
 	log.Command(args...)
 
 	cmd := exec.Command(binary, args...)
+	// Set OSM_WORKSPACES env var as alternative to -W flag
+	cmd.Env = append(os.Environ(), "OSM_SKIP_PATH_SETUP=1", "OSM_WORKSPACES="+workspacesDir)
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
@@ -215,11 +222,16 @@ func runCLIWithLogAndBase(t *testing.T, log *TestLogger, args ...string) (baseDi
 	t.Helper()
 	binary := getBinaryPath(t)
 	baseDir = t.TempDir()
+	workspacesDir := filepath.Join(baseDir, "workspaces")
+	_ = os.MkdirAll(workspacesDir, 0755)
+	// Only use --base-folder at root level (it's a persistent/global flag)
 	args = append([]string{"--base-folder", baseDir}, args...)
 
 	log.Command(args...)
 
 	cmd := exec.Command(binary, args...)
+	// Set OSM_WORKSPACES env var as alternative to -W flag
+	cmd.Env = append(os.Environ(), "OSM_SKIP_PATH_SETUP=1", "OSM_WORKSPACES="+workspacesDir)
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf

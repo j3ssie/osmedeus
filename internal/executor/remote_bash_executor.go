@@ -15,11 +15,11 @@ import (
 
 // RemoteBashExecutor executes remote-bash steps on Docker/SSH runners
 type RemoteBashExecutor struct {
-	templateEngine *template.Engine
+	templateEngine template.TemplateEngine
 }
 
 // NewRemoteBashExecutor creates a new remote bash executor
-func NewRemoteBashExecutor(engine *template.Engine) *RemoteBashExecutor {
+func NewRemoteBashExecutor(engine template.TemplateEngine) *RemoteBashExecutor {
 	return &RemoteBashExecutor{
 		templateEngine: engine,
 	}

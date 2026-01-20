@@ -1,0 +1,159 @@
+# Comprehensive example demonstrating all foreach step fields
+kind: module
+name: module-foreach-advanced
+description: Advanced foreach with threads, nested steps, and exports
+tags: example, foreach, comprehensive
+
+params:
+  - name: target
+    required: true
+  - name: threads
+    type: int
+    default: 5
+
+steps:
+  # Prepare input files
+  - name: prepare-urls
+    type: bash
+    command: |
+      echo "http://{{target}}/api" > {{Output}}/urls.txt
+      echo "http://{{target}}/admin" >> {{Output}}/urls.txt
+      echo "http://{{target}}/login" >> {{Output}}/urls.txt
+      echo "http://{{target}}/dashboard" >> {{Output}}/urls.txt
+      echo "http://{{target}}/settings" >> {{Output}}/urls.txt
+
+  - name: prepare-ports
+    type: bash
+    command: |
+      echo "22" > {{Output}}/ports.txt
+      echo "80" >> {{Output}}/ports.txt
+      echo "443" >> {{Output}}/ports.txt
+      echo "8080" >> {{Output}}/ports.txt
+
+  # File input iteration with single thread
+  - name: foreach-single-thread
+    type: foreach
+    input: "{{Output}}/urls.txt"
+    variable: url
+    threads: 1
+    step:
+      name: scan-url
+      type: bash
+      command: echo "Scanning [[url]] sequentially" >> {{Output}}/sequential-results.txt
+
+  # File input iteration with multiple threads
+  - name: foreach-multi-thread
+    type: foreach
+    input: "{{Output}}/urls.txt"
+    variable: target_url
+    threads: 5
+    step:
+      name: parallel-scan
+      type: bash
+      command: echo "Parallel scan of [[target_url]]" >> {{Output}}/parallel-results.txt
+
+  # Foreach with parameterized thread count
+  - name: foreach-param-threads
+    type: foreach
+    input: "{{Output}}/ports.txt"
+    variable: port
+    threads: "{{threads}}"
+    step:
+      name: port-check
+      type: bash
+      command: echo "Checking port [[port]] on {{target}}" >> {{Output}}/port-results.txt
+
+  # Foreach with function step inside
+  - name: foreach-with-function
+    type: foreach
+    input: "{{Output}}/urls.txt"
+    variable: scan_url
+    threads: 3
+    step:
+      name: log-url
+      type: function
+      function: 'log_info("Processing URL: [[scan_url]]")'
+
+  # Foreach with parallel-steps inside (nested parallelism)
+  - name: foreach-with-parallel
+    type: foreach
+    input: "{{Output}}/ports.txt"
+    variable: target_port
+    threads: 2
+    step:
+      name: multi-scan
+      type: parallel-steps
+      parallel_steps:
+        - name: tcp-scan
+          type: bash
+          command: echo "TCP scan port [[target_port]]" >> {{Output}}/tcp-scans.txt
+        - name: udp-scan
+          type: bash
+          command: echo "UDP scan port [[target_port]]" >> {{Output}}/udp-scans.txt
+
+  # Foreach with timeout on inner step
+  - name: foreach-with-timeout
+    type: foreach
+    input: "{{Output}}/urls.txt"
+    variable: timed_url
+    threads: 3
+    step:
+      name: timed-request
+      type: bash
+      command: echo "Timed request to [[timed_url]]"
+      timeout: 30
+
+  # Foreach with exports from inner step
+  - name: foreach-with-exports
+    type: foreach
+    input: "{{Output}}/urls.txt"
+    variable: export_url
+    threads: 2
+    step:
+      name: extract-data
+      type: bash
+      command: |
+        echo "Extracting from [[export_url]]"
+        echo "[[export_url]]" >> {{Output}}/extracted-urls.txt
+      exports:
+        last_url: "[[export_url]]"
+
+  # Foreach with pre_condition
+  - name: foreach-with-condition
+    type: foreach
+    input: "{{Output}}/urls.txt"
+    variable: cond_url
+    threads: 3
+    step:
+      name: conditional-scan
+      type: bash
+      pre_condition: "file_exists('{{Output}}/urls.txt')"
+      command: echo "Conditional scan of [[cond_url]]"
+
+  # Foreach with on_error handling in inner step
+  - name: foreach-with-error-handling
+    type: foreach
+    input: "{{Output}}/urls.txt"
+    variable: error_url
+    threads: 2
+    step:
+      name: risky-operation
+      type: bash
+      command: |
+        echo "Risky operation on [[error_url]]"
+        # Simulated operation that might fail
+      on_error:
+        - action: log
+          message: "Failed processing [[error_url]]"
+        - action: continue
+
+  # Final aggregation step
+  - name: aggregate-results
+    type: bash
+    command: |
+      echo "=== Aggregated Results ===" > {{Output}}/final-report.txt
+      echo "Sequential results:" >> {{Output}}/final-report.txt
+      cat {{Output}}/sequential-results.txt >> {{Output}}/final-report.txt 2>/dev/null || true
+      echo "" >> {{Output}}/final-report.txt
+      echo "Parallel results:" >> {{Output}}/final-report.txt
+      cat {{Output}}/parallel-results.txt >> {{Output}}/final-report.txt 2>/dev/null || true

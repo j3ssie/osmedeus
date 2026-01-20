@@ -1,0 +1,18 @@
+kind: module
+name: child-merge-steps
+description: Child that merges steps (replace specific, remove some, add new)
+extends: base-module
+
+override:
+  steps:
+    mode: merge
+    steps:
+      - name: step-new
+        type: bash
+        command: echo "New step added"
+    remove:
+      - step-three
+    replace:
+      - name: step-two
+        type: bash
+        command: echo "Step two replaced with new command"

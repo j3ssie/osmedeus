@@ -1,0 +1,12 @@
+name: test-extends-fast
+kind: module
+description: Fast variant - extends base with lower resource usage
+tags: test,extends,fast
+extends: test-extends-base
+
+override:
+  params:
+    threads:
+      default: "5"
+    rate_limit:
+      default: "50"

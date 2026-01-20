@@ -1,0 +1,12 @@
+kind: module
+name: child-prepend-steps
+description: Child that prepends steps
+extends: base-module
+
+override:
+  steps:
+    mode: prepend
+    steps:
+      - name: step-zero
+        type: bash
+        command: echo "Step zero prepended by child"

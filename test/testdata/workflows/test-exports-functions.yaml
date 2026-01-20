@@ -1,6 +1,6 @@
 name: test-exports-functions
 kind: module
-description: Test exports with utility functions like fileLength, contains, fileExists, replace
+description: Test exports with utility functions like file_length, contains, file_exists, replace
 tags: test,exports,functions,utility
 
 params:
@@ -29,13 +29,13 @@ steps:
     type: bash
     command: echo "Checking file length"
     exports:
-      line_count: "fileLength('{{outputFile}}')"
+      line_count: "file_length('{{outputFile}}')"
 
   - name: test-trim
     type: bash
     command: echo "Checking trim"
     exports:
-      trimmed_output: "trim(readFile('{{trimTestFile}}'))"
+      trimmed_output: "trim(read_file('{{trimTestFile}}'))"
 
   - name: test-contains-success
     type: bash
@@ -53,19 +53,19 @@ steps:
     type: bash
     command: echo "Checking existence"
     exports:
-      file_exists: "fileExists('{{outputFile}}')"
+      file_exists: "file_exists('{{outputFile}}')"
 
   - name: test-fileexists-false
     type: bash
     command: echo "Checking nonexistent"
     exports:
-      missing_file: "fileExists('{{Output}}/nonexistent.txt')"
+      missing_file: "file_exists('{{Output}}/nonexistent.txt')"
 
   - name: test-replace
     type: bash
     command: echo "Checking replace"
     exports:
-      replaced_output: "replace(readFile('{{replaceTestFile}}'), ',', '-')"
+      replaced_output: "replace(read_file('{{replaceTestFile}}'), ',', '-')"
 
   - name: final-summary
     type: bash

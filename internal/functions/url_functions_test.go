@@ -269,3 +269,83 @@ func TestIsNoiseURL(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractHostname(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"simple domain", "example.com", "example.com"},
+		{"domain with www", "www.example.com", "www.example.com"},
+		{"http URL", "http://example.com", "example.com"},
+		{"https URL", "https://example.com", "example.com"},
+		{"URL with path", "https://example.com/path/to/page", "example.com"},
+		{"URL with port", "https://example.com:8080/path", "example.com"},
+		{"URL with query", "https://example.com/page?foo=bar", "example.com"},
+		{"domain with port no scheme", "example.com:8080", "example.com"},
+		{"domain with path no scheme", "example.com/path", "example.com"},
+		{"subdomain URL", "https://api.sub.example.com/v1", "api.sub.example.com"},
+		{"IP address", "192.168.1.1", "192.168.1.1"},
+		{"IP with port", "192.168.1.1:8080", "192.168.1.1"},
+		{"IP URL", "http://192.168.1.1/path", "192.168.1.1"},
+		{"empty string", "", ""},
+		{"whitespace", "  example.com  ", "example.com"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractHostname(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestGetIP_WithRegistry(t *testing.T) {
+	registry := NewRegistry()
+
+	// Test with a well-known domain (google.com should always resolve)
+	result, err := registry.Execute(`get_ip("google.com")`, map[string]interface{}{})
+	require.NoError(t, err)
+	// Should return a non-empty IP string
+	ip, ok := result.(string)
+	assert.True(t, ok, "result should be a string")
+	assert.NotEmpty(t, ip, "should resolve to an IP")
+
+	// Test with URL format
+	result, err = registry.Execute(`get_ip("https://google.com/path")`, map[string]interface{}{})
+	require.NoError(t, err)
+	ip, ok = result.(string)
+	assert.True(t, ok, "result should be a string")
+	assert.NotEmpty(t, ip, "should resolve URL to an IP")
+
+	// Test with empty input
+	result, err = registry.Execute(`get_ip("")`, map[string]interface{}{})
+	require.NoError(t, err)
+	ip, ok = result.(string)
+	assert.True(t, ok, "result should be a string")
+	assert.Empty(t, ip, "empty input should return empty string")
+
+	// Test with invalid domain
+	result, err = registry.Execute(`get_ip("this-domain-does-not-exist-12345.invalid")`, map[string]interface{}{})
+	require.NoError(t, err)
+	ip, ok = result.(string)
+	assert.True(t, ok, "result should be a string")
+	assert.Empty(t, ip, "invalid domain should return empty string")
+}
+
+func TestResolveToIP(t *testing.T) {
+	// Test with empty hostname
+	result := resolveToIP("")
+	assert.Empty(t, result)
+
+	// Test with invalid hostname
+	result = resolveToIP("this-domain-does-not-exist-12345.invalid")
+	assert.Empty(t, result)
+
+	// Test with localhost (should resolve)
+	result = resolveToIP("localhost")
+	// localhost typically resolves to 127.0.0.1 or ::1
+	// We just check it returns something
+	assert.NotEmpty(t, result, "localhost should resolve")
+}

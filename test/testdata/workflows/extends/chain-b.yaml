@@ -1,0 +1,15 @@
+kind: module
+name: chain-b
+description: Chain test - middle
+extends: chain-a
+
+override:
+  params:
+    param-a:
+      default: "overridden-by-b"
+  steps:
+    mode: append
+    steps:
+      - name: step-from-b
+        type: bash
+        command: echo "from chain-b"

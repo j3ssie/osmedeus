@@ -144,7 +144,27 @@ func (l *Loader) loadAndCache(name, path string) (*core.Workflow, error) {
 		zap.Int("steps", len(workflow.Steps)),
 	)
 
-	// Validate workflow
+	// Resolve inheritance if workflow extends another
+	if workflow.Extends != "" {
+		log.Debug("Resolving workflow inheritance",
+			zap.String("workflow", workflow.Name),
+			zap.String("extends", workflow.Extends),
+		)
+
+		resolver := NewInheritanceResolver(l)
+		workflow, err = resolver.Resolve(workflow)
+		if err != nil {
+			log.Debug("Inheritance resolution failed", zap.Error(err))
+			return nil, fmt.Errorf("inheritance resolution: %w", err)
+		}
+
+		log.Debug("Inheritance resolved",
+			zap.String("workflow", workflow.Name),
+			zap.String("resolved_from", workflow.ResolvedFrom),
+		)
+	}
+
+	// Validate workflow (after inheritance resolution)
 	if err := l.parser.Validate(workflow); err != nil {
 		log.Debug("Workflow validation failed", zap.Error(err))
 		return nil, err
@@ -285,7 +305,7 @@ func (l *Loader) GetAllCached() []*core.Workflow {
 
 // ListAllWorkflows recursively scans the workflow directory and returns
 // all workflows categorized by their kind (flow or module)
-func (l *Loader) ListAllWorkflows() (flows []string, modules []string, err error) {
+func (l *Loader) ListAllWorkflows() (flows, modules []string, err error) {
 	files, err := l.findYAMLFiles(l.workflowsDir, true) // recursive=true
 	if err != nil {
 		return nil, nil, err
@@ -297,9 +317,10 @@ func (l *Loader) ListAllWorkflows() (flows []string, modules []string, err error
 			continue // skip invalid files
 		}
 		name := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
-		if wf.Kind == core.KindFlow {
+		switch wf.Kind {
+		case core.KindFlow:
 			flows = append(flows, name)
-		} else {
+		default:
 			modules = append(modules, name)
 		}
 	}

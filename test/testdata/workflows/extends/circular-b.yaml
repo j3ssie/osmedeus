@@ -1,0 +1,9 @@
+kind: module
+name: circular-b
+description: Circular dependency test B
+extends: circular-a
+
+steps:
+  - name: step-b
+    type: bash
+    command: echo "B"

@@ -1,0 +1,27 @@
+name: test-step-dependencies
+kind: module
+description: Test DAG-style step dependencies
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: step-a
+    type: bash
+    command: echo "A completed"
+
+  - name: step-b
+    type: bash
+    command: echo "B completed"
+    depends_on: [step-a]
+
+  - name: step-c
+    type: bash
+    command: echo "C completed"
+    depends_on: [step-a]
+
+  - name: step-d
+    type: bash
+    command: echo "D completed"
+    depends_on: [step-b, step-c]

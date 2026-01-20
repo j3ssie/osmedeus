@@ -173,12 +173,13 @@ The high-level ambitious plan for the project, in order:
 | :-: | ----------------------------------------------------------------------------- | :----: |
 |  1  | Osmedeus Engine reforged with a next-generation architecture                  |   ✅   |
 |  2  | Flexible workflows and step types                                             |   ✅   |
-|  3  | Beautiful UI for visualize results and workflow diagram                       |   ✅   |
-|  4  | Rewriting the workflow to adapt to new architecture and syntax                |   ⚠️   |
-|  5  | Testing more utility functions like notifications                             |   ⚠️   |
-|  6  | Generate diff reports showing new/removed/unchanged assets between runs.      |   ❌   |
-|  7  | Adding step type from cloud provider that can be run via serverless           |   ❌   |
-|  N  | Fancy features (to be expanded upon later)                                    |   ❌   |
+|  3  | Event-driven architectural model and the different trigger event categories   |   ✅   |
+|  4  | Beautiful UI for visualize results and workflow diagram                       |   ✅   |
+|  5  | Rewriting the workflow to adapt to new architecture and syntax                |   ⚠️   |
+|  6  | Testing more utility functions like notifications                             |   ⚠️   |
+|  7  | Generate diff reports showing new/removed/unchanged assets between runs.      |   ❌   |
+|  8  | Adding step type from cloud provider that can be run via serverless           |   ❌   |
+|  N  | Fancy features (to be discussed later)                                        |   ❌   |
 
 ## Documentation
 

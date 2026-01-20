@@ -486,7 +486,7 @@ func TestRenderMarkdownReport(t *testing.T) {
 		outputPath := filepath.Join(tmpDir, "output.md")
 
 		template := "# Report for {{Workspace}}\n\n" +
-			"Result: ```osm-func\ntoUpperCase(\"test\")\n```\n"
+			"Result: ```osm-func\nto_upper_case(\"test\")\n```\n"
 		err := os.WriteFile(templatePath, []byte(template), 0644)
 		require.NoError(t, err)
 

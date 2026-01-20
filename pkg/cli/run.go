@@ -4,12 +4,16 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -52,9 +56,22 @@ var (
 	repeatWaitTime       string
 	runTimeout           string
 	stdModule            bool
+	moduleURL            string
 	emptyTarget          bool
 	progressBar          bool
 	disableWorkflowState bool
+
+	// Chunk mode flags
+	chunkSize    int
+	chunkCount   int
+	chunkPart    int
+	chunkThreads int
+
+	// Validation flags
+	skipValidation bool
+
+	// activeChunkInfo holds chunk info during execution (nil when not chunking)
+	activeChunkInfo *ChunkInfo
 
 	// explicitFlags tracks which CLI flags were explicitly set by the user
 	// Used to determine precedence when applying workflow preferences
@@ -91,9 +108,19 @@ func init() {
 	runCmd.Flags().StringVar(&repeatWaitTime, "repeat-wait-time", "1h", "wait time between repeats (e.g., 30s, 20m, 10h, 1d)")
 	runCmd.Flags().StringVar(&runTimeout, "timeout", "", "run timeout (e.g., 2h, 3h, 1d)")
 	runCmd.Flags().BoolVar(&stdModule, "std-module", false, "read module YAML from stdin")
+	runCmd.Flags().StringVar(&moduleURL, "module-url", "", "URL to fetch module YAML from (supports GitHub private repos)")
 	runCmd.Flags().BoolVar(&emptyTarget, "empty-target", false, "run without target (generates placeholder target)")
 	runCmd.Flags().BoolVarP(&progressBar, "progress-bar", "G", false, "show progress bar during execution (enables silent mode)")
 	runCmd.Flags().BoolVar(&disableWorkflowState, "disable-workflow-state", false, "disable writing workflow YAML to output directory")
+
+	// Chunk mode flags
+	runCmd.Flags().IntVar(&chunkSize, "chunk-size", 0, "split targets into chunks of N targets each (0 = disabled)")
+	runCmd.Flags().IntVar(&chunkCount, "chunk-count", 0, "split targets into N equal chunks (0 = disabled)")
+	runCmd.Flags().IntVar(&chunkPart, "chunk-part", -1, "execute only chunk M (0-indexed, requires --chunk-size or --chunk-count)")
+	runCmd.Flags().IntVar(&chunkThreads, "chunk-threads", 0, "override concurrency within chunk (0 = use -c value)")
+
+	// Validation flags
+	runCmd.Flags().BoolVar(&skipValidation, "skip-validation", false, "skip target type validation from dependencies.variables")
 }
 
 // captureExplicitFlags records which CLI flags were explicitly set by the user
@@ -194,6 +221,24 @@ func applyWorkflowPreferences(prefs *core.Preferences, printer *terminal.Printer
 	}
 }
 
+// handleTargetTypeMismatchError checks if err is a TargetTypeMismatchError and prints it formatted.
+// Returns true if it was handled, false otherwise.
+func handleTargetTypeMismatchError(err error) bool {
+	var ttmErr *executor.TargetTypeMismatchError
+	if errors.As(err, &ttmErr) {
+		fmt.Println()
+		fmt.Printf("%s %s\n", terminal.Red("✘"), terminal.BoldRed("Target type mismatch"))
+		fmt.Printf("  Supplied: %s\n", ttmErr.Supplied)
+		fmt.Printf("  %s %s\n", terminal.HiBlue("Required Params:"), ttmErr.ExpectedType)
+		fmt.Println()
+		fmt.Printf("  %s %s\n", terminal.Yellow("💡"), terminal.HiBlue("\"Target\" in Required Params is supplied via -t flag (e.g., -t example.com) or each line from -T list-of-targets.txt"))
+		fmt.Printf("  %s %s\n", terminal.Yellow("💡"), terminal.Yellow("Hint: Use --skip-validation to bypass this check"))
+		fmt.Println()
+		return true
+	}
+	return false
+}
+
 func runRun(cmd *cobra.Command, args []string) error {
 	printer := terminal.NewPrinter()
 
@@ -223,7 +268,7 @@ func runRun(cmd *cobra.Command, args []string) error {
 	log := logger.Get()
 
 	// Validate flags
-	if flowName == "" && len(moduleNames) == 0 && !stdModule {
+	if flowName == "" && len(moduleNames) == 0 && !stdModule && moduleURL == "" {
 		printer.Warning("No workflow specified. Using default flow: general")
 		printer.Info("Tip: Use -f <flow_name> or -m <module_name> to select a workflow")
 		fmt.Println()
@@ -234,6 +279,9 @@ func runRun(cmd *cobra.Command, args []string) error {
 	}
 	if stdModule && (flowName != "" || len(moduleNames) > 0) {
 		return fmt.Errorf("--std-module cannot be combined with --flow or --module")
+	}
+	if moduleURL != "" && (flowName != "" || len(moduleNames) > 0 || stdModule) {
+		return fmt.Errorf("--module-url cannot be combined with --flow, --module, or --std-module")
 	}
 
 	// Parse timeout duration
@@ -290,6 +338,49 @@ func runRun(cmd *cobra.Command, args []string) error {
 		} else {
 			return fmt.Errorf("no targets specified. Use -t, -T, pipe targets via stdin, or use --empty-target")
 		}
+	}
+
+	// Validate chunk flags mutual exclusivity
+	if chunkSize > 0 && chunkCount > 0 {
+		return fmt.Errorf("cannot use both --chunk-size and --chunk-count")
+	}
+
+	// Convert --chunk-count to --chunk-size
+	if chunkCount > 0 && len(allTargets) > 0 {
+		chunkSize = (len(allTargets) + chunkCount - 1) / chunkCount // ceiling division
+	}
+
+	// Apply chunking if enabled
+	activeChunkInfo = nil // Reset chunk info
+	if chunkSize > 0 {
+		chunkedTargets, info, err := chunkTargets(allTargets, chunkSize, chunkPart)
+		if err != nil {
+			if err.Error() == "chunk-info" {
+				// Info mode - display chunk breakdown
+				printer.Info("Chunk Info: %d total targets, %d chunks of size %d",
+					len(allTargets), info.Total, info.Size)
+				for i := 0; i < info.Total; i++ {
+					start := i * info.Size
+					end := start + info.Size
+					if end > len(allTargets) {
+						end = len(allTargets)
+					}
+					printer.Info("  Chunk %d: targets %d-%d (%d targets)",
+						i, start, end-1, end-start)
+				}
+				return nil
+			}
+			return err
+		}
+		allTargets = chunkedTargets
+		activeChunkInfo = info
+		printer.Info("Processing chunk %d/%d (%d targets, indices %d-%d)",
+			info.Index+1, info.Total, len(allTargets), info.Start, info.End-1)
+	}
+
+	// Apply chunk-threads override
+	if chunkThreads > 0 && chunkSize > 0 {
+		concurrency = chunkThreads
 	}
 
 	// Handle distributed run mode
@@ -356,6 +447,24 @@ func runRun(cmd *cobra.Command, args []string) error {
 
 			// Execute for all targets (nil loader since flows not supported for stdin)
 			lastErr = executeSingleWorkflowDirect(ctx, workflow, allTargets, cfg, printer, log, nil)
+		} else if moduleURL != "" {
+			// URL module mode - fetch workflow from URL
+			workflow, err := fetchWorkflowFromURL(moduleURL)
+			if err != nil {
+				return fmt.Errorf("failed to fetch workflow from URL: %w", err)
+			}
+
+			printer.Success("Workflow fetched from URL: %s (%s)", workflow.Name, terminal.TypeBadge(string(workflow.Kind)))
+
+			// Apply workflow preferences (if any) - CLI flags take precedence
+			applyWorkflowPreferences(workflow.Preferences, printer)
+
+			if workflow.IsFlow() {
+				return fmt.Errorf("--module-url only supports module workflows, got flow")
+			}
+
+			// Execute for all targets (nil loader since flows not supported for URL modules)
+			lastErr = executeSingleWorkflowDirect(ctx, workflow, allTargets, cfg, printer, log, nil)
 		} else if flowName != "" {
 			// Flow mode - single workflow
 			lastErr = executeSingleWorkflow(ctx, loader, flowName, allTargets, cfg, printer, log)
@@ -373,7 +482,11 @@ func runRun(cmd *cobra.Command, args []string) error {
 						lastErr = moduleErr
 						break
 					}
-					printer.Error("Module %s failed: %s", moduleName, moduleErr)
+					// Skip printing for TargetTypeMismatchError (already printed)
+					var ttmErr *executor.TargetTypeMismatchError
+					if !errors.As(moduleErr, &ttmErr) {
+						printer.Error("Module %s failed: %s", moduleName, moduleErr)
+					}
 					lastErr = moduleErr
 					// Continue to next module
 				}
@@ -520,7 +633,11 @@ func executeRunsConcurrentlyWithContext(ctx context.Context, workflow *core.Work
 	for r := range results {
 		allResults[r.index] = r.result
 		if r.err != nil {
-			printer.Error("Failed for target %s: %s", targets[r.index], r.err)
+			// Skip printing for TargetTypeMismatchError (already printed)
+			var ttmErr *executor.TargetTypeMismatchError
+			if !errors.As(r.err, &ttmErr) {
+				printer.Error("Failed for target %s: %s", targets[r.index], r.err)
+			}
 			lastErr = r.err
 		}
 	}
@@ -570,6 +687,15 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 	params["workspaces_folder"] = workspacesFolder
 	params["heuristics_check"] = heuristicsCheck
 
+	// Add chunk params if chunking is active
+	if activeChunkInfo != nil {
+		params["chunk_index"] = fmt.Sprintf("%d", activeChunkInfo.Index)
+		params["chunk_size"] = fmt.Sprintf("%d", activeChunkInfo.Size)
+		params["total_chunks"] = fmt.Sprintf("%d", activeChunkInfo.Total)
+		params["chunk_start"] = fmt.Sprintf("%d", activeChunkInfo.Start)
+		params["chunk_end"] = fmt.Sprintf("%d", activeChunkInfo.End)
+	}
+
 	log.Debug("Run parameters configured",
 		zap.String("target", target),
 		zap.String("tactic", runTactic),
@@ -599,6 +725,7 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 	exec := executor.NewExecutor()
 	exec.SetDryRun(dryRun)
 	exec.SetDisableWorkflowState(disableWorkflowState)
+	exec.SetSkipValidation(skipValidation)
 	exec.SetSpinner(showSpinner)
 	exec.SetVerbose(verbose) // Show actual step output in verbose mode
 	exec.SetSilent(silent)   // Hide step output in silent mode
@@ -676,6 +803,17 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 		if pb != nil {
 			pb.Abort()
 		}
+
+		// Handle target type mismatch error specially (print once, skip logging)
+		if handleTargetTypeMismatchError(err) {
+			// Update run status to failed in database
+			if runID != "" {
+				_ = database.UpdateRunStatus(ctx, runID, "failed", err.Error())
+			}
+			return nil, err
+		}
+
+		// Other errors: log normally
 		log.Error("Workflow execution failed",
 			zap.String("workflow", workflow.Name),
 			zap.String("target", target),
@@ -846,6 +984,56 @@ func deduplicateTargets(inputTargets []string) []string {
 		}
 	}
 	return result
+}
+
+// ChunkInfo holds metadata about the current chunk
+type ChunkInfo struct {
+	Index int
+	Size  int
+	Total int
+	Start int
+	End   int
+}
+
+// chunkTargets splits targets into chunks and returns the specified chunk
+func chunkTargets(allTargets []string, size, part int) ([]string, *ChunkInfo, error) {
+	if size <= 0 {
+		return allTargets, nil, nil // No chunking
+	}
+
+	total := len(allTargets)
+	if total == 0 {
+		return allTargets, nil, nil // Empty targets, no chunking needed
+	}
+
+	totalChunks := (total + size - 1) / size // Ceiling division
+
+	if part < 0 {
+		// Info mode - return error with chunk details
+		return nil, &ChunkInfo{Total: totalChunks, Size: size},
+			fmt.Errorf("chunk-info")
+	}
+
+	if part >= totalChunks {
+		return nil, nil, fmt.Errorf("chunk-part %d exceeds total chunks %d (0-indexed)",
+			part, totalChunks)
+	}
+
+	start := part * size
+	end := start + size
+	if end > total {
+		end = total
+	}
+
+	info := &ChunkInfo{
+		Index: part,
+		Size:  size,
+		Total: totalChunks,
+		Start: start,
+		End:   end,
+	}
+
+	return allTargets[start:end], info, nil
 }
 
 // printMultiTargetSummary prints a summary for multiple target execution
@@ -1129,6 +1317,155 @@ func readWorkflowFromStdin() (*core.Workflow, error) {
 
 	if len(content) == 0 {
 		return nil, fmt.Errorf("stdin is empty")
+	}
+
+	workflow, err := parser.ParseContent(content)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse workflow: %w", err)
+	}
+
+	// Validate the workflow
+	p := parser.NewParser()
+	if err := p.Validate(workflow); err != nil {
+		return nil, fmt.Errorf("workflow validation failed: %w", err)
+	}
+
+	return workflow, nil
+}
+
+// fetchWorkflowFromURL fetches workflow YAML from a URL with GitHub auth fallback
+func fetchWorkflowFromURL(urlStr string) (*core.Workflow, error) {
+	log := logger.Get()
+
+	// Validate URL format
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid URL format: %w", err)
+	}
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return nil, fmt.Errorf("URL must use http or https scheme")
+	}
+
+	log.Debug("Fetching workflow from URL", zap.String("url", urlStr))
+
+	// First attempt: fetch without auth
+	content, err := fetchURLContent(urlStr, nil)
+	if err == nil {
+		// Success without auth
+		return parseAndValidateWorkflow(content)
+	}
+
+	// If failed and is a GitHub URL, retry with auth
+	if isGitHubURLForFetch(urlStr) {
+		token := getGitHubTokenForFetch()
+		if token != "" {
+			log.Debug("Retrying with GitHub authentication")
+
+			// Transform URL to GitHub API format for private repos
+			apiURL := transformToGitHubAPIURL(urlStr)
+			headers := map[string]string{
+				"Authorization": "Bearer " + token,
+				"Accept":        "application/vnd.github.v3.raw",
+			}
+
+			content, err = fetchURLContent(apiURL, headers)
+			if err == nil {
+				return parseAndValidateWorkflow(content)
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("failed to fetch workflow: %w", err)
+}
+
+// fetchURLContent fetches content from a URL with optional headers
+func fetchURLContent(urlStr string, headers map[string]string) ([]byte, error) {
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("User-Agent", core.DefaultUA)
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
+	}
+
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	return content, nil
+}
+
+// isGitHubURLForFetch checks if the URL is a GitHub URL
+func isGitHubURLForFetch(urlStr string) bool {
+	return strings.Contains(urlStr, "github.com") ||
+		strings.Contains(urlStr, "raw.githubusercontent.com") ||
+		strings.Contains(urlStr, "api.github.com")
+}
+
+// getGitHubTokenForFetch returns the GitHub token from settings or environment
+// Priority: GITHUB_API_KEY (from settings) > GH_TOKEN (from OS env)
+func getGitHubTokenForFetch() string {
+	// First: try GITHUB_API_KEY from settings (exported to env by root.go)
+	if token := os.Getenv("GITHUB_API_KEY"); token != "" {
+		return token
+	}
+	// Fallback: GH_TOKEN from OS environment (used by GitHub CLI)
+	if token := os.Getenv("GH_TOKEN"); token != "" {
+		return token
+	}
+	return ""
+}
+
+// transformToGitHubAPIURL transforms GitHub URLs to API format for private repo access
+// Supports:
+//   - https://github.com/owner/repo/blob/branch/path/file.yaml
+//   - https://raw.githubusercontent.com/owner/repo/branch/path/file.yaml
+//   - https://api.github.com/... (unchanged)
+func transformToGitHubAPIURL(urlStr string) string {
+	// Already an API URL, return as-is
+	if strings.Contains(urlStr, "api.github.com") {
+		return urlStr
+	}
+
+	// Pattern: https://github.com/owner/repo/blob/branch/path/to/file.yaml
+	githubBlobPattern := regexp.MustCompile(`^https://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+)$`)
+	if matches := githubBlobPattern.FindStringSubmatch(urlStr); matches != nil {
+		owner, repo, branch, path := matches[1], matches[2], matches[3], matches[4]
+		return fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s?ref=%s", owner, repo, path, branch)
+	}
+
+	// Pattern: https://raw.githubusercontent.com/owner/repo/branch/path/to/file.yaml
+	rawGitHubPattern := regexp.MustCompile(`^https://raw\.githubusercontent\.com/([^/]+)/([^/]+)/([^/]+)/(.+)$`)
+	if matches := rawGitHubPattern.FindStringSubmatch(urlStr); matches != nil {
+		owner, repo, branch, path := matches[1], matches[2], matches[3], matches[4]
+		return fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s?ref=%s", owner, repo, path, branch)
+	}
+
+	// Not a recognized format, return original
+	return urlStr
+}
+
+// parseAndValidateWorkflow parses and validates workflow content
+func parseAndValidateWorkflow(content []byte) (*core.Workflow, error) {
+	if len(content) == 0 {
+		return nil, fmt.Errorf("workflow content is empty")
 	}
 
 	workflow, err := parser.ParseContent(content)

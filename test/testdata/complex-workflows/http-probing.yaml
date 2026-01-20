@@ -22,7 +22,7 @@ steps:
 
   - name: httpx-fingerprint
     type: bash
-    pre_condition: "fileExists('{{httpFile}}')"
+    pre_condition: "file_exists('{{httpFile}}')"
     command: >
       cat {{httpFile}} | {{Binaries}}/httpx -H '{{defaultUA}}' -timeout {{httpTimeout}}
       -t {{httpThreads}} -no-fallback -no-color -silent -json -title -favicon

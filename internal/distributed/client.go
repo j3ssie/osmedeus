@@ -2,6 +2,7 @@ package distributed
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/j3ssie/osmedeus/v5/internal/config"
+	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/redis/rueidis"
 )
 
@@ -21,6 +23,15 @@ const (
 	KeyWorkers          = KeyPrefix + "workers"
 	KeyWorkersHeartbeat = KeyPrefix + "workers:heartbeat"
 	KeyMasterLock       = KeyPrefix + "master:lock"
+
+	// Event broker keys (pub/sub channels)
+	KeyEventsPrefix = KeyPrefix + "events:" // osm:events:{topic}
+
+	// Data queue keys (for worker -> master data)
+	KeyDataRuns      = KeyPrefix + "data:runs"
+	KeyDataSteps     = KeyPrefix + "data:steps"
+	KeyDataEvents    = KeyPrefix + "data:events"
+	KeyDataArtifacts = KeyPrefix + "data:artifacts"
 )
 
 // Timeouts and intervals
@@ -349,4 +360,135 @@ func (c *Client) ReleaseMasterLock(ctx context.Context, masterID string) error {
 
 	delCmd := c.client.B().Del().Key(KeyMasterLock).Build()
 	return c.client.Do(ctx, delCmd).Error()
+}
+
+// =============================================================================
+// Event Pub/Sub Methods
+// =============================================================================
+
+// PublishEvent publishes an event to a topic channel
+func (c *Client) PublishEvent(ctx context.Context, topic string, event *core.Event) error {
+	data, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("failed to marshal event: %w", err)
+	}
+
+	channel := KeyEventsPrefix + topic
+	cmd := c.client.B().Publish().Channel(channel).Message(string(data)).Build()
+	return c.client.Do(ctx, cmd).Error()
+}
+
+// SubscribeEvents subscribes to event channels with pattern and calls handler for each event.
+// This method blocks until the context is cancelled or an error occurs.
+func (c *Client) SubscribeEvents(ctx context.Context, handler func(*core.Event)) error {
+	pattern := KeyEventsPrefix + "*"
+
+	// Use Receive with PSUBSCRIBE - this blocks and calls handler for each message
+	err := c.client.Receive(ctx, c.client.B().Psubscribe().Pattern(pattern).Build(),
+		func(msg rueidis.PubSubMessage) {
+			if msg.Message != "" {
+				var event core.Event
+				if err := json.Unmarshal([]byte(msg.Message), &event); err == nil {
+					handler(&event)
+				}
+			}
+		})
+
+	if err != nil && ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return err
+}
+
+// =============================================================================
+// Data Queue Methods (Worker -> Master)
+// =============================================================================
+
+// DataEnvelope wraps data with type information for queue processing
+type DataEnvelope struct {
+	Type      string          `json:"type"`
+	Data      json.RawMessage `json:"data"`
+	Timestamp time.Time       `json:"timestamp"`
+	WorkerID  string          `json:"worker_id,omitempty"`
+}
+
+// PushData pushes data to a worker data queue
+func (c *Client) PushData(ctx context.Context, key string, dataType string, data interface{}, workerID string) error {
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	envelope := DataEnvelope{
+		Type:      dataType,
+		Data:      dataBytes,
+		Timestamp: time.Now(),
+		WorkerID:  workerID,
+	}
+
+	envBytes, err := json.Marshal(envelope)
+	if err != nil {
+		return fmt.Errorf("failed to marshal envelope: %w", err)
+	}
+
+	cmd := c.client.B().Lpush().Key(key).Element(string(envBytes)).Build()
+	return c.client.Do(ctx, cmd).Error()
+}
+
+// PopData pops data from a queue (blocking with timeout)
+func (c *Client) PopData(ctx context.Context, key string, timeout time.Duration) (*DataEnvelope, error) {
+	cmd := c.client.B().Brpop().Key(key).Timeout(timeout.Seconds()).Build()
+	result, err := c.client.Do(ctx, cmd).AsStrSlice()
+	if err != nil {
+		if rueidis.IsRedisNil(err) {
+			return nil, nil // Timeout, no data available
+		}
+		return nil, fmt.Errorf("failed to pop data: %w", err)
+	}
+
+	if len(result) < 2 {
+		return nil, nil // No data
+	}
+
+	var envelope DataEnvelope
+	if err := json.Unmarshal([]byte(result[1]), &envelope); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal envelope: %w", err)
+	}
+
+	return &envelope, nil
+}
+
+// PopDataMulti pops data from multiple queues (blocking with timeout)
+// Returns the key that had data and the data envelope
+func (c *Client) PopDataMulti(ctx context.Context, timeout time.Duration, keys ...string) (string, *DataEnvelope, error) {
+	cmd := c.client.B().Brpop().Key(keys[0])
+	for _, k := range keys[1:] {
+		cmd = cmd.Key(k)
+	}
+	cmdBuilt := cmd.Timeout(timeout.Seconds()).Build()
+
+	result, err := c.client.Do(ctx, cmdBuilt).AsStrSlice()
+	if err != nil {
+		if rueidis.IsRedisNil(err) {
+			return "", nil, nil // Timeout, no data available
+		}
+		return "", nil, fmt.Errorf("failed to pop data: %w", err)
+	}
+
+	if len(result) < 2 {
+		return "", nil, nil // No data
+	}
+
+	var envelope DataEnvelope
+	if err := json.Unmarshal([]byte(result[1]), &envelope); err != nil {
+		return "", nil, fmt.Errorf("failed to unmarshal envelope: %w", err)
+	}
+
+	return result[0], &envelope, nil
+}
+
+// GetQueueLength returns the length of a data queue
+func (c *Client) GetQueueLength(ctx context.Context, key string) (int64, error) {
+	cmd := c.client.B().Llen().Key(key).Build()
+	return c.client.Do(ctx, cmd).AsInt64()
 }
