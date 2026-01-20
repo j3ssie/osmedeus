@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# Debug config for quick builds - only macOS and Linux ARM64
 version: 2
 
 project_name: osmedeus
@@ -17,12 +18,7 @@ builds:
       - linux
       - darwin
     goarch:
-      - amd64
       - arm64
-      - 386
-    ignore:
-      - goos: darwin
-        goarch: 386
     ldflags:
       - -s -w
       - -X main.BuildTime={{.Date}}
@@ -46,16 +42,7 @@ snapshot:
   version_template: "{{ .Tag }}-snapshot"
 
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
-      - "^chore:"
-      - Merge pull request
-      - Merge branch
+  disable: true
 
 release:
-  draft: false
-  prerelease: auto
-  name_template: "{{.ProjectName}} {{.Tag}}"
+  disable: true

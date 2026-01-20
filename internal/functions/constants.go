@@ -175,6 +175,13 @@ const (
 	FnOsSetenv = "os_setenv" // os_setenv(name, value) -> bool
 )
 
+// LLM Functions - Invoke LLM from workflows
+const (
+	FnLLMInvoke        = "llm_invoke"        // llm_invoke(message) -> string (simple direct message)
+	FnLLMInvokeCustom  = "llm_invoke_custom" // llm_invoke_custom(message, body_json) -> string (custom POST body with {{message}} placeholder)
+	FnLLMConversations = "llm_conversations" // llm_conversations(msg1, msg2, ...) -> string (multi-turn with "role:content" format)
+)
+
 // Archive Functions - Go implementations for zip/unzip
 const (
 	FnZipDir   = "zip_dir"   // zip_dir(source, dest) -> bool
@@ -344,6 +351,11 @@ func AllFunctions() []string {
 		FnHttpPost,
 		FnGetIP,
 
+		// LLM Functions
+		FnLLMInvoke,
+		FnLLMInvokeCustom,
+		FnLLMConversations,
+
 		// Generation Functions
 		FnRandomString,
 		FnUUID,
@@ -506,6 +518,7 @@ const (
 	CategoryInstaller       = "installer"
 	CategoryEnvironment     = "environment"
 	CategoryTypeDetection   = "type_detection"
+	CategoryLLM             = "llm"
 )
 
 // CategoryInfo provides display metadata for a function category
@@ -526,6 +539,7 @@ func CategoryOrder() []CategoryInfo {
 		{CategoryColorPrinting, "Color Printing Functions", "Color"},
 		{CategoryRuntimeVars, "Runtime Variable Functions", "Runtime Vars"},
 		{CategoryHTTP, "HTTP Functions", "HTTP"},
+		{CategoryLLM, "LLM Functions", "LLM"},
 		{CategoryGeneration, "Generation Functions", "Generation"},
 		{CategoryEncoding, "Encoding Functions", "Encoding"},
 		{CategoryDataQuery, "Data Query Functions", "Data Query"},
@@ -625,6 +639,11 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnHttpGet, "http_get(url)", "HTTP GET request with structured response", "object", "http_get('https://api.example.com/data')"},
 			{FnHttpPost, "http_post(url, body)", "HTTP POST request with structured response", "object", "http_post('https://api.example.com', '{\"key\":\"value\"}')"},
 			{FnGetIP, "get_ip(domain_or_url)", "Resolve domain/URL to IP address (auto-parses URL hostname)", "string", "get_ip('https://example.com/path')"},
+		},
+		CategoryLLM: {
+			{FnLLMInvoke, "llm_invoke(message)", "Simple LLM call with direct message, returns response content", "string", "llm_invoke('Analyze security posture of {{Target}}')"},
+			{FnLLMInvokeCustom, "llm_invoke_custom(message, body_json)", "LLM call with custom POST body ({{message}} placeholder)", "string", "llm_invoke_custom('Summarize: {{Target}}', '{\"model\":\"gpt-4\",\"messages\":[{\"role\":\"user\",\"content\":\"{{message}}\"}]}')"},
+			{FnLLMConversations, "llm_conversations(msg1, msg2, ...)", "Multi-turn conversation with 'role:content' format messages", "string", "llm_conversations('system:Be brief', 'user:Analyze {{Target}}')"},
 		},
 		CategoryGeneration: {
 			{FnRandomString, "random_string(length)", "Generate random alphanumeric string", "string", "random_string(16)"},

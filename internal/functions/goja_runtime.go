@@ -127,6 +127,11 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnHttpPost, vf.httpPost)
 	_ = vm.Set(FnGetIP, vf.getIP)
 
+	// LLM functions
+	_ = vm.Set(FnLLMInvoke, vf.llmInvoke)
+	_ = vm.Set(FnLLMInvokeCustom, vf.llmInvokeCustom)
+	_ = vm.Set(FnLLMConversations, vf.llmConversations)
+
 	// Generation functions
 	_ = vm.Set(FnRandomString, vf.randomString)
 	_ = vm.Set(FnUUID, vf.uuidFunc)

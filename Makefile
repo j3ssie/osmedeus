@@ -289,8 +289,8 @@ snapshot-release:
 	@cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/
 	@echo "$(PREFIX) Update registry-metadata-direct-fetch.json..."
 	cp ../osmedeus-registry/registry-metadata-direct-fetch.json public/presets/registry-metadata-direct-fetch.json
-	@echo "$(PREFIX) Building snapshot release..."
-	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --clean --skip=announce,publish,validate
+	@echo "$(PREFIX) Building debug snapshot release (macOS + Linux ARM64 only)..."
+	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --config test/goreleaser-debug.yaml --clean --skip=announce,publish,validate
 	@echo "$(PREFIX) Install script copied to dist/install.sh"
 	cp ../osmedeus-registry/install.sh dist/install.sh
 	@echo "$(PREFIX) Prepare registry-metadata-direct-fetch.json"

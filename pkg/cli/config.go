@@ -672,6 +672,18 @@ func setServerValue(cfg *config.Config, parts []string, value string) error {
 		cfg.Server.EnabledAuthAPI = enabled
 	case "auth_api_key":
 		cfg.Server.AuthAPIKey = value
+	case "license":
+		cfg.Server.License = value
+	case "enable_metrics":
+		enabled, err := strconv.ParseBool(value)
+		if err != nil {
+			return fmt.Errorf("enable_metrics must be true or false")
+		}
+		cfg.Server.EnableMetrics = &enabled
+	case "cors_allowed_origins":
+		cfg.Server.CORSAllowedOrigins = value
+	case "event_receiver_url":
+		cfg.Server.EventReceiverURL = value
 	default:
 		return fmt.Errorf("unknown server field: %s", parts[0])
 	}
@@ -986,6 +998,10 @@ func setEnvironmentsValue(cfg *config.Config, parts []string, value string) erro
 		cfg.Environments.Snapshot = value
 	case "external_agent_configs":
 		cfg.Environments.ExternalAgentConfigs = value
+	case "markdown_report_templates":
+		cfg.Environments.MarkdownReportTemplates = value
+	case "external_scripts":
+		cfg.Environments.ExternalScripts = value
 	default:
 		return fmt.Errorf("unknown environments field: %s", parts[0])
 	}
@@ -1022,6 +1038,16 @@ func setStorageValue(cfg *config.Config, parts []string, value string) error {
 			return fmt.Errorf("enabled must be true or false")
 		}
 		cfg.Storage.Enabled = enabled
+	case "account_id":
+		cfg.Storage.AccountID = value
+	case "path_style":
+		pathStyle, err := strconv.ParseBool(value)
+		if err != nil {
+			return fmt.Errorf("path_style must be true or false")
+		}
+		cfg.Storage.PathStyle = pathStyle
+	case "presign_expiry":
+		cfg.Storage.PresignExpiry = value
 	default:
 		return fmt.Errorf("unknown storage field: %s", parts[0])
 	}
