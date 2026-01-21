@@ -1,5 +1,5 @@
 {
-  "_last_update_at": "2026-01-14T10:12:21.439275+00:00",
+  "_last_update_at": "2026-01-21T10:08:20.876322+00:00",
   "amass": {
     "desc": "In-depth attack surface mapping and asset discovery",
     "repo_link": "https://github.com/owasp-amass/amass",
@@ -135,6 +135,27 @@
     "darwin": {
       "amd64": "https://github.com/projectdiscovery/httpx/releases/download/v1.7.4/httpx_1.7.4_macOS_amd64.zip",
       "arm64": "https://github.com/projectdiscovery/httpx/releases/download/v1.7.4/httpx_1.7.4_macOS_arm64.zip"
+    }
+  },
+  "katana": {
+    "desc": "A next-generation crawling and spidering framework.",
+    "repo_link": "https://github.com/projectdiscovery/katana",
+    "version": "1.4.0",
+    "package-manager": "github-release",
+    "tags": [
+      "recon",
+      "http",
+      "spidering",
+      "web"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/projectdiscovery/katana/releases/download/v1.4.0/katana_1.4.0_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/katana/releases/download/v1.4.0/katana_1.4.0_linux_arm64.zip"
+    },
+    "darwin": {
+      "amd64": "https://github.com/projectdiscovery/katana/releases/download/v1.4.0/katana_1.4.0_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/katana/releases/download/v1.4.0/katana_1.4.0_macOS_arm64.zip"
     }
   },
   "naabu": {

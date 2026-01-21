@@ -57,6 +57,15 @@ var functionListCmd = &cobra.Command{
 	RunE:    runFunctionList,
 }
 
+// evalCmd is a top-level shorthand for 'func eval'
+var evalCmd = &cobra.Command{
+	Use:     "eval",
+	Aliases: []string{"e", "ev", "evl", "evla"},
+	Short:   "Evaluate a script (shorthand for 'func eval')",
+	Long:    UsageFunctionEval(),
+	RunE:    runFunctionEval,
+}
+
 func init() {
 	functionEvalCmd.Flags().StringVarP(&evalScript, "eval", "e", "", "script to evaluate")
 	functionEvalCmd.Flags().StringVarP(&evalTarget, "target", "t", "", "target value for {{target}} variable")
@@ -72,6 +81,16 @@ func init() {
 	functionListCmd.Flags().StringVarP(&funcSearchFilter, "search", "s", "", "filter functions by name or description")
 	functionListCmd.Flags().IntVar(&funcColumnWidth, "width", 60, "max column width (wraps lines instead of truncating)")
 	functionListCmd.Flags().BoolVar(&funcShowExample, "example", false, "show example usage below each function description")
+
+	// evalCmd flags (same as functionEvalCmd - it's a shorthand)
+	evalCmd.Flags().StringVarP(&evalScript, "eval", "e", "", "script to evaluate")
+	evalCmd.Flags().StringVarP(&evalTarget, "target", "t", "", "target value for {{target}} variable")
+	evalCmd.Flags().StringArrayVar(&evalParams, "params", nil, "additional parameters (key=value format)")
+	evalCmd.Flags().BoolVar(&evalStdin, "stdin", false, "read script from stdin")
+	evalCmd.Flags().StringVarP(&evalFunctionName, "function", "f", "", "function name to call (remaining args become function arguments)")
+	evalCmd.Flags().StringVarP(&funcTargetsFile, "targets", "T", "", "file containing targets (one per line)")
+	evalCmd.Flags().StringVar(&funcFunctionFile, "function-file", "", "file containing the function/script to execute")
+	evalCmd.Flags().IntVarP(&funcConcurrency, "concurrency", "c", 1, "number of concurrent executions")
 
 	functionCmd.AddCommand(functionEvalCmd)
 	functionCmd.AddCommand(functionListCmd)

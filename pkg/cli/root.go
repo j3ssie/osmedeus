@@ -296,6 +296,7 @@ func init() {
 	rootCmd.AddCommand(snapshotCmd)
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(updateCmd)
+	rootCmd.AddCommand(evalCmd)
 }
 
 // installRequiredBinaries installs all required binaries from the registry.

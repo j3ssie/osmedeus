@@ -16,7 +16,7 @@ var (
 // @termsOfService https://docs.osmedeus.org/terms/
 
 // @contact.name Osmedeus Support
-// @contact.url https://github.com/osmedeus/osmedeus
+// @contact.url https://github.com/osmedeus
 // @contact.email support@osmedeus.org
 
 // @license.name MIT

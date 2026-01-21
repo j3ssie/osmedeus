@@ -292,13 +292,13 @@ docker-publish:
 
 # Release commands (GoReleaser)
 snapshot-release:
+	@echo "$(PREFIX) Update registry-metadata-direct-fetch.json..."
+	cp ../osmedeus-registry/registry-metadata-direct-fetch.json public/presets/registry-metadata-direct-fetch.json
 	@echo "$(PREFIX) Building $(BINARY_NAME)..."
 	@mkdir -p $(BINARY_DIR)
 	$(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME) ./cmd/osmedeus
 	@echo "$(PREFIX) Installing $(BINARY_NAME) to $(GOBIN_PATH)..."
 	@cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/
-	@echo "$(PREFIX) Update registry-metadata-direct-fetch.json..."
-	cp ../osmedeus-registry/registry-metadata-direct-fetch.json public/presets/registry-metadata-direct-fetch.json
 	@echo "$(PREFIX) Building snapshot release"
 	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --clean --skip=announce,publish,validate
 	@echo "$(PREFIX) Install script copied to dist/install.sh"
