@@ -88,7 +88,8 @@ var installBinaryCmd = &cobra.Command{
 	Short:   "Install binary tools from registry",
 	Long:    `Install one or more binary tools from the registry. Skips binaries already available in PATH.`,
 	Example: `  # List binaries in registry
-  osmedeus install binary --list-registry-binaries
+  osmedeus install binary --list-registry-direct-fetch
+  osmedeus install binary --list-registry-nix-build
 
   # Install specific binaries
   osmedeus install binary --name nuclei
@@ -1466,7 +1467,8 @@ func printInstallBinaryHelp(cmd *cobra.Command) {
 
 	fmt.Println(terminal.BoldCyan("◆ Examples"))
 	fmt.Printf("  %s\n", terminal.Green("# List available binaries"))
-	fmt.Printf("  %s\n\n", terminal.Gray("osmedeus install binary --list-registry-binaries"))
+	fmt.Printf("  %s\n", terminal.Gray("osmedeus install binary --list-registry-direct-fetch"))
+	fmt.Printf("  %s\n\n", terminal.Gray("osmedeus install binary --list-registry-nix-build"))
 
 	fmt.Printf("  %s\n", terminal.Green("# Install specific binaries (auto-detects method from registry)"))
 	fmt.Printf("  %s\n", terminal.Gray("osmedeus install binary --name nuclei"))
@@ -1743,6 +1745,9 @@ func installBinariesParallel(names []string, registry installer.BinaryRegistry,
 		go func() {
 			defer wg.Done()
 			for name := range workCh {
+				if silent {
+					fmt.Printf("  %s Installing: %s\n", terminal.SymbolBullet, terminal.Cyan(name))
+				}
 				err := installer.InstallBinary(name, registry, binariesFolder, headers)
 				statusMu.Lock()
 				if err != nil {

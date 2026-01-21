@@ -859,6 +859,15 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 		e.printer.WorkflowInfo(module.Name, module.Description, module.Tags, string(module.Runner), len(module.Steps))
 	}
 
+	// Show target space folder location
+	if !e.dryRun && e.progressBar == nil {
+		if targetSpace, ok := execCtx.GetVariable("TargetSpace"); ok {
+			if tsStr, ok := targetSpace.(string); ok && tsStr != "" {
+				e.printer.Info("Reserving target space folder at: %s", terminal.Cyan(tsStr))
+			}
+		}
+	}
+
 	// Execute steps
 	e.logger.Debug("Starting step execution loop",
 		zap.Int("total_steps", len(module.Steps)),
@@ -1412,6 +1421,15 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 			tactic = "default"
 		}
 		printDryRunHeader(flow.Name, string(core.KindFlow), params["target"], tactic, len(flow.Modules), execCtx)
+	}
+
+	// Show target space folder location
+	if !e.dryRun && e.progressBar == nil {
+		if targetSpace, ok := execCtx.GetVariable("TargetSpace"); ok {
+			if tsStr, ok := targetSpace.(string); ok && tsStr != "" {
+				e.printer.Info("Reserving target space folder at: %s", terminal.Cyan(tsStr))
+			}
+		}
 	}
 
 	// Export flow workflow state (write workflow YAML to output)

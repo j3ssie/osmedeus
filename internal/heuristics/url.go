@@ -2,6 +2,7 @@ package heuristics
 
 import (
 	"crypto/tls"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -45,15 +46,22 @@ func ParseURL(rawURL string) (*TargetInfo, error) {
 	info.Port = port
 	info.Hostname = u.Host // includes port if specified
 
-	// Extract root domain using publicsuffix
-	rootDomain, err := publicsuffix.EffectiveTLDPlusOne(host)
-	if err != nil {
-		// Fallback: use the last two parts of the domain
-		rootDomain = extractRootDomainFallback(host)
+	// Check if host is an IP address
+	if net.ParseIP(host) != nil {
+		info.RootDomain = host
+		info.TLD = ""
+		info.SLD = ""
+	} else {
+		// Extract root domain using publicsuffix
+		rootDomain, err := publicsuffix.EffectiveTLDPlusOne(host)
+		if err != nil {
+			// Fallback: use the last two parts of the domain
+			rootDomain = extractRootDomainFallback(host)
+		}
+		info.RootDomain = rootDomain
+		info.TLD, _ = publicsuffix.PublicSuffix(host)
+		info.SLD = extractSLD(info.RootDomain, info.TLD)
 	}
-	info.RootDomain = rootDomain
-	info.TLD, _ = publicsuffix.PublicSuffix(host)
-	info.SLD = extractSLD(info.RootDomain, info.TLD)
 
 	// Extract path and file
 	urlPath := u.Path

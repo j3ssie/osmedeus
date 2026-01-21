@@ -3,6 +3,8 @@ package heuristics
 import (
 	"net"
 	"net/url"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -14,6 +16,7 @@ const (
 	TargetTypeURL     TargetType = "url"
 	TargetTypeDomain  TargetType = "domain"
 	TargetTypeIP      TargetType = "ip"
+	TargetTypeFile    TargetType = "file"
 	TargetTypeUnknown TargetType = "unknown"
 )
 
@@ -93,6 +96,12 @@ func Analyze(target string, level string) (*TargetInfo, error) {
 			RootDomain: target,
 		}
 
+	case TargetTypeFile:
+		info, err = ParseFileTarget(target)
+		if err != nil {
+			return nil, err
+		}
+
 	default:
 		info = &TargetInfo{
 			Type:     TargetTypeUnknown,
@@ -106,6 +115,11 @@ func Analyze(target string, level string) (*TargetInfo, error) {
 // DetectType determines the type of target
 func DetectType(target string) TargetType {
 	target = strings.TrimSpace(target)
+
+	// Check if it's a file path (exists on disk) - must check before URL
+	if info, err := os.Stat(target); err == nil && !info.IsDir() {
+		return TargetTypeFile
+	}
 
 	// Check if it's a URL (has scheme)
 	if strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://") {
@@ -148,4 +162,21 @@ func isValidDomain(s string) bool {
 	// Basic domain validation regex
 	domainRegex := regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 	return domainRegex.MatchString(s)
+}
+
+// ParseFileTarget extracts TargetInfo from a file path
+// Derives RootDomain as: basename without extension, _ replaced with -, "-file" suffix
+func ParseFileTarget(filePath string) (*TargetInfo, error) {
+	base := filepath.Base(filePath)
+	ext := filepath.Ext(base)
+	nameWithoutExt := strings.TrimSuffix(base, ext)
+	// Replace _ with - for path friendliness
+	nameWithoutExt = strings.ReplaceAll(nameWithoutExt, "_", "-")
+	targetSpace := nameWithoutExt + "-file"
+
+	return &TargetInfo{
+		Type:       TargetTypeFile,
+		Original:   filePath,
+		RootDomain: targetSpace,
+	}, nil
 }
