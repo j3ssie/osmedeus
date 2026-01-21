@@ -289,12 +289,19 @@ snapshot-release:
 	@cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/
 	@echo "$(PREFIX) Update registry-metadata-direct-fetch.json..."
 	cp ../osmedeus-registry/registry-metadata-direct-fetch.json public/presets/registry-metadata-direct-fetch.json
-	@echo "$(PREFIX) Building debug snapshot release (macOS + Linux ARM64 only)..."
-	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --config test/goreleaser-debug.yaml --clean --skip=announce,publish,validate
+	@echo "$(PREFIX) Building snapshot release"
+	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --clean --skip=announce,publish,validate
 	@echo "$(PREFIX) Install script copied to dist/install.sh"
 	cp ../osmedeus-registry/install.sh dist/install.sh
 	@echo "$(PREFIX) Prepare registry-metadata-direct-fetch.json"
-	
+
+local-release:
+	@echo "$(PREFIX) Building $(BINARY_NAME)..."
+	@mkdir -p $(BINARY_DIR)
+	$(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME) ./cmd/osmedeus
+	@echo "$(PREFIX) Building local snapshot for mac and linux arm only for testing..."
+	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --config test/goreleaser-debug.yaml --clean --skip=announce,publish,validate
+
 github-release:
 	@echo "$(PREFIX) Building and publishing GitHub release..."
 	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --clean
@@ -365,6 +372,7 @@ help:
 	@echo ""
 	@echo "\033[33m  RELEASE\033[0m"
 	@echo "    make snapshot-release Build local snapshot release (no publish)"
+	@echo "    make local-release    Build local snapshot for mac and linux arm only for testing"
 	@echo "    make github-release   Build and publish GitHub release"
 	@echo ""
 	@echo "\033[33m  DATABASE\033[0m"
