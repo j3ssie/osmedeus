@@ -46,6 +46,10 @@ curl -sSL http://www.osmedeus.org/install.sh | bash
 
 See [Quickstart](https://docs.osmedeus.org/quickstart/) for quick setup and [Installation](https://docs.osmedeus.org/installation/) for advanced configurations.
 
+| CLI Usage | Web UI Assets | Workflow Visualization |
+|-----------|--------------|-----------------|
+| ![CLI Usage](https://raw.githubusercontent.com/osmedeus/assets/refs/heads/main/demo-images/cli-run-with-verbose-output.png) | ![Web UI Assets](https://raw.githubusercontent.com/osmedeus/assets/refs/heads/main/demo-images/web-ui-assets.png) | ![Workflow Visualization](https://raw.githubusercontent.com/osmedeus/assets/refs/heads/main/demo-images/web-ui-workflow.png) |
+
 ## Quick Start
 
 ```bash
@@ -92,9 +96,6 @@ docker run --rm -v $(pwd)/output:/root/workspaces-osmedeus \
 
 For more CLI usage and example commands, refer to the [CLI Reference](https://docs.osmedeus.org/getting-started/cli).
 
-| CLI Usage | Web UI Assets | Web UI Workflow |
-|-----------|--------------|-----------------|
-| ![CLI Usage](https://raw.githubusercontent.com/osmedeus/assets/refs/heads/main/demo-images/cli-run-with-verbose-output.png) | ![Web UI Assets](https://raw.githubusercontent.com/osmedeus/assets/refs/heads/main/demo-images/web-ui-assets.png) | ![Web UI Workflow](https://raw.githubusercontent.com/osmedeus/assets/refs/heads/main/demo-images/web-ui-workflow.png) |
 
 ## Core Components
 
