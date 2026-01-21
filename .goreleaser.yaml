@@ -59,4 +59,4 @@ release:
   draft: false
   prerelease: auto
   name_template: "{{.ProjectName}} {{.Tag}}"
-  make_latest: "auto"
+  make_latest: true
