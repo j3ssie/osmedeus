@@ -24,9 +24,6 @@ jobs:
           echo "Latest release tag: $TAG"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Checkout release tag
-        run: git checkout ${{ steps.get-tag.outputs.tag }}
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
