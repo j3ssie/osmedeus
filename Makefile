@@ -1,4 +1,4 @@
-.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-docker test-ssh test-distributed test-all test-summary test-ci clean install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
+.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-docker test-ssh test-distributed test-all test-summary test-ci clean install install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
 
 # Go parameters
 GOCMD=go
@@ -49,6 +49,16 @@ build:
 	$(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME) ./cmd/osmedeus
 	@echo "$(PREFIX) Installing $(BINARY_NAME) to $(GOBIN_PATH)..."
 	@cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/
+
+# Install to GOBIN (or GOPATH/bin) - requires prior build
+install:
+	@echo "$(PREFIX) Installing $(BINARY_NAME) to $(GOBIN_PATH)..."
+	@if [ ! -f "$(BINARY_DIR)/$(BINARY_NAME)" ]; then \
+		echo "$(PREFIX) Binary not found, building first..."; \
+		$(MAKE) build; \
+	else \
+		cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/; \
+	fi
 
 # Build for multiple platforms
 build-all: build-linux build-darwin build-windows
@@ -326,9 +336,10 @@ help:
 	@echo "\033[36m                 Crafted with \033[31m<3\033[35m by $(AUTHOR)                      \033[0m"
 	@echo "\033[34m     ──────────────────────────────────────────────────\033[0m"
 	@echo ""
-	@echo "\033[33m  BUILD\033[0m"
+	@echo "\033[33m  BUILD & INSTALL\033[0m"
 	@echo "    make build            Build and install binary to \$$GOBIN (or \$$GOPATH/bin)"
-	@echo "    make build-all        Build for all platforms"
+	@echo "    make build-all        Build for all platforms (linux, darwin, windows)"
+	@echo "    make install          Install binary to \$$GOBIN (builds first if needed)"
 	@echo "    make clean            Clean build artifacts"
 	@echo ""
 	@echo "\033[33m  RUN\033[0m"
@@ -337,21 +348,32 @@ help:
 	@echo "    make run-server-debug Build and start server in debug mode (no auth)"
 	@echo ""
 	@echo "\033[33m  TEST\033[0m"
-	@echo "    make test             Run all tests"
-	@echo "    make test-unit        Run unit tests (fast)"
-	@echo "    make test-integration Run integration tests"
+	@echo "    make test             Run all tests with race detection"
+	@echo "    make test-unit        Run unit tests (fast, no external deps)"
+	@echo "    make test-integration Run integration tests (pattern match)"
+	@echo "    make test-workflow-integration  Run workflow integration tests (test/integration/)"
+	@echo "    make test-all         Run unit + integration tests"
 	@echo "    make test-e2e         Run E2E CLI tests"
 	@echo "    make test-e2e-verbose Run E2E tests with verbose output"
+	@echo "    make test-e2e-ssh     Run SSH E2E tests (full workflows)"
+	@echo "    make test-e2e-api     Run API E2E tests (all endpoints, requires Redis)"
+	@echo "    make test-e2e-nix     Run Nix mode E2E tests (requires Docker)"
+	@echo "    make test-e2e-install Run install E2E tests (workflow/base from zip/URL/git)"
+	@echo "    make test-docker      Run Docker runner tests"
+	@echo "    make test-ssh         Run SSH runner unit tests"
+	@echo "    make test-distributed Run distributed scan E2E tests (requires Redis)"
 	@echo "    make test-coverage    Run tests with coverage report"
-	@echo "    make test-summary     Quick pass/fail summary"
+	@echo "    make test-summary     Quick pass/fail summary (dots format)"
 	@echo "    make test-ci          Run tests with JUnit XML output"
 	@echo ""
 	@echo "\033[33m  DEVELOPMENT\033[0m"
 	@echo "    make dev-setup        Set up development environment"
 	@echo "    make fmt              Format code"
-	@echo "    make lint             Run linter"
+	@echo "    make lint             Run golangci-lint"
 	@echo "    make tidy             Tidy go.mod dependencies"
 	@echo "    make deps             Download dependencies"
+	@echo "    make update-deps      Update all dependencies"
+	@echo "    make generate         Run go generate"
 	@echo "    make swagger          Generate swagger documentation"
 	@echo "    make update-ui        Update embedded UI from dashboard build"
 	@echo ""
@@ -359,20 +381,13 @@ help:
 	@echo "    make docker-build     Build Docker image"
 	@echo "    make docker-run       Run Docker container"
 	@echo "    make docker-publish   Build and push j3ssie/osmedeus:latest to Docker Hub"
-	@echo "    make docker-toolbox   Build toolbox image (all tools pre-installed)"
+	@echo "    make docker-toolbox       Build toolbox image (all tools pre-installed)"
 	@echo "    make docker-toolbox-run   Start toolbox container"
 	@echo "    make docker-toolbox-shell Enter toolbox container shell"
-	@echo "    make test-docker      Run Docker runner tests"
-	@echo "    make test-ssh         Run SSH runner unit tests"
-	@echo "    make test-e2e-ssh     Run SSH E2E tests (full workflows)"
-	@echo "    make test-e2e-api     Run API E2E tests (all endpoints)"
-	@echo "    make test-e2e-nix     Run Nix mode E2E tests (requires Docker)"
-	@echo "    make test-e2e-install Run install E2E tests (workflow/base from zip/URL/git)"
-	@echo "    make test-distributed Run distributed scan e2e tests"
 	@echo ""
 	@echo "\033[33m  RELEASE\033[0m"
 	@echo "    make snapshot-release Build local snapshot release (no publish)"
-	@echo "    make local-release    Build local snapshot for mac and linux arm only for testing"
+	@echo "    make local-release    Build local snapshot for mac/linux arm (testing)"
 	@echo "    make github-release   Build and publish GitHub release"
 	@echo ""
 	@echo "\033[33m  DATABASE\033[0m"
