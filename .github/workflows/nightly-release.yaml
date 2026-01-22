@@ -54,7 +54,7 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --clean --release-notes=/tmp/release-notes.md
+          args: release --clean --release-notes=/tmp/release-notes.md --config test/goreleaser-nightly.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: v0.0.0-nightly
