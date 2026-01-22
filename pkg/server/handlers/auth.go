@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/pkg/server/middleware"
@@ -41,6 +43,18 @@ func Login(cfg *config.Config, noAuth bool) fiber.Handler {
 					"message": "Failed to generate token",
 				})
 			}
+
+			// Set session cookie for browser clients
+			c.Cookie(&fiber.Cookie{
+				Name:     "osmedeus_session",
+				Value:    token,
+				Expires:  time.Now().Add(time.Duration(cfg.Server.JWT.ExpirationMinutes) * time.Minute),
+				HTTPOnly: false, // Allow JS to read for UI state
+				Secure:   false, // Set to true in production with HTTPS
+				SameSite: "Lax",
+				Path:     "/",
+			})
+
 			return c.JSON(fiber.Map{
 				"token": token,
 			})
@@ -64,8 +78,42 @@ func Login(cfg *config.Config, noAuth bool) fiber.Handler {
 			})
 		}
 
+		// Set session cookie for browser clients
+		c.Cookie(&fiber.Cookie{
+			Name:     "osmedeus_session",
+			Value:    token,
+			Expires:  time.Now().Add(time.Duration(cfg.Server.JWT.ExpirationMinutes) * time.Minute),
+			HTTPOnly: false, // Allow JS to read for UI state
+			Secure:   false, // Set to true in production with HTTPS
+			SameSite: "Lax",
+			Path:     "/",
+		})
+
 		return c.JSON(fiber.Map{
 			"token": token,
+		})
+	}
+}
+
+// Logout handles user logout by clearing the session cookie
+// @Summary User logout
+// @Description Clear the session cookie
+// @Tags Auth
+// @Produce json
+// @Success 200 {object} map[string]string "Logout message"
+// @Router /osm/api/logout [post]
+func Logout() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// Clear the session cookie by setting it to expire in the past
+		c.Cookie(&fiber.Cookie{
+			Name:     "osmedeus_session",
+			Value:    "",
+			Expires:  time.Now().Add(-time.Hour),
+			HTTPOnly: false,
+			Path:     "/",
+		})
+		return c.JSON(fiber.Map{
+			"message": "Logged out",
 		})
 	}
 }

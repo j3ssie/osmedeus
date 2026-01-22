@@ -430,16 +430,25 @@ func UsageConfigSet() string {
 func UsageConfigView() string {
 	return terminal.BoldCyan("◆ Description") + `
   View a configuration value using dot notation.
+  Supports wildcard patterns with --force flag.
 
 ` + terminal.BoldCyan("▷ Syntax") + `
   osmedeus config view <key>
+  osmedeus config view '<pattern>' --force
 
 ` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Exact key lookup") + `
   ` + terminal.Green("osmedeus config view server.port") + `
   ` + terminal.Green("osmedeus config view server.username") + `
   ` + terminal.Green("osmedeus config view server.password") + `
   ` + terminal.Green("osmedeus config view server.jwt.secret_signing_key") + `
   ` + terminal.Green("osmedeus config view server.jwt.secret_signing_key --redact") + `
+
+  ` + terminal.Green("# Wildcard pattern search (requires --force)") + `
+  ` + terminal.Green("osmedeus config view 'server.*' --force") + `
+  ` + terminal.Green("osmedeus config view 'database.*' --force") + `
+  ` + terminal.Green("osmedeus config view '*password*' --force") + `
+  ` + terminal.Green("osmedeus config view 'server.*' --force --redact") + `
 
 ` + docsFooter()
 }

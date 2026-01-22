@@ -440,3 +440,27 @@ func TestNewUpdater_WithNilSource(t *testing.T) {
 
 	assert.NotNil(t, upd)
 }
+
+func TestNewUpdater_WithVerbose(t *testing.T) {
+	// Test that verbose option is accepted
+	upd := NewUpdater(Options{
+		Owner:   "j3ssie",
+		Repo:    "osmedeus",
+		Verbose: true,
+	})
+
+	assert.NotNil(t, upd)
+}
+
+func TestNewUpdater_WithAllOptions(t *testing.T) {
+	mock := NewMockSource()
+	upd := NewUpdater(Options{
+		Owner:           "j3ssie",
+		Repo:            "osmedeus",
+		AllowPrerelease: true,
+		Source:          mock,
+		Verbose:         true,
+	})
+
+	assert.NotNil(t, upd)
+}

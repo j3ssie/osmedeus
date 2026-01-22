@@ -71,6 +71,9 @@ type Options struct {
 
 	// Source is the release source (defaults to GitHub)
 	Source Source
+
+	// Verbose enables verbose logging
+	Verbose bool
 }
 
 // osmUpdater implements the Updater interface
@@ -86,7 +89,7 @@ func NewUpdater(opts Options) Updater {
 	source := opts.Source
 	if source == nil {
 		// Default to GitHub source
-		githubSource, err := NewGitHubSource(opts.AllowPrerelease)
+		githubSource, err := NewGitHubSource(opts.AllowPrerelease, opts.Verbose)
 		if err != nil {
 			// If we can't create GitHub source, use a nil source
 			// This will cause errors when trying to update, but allows construction

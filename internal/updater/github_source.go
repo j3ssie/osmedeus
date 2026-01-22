@@ -11,10 +11,11 @@ import (
 type GitHubSource struct {
 	updater         *selfupdate.Updater
 	allowPrerelease bool
+	verbose         bool
 }
 
 // NewGitHubSource creates a new GitHub release source
-func NewGitHubSource(allowPrerelease bool) (*GitHubSource, error) {
+func NewGitHubSource(allowPrerelease, verbose bool) (*GitHubSource, error) {
 	source, err := selfupdate.NewGitHubSource(selfupdate.GitHubConfig{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GitHub source: %w", err)
@@ -31,6 +32,7 @@ func NewGitHubSource(allowPrerelease bool) (*GitHubSource, error) {
 	return &GitHubSource{
 		updater:         updater,
 		allowPrerelease: allowPrerelease,
+		verbose:         verbose,
 	}, nil
 }
 
@@ -59,6 +61,25 @@ func (g *GitHubSource) DetectVersion(ctx context.Context, owner, repo, version s
 }
 
 func (g *GitHubSource) UpdateTo(ctx context.Context, owner, repo string, release *Release) error {
+	// Try go-selfupdate first
+	err := g.updateViaSelfupdate(ctx, owner, repo, release)
+	if err == nil {
+		return nil
+	}
+
+	// Log the error if verbose
+	if g.verbose {
+		fmt.Printf("[debug] go-selfupdate failed: %v\n", err)
+		fmt.Println("[debug] Falling back to direct download...")
+	}
+
+	// Fallback to direct download
+	direct := NewDirectDownloader(owner, repo, g.verbose)
+	return direct.UpdateBinary(ctx, release)
+}
+
+// updateViaSelfupdate attempts to update using the go-selfupdate library
+func (g *GitHubSource) updateViaSelfupdate(ctx context.Context, owner, repo string, release *Release) error {
 	// Get the executable path
 	exe, err := GetExecutablePath()
 	if err != nil {

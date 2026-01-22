@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -40,6 +41,7 @@ var configSetCmd = &cobra.Command{
 
 var (
 	configViewRedact      bool
+	configViewForce       bool
 	configListShowSecrets bool
 )
 
@@ -67,6 +69,7 @@ func init() {
 	configCmd.AddCommand(configListCmd)
 
 	configViewCmd.Flags().BoolVar(&configViewRedact, "redact", false, "redact sensitive values")
+	configViewCmd.Flags().BoolVar(&configViewForce, "force", false, "required for wildcard pattern searches")
 	configListCmd.Flags().BoolVar(&configListShowSecrets, "show-secrets", false, "show sensitive values")
 }
 
@@ -162,6 +165,14 @@ func runConfigView(cmd *cobra.Command, args []string) error {
 	fileCfg, err := config.LoadFromFile(settingsPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Check for wildcard pattern
+	if strings.Contains(key, "*") {
+		if !configViewForce {
+			return fmt.Errorf("wildcard patterns require --force flag\n\nExample: osmedeus config view '%s' --force", key)
+		}
+		return runConfigViewPattern(key, settingsPath, fileCfg)
 	}
 
 	if key == "server.username" {
@@ -1156,4 +1167,88 @@ func setLLMProviderField(provider *config.LLMProvider, field string, value strin
 		return fmt.Errorf("unknown llm_provider field: %s (valid: provider, base_url, auth_token, model)", field)
 	}
 	return nil
+}
+
+// runConfigViewPattern handles wildcard pattern searches for config view
+func runConfigViewPattern(pattern, settingsPath string, fileCfg *config.Config) error {
+	// Read and parse YAML
+	content, err := os.ReadFile(settingsPath)
+	if err != nil {
+		return err
+	}
+
+	var doc yaml.Node
+	dec := yaml.NewDecoder(bytes.NewReader(content))
+	dec.KnownFields(false)
+	if err := dec.Decode(&doc); err != nil {
+		return err
+	}
+	if len(doc.Content) == 0 {
+		return fmt.Errorf("empty yaml document")
+	}
+
+	// Flatten YAML to key=value map
+	out := map[string]string{}
+	flattenYAMLScalars(doc.Content[0], "", out)
+
+	// Add synthetic server.username/password keys
+	username, password := primaryServerAuthUser(fileCfg)
+	if username != "" {
+		out["server.username"] = username
+	}
+	if password != "" {
+		out["server.password"] = password
+	}
+
+	// Convert glob pattern to regex
+	re, err := globToRegex(pattern)
+	if err != nil {
+		return fmt.Errorf("invalid pattern: %w", err)
+	}
+
+	// Filter matching keys
+	var matchingKeys []string
+	for k := range out {
+		if re.MatchString(k) {
+			matchingKeys = append(matchingKeys, k)
+		}
+	}
+
+	if len(matchingKeys) == 0 {
+		return fmt.Errorf("no keys matching pattern: %s", pattern)
+	}
+
+	// Sort keys
+	sortStrings(matchingKeys)
+
+	// Print matching key=value pairs
+	for _, k := range matchingKeys {
+		v := out[k]
+		if configViewRedact {
+			v = redactValueForDisplay(k, v, false)
+		}
+		fmt.Printf("%s = %s\n", k, v)
+	}
+
+	return nil
+}
+
+// globToRegex converts a glob pattern (with * wildcards) to a compiled regex
+func globToRegex(pattern string) (*regexp.Regexp, error) {
+	// Escape regex special characters except *
+	var sb strings.Builder
+	sb.WriteString("^")
+	for _, c := range pattern {
+		switch c {
+		case '*':
+			sb.WriteString(".*")
+		case '.', '+', '?', '^', '$', '(', ')', '[', ']', '{', '}', '|', '\\':
+			sb.WriteRune('\\')
+			sb.WriteRune(c)
+		default:
+			sb.WriteRune(c)
+		}
+	}
+	sb.WriteString("$")
+	return regexp.Compile(sb.String())
 }

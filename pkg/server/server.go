@@ -239,11 +239,17 @@ func (s *Server) setupRoutes() {
 	// Login - always accessible
 	api.Post("/login", handlers.Login(s.config, s.options.NoAuth))
 
+	// Logout - always accessible (clears session cookie)
+	api.Post("/logout", handlers.Logout())
+
 	// Apply auth middleware conditionally
-	if s.config.Server.EnabledAuthAPI {
-		api.Use(middleware.APIKeyAuth(s.config))
-	} else if !s.options.NoAuth {
-		api.Use(middleware.JWTAuth(s.config))
+	if !s.options.NoAuth {
+		if s.config.Server.EnabledAuthAPI {
+			// Support both API key and JWT auth
+			api.Use(middleware.CombinedAuth(s.config))
+		} else {
+			api.Use(middleware.JWTAuth(s.config))
+		}
 	}
 
 	// Workflows
@@ -524,9 +530,11 @@ func (s *Server) PrintStartupInfo(addr string) {
 	p := terminal.NewPrinter()
 
 	// Banner line
-	fmt.Printf("%s Initiating Osmedeus %s - Crafted with <3 by @j3ssie\n",
-		terminal.Yellow("ϟ"),
-		terminal.Cyan(core.VERSION))
+	fmt.Printf("%s Initiating Osmedeus %s - Crafted with %s by %s\n",
+		terminal.Yellow(terminal.SymbolLightning),
+		terminal.Cyan(core.VERSION),
+		terminal.Red("<3"),
+		terminal.Yellow(core.AUTHOR))
 
 	// Starting server
 	p.Info("Starting Osmedeus server %s", terminal.Cyan("http://"+addr))
@@ -580,4 +588,10 @@ func (s *Server) PrintStartupInfo(addr string) {
 		// No event receiver, but still show scheduler status
 		p.Info("Scheduler started")
 	}
+
+	// Print credentials tip
+	fmt.Println()
+	fmt.Printf("💡 %s\n", terminal.Gray("Tip: View your login credentials with:"))
+	fmt.Printf("   %s\n", terminal.Cyan("osmedeus config view server.username"))
+	fmt.Printf("   %s\n", terminal.Cyan("osmedeus config view server.password"))
 }

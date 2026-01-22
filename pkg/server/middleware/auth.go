@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"encoding/json"
+	"net/url"
 	"strings"
 	"time"
 
@@ -18,25 +20,45 @@ type Claims struct {
 // JWTAuth creates JWT authentication middleware
 func JWTAuth(cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Get token from Authorization header
+		var tokenString string
+
+		// Try Authorization header first (API clients)
 		authHeader := c.Get("Authorization")
-		if authHeader == "" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error":   true,
-				"message": "Missing authorization header",
-			})
+		if authHeader != "" {
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				tokenString = parts[1]
+			}
 		}
 
-		// Check Bearer prefix
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error":   true,
-				"message": "Invalid authorization header format",
-			})
+		// Fall back to cookie (browser clients)
+		if tokenString == "" {
+			cookie := c.Cookies("osmedeus_session")
+			if cookie != "" {
+				// URL decode the cookie value
+				decoded, err := url.QueryUnescape(cookie)
+				if err == nil {
+					// Try to parse as JSON to extract token
+					var sessionData map[string]string
+					if json.Unmarshal([]byte(decoded), &sessionData) == nil {
+						if t, ok := sessionData["token"]; ok && t != "" {
+							tokenString = t
+						}
+					}
+				}
+				// Fallback: if not JSON, treat as raw token (backward compat)
+				if tokenString == "" {
+					tokenString = cookie
+				}
+			}
 		}
 
-		tokenString := parts[1]
+		if tokenString == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error":   true,
+				"message": "Missing authorization header or session cookie",
+			})
+		}
 
 		// Parse and validate token
 		claims := &Claims{}
@@ -115,4 +137,19 @@ func isValidAPIKey(provided, expected string) bool {
 
 	// Compare with expected (case-sensitive, exact match)
 	return provided == expected
+}
+
+// CombinedAuth creates a middleware that tries API key auth first, then falls back to JWT auth.
+// This allows both authentication methods to coexist when EnabledAuthAPI is true.
+func CombinedAuth(cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// Try API key first
+		apiKey := c.Get("x-osm-api-key")
+		if apiKey != "" && isValidAPIKey(apiKey, cfg.Server.AuthAPIKey) {
+			return c.Next()
+		}
+
+		// Fall back to JWT auth
+		return JWTAuth(cfg)(c)
+	}
 }

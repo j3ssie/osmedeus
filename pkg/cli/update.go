@@ -44,10 +44,14 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to parse repository URL: %w", err)
 	}
 
-	// Create updater
-	upd := updater.DefaultUpdater(owner, repo)
+	// Create updater with verbose flag
+	upd := updater.NewUpdater(updater.Options{
+		Owner:   owner,
+		Repo:    repo,
+		Verbose: verbose,
+	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
 	currentVersion := core.VERSION
