@@ -31,21 +31,22 @@ func Export(stateFile string, ctx *ExportContext) error {
 		UpdatedAt: time.Now(),
 	}
 
-	// Try to load run from database first
-	runLoaded := false
-	if ctx != nil && ctx.RunID != "" && db != nil {
-		var run database.Run
-		err := db.NewSelect().Model(&run).
-			Where("id = ? OR run_id = ?", ctx.RunID, ctx.RunID).Scan(dbCtx)
-		if err == nil {
-			export.Run = runInfoFromDB(&run)
-			runLoaded = true
-		}
+	// Always use context data first for run info (has correct in-memory status)
+	// The DB read happens before status is updated, so it returns stale data.
+	// Context data comes from the in-memory result which has the correct status.
+	if ctx != nil {
+		export.Run = runInfoFromContext(ctx)
 	}
 
-	// Fallback: populate run info from context
-	if !runLoaded && ctx != nil {
-		export.Run = runInfoFromContext(ctx)
+	// Optionally enrich with DB data for fields not available in context
+	// (currently all fields are available in context, so this is just for future-proofing)
+	if export.Run == nil && ctx != nil && ctx.RunUUID != "" && db != nil {
+		var run database.Run
+		err := db.NewSelect().Model(&run).
+			Where("run_uuid = ?", ctx.RunUUID).Scan(dbCtx)
+		if err == nil {
+			export.Run = runInfoFromDB(&run)
+		}
 	}
 
 	// Try to load workspace from database first
@@ -86,13 +87,13 @@ func Export(stateFile string, ctx *ExportContext) error {
 
 func runInfoFromDB(run *database.Run) *RunInfo {
 	return &RunInfo{
-		RunID:          run.RunID,
+		RunUUID:        run.RunUUID,
 		WorkflowName:   run.WorkflowName,
 		WorkflowKind:   run.WorkflowKind,
 		Target:         run.Target,
 		Params:         run.Params,
 		Status:         run.Status,
-		WorkspacePath:  run.WorkspacePath,
+		Workspace:      run.Workspace,
 		StartedAt:      run.StartedAt,
 		CompletedAt:    run.CompletedAt,
 		ErrorMessage:   run.ErrorMessage,
@@ -102,17 +103,17 @@ func runInfoFromDB(run *database.Run) *RunInfo {
 }
 
 func runInfoFromContext(ctx *ExportContext) *RunInfo {
-	if ctx.RunID == "" && ctx.WorkflowName == "" {
+	if ctx.RunUUID == "" && ctx.WorkflowName == "" {
 		return nil
 	}
 	return &RunInfo{
-		RunID:          ctx.RunID,
+		RunUUID:        ctx.RunUUID,
 		WorkflowName:   ctx.WorkflowName,
 		WorkflowKind:   ctx.WorkflowKind,
 		Target:         ctx.Target,
 		Params:         ctx.Params,
 		Status:         ctx.Status,
-		WorkspacePath:  ctx.WorkspacePath,
+		Workspace:      ctx.WorkspaceName,
 		StartedAt:      ctx.StartedAt,
 		CompletedAt:    ctx.CompletedAt,
 		ErrorMessage:   ctx.ErrorMessage,

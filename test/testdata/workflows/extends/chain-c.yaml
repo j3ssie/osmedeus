@@ -5,8 +5,7 @@ extends: chain-b
 
 override:
   params:
-    param-a:
-      default: "final-from-c"
+    param-a: "final-from-c"
   steps:
     mode: append
     steps:

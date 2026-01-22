@@ -192,7 +192,7 @@ func fromWorkflowResult(result *core.WorkflowResult, outputPath string) *RunResu
 
 	runResult := &RunResult{
 		WorkflowName: result.WorkflowName,
-		RunID:        result.RunID,
+		RunID:        result.RunUUID,
 		Target:       result.Target,
 		Status:       string(result.Status),
 		StartTime:    result.StartTime,

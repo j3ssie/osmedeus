@@ -71,7 +71,7 @@ func TestTrySendRunToRedis(t *testing.T) {
 	UnregisterDistributedHooks()
 
 	ctx := context.Background()
-	run := &Run{ID: "test-run", RunID: "run-123"}
+	run := &Run{ID: 1, RunUUID: "run-123"}
 
 	// Without hooks, should return false
 	if trySendRunToRedis(ctx, run) {
@@ -97,7 +97,7 @@ func TestTrySendRunToRedis(t *testing.T) {
 		t.Error("SendRun was not called")
 	}
 	if sentRun.ID != run.ID {
-		t.Errorf("Wrong run sent: expected %s, got %s", run.ID, sentRun.ID)
+		t.Errorf("Wrong run sent: expected %d, got %d", run.ID, sentRun.ID)
 	}
 
 	// Cleanup
@@ -244,7 +244,7 @@ func TestConcurrentHooksAccess(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			run := &Run{ID: "concurrent-test"}
+			run := &Run{ID: 1, RunUUID: "concurrent-test"}
 			trySendRunToRedis(ctx, run)
 		}()
 	}

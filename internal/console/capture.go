@@ -21,15 +21,27 @@ type Capture struct {
 	wg          sync.WaitGroup
 }
 
-// StartCapture begins capturing stdout/stderr to the specified file
+// StartCapture begins capturing stdout/stderr to the specified file.
+// This truncates the file if it exists.
 func StartCapture(filePath string) (*Capture, error) {
+	return startCaptureWithFlags(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC)
+}
+
+// StartCaptureAppend begins capturing stdout/stderr, appending to file if it exists.
+// Use this for subsequent captures in the same workflow (e.g., multiple modules in a flow).
+func StartCaptureAppend(filePath string) (*Capture, error) {
+	return startCaptureWithFlags(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND)
+}
+
+// startCaptureWithFlags is the internal implementation that accepts file open flags.
+func startCaptureWithFlags(filePath string, flags int) (*Capture, error) {
 	// Ensure directory exists
 	if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
 		return nil, err
 	}
 
-	// Open file for writing
-	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	// Open file for writing with specified flags
+	file, err := os.OpenFile(filePath, flags, 0644)
 	if err != nil {
 		return nil, err
 	}

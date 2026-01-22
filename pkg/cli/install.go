@@ -28,7 +28,6 @@ var (
 	nixInstallation         bool
 	nixPkgs                 []string
 	installOptional         bool
-	descMaxWidth            int
 	hideBinaryTags          bool
 	baseSample              bool
 	basePreset              bool
@@ -156,9 +155,24 @@ func runInstallWorkflow(cmd *cobra.Command, args []string) error {
 		headers,
 	)
 
-	if workflowPreset {
-		printer := terminal.NewPrinter()
+	printer := terminal.NewPrinter()
 
+	// Check if workflow folder exists and prompt for confirmation
+	if _, err := os.Stat(inst.WorkflowFolder); err == nil {
+		if !globalForce {
+			printer.Warning("Existing workflow folder detected!")
+			printer.Warning("Path: %s", inst.WorkflowFolder)
+			printer.Warning("This operation will REMOVE the existing workflow folder and all its contents.")
+			fmt.Println()
+
+			if !confirmPrompt("Do you want to continue?") {
+				printer.Info("Operation cancelled. Use --force to skip this confirmation.")
+				return nil
+			}
+		}
+	}
+
+	if workflowPreset {
 		workflowURL := os.Getenv("OSM_WORKFLOW_URL")
 		if workflowURL != "" {
 			printer.Info("Using workflow URL from OSM_WORKFLOW_URL environment variable")
@@ -355,13 +369,13 @@ func runInstallBinary(cmd *cobra.Command, args []string) error {
 
 	// Handle --list-registry-nix-build flag
 	if listRegistryNixBuild {
-		return printNixBinaries(printer, descMaxWidth, !hideBinaryTags)
+		return printNixBinaries(printer, globalWidth, !hideBinaryTags)
 	}
 
 	// Handle --list-registry-direct-fetch flag
 	if listRegistryDirectFetch {
 		headers := parseCustomHeaders(customHeaders)
-		return printRegistryBinaries(registryPath, headers, printer, descMaxWidth, !hideBinaryTags)
+		return printRegistryBinaries(registryPath, headers, printer, globalWidth, !hideBinaryTags)
 	}
 
 	// Handle --go-getter flag (download/clone via go-getter)
@@ -1519,6 +1533,7 @@ func init() {
 	installBaseCmd.Flags().BoolVar(&baseSample, "sample", false, "initialize base folder from embedded sample (replaces existing base folder)")
 	installBaseCmd.Flags().BoolVar(&basePreset, "preset", false, "install from OSM_PRESET_URL environment variable (default: DEFAULT_BASE_REPO)")
 	installWorkflowCmd.Flags().BoolVar(&workflowPreset, "preset", false, "install from OSM_WORKFLOW_URL environment variable (default: DEFAULT_WORKFLOW_REPO)")
+	// Note: --force flag is now global (defined in root.go)
 
 	// Binary command flags
 	installBinaryCmd.Flags().StringSliceVarP(&binaryNames, "name", "n", []string{}, "binary name(s) to install (can be repeated)")
@@ -1529,7 +1544,7 @@ func init() {
 	installBinaryCmd.Flags().BoolVar(&nixBuildInstall, "nix-build-install", false, "use Nix to install binaries instead of direct downloads")
 	installBinaryCmd.Flags().BoolVar(&nixInstallation, "nix-installation", false, "install Nix package manager (Determinate Systems installer)")
 	installBinaryCmd.Flags().BoolVar(&installOptional, "install-optional", false, "include optional binaries in installation")
-	installBinaryCmd.Flags().IntVar(&descMaxWidth, "max-width", 80, "max width of description column in list output")
+	// Note: --width flag is now global (defined in root.go), --max-width removed in favor of --width
 	installBinaryCmd.Flags().BoolVar(&hideBinaryTags, "disable-tags", false, "hide tags column in list output")
 	installBinaryCmd.Flags().StringSliceVar(&goGetterSources, "go-getter", []string{}, "source URL(s) to download via go-getter (supports git repos, archives, etc.)")
 	installBinaryCmd.Flags().StringVar(&goGetterDest, "go-getter-dest", "", "destination directory for go-getter downloads (default: $HOME)")

@@ -19,7 +19,7 @@ func BuildContext(execCtx *core.ExecutionContext) map[string]interface{} {
 
 	// Add standard variables
 	ctx["workflow"] = execCtx.WorkflowName
-	ctx["run_id"] = execCtx.RunID
+	ctx["run_id"] = execCtx.RunUUID
 	ctx["target"] = execCtx.Target
 	ctx["workspace"] = execCtx.WorkspacePath
 	ctx["base_folder"] = execCtx.BaseFolder

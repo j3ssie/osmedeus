@@ -46,7 +46,7 @@ func init() {
 	scanCmd.Flags().BoolVarP(&distributedRun, "distributed-run", "D", false, "submit run to distributed worker queue (requires Redis)")
 	scanCmd.Flags().StringVar(&redisURLRun, "redis-url", "", "Redis connection URL for distributed mode (overrides settings)")
 	scanCmd.Flags().BoolVar(&repeatRun, "repeat", false, "repeat run after completion")
-	scanCmd.Flags().StringVar(&repeatWaitTime, "repeat-wait-time", "1h", "wait time between repeats (e.g., 30s, 20m, 10h, 1d)")
+	scanCmd.Flags().StringVar(&repeatWaitTime, "repeat-wait-time", "1m", "wait time between repeats (e.g., 30s, 20m, 10h, 1d)")
 	scanCmd.Flags().StringVar(&runTimeout, "timeout", "", "run timeout (e.g., 2h, 3h, 1d)")
 	scanCmd.Flags().BoolVar(&stdModule, "std-module", false, "read module YAML from stdin")
 	scanCmd.Flags().BoolVar(&emptyTarget, "empty-target", false, "run without target (generates placeholder target)")

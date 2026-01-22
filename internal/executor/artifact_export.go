@@ -15,7 +15,8 @@ import (
 )
 
 // RegisterArtifacts registers workflow reports and state files as artifacts in the database
-func RegisterArtifacts(workflow *core.Workflow, execCtx *core.ExecutionContext, logger *zap.Logger) error {
+// runID is the integer Run.ID used as a foreign key for artifacts
+func RegisterArtifacts(workflow *core.Workflow, execCtx *core.ExecutionContext, runID int64, logger *zap.Logger) error {
 	db := database.GetDB()
 	if db == nil {
 		return nil
@@ -31,9 +32,6 @@ func RegisterArtifacts(workflow *core.Workflow, execCtx *core.ExecutionContext, 
 		return nil
 	}
 	outputStr, _ := outputPath.(string)
-
-	// Get run ID - try dbRunID first (from server mode), then execCtx.RunID
-	runID := execCtx.RunID
 
 	// Register workflow reports
 	for _, report := range workflow.Reports {

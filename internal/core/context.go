@@ -11,7 +11,7 @@ import (
 type ExecutionContext struct {
 	WorkflowName  string
 	WorkflowKind  WorkflowKind
-	RunID         string
+	RunUUID       string
 	Target        string
 	WorkspacePath string
 	BaseFolder    string
@@ -43,11 +43,11 @@ type ExecutionContext struct {
 }
 
 // NewExecutionContext creates a new execution context
-func NewExecutionContext(workflowName string, kind WorkflowKind, runID, target string) *ExecutionContext {
+func NewExecutionContext(workflowName string, kind WorkflowKind, runUUID, target string) *ExecutionContext {
 	return &ExecutionContext{
 		WorkflowName: workflowName,
 		WorkflowKind: kind,
-		RunID:        runID,
+		RunUUID:      runUUID,
 		Target:       target,
 		Params:       make(map[string]interface{}),
 		Exports:      make(map[string]interface{}),
@@ -151,7 +151,7 @@ func (c *ExecutionContext) Clone() *ExecutionContext {
 	clone := &ExecutionContext{
 		WorkflowName:  c.WorkflowName,
 		WorkflowKind:  c.WorkflowKind,
-		RunID:         c.RunID,
+		RunUUID:       c.RunUUID,
 		Target:        c.Target,
 		WorkspacePath: c.WorkspacePath,
 		BaseFolder:    c.BaseFolder,
@@ -193,7 +193,7 @@ func (c *ExecutionContext) CloneForLoop(loopVar string, loopValue interface{}, i
 	clone := &ExecutionContext{
 		WorkflowName:  c.WorkflowName,
 		WorkflowKind:  c.WorkflowKind,
-		RunID:         c.RunID,
+		RunUUID:       c.RunUUID,
 		Target:        c.Target,
 		WorkspacePath: c.WorkspacePath,
 		BaseFolder:    c.BaseFolder,

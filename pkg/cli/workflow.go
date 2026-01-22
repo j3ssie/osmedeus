@@ -1101,7 +1101,7 @@ var workflowShowCmd = &cobra.Command{
 
 				// Metadata variables
 				{terminal.Cyan("{{Version}}"), "Osmedeus version", terminal.Gray("<osmedeus version>")},
-				{terminal.Cyan("{{TaskID}}"), "Unique task identifier (8 chars)", terminal.Yellow("<generated>")},
+				{terminal.Cyan("{{RunUUID}}"), "Unique run identifier (UUID)", terminal.Yellow("<generated>")},
 				{terminal.Cyan("{{TaskDate}}"), "Task date (YYYY-MM-DD)", terminal.Yellow("<current date>")},
 				{terminal.Cyan("{{Today}}"), "Current date (YYYY-MM-DD)", terminal.Yellow("<current date>")},
 				{terminal.Cyan("{{TimeStamp}}"), "Unix timestamp", terminal.Yellow("<unix timestamp>")},
@@ -1113,7 +1113,7 @@ var workflowShowCmd = &cobra.Command{
 			// Compact: show variables in columns
 			vars := []string{
 				"{{BaseFolder}}", "{{Binaries}}", "{{Data}}", "{{Workspaces}}",
-				"{{Target}}", "{{Output}}", "{{TaskID}}", "{{Today}}",
+				"{{Target}}", "{{Output}}", "{{RunUUID}}", "{{Today}}",
 				"{{threads}}", "{{Version}}", "{{RandomString}}",
 			}
 			for i, v := range vars {

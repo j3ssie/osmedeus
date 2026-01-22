@@ -39,6 +39,11 @@ var (
 	ciOutputFormat      bool
 	skipAutoSetup       bool
 
+	// Global flags available to all subcommands
+	globalForce bool
+	globalJSON  bool
+	globalWidth int
+
 	// Build info - set via SetBuildInfo from main.go
 	buildTime  = "unknown"
 	commitHash = "unknown"
@@ -269,6 +274,11 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&ciOutputFormat, "ci-output-format", false, "output results in JSON format for CI pipelines")
 	rootCmd.PersistentFlags().BoolVar(&skipAutoSetup, "skip-auto-setup", false, "skip automatic first-time setup")
 
+	// Global flags available to all subcommands
+	rootCmd.PersistentFlags().BoolVar(&globalForce, "force", false, "skip confirmation prompts and force operations")
+	rootCmd.PersistentFlags().BoolVar(&globalJSON, "json", false, "output in JSON format")
+	rootCmd.PersistentFlags().IntVar(&globalWidth, "width", 80, "max column width for table display (0 = no limit)")
+
 	// Suppress usage display and default error output (we handle errors in Execute())
 	rootCmd.SilenceUsage = true
 	rootCmd.SilenceErrors = true
@@ -297,6 +307,7 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(evalCmd)
+	rootCmd.AddCommand(clientCmd)
 }
 
 // installRequiredBinaries installs all required binaries from the registry.
@@ -482,6 +493,7 @@ func shouldSkipAutoSetup(cmd *cobra.Command) bool {
 		"help":       true,
 		"update":     true,
 		"completion": true,
+		"client":     true,
 	}
 	// Check command and all parent commands
 	for c := cmd; c != nil; c = c.Parent() {

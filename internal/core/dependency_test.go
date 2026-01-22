@@ -86,6 +86,42 @@ func TestMatchesAnyVariableType(t *testing.T) {
 			typeSpec: "number",
 			want:     false,
 		},
+		{
+			name:     "ip type accepts IPv4",
+			value:    "192.168.1.1",
+			typeSpec: VarTypeIP,
+			want:     true,
+		},
+		{
+			name:     "ip type accepts IPv6",
+			value:    "2001:db8::1",
+			typeSpec: VarTypeIP,
+			want:     true,
+		},
+		{
+			name:     "ip type rejects domain",
+			value:    "example.com",
+			typeSpec: VarTypeIP,
+			want:     false,
+		},
+		{
+			name:     "ip type rejects invalid ip",
+			value:    "999.999.999.999",
+			typeSpec: VarTypeIP,
+			want:     false,
+		},
+		{
+			name:     "comma-separated ip,cidr accepts ip",
+			value:    "162.13.44.21",
+			typeSpec: "ip,cidr",
+			want:     true,
+		},
+		{
+			name:     "comma-separated ip,cidr accepts cidr",
+			value:    "10.0.0.0/8",
+			typeSpec: "ip,cidr",
+			want:     true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -161,6 +197,36 @@ func TestMatchesAnyTargetType(t *testing.T) {
 			name:     "string type accepts anything",
 			target:   "anything",
 			typeSpec: "string",
+			want:     true,
+		},
+		{
+			name:     "ip type accepts IPv4",
+			target:   "162.13.44.21",
+			typeSpec: TargetTypeIP,
+			want:     true,
+		},
+		{
+			name:     "ip type accepts IPv6",
+			target:   "2001:db8::1",
+			typeSpec: TargetTypeIP,
+			want:     true,
+		},
+		{
+			name:     "ip type rejects domain",
+			target:   "example.com",
+			typeSpec: TargetTypeIP,
+			want:     false,
+		},
+		{
+			name:     "comma-separated ip,cidr accepts ip",
+			target:   "192.168.1.1",
+			typeSpec: "ip,cidr",
+			want:     true,
+		},
+		{
+			name:     "comma-separated ip,cidr accepts cidr",
+			target:   "10.0.0.0/8",
+			typeSpec: "ip,cidr",
 			want:     true,
 		},
 	}

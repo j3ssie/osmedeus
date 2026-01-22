@@ -17,7 +17,7 @@ func buildExportContext(result *core.WorkflowResult, execCtx *core.ExecutionCont
 
 	// Populate from execCtx
 	if execCtx != nil {
-		ctx.RunID = execCtx.RunID
+		ctx.RunUUID = execCtx.RunUUID
 		ctx.WorkflowName = execCtx.WorkflowName
 		ctx.WorkflowKind = string(execCtx.WorkflowKind)
 		ctx.Target = execCtx.Target
@@ -28,8 +28,8 @@ func buildExportContext(result *core.WorkflowResult, execCtx *core.ExecutionCont
 
 	// Populate/override from result
 	if result != nil {
-		if ctx.RunID == "" {
-			ctx.RunID = result.RunID
+		if ctx.RunUUID == "" {
+			ctx.RunUUID = result.RunUUID
 		}
 		if ctx.WorkflowName == "" {
 			ctx.WorkflowName = result.WorkflowName

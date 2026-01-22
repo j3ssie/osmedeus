@@ -18,7 +18,7 @@ import (
 // @Param name query string false "Filter by event name"
 // @Param source query string false "Filter by source (scheduler, api, webhook)"
 // @Param workspace query string false "Filter by workspace"
-// @Param run_id query string false "Filter by run ID"
+// @Param run_uuid query string false "Filter by run UUID"
 // @Param workflow_name query string false "Filter by workflow name"
 // @Param processed query string false "Filter by processed status (true/false)"
 // @Param offset query int false "Number of records to skip" default(0)
@@ -50,7 +50,7 @@ func ListEventLogs(cfg *config.Config) fiber.Handler {
 			Name:         c.Query("name"),
 			Source:       c.Query("source"),
 			Workspace:    c.Query("workspace"),
-			RunID:        c.Query("run_id"),
+			RunID:        c.Query("run_uuid"),
 			WorkflowName: c.Query("workflow_name"),
 			Offset:       offset,
 			Limit:        limit,

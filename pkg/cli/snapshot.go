@@ -16,7 +16,6 @@ import (
 
 var (
 	snapshotOutputPath string
-	snapshotForce      bool
 	snapshotSkipDB     bool
 )
 
@@ -71,7 +70,7 @@ func init() {
 	snapshotExportCmd.Flags().StringVarP(&snapshotOutputPath, "output", "o", "", "Custom output path for the snapshot")
 
 	// Import flags
-	snapshotImportCmd.Flags().BoolVarP(&snapshotForce, "force", "f", false, "Overwrite existing workspace")
+	// Note: --force flag is now global (defined in root.go)
 	snapshotImportCmd.Flags().BoolVar(&snapshotSkipDB, "skip-db", false, "Skip database import (files only)")
 
 	// Add subcommands
@@ -158,7 +157,7 @@ func runSnapshotImport(cmd *cobra.Command, args []string) error {
 	var result *snapshot.ImportResult
 	var err error
 
-	if snapshotForce {
+	if globalForce {
 		result, err = snapshot.ForceImportWorkspace(source, cfg.WorkspacesPath, snapshotSkipDB, cfg)
 	} else {
 		result, err = snapshot.ImportWorkspace(source, cfg.WorkspacesPath, snapshotSkipDB, cfg)

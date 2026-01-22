@@ -160,11 +160,20 @@ func (e *BashExecutor) executeCommand(ctx context.Context, command string, timeo
 	if e.runner != nil {
 		result, err := e.runner.Execute(ctx, command)
 		duration := time.Since(startTime).Seconds()
-		if err != nil {
+
+		// Check for context cancellation first (Ctrl+C or timeout)
+		// This must be checked before other errors because runners return nil error
+		// but set result.ExitCode to -1 when context is cancelled
+		if ctx.Err() != nil {
 			if ctx.Err() == context.DeadlineExceeded {
 				metrics.RecordToolExecution(toolName, "timeout", duration)
 				return result.Output, fmt.Errorf("command timed out after %s", timeout)
 			}
+			metrics.RecordToolExecution(toolName, "cancelled", duration)
+			return result.Output, ctx.Err()
+		}
+
+		if err != nil {
 			metrics.RecordToolExecution(toolName, "error", duration)
 			return result.Output, fmt.Errorf("command failed: %w", err)
 		}
@@ -192,11 +201,17 @@ func (e *BashExecutor) executeCommand(ctx context.Context, command string, timeo
 		output += "\n" + stderr.String()
 	}
 
-	if err != nil {
+	// Check for context cancellation first (Ctrl+C or timeout)
+	if ctx.Err() != nil {
 		if ctx.Err() == context.DeadlineExceeded {
 			metrics.RecordToolExecution(toolName, "timeout", duration)
 			return output, fmt.Errorf("command timed out after %s", timeout)
 		}
+		metrics.RecordToolExecution(toolName, "cancelled", duration)
+		return output, ctx.Err()
+	}
+
+	if err != nil {
 		metrics.RecordToolExecution(toolName, "error", duration)
 		return output, fmt.Errorf("command failed: %w\nstderr: %s", err, stderr.String())
 	}

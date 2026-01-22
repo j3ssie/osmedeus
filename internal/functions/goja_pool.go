@@ -80,7 +80,8 @@ type VMContext struct {
 	// Context fields for function execution (previously on GojaRuntime)
 	workspaceName string
 	stateFile     string
-	scanID        string
+	scanID        string // RunUUID (string identifier)
+	runID         int64  // Run.ID (integer for database foreign keys)
 	workflowName  string
 	workflowKind  string
 	target        string
@@ -136,6 +137,7 @@ func (p *VMPool) Put(ctx *VMContext) {
 	ctx.workspaceName = ""
 	ctx.stateFile = ""
 	ctx.scanID = ""
+	ctx.runID = 0
 	ctx.workflowName = ""
 	ctx.workflowKind = ""
 	ctx.target = ""
@@ -171,9 +173,16 @@ func (v *VMContext) SetContext(ctx map[string]interface{}) {
 		v.stateFile = sf
 	}
 
-	// Extract scan ID
-	if sid, ok := ctx["TaskID"].(string); ok {
+	// Extract scan ID (RunUUID) - check both new and legacy variable names
+	if sid, ok := ctx["RunUUID"].(string); ok {
 		v.scanID = sid
+	} else if sid, ok := ctx["TaskID"].(string); ok {
+		v.scanID = sid
+	}
+
+	// Extract database Run.ID (integer for foreign keys)
+	if rid, ok := ctx["DBRunID"].(int64); ok {
+		v.runID = rid
 	}
 
 	// Extract workflow name and kind

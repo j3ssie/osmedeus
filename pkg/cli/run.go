@@ -26,6 +26,7 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/database"
 	"github.com/j3ssie/osmedeus/v5/internal/distributed"
 	"github.com/j3ssie/osmedeus/v5/internal/executor"
+	"github.com/j3ssie/osmedeus/v5/internal/heuristics"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
@@ -105,7 +106,7 @@ func init() {
 	runCmd.Flags().BoolVarP(&distributedRun, "distributed-run", "D", false, "submit run to distributed worker queue (requires Redis)")
 	runCmd.Flags().StringVar(&redisURLRun, "redis-url", "", "Redis connection URL for distributed mode (overrides settings)")
 	runCmd.Flags().BoolVar(&repeatRun, "repeat", false, "repeat run after completion")
-	runCmd.Flags().StringVar(&repeatWaitTime, "repeat-wait-time", "1h", "wait time between repeats (e.g., 30s, 20m, 10h, 1d)")
+	runCmd.Flags().StringVar(&repeatWaitTime, "repeat-wait-time", "1m", "wait time between repeats (e.g., 30s, 20m, 10h, 1d)")
 	runCmd.Flags().StringVar(&runTimeout, "timeout", "", "run timeout (e.g., 2h, 3h, 1d)")
 	runCmd.Flags().BoolVar(&stdModule, "std-module", false, "read module YAML from stdin")
 	runCmd.Flags().StringVar(&moduleURL, "module-url", "", "URL to fetch module YAML from (supports GitHub private repos)")
@@ -710,9 +711,10 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 	}
 
 	// Create run record in database (skip for dry-run)
-	var runID string
+	var runUUID string
+	var runID int64
 	if !dryRun {
-		runID = createCLIRunRecord(ctx, cfg, workflow, target, params)
+		runUUID, runID = createCLIRunRecord(ctx, cfg, workflow, target, params, loader)
 	}
 
 	// Create executor
@@ -734,10 +736,11 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 	}
 
 	// Set up database progress tracking
-	if runID != "" {
+	if runUUID != "" {
+		exec.SetDBRunUUID(runUUID)
 		exec.SetDBRunID(runID)
-		exec.SetOnStepCompleted(func(stepCtx context.Context, dbRunID string) {
-			_ = database.IncrementRunCompletedSteps(stepCtx, dbRunID)
+		exec.SetOnStepCompleted(func(stepCtx context.Context, dbRunUUID string) {
+			_ = database.IncrementRunCompletedSteps(stepCtx, dbRunUUID)
 		})
 	}
 
@@ -807,21 +810,43 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 		// Handle target type mismatch error specially (print once, skip logging)
 		if handleTargetTypeMismatchError(err) {
 			// Update run status to failed in database
-			if runID != "" {
-				_ = database.UpdateRunStatus(ctx, runID, "failed", err.Error())
+			// Use a fresh context for cleanup - the original ctx may be cancelled
+			if runUUID != "" {
+				cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+				_ = database.UpdateRunStatus(cleanupCtx, runUUID, "failed", err.Error())
+				cleanupCancel()
 			}
 			return nil, err
 		}
 
-		// Other errors: log normally
-		log.Error("Workflow execution failed",
-			zap.String("workflow", workflow.Name),
-			zap.String("target", target),
-			zap.Error(err),
-		)
-		// Update run status to failed in database
-		if runID != "" {
-			_ = database.UpdateRunStatus(ctx, runID, "failed", err.Error())
+		// Determine status based on error type
+		status := "failed"
+		if errors.Is(err, context.Canceled) {
+			status = "cancelled"
+			log.Warn("Workflow execution cancelled",
+				zap.String("workflow", workflow.Name),
+				zap.String("target", target),
+			)
+		} else {
+			log.Error("Workflow execution failed",
+				zap.String("workflow", workflow.Name),
+				zap.String("target", target),
+				zap.Error(err),
+			)
+		}
+
+		// Update run status in database
+		// Use a fresh context for cleanup - the original ctx may be cancelled
+		if runUUID != "" {
+			cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if updateErr := database.UpdateRunStatus(cleanupCtx, runUUID, status, err.Error()); updateErr != nil {
+				log.Error("Failed to update run status on cancellation",
+					zap.String("run_uuid", runUUID),
+					zap.String("status", status),
+					zap.Error(updateErr),
+				)
+			}
+			cleanupCancel()
 		}
 		return nil, err
 	}
@@ -840,8 +865,8 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 	)
 
 	// Update run status to completed in database
-	if runID != "" {
-		_ = database.UpdateRunStatus(ctx, runID, "completed", "")
+	if runUUID != "" {
+		_ = database.UpdateRunStatus(ctx, runUUID, "completed", "")
 	}
 
 	// Print result summary for this target (skip if progress bar was used - it shows its own summary)
@@ -852,25 +877,105 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 	return result, nil
 }
 
+// calculateTotalSteps returns the appropriate step count based on workflow kind.
+// For module workflows, it returns len(Steps).
+// For flow workflows, it loads each module and sums their step counts.
+func calculateTotalSteps(workflow *core.Workflow, loader *parser.Loader) int {
+	if workflow.Kind != core.KindFlow {
+		return len(workflow.Steps)
+	}
+
+	// Flow workflow: sum steps from all modules
+	if loader == nil {
+		return len(workflow.Modules)
+	}
+
+	log := logger.Get()
+	totalSteps := 0
+
+	for _, modRef := range workflow.Modules {
+		if modRef.Path == "" {
+			totalSteps++
+			continue
+		}
+
+		module, err := loader.LoadWorkflowByPath(modRef.Path)
+		if err != nil {
+			log.Warn("Failed to load module for step counting",
+				zap.String("module", modRef.Name),
+				zap.String("path", modRef.Path),
+				zap.Error(err),
+			)
+			totalSteps++
+			continue
+		}
+
+		totalSteps += len(module.Steps)
+	}
+
+	return totalSteps
+}
+
+// computeWorkspace computes the workspace name from target and params
+// This mirrors the executor's logic for computing TargetSpace
+func computeWorkspace(target string, params map[string]string) string {
+	// If -S flag provided, use it directly
+	if spaceName := params["space_name"]; spaceName != "" {
+		return spaceName
+	}
+
+	// Use heuristics to extract root domain/host (matches executor behavior)
+	heuristicsLevel := params["heuristics_check"]
+	if heuristicsLevel == "" {
+		heuristicsLevel = "basic"
+	}
+	if heuristicsLevel != "none" {
+		info, err := heuristics.Analyze(target, heuristicsLevel)
+		if err == nil && info != nil && info.RootDomain != "" {
+			return sanitizeTargetForWorkspace(info.RootDomain)
+		}
+	}
+
+	// Otherwise, sanitize the target for filesystem safety
+	return sanitizeTargetForWorkspace(target)
+}
+
+// sanitizeTargetForWorkspace creates a filesystem-safe workspace name from target
+// This mirrors the executor's sanitizeTargetSpace function
+func sanitizeTargetForWorkspace(target string) string {
+	sanitized := strings.Map(func(r rune) rune {
+		if strings.ContainsRune(`/\:*?"<>|`, r) {
+			return '_'
+		}
+		return r
+	}, target)
+	// Limit length to avoid filesystem issues
+	if len(sanitized) > 200 {
+		sanitized = sanitized[:200]
+	}
+	return sanitized
+}
+
 // createCLIRunRecord creates a run record in the database for CLI executions
-func createCLIRunRecord(ctx context.Context, cfg *config.Config, workflow *core.Workflow, target string, params map[string]string) string {
+// Returns the RunUUID (string) and Run.ID (int64)
+func createCLIRunRecord(ctx context.Context, cfg *config.Config, workflow *core.Workflow, target string, params map[string]string, loader *parser.Loader) (string, int64) {
 	log := logger.Get()
 
 	// Connect to database
 	_, err := database.Connect(cfg)
 	if err != nil {
 		log.Debug("Failed to connect to database for run record", zap.Error(err))
-		return ""
+		return "", 0
 	}
 
 	// Migrate database schema if needed
 	if err := database.Migrate(ctx); err != nil {
 		log.Debug("Failed to migrate database for run record", zap.Error(err))
-		return ""
+		return "", 0
 	}
 
 	now := time.Now()
-	runID := uuid.New().String()
+	runUUID := uuid.New().String()
 
 	// Convert params to interface map
 	paramsInterface := make(map[string]interface{})
@@ -878,9 +983,11 @@ func createCLIRunRecord(ctx context.Context, cfg *config.Config, workflow *core.
 		paramsInterface[k] = v
 	}
 
+	// Compute workspace from target and params
+	workspace := computeWorkspace(target, params)
+
 	run := &database.Run{
-		ID:           uuid.New().String(),
-		RunID:        runID,
+		RunUUID:      runUUID,
 		WorkflowName: workflow.Name,
 		WorkflowKind: string(workflow.Kind),
 		Target:       target,
@@ -888,16 +995,17 @@ func createCLIRunRecord(ctx context.Context, cfg *config.Config, workflow *core.
 		Status:       "running",
 		TriggerType:  "cli",
 		StartedAt:    &now,
-		TotalSteps:   len(workflow.Steps),
+		TotalSteps:   calculateTotalSteps(workflow, loader),
+		Workspace:    workspace,
 	}
 
 	if err := database.CreateRun(ctx, run); err != nil {
 		log.Debug("Failed to create run record", zap.Error(err))
-		return ""
+		return "", 0
 	}
 
-	log.Debug("Created run record", zap.String("run_id", runID))
-	return runID
+	log.Debug("Created run record", zap.String("run_uuid", runUUID), zap.Int64("run_id", run.ID))
+	return runUUID, run.ID
 }
 
 // collectTargets gathers targets from all input sources: flags, file, and stdin
@@ -1178,7 +1286,7 @@ func printResultSummary(result *core.WorkflowResult) {
 	// Log execution summary to state execution log file
 	logger.Get().Info("Execution Summary",
 		zap.String("workflow", result.WorkflowName),
-		zap.String("run_id", result.RunID),
+		zap.String("run_id", result.RunUUID),
 		zap.String("target", result.Target),
 		zap.String("status", string(result.Status)),
 		zap.Duration("duration", result.EndTime.Sub(result.StartTime)),
@@ -1200,7 +1308,7 @@ func printResultSummary(result *core.WorkflowResult) {
 
 	printer.Section("Execution Summary")
 	printer.KeyValue("Workflow", result.WorkflowName)
-	printer.KeyValue("Run ID", result.RunID)
+	printer.KeyValue("Run ID", result.RunUUID)
 	printer.KeyValue("Target", result.Target)
 	printer.KeyValue("Status", terminal.StatusBadge(string(result.Status)))
 	printer.KeyValue("Duration", formatDuration(result.EndTime.Sub(result.StartTime)))
@@ -1244,7 +1352,7 @@ func formatResultForCI(result *core.WorkflowResult) map[string]interface{} {
 
 	return map[string]interface{}{
 		"workflow":   result.WorkflowName,
-		"run_id":     result.RunID,
+		"run_id":     result.RunUUID,
 		"target":     result.Target,
 		"status":     string(result.Status),
 		"duration":   formatDuration(result.EndTime.Sub(result.StartTime)),

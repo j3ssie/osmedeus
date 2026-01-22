@@ -21,7 +21,7 @@ func TestExport_WithoutDatabase(t *testing.T) {
 	// Create context without database
 	now := time.Now()
 	ctx := &ExportContext{
-		RunID:          "test-run-123",
+		RunUUID:          "test-run-123",
 		WorkflowName:   "test-workflow",
 		WorkflowKind:   "module",
 		Target:         "example.com",
@@ -55,8 +55,8 @@ func TestExport_WithoutDatabase(t *testing.T) {
 	if export.Run == nil {
 		t.Fatal("Expected Run to be populated")
 	}
-	if export.Run.RunID != "test-run-123" {
-		t.Errorf("Expected RunID 'test-run-123', got '%s'", export.Run.RunID)
+	if export.Run.RunUUID != "test-run-123" {
+		t.Errorf("Expected RunID 'test-run-123', got '%s'", export.Run.RunUUID)
 	}
 	if export.Run.WorkflowName != "test-workflow" {
 		t.Errorf("Expected WorkflowName 'test-workflow', got '%s'", export.Run.WorkflowName)
@@ -111,7 +111,7 @@ func TestExport_MinimalContext(t *testing.T) {
 
 	// Create minimal context
 	ctx := &ExportContext{
-		RunID:         "minimal-run",
+		RunUUID:         "minimal-run",
 		WorkspaceName: "minimal-workspace",
 	}
 
@@ -136,8 +136,8 @@ func TestExport_MinimalContext(t *testing.T) {
 	if export.Run == nil {
 		t.Fatal("Expected Run to be populated")
 	}
-	if export.Run.RunID != "minimal-run" {
-		t.Errorf("Expected RunID 'minimal-run', got '%s'", export.Run.RunID)
+	if export.Run.RunUUID != "minimal-run" {
+		t.Errorf("Expected RunID 'minimal-run', got '%s'", export.Run.RunUUID)
 	}
 
 	// Verify workspace info is present
@@ -151,7 +151,7 @@ func TestExport_MinimalContext(t *testing.T) {
 
 func TestExport_EmptyStateFilePath(t *testing.T) {
 	ctx := &ExportContext{
-		RunID: "test",
+		RunUUID: "test",
 	}
 
 	err := Export("", ctx)

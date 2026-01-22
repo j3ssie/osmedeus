@@ -401,7 +401,7 @@ func TestListArtifactsVerifyExist(t *testing.T) {
 	now := time.Now()
 	art1 := &database.Artifact{
 		ID:           "a1",
-		RunID:        "r1",
+		RunID:        1,
 		Workspace:    "w1",
 		Name:         "file",
 		ArtifactPath: filePath,
@@ -413,7 +413,7 @@ func TestListArtifactsVerifyExist(t *testing.T) {
 	}
 	art2 := &database.Artifact{
 		ID:           "a2",
-		RunID:        "r1",
+		RunID:        1,
 		Workspace:    "w1",
 		Name:         "folder",
 		ArtifactPath: folderPath,
@@ -423,7 +423,7 @@ func TestListArtifactsVerifyExist(t *testing.T) {
 	}
 	art3 := &database.Artifact{
 		ID:           "a3",
-		RunID:        "r1",
+		RunID:        1,
 		Workspace:    "w1",
 		Name:         "missing",
 		ArtifactPath: filepath.Join(tmpDir, "missing.txt"),

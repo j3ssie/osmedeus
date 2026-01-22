@@ -2,6 +2,7 @@ package terminal
 
 import (
 	"os"
+	"strings"
 
 	"golang.org/x/term"
 )
@@ -185,4 +186,22 @@ func HiBlue(s string) string {
 // Teal returns text in teal color
 func Teal(s string) string {
 	return colorize(colorTeal, s)
+}
+
+// ColorizeStatus applies ANSI color codes to status values for table display
+func ColorizeStatus(status string) string {
+	switch strings.ToLower(status) {
+	case "running", "in_progress", "active":
+		return Blue(status)
+	case "failed", "error":
+		return Red(status)
+	case "completed", "success", "done":
+		return Green(status)
+	case "cancelled", "canceled":
+		return Yellow(status)
+	case "pending", "waiting", "queued":
+		return Gray(status)
+	default:
+		return status
+	}
 }

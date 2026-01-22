@@ -170,6 +170,11 @@ func Migrate(ctx context.Context) error {
 		}
 	}
 
+	// Create indexes for Run table
+	if err := createRunIndexes(ctx); err != nil {
+		return err
+	}
+
 	// Create indexes for Asset table
 	if err := createAssetIndexes(ctx); err != nil {
 		return err
@@ -203,6 +208,25 @@ func Migrate(ctx context.Context) error {
 	// Create indexes for VulnDiffSnapshot table
 	if err := createVulnDiffIndexes(ctx); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// createRunIndexes creates indexes for the runs table
+func createRunIndexes(ctx context.Context) error {
+	indexes := []string{
+		"CREATE INDEX IF NOT EXISTS idx_runs_run_uuid ON runs(run_uuid)",
+		"CREATE INDEX IF NOT EXISTS idx_runs_run_group_id ON runs(run_group_id)",
+		"CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status)",
+		"CREATE INDEX IF NOT EXISTS idx_runs_workflow_name ON runs(workflow_name)",
+		"CREATE INDEX IF NOT EXISTS idx_runs_target ON runs(target)",
+	}
+
+	for _, idx := range indexes {
+		if _, err := db.ExecContext(ctx, idx); err != nil {
+			return fmt.Errorf("failed to create index: %w", err)
+		}
 	}
 
 	return nil

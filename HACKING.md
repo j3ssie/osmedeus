@@ -23,113 +23,43 @@ This document describes the technical architecture and development practices for
 ## Project Structure
 
 ```
-osmedeus-ng/
-├── cmd/
-│   └── osmedeus/
-│       └── main.go              # Application entry point
-├── internal/                    # Private packages
-│   ├── config/                  # Configuration management
-│   │   ├── config.go            # Config loading and defaults
-│   │   ├── settings.go          # Settings struct definitions
-│   │   └── secrets.go           # Secret management
-│   ├── core/                    # Core types and interfaces
-│   │   ├── workflow.go          # Workflow and RunnerConfig structs
-│   │   ├── step.go              # Step definition
-│   │   ├── trigger.go           # Trigger types and events
-│   │   ├── types.go             # Status types, constants
-│   │   ├── context.go           # Execution context
-│   │   └── constants.go         # Project metadata
-│   ├── parser/                  # Workflow parsing
-│   │   ├── parser.go            # YAML parser
-│   │   ├── loader.go            # Workflow loader with caching
-│   │   └── validator.go         # Workflow validation
-│   ├── executor/                # Workflow execution
-│   │   ├── executor.go          # Main executor
-│   │   ├── dispatcher.go        # Step dispatcher
-│   │   ├── bash_executor.go     # Bash step handler
-│   │   ├── function_executor.go # Function step handler
-│   │   ├── foreach_executor.go  # Foreach step handler
-│   │   ├── parallel_executor.go # Parallel step handler
-│   │   ├── remote_bash_executor.go # Remote-bash step handler
-│   │   ├── http_executor.go     # HTTP request handler
-│   │   └── llm_executor.go      # LLM step handler
-│   ├── runner/                  # Execution environments
-│   │   ├── runner.go            # Runner interface
-│   │   ├── host_runner.go       # Local execution
-│   │   ├── docker_runner.go     # Docker execution
-│   │   └── ssh_runner.go        # SSH remote execution
-│   ├── template/                # Template rendering
-│   │   ├── engine.go            # Template engine
-│   │   ├── generators.go        # Value generators
-│   │   └── context.go           # Template context
-│   ├── functions/               # Utility functions
-│   │   ├── registry.go          # Function registry
-│   │   ├── goja_runtime.go      # JavaScript runtime (Goja VM)
-│   │   ├── file_functions.go    # File operations
-│   │   ├── string_functions.go  # String operations
-│   │   ├── util_functions.go    # Utility functions
-│   │   ├── event_functions.go   # Event generation functions
-│   │   └── jq.go                # JSON query functions
-│   ├── scheduler/               # Trigger scheduling
-│   │   └── scheduler.go         # Cron, event, watch triggers
-│   ├── database/                # Data persistence
-│   │   ├── database.go          # Connection management
-│   │   ├── models.go            # Data models
-│   │   ├── jsonl.go             # JSONL import/export
-│   │   └── repository/          # Data access layer
-│   ├── heuristics/              # Target analysis
-│   │   ├── heuristics.go        # Target type detection
-│   │   ├── url.go               # URL parsing
-│   │   └── domain.go            # Domain analysis
-│   ├── linter/                  # Workflow linting
-│   │   ├── linter.go            # Main linter logic
-│   │   ├── rules.go             # Linting rules (built-in variables, etc.)
-│   │   ├── formatter.go         # Output formatters (pretty, JSON, GitHub)
-│   │   ├── ast.go               # Workflow AST for position tracking
-│   │   └── types.go             # Linter types and severity levels
-│   ├── workspace/               # Workspace management
-│   │   └── workspace.go         # Workspace creation
-│   ├── snapshot/                # Workspace snapshots
-│   │   └── snapshot.go          # Export/import ZIP archives
-│   ├── installer/               # Binary installation
-│   │   ├── installer.go         # Core installer logic
-│   │   ├── nix.go               # Nix package manager support
-│   │   └── registry.go          # Binary registry management
-│   ├── state/                   # Run state export
-│   │   ├── export.go            # State export functionality
-│   │   └── types.go             # State types
-│   ├── updater/                 # Self-update functionality
-│   │   ├── updater.go           # Update logic
-│   │   └── github_source.go     # GitHub releases source
-│   ├── terminal/                # Terminal UI
-│   │   ├── printer.go           # Output formatting
-│   │   ├── colors.go            # ANSI colors
-│   │   ├── symbols.go           # Unicode symbols
-│   │   ├── spinner.go           # Loading spinners
-│   │   └── table.go             # Table rendering
-│   └── logger/                  # Structured logging
-│       └── logger.go            # Zap logger wrapper
-├── pkg/                         # Public packages
-│   ├── cli/                     # CLI commands
-│   │   ├── root.go              # Root command
-│   │   ├── run.go               # Run command (scan)
-│   │   ├── workflow.go          # Workflow command
-│   │   ├── function.go          # Function command (with bulk processing)
-│   │   ├── db.go                # Database CLI command
-│   │   └── server.go            # Server command
-│   └── server/                  # REST API
-│       ├── server.go            # Server setup
-│       ├── handlers/            # Request handlers
-│       └── middleware/          # Auth middleware (JWT, API Key)
-├── test/                        # Test suites
-│   ├── e2e/                     # E2E CLI tests
-│   ├── integration/             # Integration tests
-│   └── testdata/
-│       ├── workflows/           # Test workflow fixtures
-│       └── complex-workflows/   # Complex workflow examples
-└── build/                       # Build artifacts
-    ├── docker/                  # Docker files
-    └── DEPLOYMENT.md            # Deployment guide
+osmedeus/
+├── cmd/osmedeus/           # Application entry point
+├── internal/               # Private packages
+│   ├── client/             # Remote API client
+│   ├── config/             # Configuration management
+│   ├── console/            # Console output capture
+│   ├── core/               # Core types (Workflow, Step, Trigger, etc.)
+│   ├── database/           # SQLite/PostgreSQL via Bun ORM
+│   ├── distributed/        # Distributed execution (master/worker)
+│   ├── executor/           # Workflow execution engine
+│   ├── functions/          # Utility functions (Goja JS runtime)
+│   ├── heuristics/         # Target type detection
+│   ├── installer/          # Binary installation (direct/Nix)
+│   ├── linter/             # Workflow linting and validation
+│   ├── logger/             # Structured logging (Zap)
+│   ├── parser/             # YAML parsing and caching
+│   ├── runner/             # Execution environments (host/docker/ssh)
+│   ├── scheduler/          # Trigger scheduling (cron/event/watch)
+│   ├── snapshot/           # Workspace export/import
+│   ├── state/              # Run state export
+│   ├── template/           # {{Variable}} interpolation engine
+│   ├── terminal/           # Terminal UI (colors, tables, spinners)
+│   ├── updater/            # Self-update via GitHub releases
+│   └── workspace/          # Workspace management
+├── lib/                    # Shared library utilities
+├── pkg/                    # Public packages
+│   ├── cli/                # Cobra CLI commands
+│   └── server/             # Fiber REST API server
+│       ├── handlers/       # Request handlers
+│       └── middleware/     # Auth middleware (JWT, API Key)
+├── public/                 # Public assets (examples, presets, UI)
+├── test/                   # Test suites
+│   ├── e2e/                # E2E CLI tests
+│   ├── integration/        # Integration tests
+│   └── testdata/           # Test workflow fixtures
+├── docs/                   # API documentation
+└── build/                  # Build artifacts and Docker files
 ```
 
 ## Architecture Overview
@@ -574,7 +504,7 @@ func (e *Executor) injectBuiltinVariables(cfg *config.Config, params map[string]
     execCtx.SetVariable("Target", params["target"])
     execCtx.SetVariable("Output", filepath.Join(workspacesPath, targetSpace))
     execCtx.SetVariable("threads", threads)
-    execCtx.SetVariable("TaskID", execCtx.RunID)
+    execCtx.SetVariable("RunUUID", execCtx.RunUUID)
     // ... more variables
 }
 ```
@@ -846,7 +776,7 @@ The linter recognizes all runtime-injected variables to avoid false positives. T
 
 **Output Variables**: `Output`, `output`, `Workspace`, `workspace`
 
-**Metadata Variables**: `Version`, `TaskID`, `TaskDate`, `TimeStamp`, `Today`, `RandomString`
+**Metadata Variables**: `Version`, `RunUUID`, `TaskDate`, `TimeStamp`, `Today`, `RandomString`
 
 **Heuristic Variables**: `TargetType`, `TargetRootDomain`, `TargetTLD`, `Org`, `TargetHost`, `TargetPort`, etc.
 
@@ -935,7 +865,7 @@ type Run struct {
     Target         string
     Params         map[string]string
     Status         string    // "pending", "running", "completed", "failed"
-    WorkspacePath  string
+    Workspace      string    // Logical workspace name (same as TargetSpace)
     StartedAt      time.Time
     CompletedAt    time.Time
     ErrorMessage   string

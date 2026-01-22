@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -61,7 +62,8 @@ type Executor struct {
 	progressBar           *terminal.ProgressBar
 	disableWorkflowState  bool                  // disable writing workflow YAML to output directory
 	skipValidation        bool                  // skip target type validation from dependencies.variables
-	dbRunID               string                // database run ID for tracking progress
+	dbRunUUID             string                // database run UUID for tracking progress
+	dbRunID               int64                 // database run ID for step result foreign keys
 	onStepCompleted       StepCompletedCallback // callback after each step completes
 	loader                *parser.Loader        // workflow loader for loading nested modules in flows
 	consoleCapture        *console.Capture      // console output capture for run-console.log
@@ -128,12 +130,18 @@ func (e *Executor) SetProgressBar(pb *terminal.ProgressBar) {
 	e.progressBar = pb
 }
 
-// SetDBRunID sets the database run ID for progress tracking
-func (e *Executor) SetDBRunID(runID string) {
+// SetDBRunUUID sets the database run UUID for progress tracking
+func (e *Executor) SetDBRunUUID(runUUID string) {
+	e.dbRunUUID = runUUID
+	// Initialize progress tracker with RunUUID
+	e.progressTracker = database.NewProgressTracker(runUUID, nil)
+}
+
+// SetDBRunID sets the database run ID for step result foreign keys
+func (e *Executor) SetDBRunID(runID int64) {
 	e.dbRunID = runID
-	// Initialize batch buffers for database operations
+	// Initialize step result buffer with Run.ID (foreign key)
 	e.stepResultBuffer = database.NewStepResultBuffer(runID, nil)
-	e.progressTracker = database.NewProgressTracker(runID, nil)
 }
 
 // SetOnStepCompleted sets the callback for step completion
@@ -272,7 +280,8 @@ func (e *Executor) injectBuiltinVariables(cfg *config.Config, params map[string]
 
 	// Auto-generated variables
 	execCtx.SetVariable("TaskDate", now.Format("2006-01-02"))
-	execCtx.SetVariable("TaskID", execCtx.RunID)
+	execCtx.SetVariable("RunUUID", execCtx.RunUUID)
+	execCtx.SetVariable("DBRunID", e.dbRunID) // Integer Run.ID for database foreign keys
 	execCtx.SetVariable("TimeStamp", fmt.Sprintf("%d", now.Unix()))
 	execCtx.SetVariable("CurrentTime", now.Format("2006-01-02T15:04:05"))
 	execCtx.SetVariable("Today", now.Format("2006-01-02"))
@@ -335,7 +344,7 @@ func (e *Executor) debugLogTargetVariables(execCtx *core.ExecutionContext) {
 
 	execCtx.Logger.Debug("Target variables",
 		zap.String("workflow", execCtx.WorkflowName),
-		zap.String("run_id", execCtx.RunID),
+		zap.String("run_id", execCtx.RunUUID),
 		zap.String("Target", getStr("Target")),
 		zap.String("TargetSpace", getStr("TargetSpace")),
 		zap.String("Output", getStr("Output")),
@@ -756,18 +765,23 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	}
 
 	// Setup console capture to {{Output}}/run-console.log
-	if !e.dryRun {
+	// Only create if not already set up by parent (flow) to avoid truncating previous module output
+	createdCapture := false
+	if !e.dryRun && e.consoleCapture == nil {
 		if logPath, ok := execCtx.GetVariable("StateConsoleLog"); ok {
 			if logStr, ok := logPath.(string); ok && logStr != "" {
 				var err error
 				e.consoleCapture, err = console.StartCapture(logStr)
 				if err != nil {
 					e.logger.Warn("Failed to setup console capture", zap.Error(err))
+				} else {
+					createdCapture = true
 				}
 			}
 		}
 	}
-	if e.consoleCapture != nil {
+	// Only defer cleanup if WE created the capture (not if inherited from flow)
+	if createdCapture {
 		defer func() {
 			_ = e.consoleCapture.Stop()
 			e.consoleCapture = nil
@@ -785,7 +799,7 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	result := &core.WorkflowResult{
 		WorkflowName: module.Name,
 		WorkflowKind: core.KindModule,
-		RunID:        runID,
+		RunUUID:      runID,
 		Target:       params["target"],
 		Status:       core.RunStatusRunning,
 		StartTime:    time.Now(),
@@ -938,8 +952,8 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 			}
 
 			// Call step completed callback (for database progress tracking)
-			if e.onStepCompleted != nil && e.dbRunID != "" {
-				e.onStepCompleted(ctx, e.dbRunID)
+			if e.onStepCompleted != nil && e.dbRunUUID != "" {
+				e.onStepCompleted(ctx, e.dbRunUUID)
 			}
 
 			e.logger.Debug("Step execution result",
@@ -1037,7 +1051,7 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 
 	// Register artifacts (reports from workflow + state files)
 	if !e.dryRun {
-		if err := RegisterArtifacts(module, execCtx, execCtx.Logger); err != nil {
+		if err := RegisterArtifacts(module, execCtx, e.dbRunID, execCtx.Logger); err != nil {
 			execCtx.Logger.Warn("Failed to register artifacts", zap.Error(err))
 		}
 	}
@@ -1189,8 +1203,8 @@ func (e *Executor) executeStepsDAG(ctx context.Context, steps []core.Step, execC
 			}
 
 			// Callback
-			if e.onStepCompleted != nil && e.dbRunID != "" {
-				e.onStepCompleted(ctx, e.dbRunID)
+			if e.onStepCompleted != nil && e.dbRunUUID != "" {
+				e.onStepCompleted(ctx, e.dbRunUUID)
 			}
 
 			if err != nil {
@@ -1368,7 +1382,7 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	result := &core.WorkflowResult{
 		WorkflowName: flow.Name,
 		WorkflowKind: core.KindFlow,
-		RunID:        runID,
+		RunUUID:      runID,
 		Target:       params["target"],
 		Status:       core.RunStatusRunning,
 		StartTime:    time.Now(),
@@ -1471,6 +1485,20 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 
 	// Process ready queue (Kahn's algorithm)
 	for len(ready) > 0 {
+		// Check for context cancellation at start of each iteration
+		select {
+		case <-ctx.Done():
+			if e.progressBar != nil {
+				e.progressBar.Abort()
+			}
+			result.Status = core.RunStatusCancelled
+			result.EndTime = time.Now()
+			execCtx.Logger.Warn("Flow execution cancelled")
+			metrics.RecordWorkflowEnd(flow.Name, string(core.KindFlow), string(result.Status), result.EndTime.Sub(result.StartTime).Seconds())
+			return result, ctx.Err()
+		default:
+		}
+
 		// Pop from ready queue
 		modName := ready[0]
 		ready = ready[1:]
@@ -1587,6 +1615,18 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 		// Execute the module
 		moduleResult, err := e.ExecuteModule(ctx, module, mergedParams, cfg)
 		if err != nil {
+			// Check for context cancellation FIRST (interrupt/timeout)
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				if e.progressBar != nil {
+					e.progressBar.Abort()
+				}
+				result.Status = core.RunStatusCancelled
+				result.EndTime = time.Now()
+				execCtx.Logger.Warn("Flow execution cancelled", zap.Error(err))
+				metrics.RecordWorkflowEnd(flow.Name, string(core.KindFlow), string(result.Status), result.EndTime.Sub(result.StartTime).Seconds())
+				return result, err
+			}
+
 			execCtx.Logger.Error("Module execution failed",
 				zap.String("module", modRef.Name),
 				zap.Error(err))
@@ -1650,6 +1690,15 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 		}
 	}
 
+	// Check if context was cancelled during execution
+	if ctx.Err() != nil {
+		result.Status = core.RunStatusCancelled
+		result.EndTime = time.Now()
+		execCtx.Logger.Warn("Flow execution cancelled")
+		metrics.RecordWorkflowEnd(flow.Name, string(core.KindFlow), string(result.Status), result.EndTime.Sub(result.StartTime).Seconds())
+		return result, ctx.Err()
+	}
+
 	result.Status = core.RunStatusCompleted
 	result.EndTime = time.Now()
 	result.Exports = execCtx.Exports
@@ -1690,7 +1739,7 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 
 	// Register artifacts (reports from workflow + state files)
 	if !e.dryRun {
-		if err := RegisterArtifacts(flow, execCtx, execCtx.Logger); err != nil {
+		if err := RegisterArtifacts(flow, execCtx, e.dbRunID, execCtx.Logger); err != nil {
 			execCtx.Logger.Warn("Failed to register artifacts", zap.Error(err))
 		}
 	}
@@ -1710,7 +1759,7 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 
 // executeStep executes a single step
 func (e *Executor) executeStep(ctx context.Context, step *core.Step, execCtx *core.ExecutionContext) (*core.StepResult, error) {
-	stepLogger := logger.WithStep(execCtx.WorkflowName, execCtx.RunID, step.Name)
+	stepLogger := logger.WithStep(execCtx.WorkflowName, execCtx.RunUUID, step.Name)
 	stepLogger.Debug("executeStep called",
 		zap.String("step_name", step.Name),
 		zap.String("type", string(step.Type)),

@@ -23,7 +23,7 @@ params:
 #   {{Workspace}}  - Current workspace name (usually the target)
 #   {{Target}}     - Target domain
 #   {{Output}}     - Output directory path
-#   {{TaskID}}     - Current task/scan ID
+#   {{RunUUID}}    - Current run UUID
 #   {{TaskDate}}   - Current date
 #   {{Data}}       - External data directory
 #   {{Binaries}}   - External binaries directory
@@ -45,7 +45,7 @@ steps:
       **Workspace**: {{Workspace}}
       **Target**: {{Target}}
       **Generated**: {{TaskDate}}
-      **Task ID**: {{TaskID}}
+      **Run UUID**: {{RunUUID}}
 
       ---
 

@@ -48,7 +48,7 @@ var builtInVariables = map[string]bool{
 	// Metadata Variables
 	"Version":      true,
 	"TaskDate":     true,
-	"TaskID":       true,
+	"RunUUID":      true,
 	"TimeStamp":    true,
 	"CurrentTime":  true,
 	"Today":        true,

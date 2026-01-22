@@ -10,14 +10,14 @@ import (
 type Run struct {
 	bun.BaseModel `bun:"table:runs,alias:r"`
 
-	ID            string                 `bun:"id,pk,type:text" json:"id"`
-	RunID         string                 `bun:"run_id,unique,notnull" json:"run_id"`
+	ID            int64                  `bun:"id,pk,autoincrement" json:"id"`
+	RunUUID       string                 `bun:"run_uuid,unique,notnull" json:"run_uuid"`
 	WorkflowName  string                 `bun:"workflow_name,notnull" json:"workflow_name"`
 	WorkflowKind  string                 `bun:"workflow_kind,notnull" json:"workflow_kind"`
 	Target        string                 `bun:"target,notnull" json:"target"`
 	Params        map[string]interface{} `bun:"params,type:json" json:"params"`
 	Status        string                 `bun:"status,notnull" json:"status"`
-	WorkspacePath string                 `bun:"workspace_path" json:"workspace_path"`
+	Workspace string                 `bun:"workspace" json:"workspace"`
 	StartedAt     *time.Time             `bun:"started_at" json:"started_at"`
 	CompletedAt   *time.Time             `bun:"completed_at" json:"completed_at"`
 	ErrorMessage  string                 `bun:"error_message" json:"error_message,omitempty"`
@@ -29,8 +29,8 @@ type Run struct {
 	TriggerType string `bun:"trigger_type" json:"trigger_type,omitempty"` // manual, cron, event
 	TriggerName string `bun:"trigger_name" json:"trigger_name,omitempty"`
 
-	// Job grouping - multiple targets from same request share a JobID
-	JobID string `bun:"job_id" json:"job_id,omitempty"`
+	// Run grouping - multiple targets from same request share a RunGroupID
+	RunGroupID string `bun:"run_group_id" json:"run_group_id,omitempty"`
 
 	// Progress tracking
 	TotalSteps     int `bun:"total_steps" json:"total_steps"`
@@ -39,7 +39,7 @@ type Run struct {
 	// Relations
 	Steps     []*StepResult `bun:"rel:has-many,join:id=run_id" json:"steps,omitempty"`
 	Artifacts []*Artifact   `bun:"rel:has-many,join:id=run_id" json:"artifacts,omitempty"`
-	Events    []*EventLog   `bun:"rel:has-many,join:run_id=run_id" json:"events,omitempty"`
+	Events    []*EventLog   `bun:"rel:has-many,join:run_uuid=run_id" json:"events,omitempty"`
 }
 
 // StepResult represents a step execution result
@@ -47,7 +47,7 @@ type StepResult struct {
 	bun.BaseModel `bun:"table:step_results,alias:sr"`
 
 	ID           string                 `bun:"id,pk,type:text" json:"id"`
-	RunID        string                 `bun:"run_id,notnull,type:text" json:"run_id"`
+	RunID        int64                  `bun:"run_id,notnull" json:"run_id"`
 	StepName     string                 `bun:"step_name,notnull" json:"step_name"`
 	StepType     string                 `bun:"step_type,notnull" json:"step_type"`
 	Status       string                 `bun:"status,notnull" json:"status"`
@@ -109,7 +109,7 @@ type Artifact struct {
 	bun.BaseModel `bun:"table:artifacts,alias:a"`
 
 	ID           string    `bun:"id,pk,type:text" json:"id"`
-	RunID        string    `bun:"run_id,notnull,type:text" json:"run_id"`
+	RunID        int64     `bun:"run_id,notnull" json:"run_id"`
 	Workspace    string    `bun:"workspace,notnull" json:"workspace"`
 	Name         string    `bun:"name,notnull" json:"name"`
 	ArtifactPath string    `bun:"artifact_path,notnull" json:"artifact_path"`

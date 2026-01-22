@@ -22,8 +22,8 @@ func SeedDatabase(ctx context.Context) error {
 	scan4ID := uuid.New().String() // secondary.com - part of batch job
 	scan5ID := uuid.New().String() // tertiary.io - part of batch job
 
-	// Job ID for batch scanning demonstration (scan1, scan4, scan5 share this)
-	job1ID := uuid.New().String()
+	// Run group ID for batch scanning demonstration (scan1, scan4, scan5 share this)
+	runGroup1ID := uuid.New().String()[:8]
 
 	now := time.Now()
 	oneHourAgo := now.Add(-1 * time.Hour)
@@ -36,18 +36,17 @@ func SeedDatabase(ctx context.Context) error {
 	twoWeeksAgo := now.Add(-14 * 24 * time.Hour)
 	oneMonthAgo := now.Add(-30 * 24 * time.Hour)
 
-	// Seed Runs
+	// Seed Runs - ID is auto-generated, use RunUUID as unique identifier
 	runs := []Run{
 		{
-			ID:             scan1ID,
-			RunID:          fmt.Sprintf("run-%s", scan1ID[:8]),
-			JobID:          job1ID, // Part of batch job with scan4 and scan5
+			RunUUID:        scan1ID,
+			RunGroupID:     runGroup1ID, // Part of batch run group with scan4 and scan5
 			WorkflowName:   "subdomain-enum",
 			WorkflowKind:   "module",
 			Target:         "example.com",
 			Params:         map[string]interface{}{"threads": 10, "timeout": 300},
 			Status:         "completed",
-			WorkspacePath:  "/home/osmedeus/workspaces-osmedeus/example.com",
+			Workspace:      "example.com",
 			StartedAt:      &twoHoursAgo,
 			CompletedAt:    &oneHourAgo,
 			TriggerType:    "manual",
@@ -57,14 +56,13 @@ func SeedDatabase(ctx context.Context) error {
 			UpdatedAt:      oneHourAgo,
 		},
 		{
-			ID:             scan2ID,
-			RunID:          fmt.Sprintf("run-%s", scan2ID[:8]),
+			RunUUID:        scan2ID,
 			WorkflowName:   "port-scan",
 			WorkflowKind:   "module",
 			Target:         "api.example.com",
 			Params:         map[string]interface{}{"ports": "1-10000", "rate": 1000},
 			Status:         "running",
-			WorkspacePath:  "/home/osmedeus/workspaces-osmedeus/api.example.com",
+			Workspace:      "api.example.com",
 			StartedAt:      &thirtyMinsAgo,
 			TriggerType:    "cron",
 			TriggerName:    "daily-recon",
@@ -74,14 +72,13 @@ func SeedDatabase(ctx context.Context) error {
 			UpdatedAt:      now,
 		},
 		{
-			ID:             scan3ID,
-			RunID:          fmt.Sprintf("run-%s", scan3ID[:8]),
+			RunUUID:        scan3ID,
 			WorkflowName:   "vuln-scan",
 			WorkflowKind:   "flow",
 			Target:         "staging.test.local",
 			Params:         map[string]interface{}{"severity": "critical,high", "templates": "cves"},
 			Status:         "failed",
-			WorkspacePath:  "/home/osmedeus/workspaces-osmedeus/staging.test.local",
+			Workspace:      "staging.test.local",
 			StartedAt:      &twoHoursAgo,
 			CompletedAt:    &oneHourAgo,
 			ErrorMessage:   "nuclei: template loading failed: connection timeout",
@@ -91,17 +88,16 @@ func SeedDatabase(ctx context.Context) error {
 			CreatedAt:      twoHoursAgo,
 			UpdatedAt:      oneHourAgo,
 		},
-		// Batch job runs - scan4 and scan5 share job1ID with scan1
+		// Batch run group - scan4 and scan5 share runGroup1ID with scan1
 		{
-			ID:             scan4ID,
-			RunID:          fmt.Sprintf("run-%s", scan4ID[:8]),
-			JobID:          job1ID, // Part of batch job with scan1 and scan5
+			RunUUID:        scan4ID,
+			RunGroupID:     runGroup1ID, // Part of batch run group with scan1 and scan5
 			WorkflowName:   "subdomain-enum",
 			WorkflowKind:   "module",
 			Target:         "secondary.com",
 			Params:         map[string]interface{}{"threads": 10, "timeout": 300},
 			Status:         "completed",
-			WorkspacePath:  "/home/osmedeus/workspaces-osmedeus/secondary.com",
+			Workspace:      "secondary.com",
 			StartedAt:      &twoHoursAgo,
 			CompletedAt:    &oneHourAgo,
 			TriggerType:    "manual",
@@ -111,15 +107,14 @@ func SeedDatabase(ctx context.Context) error {
 			UpdatedAt:      oneHourAgo,
 		},
 		{
-			ID:             scan5ID,
-			RunID:          fmt.Sprintf("run-%s", scan5ID[:8]),
-			JobID:          job1ID, // Part of batch job with scan1 and scan4
+			RunUUID:        scan5ID,
+			RunGroupID:     runGroup1ID, // Part of batch run group with scan1 and scan4
 			WorkflowName:   "subdomain-enum",
 			WorkflowKind:   "module",
 			Target:         "tertiary.io",
 			Params:         map[string]interface{}{"threads": 10, "timeout": 300},
 			Status:         "running",
-			WorkspacePath:  "/home/osmedeus/workspaces-osmedeus/tertiary.io",
+			Workspace:      "tertiary.io",
 			StartedAt:      &thirtyMinsAgo,
 			TriggerType:    "manual",
 			TotalSteps:     5,
@@ -129,10 +124,13 @@ func SeedDatabase(ctx context.Context) error {
 		},
 	}
 
-	for _, run := range runs {
-		if _, err := db.NewInsert().Model(&run).Exec(ctx); err != nil {
+	// Insert runs and build a map of RunUUID -> ID for referencing in StepResults/Artifacts
+	runIDMap := make(map[string]int64)
+	for i := range runs {
+		if _, err := db.NewInsert().Model(&runs[i]).Exec(ctx); err != nil {
 			return fmt.Errorf("failed to insert run: %w", err)
 		}
+		runIDMap[runs[i].RunUUID] = runs[i].ID
 	}
 
 	// Seed StepResults
@@ -140,7 +138,7 @@ func SeedDatabase(ctx context.Context) error {
 		// Run 1 steps (subdomain-enum - completed)
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan1ID,
+			RunID:       runIDMap[scan1ID],
 			StepName:    "subfinder",
 			StepType:    "bash",
 			Status:      "completed",
@@ -155,7 +153,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan1ID,
+			RunID:       runIDMap[scan1ID],
 			StepName:    "amass",
 			StepType:    "bash",
 			Status:      "completed",
@@ -170,7 +168,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan1ID,
+			RunID:       runIDMap[scan1ID],
 			StepName:    "merge-subdomains",
 			StepType:    "function",
 			Status:      "completed",
@@ -184,7 +182,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan1ID,
+			RunID:       runIDMap[scan1ID],
 			StepName:    "httpx",
 			StepType:    "bash",
 			Status:      "completed",
@@ -199,7 +197,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan1ID,
+			RunID:       runIDMap[scan1ID],
 			StepName:    "screenshot",
 			StepType:    "bash",
 			Status:      "completed",
@@ -214,7 +212,7 @@ func SeedDatabase(ctx context.Context) error {
 		// Run 2 steps (port-scan - running)
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan2ID,
+			RunID:       runIDMap[scan2ID],
 			StepName:    "masscan",
 			StepType:    "bash",
 			Status:      "completed",
@@ -228,7 +226,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:         uuid.New().String(),
-			RunID:      scan2ID,
+			RunID:      runIDMap[scan2ID],
 			StepName:   "nmap-service-scan",
 			StepType:   "bash",
 			Status:     "running",
@@ -241,7 +239,7 @@ func SeedDatabase(ctx context.Context) error {
 		// Run 3 steps (vuln-scan - failed)
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan3ID,
+			RunID:       runIDMap[scan3ID],
 			StepName:    "prepare-targets",
 			StepType:    "function",
 			Status:      "completed",
@@ -254,7 +252,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan3ID,
+			RunID:        runIDMap[scan3ID],
 			StepName:     "nuclei",
 			StepType:     "bash",
 			Status:       "failed",
@@ -269,7 +267,7 @@ func SeedDatabase(ctx context.Context) error {
 		// Additional steps for scan2ID (port-scan)
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan2ID,
+			RunID:       runIDMap[scan2ID],
 			StepName:    "port-filter",
 			StepType:    "function",
 			Status:      "completed",
@@ -283,7 +281,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:         uuid.New().String(),
-			RunID:      scan2ID,
+			RunID:      runIDMap[scan2ID],
 			StepName:   "banner-grab",
 			StepType:   "bash",
 			Status:     "pending",
@@ -295,7 +293,7 @@ func SeedDatabase(ctx context.Context) error {
 		// Additional steps for scan3ID (vuln-scan - some completed before failure)
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan3ID,
+			RunID:       runIDMap[scan3ID],
 			StepName:    "validate-targets",
 			StepType:    "function",
 			Status:      "completed",
@@ -309,7 +307,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan3ID,
+			RunID:       runIDMap[scan3ID],
 			StepName:    "load-templates",
 			StepType:    "bash",
 			Status:      "completed",
@@ -324,7 +322,7 @@ func SeedDatabase(ctx context.Context) error {
 		// Steps for scan4ID (secondary.com - completed batch job run)
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan4ID,
+			RunID:       runIDMap[scan4ID],
 			StepName:    "subfinder",
 			StepType:    "bash",
 			Status:      "completed",
@@ -339,7 +337,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan4ID,
+			RunID:       runIDMap[scan4ID],
 			StepName:    "amass",
 			StepType:    "bash",
 			Status:      "completed",
@@ -354,7 +352,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan4ID,
+			RunID:       runIDMap[scan4ID],
 			StepName:    "merge-subdomains",
 			StepType:    "function",
 			Status:      "completed",
@@ -368,7 +366,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan4ID,
+			RunID:       runIDMap[scan4ID],
 			StepName:    "httpx",
 			StepType:    "bash",
 			Status:      "completed",
@@ -383,7 +381,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan4ID,
+			RunID:       runIDMap[scan4ID],
 			StepName:    "screenshot",
 			StepType:    "bash",
 			Status:      "completed",
@@ -398,7 +396,7 @@ func SeedDatabase(ctx context.Context) error {
 		// Steps for scan5ID (tertiary.io - running batch job run)
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan5ID,
+			RunID:       runIDMap[scan5ID],
 			StepName:    "subfinder",
 			StepType:    "bash",
 			Status:      "completed",
@@ -413,7 +411,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan5ID,
+			RunID:       runIDMap[scan5ID],
 			StepName:    "amass",
 			StepType:    "bash",
 			Status:      "completed",
@@ -428,7 +426,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:          uuid.New().String(),
-			RunID:       scan5ID,
+			RunID:       runIDMap[scan5ID],
 			StepName:    "merge-subdomains",
 			StepType:    "function",
 			Status:      "completed",
@@ -442,7 +440,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:         uuid.New().String(),
-			RunID:      scan5ID,
+			RunID:      runIDMap[scan5ID],
 			StepName:   "httpx",
 			StepType:   "bash",
 			Status:     "running",
@@ -454,7 +452,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:         uuid.New().String(),
-			RunID:      scan5ID,
+			RunID:      runIDMap[scan5ID],
 			StepName:   "screenshot",
 			StepType:   "bash",
 			Status:     "pending",
@@ -475,7 +473,7 @@ func SeedDatabase(ctx context.Context) error {
 	artifacts := []Artifact{
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan1ID,
+			RunID:        runIDMap[scan1ID],
 			Workspace:    "example.com",
 			Name:         "final-subdomains.txt",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/example.com/subdomain/final-subdomains.txt",
@@ -488,7 +486,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan1ID,
+			RunID:        runIDMap[scan1ID],
 			Workspace:    "example.com",
 			Name:         "alive-hosts.txt",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/example.com/http/alive-hosts.txt",
@@ -501,7 +499,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan1ID,
+			RunID:        runIDMap[scan1ID],
 			Workspace:    "example.com",
 			Name:         "httpx-output.json",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/example.com/http/httpx-output.json",
@@ -514,7 +512,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan2ID,
+			RunID:        runIDMap[scan2ID],
 			Workspace:    "api.example.com",
 			Name:         "masscan.txt",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/api.example.com/ports/masscan.txt",
@@ -527,7 +525,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan1ID,
+			RunID:        runIDMap[scan1ID],
 			Workspace:    "example.com",
 			Name:         "screenshots",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/example.com/screenshots/",
@@ -541,7 +539,7 @@ func SeedDatabase(ctx context.Context) error {
 		// Additional artifacts for scan2ID (port-scan)
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan2ID,
+			RunID:        runIDMap[scan2ID],
 			Workspace:    "api.example.com",
 			Name:         "nmap-services.xml",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/api.example.com/ports/nmap-services.xml",
@@ -554,7 +552,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan2ID,
+			RunID:        runIDMap[scan2ID],
 			Workspace:    "api.example.com",
 			Name:         "port-summary.csv",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/api.example.com/ports/port-summary.csv",
@@ -567,7 +565,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan2ID,
+			RunID:        runIDMap[scan2ID],
 			Workspace:    "api.example.com",
 			Name:         "targets.txt",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/api.example.com/targets.txt",
@@ -581,7 +579,7 @@ func SeedDatabase(ctx context.Context) error {
 		// Artifacts for scan3ID (vuln-scan - failed but has some outputs)
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan3ID,
+			RunID:        runIDMap[scan3ID],
 			Workspace:    "staging.test.local",
 			Name:         "nuclei-partial.json",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/staging.test.local/vuln/nuclei-partial.json",
@@ -594,7 +592,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan3ID,
+			RunID:        runIDMap[scan3ID],
 			Workspace:    "staging.test.local",
 			Name:         "targets-prepared.txt",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/staging.test.local/targets-prepared.txt",
@@ -608,7 +606,7 @@ func SeedDatabase(ctx context.Context) error {
 		// Artifacts for scan4ID (secondary.com - completed batch job)
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan4ID,
+			RunID:        runIDMap[scan4ID],
 			Workspace:    "secondary.com",
 			Name:         "final-subdomains.txt",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/secondary.com/subdomain/final-subdomains.txt",
@@ -621,7 +619,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan4ID,
+			RunID:        runIDMap[scan4ID],
 			Workspace:    "secondary.com",
 			Name:         "alive-hosts.txt",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/secondary.com/http/alive-hosts.txt",
@@ -634,7 +632,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan4ID,
+			RunID:        runIDMap[scan4ID],
 			Workspace:    "secondary.com",
 			Name:         "httpx-output.json",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/secondary.com/http/httpx-output.json",
@@ -647,7 +645,7 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan4ID,
+			RunID:        runIDMap[scan4ID],
 			Workspace:    "secondary.com",
 			Name:         "screenshots",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/secondary.com/screenshots/",
@@ -661,7 +659,7 @@ func SeedDatabase(ctx context.Context) error {
 		// Artifacts for scan5ID (tertiary.io - running batch job)
 		{
 			ID:           uuid.New().String(),
-			RunID:        scan5ID,
+			RunID:        runIDMap[scan5ID],
 			Workspace:    "tertiary.io",
 			Name:         "final-subdomains.txt",
 			ArtifactPath: "/home/osmedeus/workspaces-osmedeus/tertiary.io/subdomain/final-subdomains.txt",
@@ -1639,7 +1637,7 @@ func SeedDatabase(ctx context.Context) error {
 			Name:         "subdomain-enum started (batch job)",
 			Source:       "executor",
 			DataType:     "scan",
-			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"secondary.com","job_id":"%s"}`, scan4ID, job1ID),
+			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"secondary.com","run_group_id":"%s"}`, scan4ID, runGroup1ID),
 			Workspace:    "secondary.com",
 			RunID:        scan4ID,
 			WorkflowName: "subdomain-enum",
@@ -1653,7 +1651,7 @@ func SeedDatabase(ctx context.Context) error {
 			Name:         "subdomain-enum completed (batch job)",
 			Source:       "executor",
 			DataType:     "scan",
-			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"secondary.com","job_id":"%s","duration_ms":3200000}`, scan4ID, job1ID),
+			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"secondary.com","run_group_id":"%s","duration_ms":3200000}`, scan4ID, runGroup1ID),
 			Workspace:    "secondary.com",
 			RunID:        scan4ID,
 			WorkflowName: "subdomain-enum",
@@ -1682,7 +1680,7 @@ func SeedDatabase(ctx context.Context) error {
 			Name:         "subdomain-enum started (batch job)",
 			Source:       "executor",
 			DataType:     "scan",
-			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"tertiary.io","job_id":"%s"}`, scan5ID, job1ID),
+			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"tertiary.io","run_group_id":"%s"}`, scan5ID, runGroup1ID),
 			Workspace:    "tertiary.io",
 			RunID:        scan5ID,
 			WorkflowName: "subdomain-enum",
@@ -1697,7 +1695,7 @@ func SeedDatabase(ctx context.Context) error {
 			Name:      "Batch job started",
 			Source:    "executor",
 			DataType:  "job",
-			Data:      fmt.Sprintf(`{"job_id":"%s","targets":["example.com","secondary.com","tertiary.io"],"total_targets":3}`, job1ID),
+			Data:      fmt.Sprintf(`{"run_group_id":"%s","targets":["example.com","secondary.com","tertiary.io"],"total_targets":3}`, runGroup1ID),
 			Processed: true,
 			CreatedAt: twoHoursAgo,
 		},
@@ -2583,7 +2581,7 @@ func ListTables(ctx context.Context) ([]TableInfo, error) {
 
 // tableSearchColumns defines which columns to search for each table
 var tableSearchColumns = map[string][]string{
-	"runs":            {"id", "run_id", "job_id", "workflow_name", "target", "status", "error_message"},
+	"runs":            {"id", "run_uuid", "run_group_id", "workflow_name", "target", "status", "error_message"},
 	"step_results":    {"id", "run_id", "step_name", "step_type", "status", "command", "output", "error_message"},
 	"artifacts":       {"id", "run_id", "name", "path", "type", "description"},
 	"assets":          {"workspace", "asset_value", "url", "title", "host_ip", "source", "labels"},
@@ -2597,7 +2595,7 @@ var tableSearchColumns = map[string][]string{
 
 // tableDisplayColumns defines which columns to display by default for each table (ordered)
 var tableDisplayColumns = map[string][]string{
-	"runs":            {"run_id", "job_id", "workflow_name", "target", "status", "started_at", "completed_at"},
+	"runs":            {"run_uuid", "workflow_name", "target", "trigger_type", "status", "completed_steps", "total_steps", "started_at"},
 	"step_results":    {"step_name", "step_type", "status", "duration_ms", "command"},
 	"artifacts":       {"name", "path", "type", "size_bytes", "line_count"},
 	"assets":          {"asset_value", "host_ip", "title", "status_code", "last_seen_at", "url"},
@@ -2611,7 +2609,7 @@ var tableDisplayColumns = map[string][]string{
 
 // tableAllColumns defines ALL columns for each table (ordered, matching model structs)
 var tableAllColumns = map[string][]string{
-	"runs": {"id", "run_id", "job_id", "workflow_name", "workflow_kind", "target", "params",
+	"runs": {"id", "run_uuid", "run_group_id", "workflow_name", "workflow_kind", "target", "params",
 		"status", "workspace_path", "started_at", "completed_at", "error_message",
 		"schedule_id", "trigger_type", "trigger_name", "total_steps",
 		"completed_steps", "created_at", "updated_at"},
@@ -3701,7 +3699,7 @@ func GetRunByID(ctx context.Context, id string, includeSteps, includeArtifacts b
 	}
 
 	var run Run
-	query := db.NewSelect().Model(&run).Where("id = ? OR run_id = ?", id, id)
+	query := db.NewSelect().Model(&run).Where("run_uuid = ?", id)
 
 	if includeSteps {
 		query = query.Relation("Steps")
@@ -3718,23 +3716,23 @@ func GetRunByID(ctx context.Context, id string, includeSteps, includeArtifacts b
 	return &run, nil
 }
 
-// GetRunsByJobID returns all runs for a given job ID
-func GetRunsByJobID(ctx context.Context, jobID string) ([]*Run, error) {
+// GetRunsByRunGroupID returns all runs for a given run group ID
+func GetRunsByRunGroupID(ctx context.Context, runGroupID string) ([]*Run, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database not connected")
 	}
-	if jobID == "" {
-		return nil, fmt.Errorf("job ID is required")
+	if runGroupID == "" {
+		return nil, fmt.Errorf("run group ID is required")
 	}
 
 	var runs []*Run
 	err := db.NewSelect().
 		Model(&runs).
-		Where("job_id = ?", jobID).
+		Where("run_group_id = ?", runGroupID).
 		Order("created_at ASC").
 		Scan(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get runs by job ID: %w", err)
+		return nil, fmt.Errorf("failed to get runs by run group ID: %w", err)
 	}
 
 	return runs, nil
@@ -3768,7 +3766,7 @@ func CreateRun(ctx context.Context, run *Run) error {
 }
 
 // UpdateRunStatus updates the status of a run
-func UpdateRunStatus(ctx context.Context, id, status, errorMessage string) error {
+func UpdateRunStatus(ctx context.Context, runUUID, status, errorMessage string) error {
 	if db == nil {
 		return fmt.Errorf("database not connected")
 	}
@@ -3778,7 +3776,7 @@ func UpdateRunStatus(ctx context.Context, id, status, errorMessage string) error
 		Model((*Run)(nil)).
 		Set("status = ?", status).
 		Set("updated_at = ?", now).
-		Where("id = ? OR run_id = ?", id, id)
+		Where("run_uuid = ?", runUUID)
 
 	if errorMessage != "" {
 		query = query.Set("error_message = ?", errorMessage)
@@ -3807,7 +3805,7 @@ func UpdateRunStatus(ctx context.Context, id, status, errorMessage string) error
 }
 
 // IncrementRunCompletedSteps increments the completed_steps counter for a run
-func IncrementRunCompletedSteps(ctx context.Context, runID string) error {
+func IncrementRunCompletedSteps(ctx context.Context, runUUID string) error {
 	if db == nil {
 		return fmt.Errorf("database not connected")
 	}
@@ -3817,7 +3815,7 @@ func IncrementRunCompletedSteps(ctx context.Context, runID string) error {
 		Model((*Run)(nil)).
 		Set("completed_steps = completed_steps + 1").
 		Set("updated_at = ?", now).
-		Where("id = ? OR run_id = ?", runID, runID).
+		Where("run_uuid = ?", runUUID).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to increment completed steps: %w", err)
@@ -3877,4 +3875,163 @@ func GetRunArtifacts(ctx context.Context, runID string) ([]Artifact, error) {
 	}
 
 	return artifacts, nil
+}
+
+// StepResultQuery holds query parameters for listing step results
+type StepResultQuery struct {
+	Workspace string
+	Status    string
+	StepType  string
+	RunID     int64
+	Offset    int
+	Limit     int
+}
+
+// StepResultResult holds paginated step result results
+type StepResultResult struct {
+	Data       []StepResult
+	TotalCount int
+	Offset     int
+	Limit      int
+}
+
+// ListStepResults returns step results with pagination and filtering
+func ListStepResults(ctx context.Context, query StepResultQuery) (*StepResultResult, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database not connected")
+	}
+
+	result := &StepResultResult{
+		Offset: query.Offset,
+		Limit:  query.Limit,
+	}
+
+	applyFilters := func(q *bun.SelectQuery) *bun.SelectQuery {
+		if query.RunID > 0 {
+			q = q.Where("sr.run_id = ?", query.RunID)
+		}
+		if query.Status != "" {
+			q = q.Where("sr.status = ?", query.Status)
+		}
+		if query.StepType != "" {
+			q = q.Where("sr.step_type = ?", query.StepType)
+		}
+		if query.Workspace != "" {
+			// Join with runs table to filter by workspace
+			q = q.Join("JOIN runs r ON r.id = sr.run_id").
+				Where("r.workspace = ?", query.Workspace)
+		}
+		return q
+	}
+
+	countQuery := db.NewSelect().Model((*StepResult)(nil))
+	countQuery = applyFilters(countQuery)
+	count, err := countQuery.Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count step results: %w", err)
+	}
+	result.TotalCount = count
+
+	baseQuery := db.NewSelect().Model(&result.Data)
+	baseQuery = applyFilters(baseQuery)
+	err = baseQuery.
+		Order("sr.created_at DESC").
+		Offset(query.Offset).
+		Limit(query.Limit).
+		Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch step results: %w", err)
+	}
+
+	return result, nil
+}
+
+// AssetDiffSnapshotResult holds paginated asset diff snapshot results
+type AssetDiffSnapshotResult struct {
+	Data       []AssetDiffSnapshot
+	TotalCount int
+	Offset     int
+	Limit      int
+}
+
+// ListAssetDiffSnapshots returns asset diff snapshots with pagination
+func ListAssetDiffSnapshots(ctx context.Context, workspace string, offset, limit int) (*AssetDiffSnapshotResult, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database not connected")
+	}
+
+	result := &AssetDiffSnapshotResult{
+		Offset: offset,
+		Limit:  limit,
+	}
+
+	countQuery := db.NewSelect().Model((*AssetDiffSnapshot)(nil))
+	if workspace != "" {
+		countQuery = countQuery.Where("workspace_name = ?", workspace)
+	}
+	count, err := countQuery.Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count asset diff snapshots: %w", err)
+	}
+	result.TotalCount = count
+
+	baseQuery := db.NewSelect().Model(&result.Data)
+	if workspace != "" {
+		baseQuery = baseQuery.Where("workspace_name = ?", workspace)
+	}
+	err = baseQuery.
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(limit).
+		Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch asset diff snapshots: %w", err)
+	}
+
+	return result, nil
+}
+
+// VulnDiffSnapshotResult holds paginated vulnerability diff snapshot results
+type VulnDiffSnapshotResult struct {
+	Data       []VulnDiffSnapshot
+	TotalCount int
+	Offset     int
+	Limit      int
+}
+
+// ListVulnDiffSnapshots returns vulnerability diff snapshots with pagination
+func ListVulnDiffSnapshots(ctx context.Context, workspace string, offset, limit int) (*VulnDiffSnapshotResult, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database not connected")
+	}
+
+	result := &VulnDiffSnapshotResult{
+		Offset: offset,
+		Limit:  limit,
+	}
+
+	countQuery := db.NewSelect().Model((*VulnDiffSnapshot)(nil))
+	if workspace != "" {
+		countQuery = countQuery.Where("workspace_name = ?", workspace)
+	}
+	count, err := countQuery.Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count vulnerability diff snapshots: %w", err)
+	}
+	result.TotalCount = count
+
+	baseQuery := db.NewSelect().Model(&result.Data)
+	if workspace != "" {
+		baseQuery = baseQuery.Where("workspace_name = ?", workspace)
+	}
+	err = baseQuery.
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(limit).
+		Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch vulnerability diff snapshots: %w", err)
+	}
+
+	return result, nil
 }

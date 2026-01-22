@@ -27,6 +27,45 @@ func generateEmptyTarget() string {
 	return fmt.Sprintf("empty-%s-%d", string(random), time.Now().Unix())
 }
 
+// calculateTotalSteps returns the appropriate step count based on workflow kind.
+// For module workflows, it returns len(Steps). For flow workflows, it returns len(Modules).
+func calculateTotalSteps(workflow *core.Workflow) int {
+	if workflow.Kind == core.KindFlow {
+		return len(workflow.Modules)
+	}
+	return len(workflow.Steps)
+}
+
+// computeWorkspace computes the workspace name from target and params
+// This mirrors the executor's logic for computing TargetSpace
+func computeWorkspace(target string, params map[string]string) string {
+	// If space_name param provided (via -S flag or API), use it directly
+	if spaceName := params["space_name"]; spaceName != "" {
+		return spaceName
+	}
+	// Otherwise, sanitize the target for filesystem safety
+	return sanitizeTargetForWorkspace(target)
+}
+
+// sanitizeTargetForWorkspace creates a filesystem-safe workspace name from target
+// This mirrors the executor's sanitizeTargetSpace function
+func sanitizeTargetForWorkspace(target string) string {
+	sanitized := make([]rune, 0, len(target))
+	for _, r := range target {
+		if r == '/' || r == '\\' || r == ':' || r == '*' || r == '?' || r == '"' || r == '<' || r == '>' || r == '|' {
+			sanitized = append(sanitized, '_')
+		} else {
+			sanitized = append(sanitized, r)
+		}
+	}
+	result := string(sanitized)
+	// Limit length to avoid filesystem issues
+	if len(result) > 200 {
+		result = result[:200]
+	}
+	return result
+}
+
 // createRunRecord creates a database record for a run
 func createRunRecord(ctx context.Context, _ *config.Config, workflow *core.Workflow, target string, params map[string]string, triggerType, jobID string) (*database.Run, error) {
 	now := time.Now()
@@ -37,18 +76,21 @@ func createRunRecord(ctx context.Context, _ *config.Config, workflow *core.Workf
 		paramsInterface[k] = v
 	}
 
+	// Compute workspace from target and params
+	workspace := computeWorkspace(target, params)
+
 	run := &database.Run{
-		ID:           uuid.New().String(),
-		RunID:        runID,
+		RunUUID:      runID,
 		WorkflowName: workflow.Name,
 		WorkflowKind: string(workflow.Kind),
 		Target:       target,
 		Params:       paramsInterface,
 		Status:       "running",
 		TriggerType:  triggerType,
-		JobID:        jobID,
+		RunGroupID:   jobID,
 		StartedAt:    &now,
-		TotalSteps:   len(workflow.Steps),
+		TotalSteps:   calculateTotalSteps(workflow),
+		Workspace:    workspace,
 	}
 
 	if err := database.CreateRun(ctx, run); err != nil {
@@ -120,9 +162,11 @@ func executeRunsConcurrently(
 
 			// Create run record in database
 			run, err := createRunRecord(ctx, cfg, workflow, t, targetParams, "api", jobID)
-			var runID string
+			var runUUID string
+			var runID int64
 			if err == nil && run != nil {
-				runID = run.RunID
+				runUUID = run.RunUUID
+				runID = run.ID
 			}
 
 			// Execute workflow
@@ -130,10 +174,11 @@ func executeRunsConcurrently(
 			exec.SetServerMode(true) // Enable file logging for server mode
 
 			// Set up database progress tracking
-			if runID != "" {
+			if runUUID != "" {
+				exec.SetDBRunUUID(runUUID)
 				exec.SetDBRunID(runID)
-				exec.SetOnStepCompleted(func(stepCtx context.Context, dbRunID string) {
-					_ = database.IncrementRunCompletedSteps(stepCtx, dbRunID)
+				exec.SetOnStepCompleted(func(stepCtx context.Context, dbRunUUID string) {
+					_ = database.IncrementRunCompletedSteps(stepCtx, dbRunUUID)
 				})
 			}
 
@@ -145,11 +190,11 @@ func executeRunsConcurrently(
 			}
 
 			// Update run status in database
-			if runID != "" {
+			if runUUID != "" {
 				if execErr != nil {
-					_ = database.UpdateRunStatus(ctx, runID, "failed", execErr.Error())
+					_ = database.UpdateRunStatus(ctx, runUUID, "failed", execErr.Error())
 				} else {
-					_ = database.UpdateRunStatus(ctx, runID, "completed", "")
+					_ = database.UpdateRunStatus(ctx, runUUID, "completed", "")
 				}
 			}
 		}(target)
@@ -299,7 +344,7 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 			ctx := context.Background()
 			run, _ := createRunRecord(ctx, cfgCopy, workflow, targets[0], params, "api", jobID)
 			if run != nil {
-				runIDs = append(runIDs, run.RunID)
+				runIDs = append(runIDs, run.RunUUID)
 			}
 
 			exec := executor.NewExecutor()
@@ -307,9 +352,10 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 
 			// Set up database progress tracking
 			if run != nil {
-				exec.SetDBRunID(run.RunID)
-				exec.SetOnStepCompleted(func(stepCtx context.Context, dbRunID string) {
-					_ = database.IncrementRunCompletedSteps(stepCtx, dbRunID)
+				exec.SetDBRunUUID(run.RunUUID)
+				exec.SetDBRunID(run.ID)
+				exec.SetOnStepCompleted(func(stepCtx context.Context, dbRunUUID string) {
+					_ = database.IncrementRunCompletedSteps(stepCtx, dbRunUUID)
 				})
 			}
 
@@ -331,7 +377,7 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 				}
 			}(func() string {
 				if run != nil {
-					return run.RunID
+					return run.RunUUID
 				}
 				return ""
 			}())
@@ -518,7 +564,7 @@ func CancelRun(cfg *config.Config) fiber.Handler {
 		return c.JSON(fiber.Map{
 			"message": "Run cancelled successfully",
 			"id":      run.ID,
-			"run_id":  run.RunID,
+			"run_id":  run.RunUUID,
 		})
 	}
 }

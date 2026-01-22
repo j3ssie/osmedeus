@@ -10,7 +10,11 @@ The Osmedeus API provides a RESTful interface for managing security automation w
 
 ## Authentication
 
-Most API endpoints require JWT authentication. First, obtain a token via the login endpoint, then include it in subsequent requests using the `Authorization: Bearer <token>` header.
+Most API endpoints require authentication. Two methods are supported:
+
+1. **JWT Token**: Obtain a token via the login endpoint, then include it in requests using the `Authorization: Bearer <token>` header.
+
+2. **API Key**: Use a static API key via the `x-osm-api-key` header. Configure in `~/osmedeus-base/osm-settings.yaml` under `server.auth_api_key`.
 
 See [Authentication](authentication.md) for details.
 
@@ -28,6 +32,7 @@ See [Authentication](authentication.md) for details.
 | [Assets](assets.md) | View discovered assets |
 | [Vulnerabilities](vulnerabilities.md) | View and manage vulnerabilities |
 | [Event Logs](event-logs.md) | View execution event logs |
+| [Step Results](steps.md) | Query step execution results |
 | [Functions](functions.md) | Execute and list utility functions |
 | [System Statistics](system.md) | Get aggregated system stats |
 | [Settings](settings.md) | Manage server configuration |

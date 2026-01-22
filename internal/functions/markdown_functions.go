@@ -916,7 +916,7 @@ func (vf *vmFunc) getContextVariables() map[string]interface{} {
 	varNames := []string{
 		"Target", "TargetSpace", "Workspace", "Output", "BaseFolder",
 		"Binaries", "Data", "ExternalConfigs", "Workflows", "Workspaces",
-		"TaskID", "TaskDate", "Version", "DefaultUA",
+		"RunUUID", "TaskDate", "Version", "DefaultUA",
 	}
 
 	for _, name := range varNames {
@@ -937,7 +937,7 @@ func (vf *vmFunc) getContextVariables() map[string]interface{} {
 			ctx["TargetSpace"] = vmCtx.workspaceName
 		}
 		if vmCtx.scanID != "" {
-			ctx["TaskID"] = vmCtx.scanID
+			ctx["RunUUID"] = vmCtx.scanID
 		}
 	}
 
@@ -1125,10 +1125,10 @@ func (vf *vmFunc) registerReportArtifact(filePath, name, description string) err
 	}
 
 	vmCtx := vf.getContext()
-	runID := ""
+	var runID int64
 	workspace := ""
 	if vmCtx != nil {
-		runID = vmCtx.scanID
+		runID = vmCtx.runID
 		workspace = vmCtx.workspaceName
 	}
 

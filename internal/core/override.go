@@ -1,5 +1,7 @@
 package core
 
+import "fmt"
+
 // OverrideMode specifies how to merge steps or modules during inheritance
 type OverrideMode string
 
@@ -54,6 +56,56 @@ type ParamOverride struct {
 
 	// Generator overrides the generator function
 	Generator *string `yaml:"generator,omitempty"`
+}
+
+// UnmarshalYAML supports shorthand syntax where a scalar value is treated as the default:
+//
+//	param-a: "value"     # shorthand: scalar becomes default
+//	param-b: false       # shorthand: bool becomes default
+//
+// And verbose syntax with full struct:
+//
+//	param-a:
+//	  default: "value"
+//	  type: "string"
+//	  required: true
+func (p *ParamOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// Try scalar first (shorthand syntax)
+	var scalar interface{}
+	if err := unmarshal(&scalar); err == nil {
+		switch v := scalar.(type) {
+		case string, bool, int, int64, float64:
+			p.Default = v
+			return nil
+		case nil:
+			// nil value is valid, means no default
+			return nil
+		case map[string]interface{}:
+			// Fall through to map handling below
+		default:
+			// Unknown type, try map handling
+		}
+	}
+
+	// Try as map (verbose syntax)
+	var m map[string]interface{}
+	if err := unmarshal(&m); err != nil {
+		return fmt.Errorf("invalid param override: expected scalar or map")
+	}
+
+	if v, ok := m["default"]; ok {
+		p.Default = v
+	}
+	if v, ok := m["type"].(string); ok {
+		p.Type = &v
+	}
+	if v, ok := m["required"].(bool); ok {
+		p.Required = &v
+	}
+	if v, ok := m["generator"].(string); ok {
+		p.Generator = &v
+	}
+	return nil
 }
 
 // StepsOverride specifies how to override steps in a module workflow

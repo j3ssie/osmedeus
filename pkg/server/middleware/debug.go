@@ -97,6 +97,17 @@ func DebugErrorHandler(c *fiber.Ctx, err error) error {
 		}
 	}
 
+	// Custom message for 403 Forbidden
+	if code == fiber.StatusForbidden {
+		return c.Status(code).JSON(fiber.Map{
+			"error":   true,
+			"message": "Oh dear! It seems you've wandered off the path. If you'd like to see the UI page, please pop back root route at /",
+			"code":    code,
+			"path":    c.Path(),
+			"method":  c.Method(),
+		})
+	}
+
 	// Return detailed error response in debug mode
 	return c.Status(code).JSON(fiber.Map{
 		"error":   true,

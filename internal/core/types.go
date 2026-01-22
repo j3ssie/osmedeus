@@ -50,6 +50,7 @@ const (
 	VarTypeURL       VariableType = "url"
 	VarTypeCIDR      VariableType = "cidr"
 	VarTypeRepo      VariableType = "repo"
+	VarTypeIP        VariableType = "ip"
 )
 
 type TargetType string
@@ -65,6 +66,7 @@ const (
 	TargetTypeFolder    TargetType = "folder"
 	TargetTypeNumber    TargetType = "number"
 	TargetTypeString    TargetType = "string"
+	TargetTypeIP        TargetType = "ip"
 )
 
 // ActionType for on_success/on_error handlers
@@ -129,7 +131,7 @@ type StepResult struct {
 type WorkflowResult struct {
 	WorkflowName string
 	WorkflowKind WorkflowKind
-	RunID        string
+	RunUUID      string
 	Target       string
 	Status       RunStatus
 	StartTime    time.Time

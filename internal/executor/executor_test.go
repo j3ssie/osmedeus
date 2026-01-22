@@ -1168,7 +1168,7 @@ func TestExecutionContext_CloneForLoop(t *testing.T) {
 	// Verify metadata is copied
 	assert.Equal(t, "test-workflow", clone.WorkflowName)
 	assert.Equal(t, core.KindModule, clone.WorkflowKind)
-	assert.Equal(t, "run-123", clone.RunID)
+	assert.Equal(t, "run-123", clone.RunUUID)
 	assert.Equal(t, "example.com", clone.Target)
 
 	// Verify Params reference is shared (not copied)

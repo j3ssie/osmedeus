@@ -249,6 +249,8 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnDBVulnDiff, vf.dbVulnDiff)
 	_ = vm.Set(FnDBAssetDiffToFile, vf.dbAssetDiffToFile)
 	_ = vm.Set(FnDBVulnDiffToFile, vf.dbVulnDiffToFile)
+	_ = vm.Set(FnDBSelectRuns, vf.dbSelectRuns)
+	_ = vm.Set(FnDBSelectRunByUUID, vf.dbSelectRunByUUID)
 
 	// Installer functions
 	_ = vm.Set(FnGoGetter, vf.goGetter)

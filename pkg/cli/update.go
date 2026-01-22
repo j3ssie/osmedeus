@@ -17,7 +17,6 @@ import (
 var (
 	updateCheck   bool
 	updateYes     bool
-	updateForce   bool
 	updateVersion string
 )
 
@@ -32,7 +31,7 @@ var updateCmd = &cobra.Command{
 func init() {
 	updateCmd.Flags().BoolVar(&updateCheck, "check", false, "only check for updates without installing")
 	updateCmd.Flags().BoolVarP(&updateYes, "yes", "y", false, "skip confirmation prompt")
-	updateCmd.Flags().BoolVar(&updateForce, "force", false, "force update even if current version is latest")
+	// Note: --force flag is now global (defined in root.go)
 	updateCmd.Flags().StringVar(&updateVersion, "version", "", "update to a specific version (e.g., v5.1.0)")
 }
 
@@ -84,7 +83,7 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	if !hasUpdate && !updateForce {
+	if !hasUpdate && !globalForce {
 		printer.Success("You are running the latest version (%s)", currentVersion)
 		return nil
 	}
@@ -128,9 +127,9 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 
 	var result *updater.UpdateResult
 	if updateVersion != "" {
-		result, err = upd.UpdateToVersion(ctx, currentVersion, updateVersion, updateForce)
+		result, err = upd.UpdateToVersion(ctx, currentVersion, updateVersion, globalForce)
 	} else {
-		result, err = upd.Update(ctx, currentVersion, updateForce)
+		result, err = upd.Update(ctx, currentVersion, globalForce)
 	}
 
 	if err != nil {

@@ -265,6 +265,10 @@ const (
 	FnDBVulnDiff        = "db_vuln_diff"          // db_vuln_diff(workspace) -> string (JSONL)
 	FnDBAssetDiffToFile = "db_asset_diff_to_file" // db_asset_diff_to_file(workspace, dest) -> bool
 	FnDBVulnDiffToFile  = "db_vuln_diff_to_file"  // db_vuln_diff_to_file(workspace, dest) -> bool
+
+	// Run status functions - query run records
+	FnDBSelectRuns      = "run_status"         // run_status(workspace, format) -> string
+	FnDBSelectRunByUUID = "run_status_by_uuid" // run_status_by_uuid(uuid, format) -> string
 )
 
 // AllFunctions returns a list of all available function names
@@ -471,6 +475,8 @@ func AllFunctions() []string {
 		FnDBVulnDiff,
 		FnDBAssetDiffToFile,
 		FnDBVulnDiffToFile,
+		FnDBSelectRuns,
+		FnDBSelectRunByUUID,
 
 		// Installer functions
 		FnGoGetter,
@@ -756,6 +762,8 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnDBVulnDiff, "db_vuln_diff(workspace)", "Get vulnerability diff as JSONL string", "string", "db_vuln_diff('{{Workspace}}')"},
 			{FnDBAssetDiffToFile, "db_asset_diff_to_file(workspace, dest)", "Write asset diff to JSONL file", "bool", "db_asset_diff_to_file('{{Workspace}}', '{{Output}}/asset-diff.jsonl')"},
 			{FnDBVulnDiffToFile, "db_vuln_diff_to_file(workspace, dest)", "Write vulnerability diff to JSONL file", "bool", "db_vuln_diff_to_file('{{Workspace}}', '{{Output}}/vuln-diff.jsonl')"},
+			{FnDBSelectRuns, "run_status(workspace, format)", "Query run records by workspace. Format: markdown or jsonl", "string", "run_status('{{Workspace}}', 'markdown')"},
+			{FnDBSelectRunByUUID, "run_status_by_uuid(uuid, format)", "Query run record by UUID. Format: markdown or jsonl", "string", "run_status_by_uuid('abc-123', 'jsonl')"},
 		},
 		CategoryInstaller: {
 			{FnGoGetter, "go_getter(url, dest)", "Download files/repos using go-getter", "bool", "go_getter('https://github.com/user/repo.git?ref=main', '{{Output}}/repo')"},

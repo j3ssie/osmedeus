@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"strings"
 	"sync"
+	"syscall"
+	"time"
 
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
@@ -23,13 +26,16 @@ var (
 	evalStdin        bool
 	evalFunctionName string
 	funcSearchFilter string
-	funcColumnWidth  int
 	funcShowExample  bool
 
 	// Bulk processing flags
 	funcTargetsFile  string
 	funcFunctionFile string
 	funcConcurrency  int
+
+	// Repeat flags
+	funcRepeat         bool
+	funcRepeatWaitTime string
 )
 
 // functionCmd is the parent command for function operations
@@ -78,8 +84,12 @@ func init() {
 	functionEvalCmd.Flags().StringVar(&funcFunctionFile, "function-file", "", "file containing the function/script to execute")
 	functionEvalCmd.Flags().IntVarP(&funcConcurrency, "concurrency", "c", 1, "number of concurrent executions")
 
+	// Repeat flags
+	functionEvalCmd.Flags().BoolVar(&funcRepeat, "repeat", false, "repeat run after completion")
+	functionEvalCmd.Flags().StringVar(&funcRepeatWaitTime, "repeat-wait-time", "5s", "wait time between repeats (e.g., 30s, 20m, 10h, 1d)")
+
 	functionListCmd.Flags().StringVarP(&funcSearchFilter, "search", "s", "", "filter functions by name or description")
-	functionListCmd.Flags().IntVar(&funcColumnWidth, "width", 60, "max column width (wraps lines instead of truncating)")
+	// Note: --width flag is now global (defined in root.go)
 	functionListCmd.Flags().BoolVar(&funcShowExample, "example", false, "show example usage below each function description")
 
 	// evalCmd flags (same as functionEvalCmd - it's a shorthand)
@@ -91,6 +101,8 @@ func init() {
 	evalCmd.Flags().StringVarP(&funcTargetsFile, "targets", "T", "", "file containing targets (one per line)")
 	evalCmd.Flags().StringVar(&funcFunctionFile, "function-file", "", "file containing the function/script to execute")
 	evalCmd.Flags().IntVarP(&funcConcurrency, "concurrency", "c", 1, "number of concurrent executions")
+	evalCmd.Flags().BoolVar(&funcRepeat, "repeat", false, "repeat run after completion")
+	evalCmd.Flags().StringVar(&funcRepeatWaitTime, "repeat-wait-time", "5s", "wait time between repeats (e.g., 30s, 20m, 10h, 1d)")
 
 	functionCmd.AddCommand(functionEvalCmd)
 	functionCmd.AddCommand(functionListCmd)
@@ -98,6 +110,24 @@ func init() {
 
 func runFunctionEval(cmd *cobra.Command, args []string) error {
 	printer := terminal.NewPrinter()
+
+	// Parse repeat wait time
+	var waitDuration time.Duration
+	if funcRepeat {
+		var err error
+		waitDuration, err = parseRunDuration(funcRepeatWaitTime)
+		if err != nil {
+			return fmt.Errorf("invalid repeat-wait-time: %w", err)
+		}
+		printer.Info("Repeat mode enabled, wait time: %s", funcRepeatWaitTime)
+	}
+
+	// Setup signal handling for repeat mode
+	sigChan := make(chan os.Signal, 1)
+	if funcRepeat {
+		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+		defer signal.Stop(sigChan)
+	}
 
 	// Connect to database for db_* functions (skip if --disable-db is set)
 	if !disableDB {
@@ -160,13 +190,38 @@ func runFunctionEval(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no script provided: use positional argument, -e flag, --function-file, or --stdin")
 	}
 
-	// Bulk processing mode: process multiple targets from file
-	if funcTargetsFile != "" {
-		return runBulkFunctionEval(printer, script)
-	}
+	// Main execution loop
+	iteration := 0
+	for {
+		iteration++
+		if funcRepeat && iteration > 1 {
+			printer.Section(fmt.Sprintf("Repeat Iteration %d", iteration))
+		}
 
-	// Single target execution (existing behavior)
-	return executeFunctionForTarget(printer, script, evalTarget)
+		var lastErr error
+		// Bulk processing mode: process multiple targets from file
+		if funcTargetsFile != "" {
+			lastErr = runBulkFunctionEval(printer, script)
+		} else {
+			// Single target execution (existing behavior)
+			lastErr = executeFunctionForTarget(printer, script, evalTarget)
+		}
+
+		if !funcRepeat {
+			return lastErr
+		}
+
+		printer.Info("Iteration %d completed. Waiting %s before next iteration...", iteration, funcRepeatWaitTime)
+		printer.Info("Press Ctrl+C to stop repeat mode")
+
+		select {
+		case <-time.After(waitDuration):
+			// Continue to next iteration
+		case <-sigChan:
+			printer.Info("Interrupt received, stopping repeat mode")
+			return nil
+		}
+	}
 }
 
 // runBulkFunctionEval processes the script for multiple targets from a file
@@ -371,8 +426,8 @@ func runFunctionList(cmd *cobra.Command, args []string) error {
 	}
 
 	headers := []string{"Category", "Function", "Description", "Returns"}
-	if funcColumnWidth > 0 {
-		printMarkdownTableWithWidth(headers, rows, funcColumnWidth)
+	if globalWidth > 0 {
+		printMarkdownTableWithWidth(headers, rows, globalWidth)
 	} else {
 		printMarkdownTable(headers, rows)
 	}

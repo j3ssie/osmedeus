@@ -5,8 +5,7 @@ extends: base-module
 
 override:
   params:
-    threads:
-      default: "20"
+    threads: "20"
   steps:
     mode: append
     steps:

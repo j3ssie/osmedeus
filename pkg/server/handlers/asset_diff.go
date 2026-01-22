@@ -141,6 +141,102 @@ func GetVulnerabilityDiff(cfg *config.Config) fiber.Handler {
 	}
 }
 
+// ListAssetDiffSnapshots handles listing stored asset diff snapshots
+// @Summary List asset diff snapshots
+// @Description Get a paginated list of stored asset diff snapshots
+// @Tags Assets
+// @Produce json
+// @Param workspace query string false "Filter by workspace name"
+// @Param offset query int false "Number of records to skip" default(0)
+// @Param limit query int false "Maximum number of records to return" default(20)
+// @Success 200 {object} map[string]interface{} "List of asset diff snapshots with pagination"
+// @Failure 500 {object} map[string]interface{} "Failed to fetch asset diff snapshots"
+// @Security BearerAuth
+// @Router /osm/api/assets/diffs [get]
+func ListAssetDiffSnapshots(cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		workspace := c.Query("workspace")
+		offset, _ := strconv.Atoi(c.Query("offset", "0"))
+		limit, _ := strconv.Atoi(c.Query("limit", "20"))
+
+		if offset < 0 {
+			offset = 0
+		}
+		if limit <= 0 {
+			limit = 20
+		}
+		if limit > 10000 {
+			limit = 10000
+		}
+
+		ctx := context.Background()
+		result, err := database.ListAssetDiffSnapshots(ctx, workspace, offset, limit)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   true,
+				"message": err.Error(),
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"data": result.Data,
+			"pagination": fiber.Map{
+				"total":  result.TotalCount,
+				"offset": result.Offset,
+				"limit":  result.Limit,
+			},
+		})
+	}
+}
+
+// ListVulnDiffSnapshots handles listing stored vulnerability diff snapshots
+// @Summary List vulnerability diff snapshots
+// @Description Get a paginated list of stored vulnerability diff snapshots
+// @Tags Vulnerabilities
+// @Produce json
+// @Param workspace query string false "Filter by workspace name"
+// @Param offset query int false "Number of records to skip" default(0)
+// @Param limit query int false "Maximum number of records to return" default(20)
+// @Success 200 {object} map[string]interface{} "List of vulnerability diff snapshots with pagination"
+// @Failure 500 {object} map[string]interface{} "Failed to fetch vulnerability diff snapshots"
+// @Security BearerAuth
+// @Router /osm/api/vulnerabilities/diffs [get]
+func ListVulnDiffSnapshots(cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		workspace := c.Query("workspace")
+		offset, _ := strconv.Atoi(c.Query("offset", "0"))
+		limit, _ := strconv.Atoi(c.Query("limit", "20"))
+
+		if offset < 0 {
+			offset = 0
+		}
+		if limit <= 0 {
+			limit = 20
+		}
+		if limit > 10000 {
+			limit = 10000
+		}
+
+		ctx := context.Background()
+		result, err := database.ListVulnDiffSnapshots(ctx, workspace, offset, limit)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   true,
+				"message": err.Error(),
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"data": result.Data,
+			"pagination": fiber.Map{
+				"total":  result.TotalCount,
+				"offset": result.Offset,
+				"limit":  result.Limit,
+			},
+		})
+	}
+}
+
 // parseTime parses a time string in RFC3339 format or Unix timestamp
 func parseTime(s string) (time.Time, error) {
 	// Try RFC3339 first

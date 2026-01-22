@@ -12,13 +12,13 @@ type StateExport struct {
 
 // RunInfo contains run information for export (mirrors database.Run fields)
 type RunInfo struct {
-	RunID          string         `json:"run_id"`
+	RunUUID        string         `json:"run_uuid"`
 	WorkflowName   string         `json:"workflow_name"`
 	WorkflowKind   string         `json:"workflow_kind"`
 	Target         string         `json:"target"`
 	Params         map[string]any `json:"params,omitempty"`
 	Status         string         `json:"status"`
-	WorkspacePath  string         `json:"workspace_path"`
+	Workspace      string         `json:"workspace"`
 	StartedAt      *time.Time     `json:"started_at,omitempty"`
 	CompletedAt    *time.Time     `json:"completed_at,omitempty"`
 	ErrorMessage   string         `json:"error_message,omitempty"`
@@ -48,7 +48,7 @@ type WorkspaceInfo struct {
 // ExportContext provides the context needed for state export
 // This allows callers to provide whatever information they have available
 type ExportContext struct {
-	RunID          string
+	RunUUID        string
 	WorkflowName   string
 	WorkflowKind   string
 	Target         string

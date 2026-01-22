@@ -11,9 +11,9 @@ func TestDetectType_File(t *testing.T) {
     if err != nil {
         t.Fatal(err)
     }
-    defer os.Remove(f.Name())
-    f.Close()
-    
+    defer func() { _ = os.Remove(f.Name()) }()
+    _ = f.Close()
+
     got := DetectType(f.Name())
     if got != TargetTypeFile {
         t.Errorf("DetectType() = %v, want %v", got, TargetTypeFile)
@@ -83,9 +83,9 @@ func TestAnalyze_FileTarget(t *testing.T) {
     if err != nil {
         t.Fatal(err)
     }
-    defer os.Remove(f.Name())
-    f.Close()
-    
+    defer func() { _ = os.Remove(f.Name()) }()
+    _ = f.Close()
+
     info, err := Analyze(f.Name(), "basic")
     if err != nil {
         t.Errorf("Analyze() error = %v", err)

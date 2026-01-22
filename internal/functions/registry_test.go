@@ -323,7 +323,8 @@ func TestRegistry_StoreArtifact(t *testing.T) {
 		`store_artifact("`+filePath+`")`,
 		map[string]interface{}{
 			"Workspace": "w1",
-			"TaskID":    "r1",
+			"RunUUID":   "r1",
+			"DBRunID":   int64(1),
 		},
 	)
 	require.NoError(t, err)
@@ -334,7 +335,7 @@ func TestRegistry_StoreArtifact(t *testing.T) {
 
 	var artifacts []database.Artifact
 	err = db.NewSelect().Model(&artifacts).
-		Where("run_id = ?", "r1").
+		Where("run_id = ?", int64(1)).
 		Where("workspace = ?", "w1").
 		Scan(ctx)
 	require.NoError(t, err)

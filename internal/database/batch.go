@@ -28,12 +28,12 @@ func DefaultBatchConfig() *BatchConfig {
 type StepResultBuffer struct {
 	mu     sync.Mutex
 	buffer []*StepResult
-	runID  string
+	runID  int64
 	config *BatchConfig
 }
 
 // NewStepResultBuffer creates a new step result buffer
-func NewStepResultBuffer(runID string, cfg *BatchConfig) *StepResultBuffer {
+func NewStepResultBuffer(runID int64, cfg *BatchConfig) *StepResultBuffer {
 	if cfg == nil {
 		cfg = DefaultBatchConfig()
 	}
@@ -205,8 +205,8 @@ func (pt *ProgressTracker) Stop() {
 }
 
 // BatchUpdateRunProgress performs a single update for multiple steps
-func BatchUpdateRunProgress(ctx context.Context, runID string, steps int) error {
-	if db == nil || runID == "" || steps == 0 {
+func BatchUpdateRunProgress(ctx context.Context, runUUID string, steps int) error {
+	if db == nil || runUUID == "" || steps == 0 {
 		return nil
 	}
 
@@ -214,7 +214,7 @@ func BatchUpdateRunProgress(ctx context.Context, runID string, steps int) error 
 		Model((*Run)(nil)).
 		Set("completed_steps = completed_steps + ?", steps).
 		Set("updated_at = ?", time.Now()).
-		Where("id = ? OR run_id = ?", runID, runID).
+		Where("run_uuid = ?", runUUID).
 		Exec(ctx)
 	return err
 }

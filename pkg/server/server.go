@@ -284,13 +284,18 @@ func (s *Server) setupRoutes() {
 	api.Get("/artifacts", handlers.ListArtifacts(s.config))
 	api.Get("/artifacts/:workspace_name", handlers.DownloadWorkspaceArtifact(s.config))
 
+	// Step Results (global listing)
+	api.Get("/step-results", handlers.ListStepResults(s.config))
+
 	// Assets
 	api.Get("/assets", handlers.ListAssets(s.config))
 	api.Get("/assets/diff", handlers.GetAssetDiff(s.config))
+	api.Get("/assets/diffs", handlers.ListAssetDiffSnapshots(s.config))
 
 	// Vulnerabilities
 	api.Get("/vulnerabilities", handlers.ListVulnerabilities(s.config))
 	api.Get("/vulnerabilities/diff", handlers.GetVulnerabilityDiff(s.config))
+	api.Get("/vulnerabilities/diffs", handlers.ListVulnDiffSnapshots(s.config))
 	api.Get("/vulnerabilities/summary", handlers.GetVulnerabilitySummary(s.config))
 	api.Get("/vulnerabilities/:id", handlers.GetVulnerability(s.config))
 	api.Post("/vulnerabilities", handlers.CreateVulnerability(s.config))
@@ -477,6 +482,14 @@ func errorHandler(c *fiber.Ctx, err error) error {
 
 	if e, ok := err.(*fiber.Error); ok {
 		code = e.Code
+	}
+
+	// Custom message for 403 Forbidden
+	if code == fiber.StatusForbidden {
+		return c.Status(code).JSON(fiber.Map{
+			"error":   true,
+			"message": "Oh dear! It seems you've wandered off the path. If you'd like to see the UI page, please pop back root route at /",
+		})
 	}
 
 	return c.Status(code).JSON(fiber.Map{

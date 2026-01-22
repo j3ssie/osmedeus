@@ -5,7 +5,5 @@ extends: base-module
 
 override:
   params:
-    threads:
-      default: "5"
-    timeout:
-      default: "1800"
+    threads: "5"
+    timeout: "1800"

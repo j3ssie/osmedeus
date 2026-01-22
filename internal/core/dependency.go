@@ -86,6 +86,8 @@ func MatchesVariableType(value string, varType VariableType) (bool, error) {
 	case VarTypeCIDR:
 		_, _, err := net.ParseCIDR(value)
 		return err == nil, nil
+	case VarTypeIP:
+		return net.ParseIP(value) != nil, nil
 	case VarTypeRepo:
 		return isRepo(value), nil
 	case VarTypePath, VarTypeFile, VarTypeFolder:
@@ -159,6 +161,8 @@ func MatchesTargetType(target string, targetType TargetType) (bool, error) {
 		return MatchesVariableType(target, VarTypeNumber)
 	case TargetTypeString:
 		return true, nil
+	case TargetTypeIP:
+		return MatchesVariableType(target, VarTypeIP)
 	case TargetTypeFile:
 		info, err := os.Stat(target)
 		if err != nil {

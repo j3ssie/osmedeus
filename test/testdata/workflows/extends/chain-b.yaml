@@ -5,8 +5,7 @@ extends: chain-a
 
 override:
   params:
-    param-a:
-      default: "overridden-by-b"
+    param-a: "overridden-by-b"  # shorthand syntax
   steps:
     mode: append
     steps:

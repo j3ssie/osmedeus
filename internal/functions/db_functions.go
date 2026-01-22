@@ -535,7 +535,7 @@ func (vf *vmFunc) runtimeExport(call goja.FunctionCall) goja.Value {
 	}
 
 	ctx := &state.ExportContext{
-		RunID:         vf.getContext().scanID,
+		RunUUID:       vf.getContext().scanID,
 		WorkspaceName: vf.getContext().workspaceName,
 		WorkspacePath: vf.getContext().workspacePath,
 		WorkflowName:  vf.getContext().workflowName,
@@ -584,6 +584,9 @@ var assetColumns = []string{"id", "workspace", "asset_value", "url", "status_cod
 
 // vulnerabilityColumns defines the columns for vulnerability markdown table
 var vulnerabilityColumns = []string{"id", "workspace", "severity", "vuln_title", "asset_value"}
+
+// runColumns defines the columns for run markdown table
+var runColumns = []string{"run_uuid", "workflow_name", "target", "workspace", "status", "total_steps", "completed_steps", "started_at"}
 
 // formatAsMarkdownTable converts a slice of maps to a markdown table
 func formatAsMarkdownTable(rows []map[string]interface{}, columns []string) string {
@@ -709,6 +712,31 @@ func vulnerabilityToMap(vuln *database.Vulnerability) map[string]interface{} {
 		"created_at":  vuln.CreatedAt,
 		"updated_at":  vuln.UpdatedAt,
 	}
+}
+
+// runToMap converts a Run struct to a map for formatting
+func runToMap(run *database.Run) map[string]interface{} {
+	result := map[string]interface{}{
+		"run_uuid":        run.RunUUID,
+		"workflow_name":   run.WorkflowName,
+		"workflow_kind":   run.WorkflowKind,
+		"target":          run.Target,
+		"workspace":       run.Workspace,
+		"status":          run.Status,
+		"total_steps":     run.TotalSteps,
+		"completed_steps": run.CompletedSteps,
+		"trigger_type":    run.TriggerType,
+	}
+	if run.StartedAt != nil {
+		result["started_at"] = run.StartedAt.Format(time.RFC3339)
+	}
+	if run.CompletedAt != nil {
+		result["completed_at"] = run.CompletedAt.Format(time.RFC3339)
+	}
+	if run.ErrorMessage != "" {
+		result["error_message"] = run.ErrorMessage
+	}
+	return result
 }
 
 // Forbidden SQL keywords for security
@@ -1166,10 +1194,10 @@ func (vf *vmFunc) dbRegisterArtifact(call goja.FunctionCall) goja.Value {
 		return vf.errorValue(fmt.Sprintf("file not found: %s", filePath))
 	}
 
-	// Get scan ID from context
-	scanID := vf.getContext().scanID
-	if scanID == "" {
-		return vf.errorValue("scan ID not set in context")
+	// Get run ID from context (integer for database foreign key)
+	runID := vf.getContext().runID
+	if runID == 0 {
+		return vf.errorValue("run ID not set in context")
 	}
 
 	// Count lines in file
@@ -1188,7 +1216,7 @@ func (vf *vmFunc) dbRegisterArtifact(call goja.FunctionCall) goja.Value {
 	// Create artifact record
 	artifact := database.Artifact{
 		ID:           artifactID,
-		RunID:        scanID,
+		RunID:        runID,
 		Name:         filepath.Base(filePath),
 		ArtifactPath: filePath,
 		ArtifactType: artifactType,
@@ -1230,9 +1258,9 @@ func (vf *vmFunc) storeArtifact(call goja.FunctionCall) goja.Value {
 		return vf.errorValue("workspace not set in context")
 	}
 
-	runID := vf.getContext().scanID
-	if runID == "" {
-		return vf.errorValue("scan ID not set in context")
+	runID := vf.getContext().runID
+	if runID == 0 {
+		return vf.errorValue("run ID not set in context")
 	}
 
 	info, err := os.Stat(filePath)
@@ -2521,4 +2549,104 @@ func fieldChangeSliceToMaps(changes []database.FieldChange) []map[string]interfa
 		}
 	}
 	return result
+}
+
+// dbSelectRuns queries run records by workspace
+// Usage: run_status(workspace, format) -> string
+func (vf *vmFunc) dbSelectRuns(call goja.FunctionCall) goja.Value {
+	logger.Get().Debug("Calling " + terminal.HiGreen(FnDBSelectRuns))
+
+	if len(call.Arguments) < 2 {
+		return vf.errorValue(FnDBSelectRuns + " requires 2 arguments: workspace, format")
+	}
+
+	workspace := call.Argument(0).String()
+	format := call.Argument(1).String()
+
+	if workspace == "undefined" {
+		workspace = ""
+	}
+
+	if err := validateOutputFormat(format); err != nil {
+		return vf.errorValue(err.Error())
+	}
+
+	db := database.GetDB()
+	if db == nil {
+		return vf.errorValue("database not connected")
+	}
+
+	ctx := context.Background()
+	var runs []*database.Run
+	query := db.NewSelect().Model(&runs).Order("started_at DESC")
+
+	if workspace != "" {
+		query = query.Where("workspace = ?", workspace)
+	}
+
+	query = query.Limit(1000)
+
+	if err := query.Scan(ctx); err != nil {
+		return vf.errorValue(fmt.Sprintf("query failed: %v", err))
+	}
+
+	rows := make([]map[string]interface{}, len(runs))
+	for i, run := range runs {
+		rows[i] = runToMap(run)
+	}
+
+	var output string
+	switch format {
+	case "markdown":
+		output = formatAsMarkdownTable(rows, runColumns)
+	case "jsonl":
+		output = formatAsJSONL(rows)
+	}
+
+	return vf.vm.ToValue(output)
+}
+
+// dbSelectRunByUUID queries a run record by UUID
+// Usage: run_status_by_uuid(uuid, format) -> string
+func (vf *vmFunc) dbSelectRunByUUID(call goja.FunctionCall) goja.Value {
+	logger.Get().Debug("Calling " + terminal.HiGreen(FnDBSelectRunByUUID))
+
+	if len(call.Arguments) < 2 {
+		return vf.errorValue(FnDBSelectRunByUUID + " requires 2 arguments: uuid, format")
+	}
+
+	runUUID := call.Argument(0).String()
+	format := call.Argument(1).String()
+
+	if runUUID == "" || runUUID == "undefined" {
+		return vf.errorValue("uuid argument is required")
+	}
+
+	if err := validateOutputFormat(format); err != nil {
+		return vf.errorValue(err.Error())
+	}
+
+	db := database.GetDB()
+	if db == nil {
+		return vf.errorValue("database not connected")
+	}
+
+	ctx := context.Background()
+	var run database.Run
+	err := db.NewSelect().Model(&run).Where("run_uuid = ?", runUUID).Scan(ctx)
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("run not found: %v", err))
+	}
+
+	rows := []map[string]interface{}{runToMap(&run)}
+
+	var output string
+	switch format {
+	case "markdown":
+		output = formatAsMarkdownTable(rows, runColumns)
+	case "jsonl":
+		output = formatAsJSONL(rows)
+	}
+
+	return vf.vm.ToValue(output)
 }

@@ -479,22 +479,22 @@ func (m *Master) processRunData(ctx context.Context, envelope *DataEnvelope) {
 
 	repo := repository.NewRunRepository(m.db)
 
-	// Check if run exists (by run_id)
-	existing, err := repo.GetByRunID(ctx, run.RunID)
+	// Check if run exists (by run_uuid)
+	existing, err := repo.GetByRunID(ctx, run.RunUUID)
 	if err == nil && existing != nil {
 		// Update existing run
 		run.ID = existing.ID
 		if err := repo.Update(ctx, &run); err != nil {
-			m.logger.Error("failed to update run", zap.Error(err), zap.String("run_id", run.RunID))
+			m.logger.Error("failed to update run", zap.Error(err), zap.String("run_uuid", run.RunUUID))
 		} else {
-			m.logger.Debug("updated run from worker", zap.String("run_id", run.RunID))
+			m.logger.Debug("updated run from worker", zap.String("run_uuid", run.RunUUID))
 		}
 	} else {
 		// Create new run
 		if err := repo.Create(ctx, &run); err != nil {
-			m.logger.Error("failed to create run", zap.Error(err), zap.String("run_id", run.RunID))
+			m.logger.Error("failed to create run", zap.Error(err), zap.String("run_uuid", run.RunUUID))
 		} else {
-			m.logger.Debug("created run from worker", zap.String("run_id", run.RunID))
+			m.logger.Debug("created run from worker", zap.String("run_uuid", run.RunUUID))
 		}
 	}
 }
@@ -514,7 +514,7 @@ func (m *Master) processStepData(ctx context.Context, envelope *DataEnvelope) {
 	} else {
 		m.logger.Debug("created step result from worker",
 			zap.String("step_name", step.StepName),
-			zap.String("run_id", step.RunID),
+			zap.Int64("run_id", step.RunID),
 		)
 	}
 }

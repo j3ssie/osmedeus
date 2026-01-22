@@ -220,8 +220,8 @@ func checkWorkflows(printer *terminal.Printer, cfg *config.Config) bool {
 	}
 
 	if len(workflowFiles) == 0 {
-		printer.Warning("  No workflows found in %s", terminal.White(cfg.WorkflowsPath))
-		return false
+		printer.Error("  Workflows folder is empty: %s", terminal.White(cfg.WorkflowsPath))
+		return true
 	}
 
 	p := parser.NewParser()

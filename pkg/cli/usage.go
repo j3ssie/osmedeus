@@ -947,6 +947,134 @@ func UsageFullExample() string {
 ` + docsFooter()
 }
 
+// UsageClient returns the Long description for the client command
+func UsageClient() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Interact with a remote osmedeus server via REST API.
+
+` + terminal.BoldCyan("▶ Environment Variables") + `
+  ` + terminal.Yellow("OSM_REMOTE_URL") + `      Remote server URL (e.g., http://localhost:8002)
+  ` + terminal.Yellow("OSM_REMOTE_AUTH_KEY") + ` API authentication key for x-osm-api-key header
+
+` + terminal.BoldCyan("▶ Subcommands") + `
+  • ` + terminal.Yellow("fetch") + `  - Fetch data from server (runs, assets, vulns, etc.)
+  • ` + terminal.Yellow("run") + `    - Create or cancel a run
+  • ` + terminal.Yellow("exec") + `   - Execute a function remotely
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Configure via environment") + `
+  export OSM_REMOTE_URL="http://localhost:8002"
+  export OSM_REMOTE_AUTH_KEY="your-api-key"
+
+  ` + terminal.Green("# Fetch data from different tables") + `
+  osmedeus client fetch ` + terminal.Yellow("--table") + ` assets
+  osmedeus client fetch ` + terminal.Yellow("-t") + ` runs
+  osmedeus client fetch ` + terminal.Yellow("-t") + ` vulnerabilities ` + terminal.Yellow("--severity") + ` critical
+
+  ` + terminal.Green("# Create a run") + `
+  osmedeus client run ` + terminal.Yellow("-f") + ` basic-recon ` + terminal.Yellow("-T") + ` example.com
+
+  ` + terminal.Green("# Cancel a run") + `
+  osmedeus client run ` + terminal.Yellow("--cancel") + ` abc123-run-uuid
+
+  ` + terminal.Green("# Execute a function") + `
+  osmedeus client exec 'log_info("Hello from remote")'
+
+` + docsFooter()
+}
+
+// UsageClientFetch returns the Long description for the client fetch command
+func UsageClientFetch() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Fetch data from the remote osmedeus server.
+
+` + terminal.BoldCyan("▶ Supported Tables") + `
+  • ` + terminal.Yellow("runs") + `             - Workflow execution runs
+  • ` + terminal.Yellow("step_results") + `     - Step execution results
+  • ` + terminal.Yellow("artifacts") + `        - Output artifacts from runs
+  • ` + terminal.Yellow("assets") + `           - HTTP assets discovered during scans (default)
+  • ` + terminal.Yellow("event_logs") + `       - System event logs
+  • ` + terminal.Yellow("schedules") + `        - Scheduled workflow executions
+  • ` + terminal.Yellow("workspaces") + `       - Scan workspaces
+  • ` + terminal.Yellow("vulnerabilities") + `  - Discovered vulnerabilities
+  • ` + terminal.Yellow("asset_diffs") + `      - Asset diff snapshots
+  • ` + terminal.Yellow("vuln_diffs") + `       - Vulnerability diff snapshots
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Fetch assets (default)") + `
+  osmedeus client fetch
+  osmedeus client fetch ` + terminal.Yellow("-t") + ` assets ` + terminal.Yellow("-w") + ` example.com
+
+  ` + terminal.Green("# Fetch runs") + `
+  osmedeus client fetch ` + terminal.Yellow("--table") + ` runs
+  osmedeus client fetch ` + terminal.Yellow("-t") + ` runs ` + terminal.Yellow("--status") + ` running
+
+  ` + terminal.Green("# Fetch vulnerabilities with severity filter") + `
+  osmedeus client fetch ` + terminal.Yellow("-t") + ` vulnerabilities ` + terminal.Yellow("--severity") + ` critical
+
+  ` + terminal.Green("# Fetch step results") + `
+  osmedeus client fetch ` + terminal.Yellow("-t") + ` step_results
+
+  ` + terminal.Green("# Pagination") + `
+  osmedeus client fetch ` + terminal.Yellow("-t") + ` assets ` + terminal.Yellow("--limit") + ` 50 ` + terminal.Yellow("--offset") + ` 100
+
+  ` + terminal.Green("# JSON output") + `
+  osmedeus client ` + terminal.Yellow("--json") + ` fetch ` + terminal.Yellow("-t") + ` runs
+
+` + docsFooter()
+}
+
+// UsageClientRun returns the Long description for the client run command
+func UsageClientRun() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Create or cancel a workflow run on the remote server.
+
+` + terminal.BoldCyan("▶ Create Mode Flags") + `
+  ` + terminal.Yellow("-T, --target") + `  Target to run against (required)
+  One of:
+  ` + terminal.Yellow("-f, --flow") + `    Flow workflow name
+  ` + terminal.Yellow("-m, --module") + `  Module workflow name
+
+` + terminal.BoldCyan("▶ Cancel Mode") + `
+  ` + terminal.Yellow("--cancel") + `      Run ID to cancel (switches to cancel mode)
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Create a flow run") + `
+  osmedeus client run ` + terminal.Yellow("-f") + ` basic-recon ` + terminal.Yellow("-T") + ` example.com
+
+  ` + terminal.Green("# Create a module run") + `
+  osmedeus client run ` + terminal.Yellow("-m") + ` subdomain ` + terminal.Yellow("-T") + ` example.com
+
+  ` + terminal.Green("# Cancel a run by ID") + `
+  osmedeus client run ` + terminal.Yellow("--cancel") + ` abc123-run-uuid
+
+  ` + terminal.Green("# JSON output") + `
+  osmedeus client ` + terminal.Yellow("--json") + ` run ` + terminal.Yellow("-f") + ` recon ` + terminal.Yellow("-T") + ` example.com
+
+` + docsFooter()
+}
+
+// UsageClientExec returns the Long description for the client exec command
+func UsageClientExec() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Execute a utility function on the remote server.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Execute a simple function") + `
+  osmedeus client exec 'log_info("Hello from remote")'
+
+  ` + terminal.Green("# With target variable") + `
+  osmedeus client exec ` + terminal.Yellow("-t") + ` example.com 'fileExists("{{target}}/output.txt")'
+
+  ` + terminal.Green("# Using --script flag") + `
+  osmedeus client exec ` + terminal.Yellow("-s") + ` 'trim("  hello  ")'
+
+  ` + terminal.Green("# JSON output") + `
+  osmedeus client ` + terminal.Yellow("--json") + ` exec 'trim("  test  ")'
+
+` + docsFooter()
+}
+
 // docsFooter returns the documentation footer
 func docsFooter() string {
 	return terminal.HiCyan("📖 Documentation: ") + terminal.HiWhite(core.DOCS) + "\n"

@@ -8,12 +8,12 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/database"
 )
 
-// JobStatus represents the aggregated status of a job
+// JobStatus represents the aggregated status of a job (run group)
 type JobStatus struct {
-	JobID    string          `json:"job_id"`
-	Status   string          `json:"status"` // pending, running, completed, failed, partial
-	Runs     []*database.Run `json:"runs"`
-	Progress JobProgress     `json:"progress"`
+	RunGroupID string          `json:"run_group_id"`
+	Status     string          `json:"status"` // pending, running, completed, failed, partial
+	Runs       []*database.Run `json:"runs"`
+	Progress   JobProgress     `json:"progress"`
 }
 
 // JobProgress represents progress statistics for a job
@@ -46,7 +46,7 @@ func GetJobStatus(cfg *config.Config) fiber.Handler {
 		}
 
 		ctx := context.Background()
-		runs, err := database.GetRunsByJobID(ctx, jobID)
+		runs, err := database.GetRunsByRunGroupID(ctx, jobID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error":   true,
@@ -80,10 +80,10 @@ func GetJobStatus(cfg *config.Config) fiber.Handler {
 		status := aggregateStatus(progress)
 
 		return c.JSON(fiber.Map{
-			"job_id":   jobID,
-			"status":   status,
-			"runs":     runs,
-			"progress": progress,
+			"run_group_id": jobID,
+			"status":       status,
+			"runs":         runs,
+			"progress":     progress,
 		})
 	}
 }

@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
 	"sort"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/charmbracelet/glamour"
 	"github.com/j3ssie/osmedeus/v5/internal/config"
@@ -16,20 +19,18 @@ import (
 )
 
 var (
-	dbForce          bool
 	dbTable          string
 	dbOffset         int
 	dbLimit          int
-	dbJSON           bool
 	dbNoTUI          bool
 	dbWhere          []string
 	dbColumns        string
 	dbSearch         string
-	dbWidth          int
 	dbAll            bool
 	dbIndexForce     bool
 	dbListColumns    bool
 	dbExcludeColumns string
+	dbRefresh        string
 )
 
 // defaultHiddenColumns are columns hidden by default for all tables
@@ -37,7 +38,7 @@ var defaultHiddenColumns = []string{"id", "created_at", "updated_at", "completed
 
 // tableDefaultColumns defines default columns for specific tables
 var tableDefaultColumns = map[string][]string{
-	"runs":            {"run_id", "job_id", "workflow_name", "target", "status", "started_at"},
+	"runs":            {"run_uuid", "workflow_name", "target", "workspace", "trigger_type", "status", "completed_steps", "total_steps"},
 	"step_results":    {"step_name", "step_type", "status", "duration_ms", "command"},
 	"artifacts":       {"name", "path", "type", "size_bytes", "line_count"},
 	"assets":          {"asset_value", "host_ip", "title", "status_code", "last_seen_at", "technologies"},
@@ -52,6 +53,7 @@ var dbCmd = &cobra.Command{
 	Use:   "db",
 	Short: "Database management commands",
 	Long:  UsageDB(),
+	RunE:  runDBList,
 }
 
 // dbSeedCmd - seed database with sample data
@@ -111,20 +113,21 @@ Use --force to re-index all workflows regardless of checksum.`,
 }
 
 func init() {
-	dbCleanCmd.Flags().BoolVar(&dbForce, "force", false, "skip confirmation prompt")
+	// Note: --force flag is now global (defined in root.go)
 
-	dbListCmd.Flags().StringVarP(&dbTable, "table", "t", "", "table name to list records from (runs, step_results, artifacts, assets, event_logs, schedules, workspaces)")
-	dbListCmd.Flags().IntVar(&dbOffset, "offset", 0, "number of records to skip (for pagination)")
-	dbListCmd.Flags().IntVar(&dbLimit, "limit", 50, "maximum number of records to return")
-	dbListCmd.Flags().BoolVar(&dbJSON, "json", false, "output records as JSON only (no extra output, bypasses TUI)")
-	dbListCmd.Flags().BoolVar(&dbNoTUI, "no-tui", false, "disable interactive TUI mode, use plain text output")
-	dbListCmd.Flags().StringArrayVar(&dbWhere, "where", nil, "filter records (key=value format, can be repeated) - only with --no-tui")
-	dbListCmd.Flags().StringVar(&dbColumns, "columns", "", "comma-separated columns to display (default: all) - only with --no-tui")
-	dbListCmd.Flags().StringVar(&dbSearch, "search", "", "search all columns for substring (case-insensitive) - only with --no-tui")
-	dbListCmd.Flags().IntVar(&dbWidth, "width", 30, "max column width for table display (0 = no limit) - only with --no-tui")
-	dbListCmd.Flags().BoolVar(&dbAll, "all", false, "show all columns including hidden ones (id, timestamps) - only with --no-tui")
-	dbListCmd.Flags().BoolVar(&dbListColumns, "list-columns", false, "list all available columns for the specified table")
-	dbListCmd.Flags().StringVar(&dbExcludeColumns, "exclude-columns", "", "comma-separated column names to exclude from output")
+	// Use persistent flags on dbCmd so they work on both `db` and `db ls`
+	dbCmd.PersistentFlags().StringVarP(&dbTable, "table", "t", "", "table name to list records from (runs, step_results, artifacts, assets, event_logs, schedules, workspaces)")
+	dbCmd.PersistentFlags().IntVar(&dbOffset, "offset", 0, "number of records to skip (for pagination)")
+	dbCmd.PersistentFlags().IntVar(&dbLimit, "limit", 50, "maximum number of records to return")
+	// Note: --json and --width flags are now global (defined in root.go)
+	dbCmd.PersistentFlags().BoolVar(&dbNoTUI, "no-tui", false, "disable interactive TUI mode, use plain text output")
+	dbCmd.PersistentFlags().StringArrayVar(&dbWhere, "where", nil, "filter records (key=value format, can be repeated) - only with --no-tui")
+	dbCmd.PersistentFlags().StringVar(&dbColumns, "columns", "", "comma-separated columns to display (default: all) - only with --no-tui")
+	dbCmd.PersistentFlags().StringVar(&dbSearch, "search", "", "search all columns for substring (case-insensitive) - only with --no-tui")
+	dbCmd.PersistentFlags().BoolVar(&dbAll, "all", false, "show all columns including hidden ones (id, timestamps) - only with --no-tui")
+	dbCmd.PersistentFlags().BoolVar(&dbListColumns, "list-columns", false, "list all available columns for the specified table")
+	dbCmd.PersistentFlags().StringVar(&dbExcludeColumns, "exclude-columns", "", "comma-separated column names to exclude from output")
+	dbCmd.PersistentFlags().StringVar(&dbRefresh, "refresh", "", "auto-refresh interval (e.g., 5s, 1m, 30s)")
 
 	dbIndexWorkflowCmd.Flags().BoolVar(&dbIndexForce, "force", false, "force re-index all workflows regardless of checksum")
 
@@ -191,7 +194,7 @@ func runDBClean(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("configuration not loaded")
 	}
 
-	if !dbForce {
+	if !globalForce {
 		printer.Warning("This will delete ALL data from the database!")
 		printer.Warning("Use --force to skip this confirmation")
 		return fmt.Errorf("operation aborted: use --force to confirm")
@@ -331,7 +334,7 @@ func runDBList(cmd *cobra.Command, args []string) error {
 	}
 
 	// JSON mode bypasses TUI entirely
-	if dbJSON {
+	if globalJSON {
 		if dbTable != "" {
 			return listTableRecordsJSON(ctx)
 		}
@@ -458,8 +461,53 @@ func listAllTables(ctx context.Context, cfg *config.Config, printer *terminal.Pr
 	return nil
 }
 
+// runDBRefreshLoop continuously refreshes the table display at the specified interval
+func runDBRefreshLoop(ctx context.Context, cfg *config.Config, printer *terminal.Printer, interval time.Duration) error {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
+
+	for {
+		fmt.Print("\033[2J\033[H") // Clear screen
+		if err := listTableRecordsOnce(ctx, cfg, printer); err != nil {
+			printer.Error("Query failed: %s", err)
+		}
+		fmt.Printf("\n%s Refreshing every %s. Press Ctrl+C to stop.\n", terminal.Gray("⟳"), interval)
+
+		select {
+		case <-ticker.C:
+			continue
+		case <-sigChan:
+			fmt.Print("\033[2J\033[H")
+			printer.Info("Refresh stopped")
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
 // listTableRecords lists records from a specific table with pagination
 func listTableRecords(ctx context.Context, cfg *config.Config, printer *terminal.Printer) error {
+	// Check if refresh mode is enabled
+	if dbRefresh != "" {
+		interval, err := time.ParseDuration(dbRefresh)
+		if err != nil {
+			return fmt.Errorf("invalid refresh interval: %w", err)
+		}
+		if interval < time.Second {
+			return fmt.Errorf("refresh interval must be at least 1s")
+		}
+		return runDBRefreshLoop(ctx, cfg, printer, interval)
+	}
+	return listTableRecordsOnce(ctx, cfg, printer)
+}
+
+// listTableRecordsOnce performs a single query and displays the results
+func listTableRecordsOnce(ctx context.Context, cfg *config.Config, printer *terminal.Printer) error {
 	// Validate limit
 	if dbLimit <= 0 {
 		dbLimit = 50
@@ -488,7 +536,7 @@ func listTableRecords(ctx context.Context, cfg *config.Config, printer *terminal
 	}
 
 	// JSON-only output mode
-	if dbJSON {
+	if globalJSON {
 		jsonBytes, err := json.Marshal(records.Records)
 		if err != nil {
 			return fmt.Errorf("failed to format records: %w", err)
@@ -510,15 +558,17 @@ func listTableRecords(ctx context.Context, cfg *config.Config, printer *terminal
 	printer.Info("Table: %s", records.Table)
 	fmt.Printf("Showing records %d-%d of %d\n\n", startRecord, endRecord, records.TotalCount)
 
-	// Output as markdown table with glamour rendering
-	tableStr := formatAsMarkdownTable(records.Records, columns, dbWidth, hideDefaultColumns, excludeColumns)
+	// Output as markdown table
+	tableStr := formatAsMarkdownTable(records.Records, columns, globalWidth, hideDefaultColumns, excludeColumns)
+
+	// Render with glamour for styled markdown table
 	renderer, err := glamour.NewTermRenderer(
 		glamour.WithAutoStyle(),
-		glamour.WithWordWrap(0), // No word wrap for tables
+		glamour.WithWordWrap(0),
 	)
 	if err == nil {
-		rendered, err := renderer.Render(tableStr)
-		if err == nil {
+		rendered, renderErr := renderer.Render(tableStr)
+		if renderErr == nil {
 			fmt.Print(rendered)
 		} else {
 			fmt.Println(tableStr)
@@ -695,10 +745,12 @@ func formatTableValue(v interface{}, maxWidth int) string {
 	// Apply width limit
 	if maxWidth > 0 && len(s) > maxWidth {
 		if maxWidth > 3 {
-			return s[:maxWidth-3] + "..."
+			s = s[:maxWidth-3] + "..."
+		} else {
+			s = s[:maxWidth]
 		}
-		return s[:maxWidth]
 	}
+
 	return s
 }
 
