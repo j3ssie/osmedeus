@@ -61,7 +61,7 @@ func (f *PrettyFormatter) Format(result *LintResult, source []byte) string {
 
 		// Suggestion
 		if issue.Suggestion != "" {
-			sb.WriteString(f.colorSuggestion("   Suggestion: " + issue.Suggestion) + "\n")
+			sb.WriteString(f.colorSuggestion("   Suggestion: "+issue.Suggestion) + "\n")
 		}
 
 		sb.WriteString("\n")
@@ -175,9 +175,9 @@ type JSONFormatter struct{}
 
 // JSONOutput represents the JSON output structure
 type JSONOutput struct {
-	File    string         `json:"file"`
-	Issues  []JSONIssue    `json:"issues"`
-	Summary JSONSummary    `json:"summary"`
+	File    string      `json:"file"`
+	Issues  []JSONIssue `json:"issues"`
+	Summary JSONSummary `json:"summary"`
 }
 
 // JSONIssue represents a single issue in JSON format
@@ -237,10 +237,10 @@ func (f *JSONFormatter) Format(result *LintResult, _ []byte) string {
 // FormatSummary formats a combined summary as JSON
 func (f *JSONFormatter) FormatSummary(results []*LintResult) string {
 	type combinedOutput struct {
-		TotalErrors   int           `json:"total_errors"`
-		TotalWarnings int           `json:"total_warnings"`
-		TotalFiles    int           `json:"total_files"`
-		Files         []JSONOutput  `json:"files"`
+		TotalErrors   int          `json:"total_errors"`
+		TotalWarnings int          `json:"total_warnings"`
+		TotalFiles    int          `json:"total_files"`
+		Files         []JSONOutput `json:"files"`
 	}
 
 	combined := combinedOutput{

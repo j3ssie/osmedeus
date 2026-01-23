@@ -9,10 +9,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/goccy/go-yaml/ast"
+	"github.com/goccy/go-yaml/parser"
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 // configCmd - parent command for config management
@@ -191,33 +192,39 @@ func runConfigView(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var doc yaml.Node
-	dec := yaml.NewDecoder(bytes.NewReader(content))
-	dec.KnownFields(false)
-	if err := dec.Decode(&doc); err != nil {
+	file, err := parser.ParseBytes(content, parser.ParseComments)
+	if err != nil {
 		return err
 	}
-	if len(doc.Content) == 0 {
+	if len(file.Docs) == 0 {
 		return fmt.Errorf("empty yaml document")
 	}
 
-	targetNode, err := findYAMLNodeByPath(doc.Content[0], strings.Split(key, "."))
+	targetNode, err := findASTNodeByPath(file.Docs[0].Body, strings.Split(key, "."))
 	if err != nil {
 		return err
 	}
 
-	if targetNode.Kind == yaml.ScalarNode {
-		fmt.Println(redactValueForDisplay(key, targetNode.Value, !configViewRedact))
+	// Check if it's a scalar node
+	if strNode, ok := targetNode.(*ast.StringNode); ok {
+		fmt.Println(redactValueForDisplay(key, strNode.Value, !configViewRedact))
+		return nil
+	}
+	if intNode, ok := targetNode.(*ast.IntegerNode); ok {
+		fmt.Println(redactValueForDisplay(key, intNode.String(), !configViewRedact))
+		return nil
+	}
+	if floatNode, ok := targetNode.(*ast.FloatNode); ok {
+		fmt.Println(redactValueForDisplay(key, floatNode.String(), !configViewRedact))
+		return nil
+	}
+	if boolNode, ok := targetNode.(*ast.BoolNode); ok {
+		fmt.Println(redactValueForDisplay(key, fmt.Sprintf("%v", boolNode.Value), !configViewRedact))
 		return nil
 	}
 
-	var buf bytes.Buffer
-	enc := yaml.NewEncoder(&buf)
-	enc.SetIndent(2)
-	_ = enc.Encode(targetNode)
-	_ = enc.Close()
-
-	output := buf.String()
+	// For complex nodes, marshal and print
+	output := targetNode.String()
 	if configViewRedact {
 		output = redactSensitiveFieldsYAML(output)
 	}
@@ -242,18 +249,16 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var doc yaml.Node
-	dec := yaml.NewDecoder(bytes.NewReader(content))
-	dec.KnownFields(false)
-	if err := dec.Decode(&doc); err != nil {
+	file, err := parser.ParseBytes(content, parser.ParseComments)
+	if err != nil {
 		return err
 	}
-	if len(doc.Content) == 0 {
+	if len(file.Docs) == 0 {
 		return fmt.Errorf("empty yaml document")
 	}
 
 	out := map[string]string{}
-	flattenYAMLScalars(doc.Content[0], "", out)
+	flattenASTScalars(file.Docs[0].Body, "", out)
 
 	username, password := primaryServerAuthUser(fileCfg)
 	if username != "" {
@@ -274,7 +279,7 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 		if !configListShowSecrets {
 			v = redactValueForDisplay(k, v, false)
 		}
-		fmt.Printf("%s = %s\n", k, v)
+		fmt.Printf("%s = %s\n", getCategoryColor(k)(k), v)
 	}
 	return nil
 }
@@ -331,35 +336,38 @@ func setYAMLScalarValuePreserveComments(content []byte, path []string, newValue 
 		return nil, fmt.Errorf("empty key")
 	}
 
-	var doc yaml.Node
-	dec := yaml.NewDecoder(bytes.NewReader(content))
-	dec.KnownFields(false)
-	if err := dec.Decode(&doc); err != nil {
-		return nil, err
-	}
-	if len(doc.Content) == 0 {
-		return nil, fmt.Errorf("empty yaml document")
-	}
-
-	targetNode, err := findYAMLNodeByPath(doc.Content[0], path)
+	file, err := parser.ParseBytes(content, parser.ParseComments)
 	if err != nil {
 		return nil, err
 	}
-	if targetNode.Kind != yaml.ScalarNode {
-		return nil, fmt.Errorf("target %s is not a scalar", strings.Join(path, "."))
+	if len(file.Docs) == 0 {
+		return nil, fmt.Errorf("empty yaml document")
 	}
-	if targetNode.Line <= 0 || targetNode.Column <= 0 {
+
+	targetNode, err := findASTNodeByPath(file.Docs[0].Body, path)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get position from the node's token
+	token := targetNode.GetToken()
+	if token == nil {
+		return nil, fmt.Errorf("unable to locate scalar position for %s", strings.Join(path, "."))
+	}
+
+	pos := token.Position
+	if pos.Line <= 0 || pos.Column <= 0 {
 		return nil, fmt.Errorf("unable to locate scalar position for %s", strings.Join(path, "."))
 	}
 
 	lines := bytes.Split(content, []byte("\n"))
-	lineIdx := targetNode.Line - 1
+	lineIdx := pos.Line - 1
 	if lineIdx < 0 || lineIdx >= len(lines) {
 		return nil, fmt.Errorf("invalid yaml line for %s", strings.Join(path, "."))
 	}
 
 	line := lines[lineIdx]
-	start := targetNode.Column - 1
+	start := pos.Column - 1
 	if start < 0 || start >= len(line) {
 		return nil, fmt.Errorf("invalid yaml column for %s", strings.Join(path, "."))
 	}
@@ -393,47 +401,51 @@ func setYAMLScalarValuePreserveComments(content []byte, path []string, newValue 
 }
 
 func renameYAMLMappingKeyPreserveComments(content []byte, mappingPath []string, oldKey, newKey string) ([]byte, error) {
-	var doc yaml.Node
-	dec := yaml.NewDecoder(bytes.NewReader(content))
-	dec.KnownFields(false)
-	if err := dec.Decode(&doc); err != nil {
-		return nil, err
-	}
-	if len(doc.Content) == 0 {
-		return nil, fmt.Errorf("empty yaml document")
-	}
-
-	mappingNode, err := findYAMLNodeByPath(doc.Content[0], mappingPath)
+	file, err := parser.ParseBytes(content, parser.ParseComments)
 	if err != nil {
 		return nil, err
 	}
-	if mappingNode.Kind != yaml.MappingNode {
+	if len(file.Docs) == 0 {
+		return nil, fmt.Errorf("empty yaml document")
+	}
+
+	mappingNode, err := findASTNodeByPath(file.Docs[0].Body, mappingPath)
+	if err != nil {
+		return nil, err
+	}
+
+	mapping, ok := mappingNode.(*ast.MappingNode)
+	if !ok {
 		return nil, fmt.Errorf("target %s is not a mapping", strings.Join(mappingPath, "."))
 	}
 
-	var keyNode *yaml.Node
-	for i := 0; i+1 < len(mappingNode.Content); i += 2 {
-		k := mappingNode.Content[i]
-		if k.Kind == yaml.ScalarNode && k.Value == oldKey {
-			keyNode = k
-			break
+	var keyNode ast.Node
+	for _, val := range mapping.Values {
+		if val.Key != nil {
+			if strKey, ok := val.Key.(*ast.StringNode); ok && strKey.Value == oldKey {
+				keyNode = val.Key
+				break
+			}
 		}
 	}
 	if keyNode == nil {
 		return nil, fmt.Errorf("key not found: %s", strings.Join(append(mappingPath, oldKey), "."))
 	}
-	if keyNode.Line <= 0 || keyNode.Column <= 0 {
+
+	token := keyNode.GetToken()
+	if token == nil || token.Position.Line <= 0 || token.Position.Column <= 0 {
 		return nil, fmt.Errorf("unable to locate scalar position for %s", strings.Join(append(mappingPath, oldKey), "."))
 	}
 
+	pos := token.Position
 	lines := bytes.Split(content, []byte("\n"))
-	lineIdx := keyNode.Line - 1
+	lineIdx := pos.Line - 1
 	if lineIdx < 0 || lineIdx >= len(lines) {
 		return nil, fmt.Errorf("invalid yaml line for %s", strings.Join(append(mappingPath, oldKey), "."))
 	}
 
 	line := lines[lineIdx]
-	start := keyNode.Column - 1
+	start := pos.Column - 1
 	if start < 0 || start >= len(line) {
 		return nil, fmt.Errorf("invalid yaml column for %s", strings.Join(append(mappingPath, oldKey), "."))
 	}
@@ -464,31 +476,39 @@ func renameYAMLMappingKeyPreserveComments(content []byte, mappingPath []string, 
 	return updated, nil
 }
 
-func findYAMLNodeByPath(root *yaml.Node, path []string) (*yaml.Node, error) {
+// findASTNodeByPath traverses the AST to find a node by dot-separated path
+func findASTNodeByPath(root ast.Node, path []string) (ast.Node, error) {
 	node := root
 	for _, segment := range path {
-		if node.Kind == yaml.DocumentNode {
-			if len(node.Content) == 0 {
-				return nil, fmt.Errorf("empty yaml document")
+		switch n := node.(type) {
+		case *ast.MappingNode:
+			found := false
+			for _, val := range n.Values {
+				if val.Key != nil {
+					keyStr := ""
+					switch k := val.Key.(type) {
+					case *ast.StringNode:
+						keyStr = k.Value
+					default:
+						keyStr = k.String()
+					}
+					if keyStr == segment {
+						node = val.Value
+						found = true
+						break
+					}
+				}
 			}
-			node = node.Content[0]
-		}
-		if node.Kind != yaml.MappingNode {
+			if !found {
+				return nil, fmt.Errorf("key not found: %s", strings.Join(path, "."))
+			}
+		case *ast.MappingValueNode:
+			// Unwrap MappingValueNode
+			node = n.Value
+			// Re-process this segment
+			return findASTNodeByPath(node, path)
+		default:
 			return nil, fmt.Errorf("%s is not a mapping", segment)
-		}
-
-		found := false
-		for i := 0; i+1 < len(node.Content); i += 2 {
-			k := node.Content[i]
-			v := node.Content[i+1]
-			if k.Kind == yaml.ScalarNode && k.Value == segment {
-				node = v
-				found = true
-				break
-			}
-		}
-		if !found {
-			return nil, fmt.Errorf("key not found: %s", strings.Join(path, "."))
 		}
 	}
 
@@ -729,37 +749,82 @@ func sortStrings(s []string) {
 	}
 }
 
-func flattenYAMLScalars(node *yaml.Node, prefix string, out map[string]string) {
+// flattenASTScalars extracts all scalar values from AST with their dot-notation paths
+func flattenASTScalars(node ast.Node, prefix string, out map[string]string) {
 	if node == nil {
 		return
 	}
-	switch node.Kind {
-	case yaml.DocumentNode:
-		if len(node.Content) > 0 {
-			flattenYAMLScalars(node.Content[0], prefix, out)
-		}
-	case yaml.MappingNode:
-		for i := 0; i+1 < len(node.Content); i += 2 {
-			k := node.Content[i]
-			v := node.Content[i+1]
-			if k.Kind != yaml.ScalarNode {
-				continue
+	switch n := node.(type) {
+	case *ast.MappingNode:
+		for _, val := range n.Values {
+			if val.Key != nil {
+				keyStr := ""
+				switch k := val.Key.(type) {
+				case *ast.StringNode:
+					keyStr = k.Value
+				default:
+					keyStr = k.String()
+				}
+				next := keyStr
+				if prefix != "" {
+					next = prefix + "." + next
+				}
+				flattenASTScalars(val.Value, next, out)
 			}
-			next := k.Value
-			if prefix != "" {
-				next = prefix + "." + next
-			}
-			flattenYAMLScalars(v, next, out)
 		}
-	case yaml.SequenceNode:
-		for i, v := range node.Content {
+	case *ast.SequenceNode:
+		for i, v := range n.Values {
 			next := fmt.Sprintf("%s.%d", prefix, i)
-			flattenYAMLScalars(v, next, out)
+			flattenASTScalars(v, next, out)
 		}
-	case yaml.ScalarNode:
+	case *ast.StringNode:
 		if prefix != "" {
-			out[prefix] = node.Value
+			out[prefix] = n.Value
 		}
+	case *ast.IntegerNode:
+		if prefix != "" {
+			out[prefix] = n.String()
+		}
+	case *ast.FloatNode:
+		if prefix != "" {
+			out[prefix] = n.String()
+		}
+	case *ast.BoolNode:
+		if prefix != "" {
+			out[prefix] = fmt.Sprintf("%v", n.Value)
+		}
+	case *ast.NullNode:
+		if prefix != "" {
+			out[prefix] = "null"
+		}
+	}
+}
+
+// getCategoryColor returns the terminal color function for a config key prefix
+func getCategoryColor(key string) func(string) string {
+	switch {
+	case key == "base_folder":
+		return terminal.Cyan
+	case strings.HasPrefix(key, "server."):
+		return terminal.Blue
+	case strings.HasPrefix(key, "database."):
+		return terminal.Magenta
+	case strings.HasPrefix(key, "environments."):
+		return terminal.Green
+	case strings.HasPrefix(key, "scan_tactic."):
+		return terminal.Yellow
+	case strings.HasPrefix(key, "redis."):
+		return terminal.Red
+	case strings.HasPrefix(key, "global_vars."):
+		return terminal.HiCyan
+	case strings.HasPrefix(key, "notification."):
+		return terminal.HiMagenta
+	case strings.HasPrefix(key, "storage."):
+		return terminal.Teal
+	case strings.HasPrefix(key, "llm_config."):
+		return terminal.HiBlue
+	default:
+		return terminal.White
 	}
 }
 
@@ -1177,19 +1242,17 @@ func runConfigViewPattern(pattern, settingsPath string, fileCfg *config.Config) 
 		return err
 	}
 
-	var doc yaml.Node
-	dec := yaml.NewDecoder(bytes.NewReader(content))
-	dec.KnownFields(false)
-	if err := dec.Decode(&doc); err != nil {
+	file, err := parser.ParseBytes(content, parser.ParseComments)
+	if err != nil {
 		return err
 	}
-	if len(doc.Content) == 0 {
+	if len(file.Docs) == 0 {
 		return fmt.Errorf("empty yaml document")
 	}
 
 	// Flatten YAML to key=value map
 	out := map[string]string{}
-	flattenYAMLScalars(doc.Content[0], "", out)
+	flattenASTScalars(file.Docs[0].Body, "", out)
 
 	// Add synthetic server.username/password keys
 	username, password := primaryServerAuthUser(fileCfg)
@@ -1227,7 +1290,7 @@ func runConfigViewPattern(pattern, settingsPath string, fileCfg *config.Config) 
 		if configViewRedact {
 			v = redactValueForDisplay(k, v, false)
 		}
-		fmt.Printf("%s = %s\n", k, v)
+		fmt.Printf("%s = %s\n", getCategoryColor(k)(k), v)
 	}
 
 	return nil

@@ -247,6 +247,32 @@ func (entry *BinaryEntry) GetBinaryInfo() (url string, commands []string, err er
 	return "", nil, fmt.Errorf("no download/command available for %s/%s", osName, arch)
 }
 
+// coreUnixTools lists system utilities that should never be copied to external-binaries.
+// These are typically provided by the OS and copying them is unnecessary.
+var coreUnixTools = map[string]bool{
+	// Core utilities
+	"cat": true, "cp": true, "mv": true, "rm": true, "ls": true,
+	"mkdir": true, "rmdir": true, "touch": true, "chmod": true, "chown": true,
+	// Text processing
+	"grep": true, "sed": true, "awk": true, "sort": true, "uniq": true,
+	"head": true, "tail": true, "cut": true, "tr": true, "wc": true,
+	// Network
+	"curl": true, "wget": true, "ping": true, "ssh": true, "scp": true,
+	// Build tools
+	"make": true, "gcc": true, "cc": true, "clang": true,
+	// Other common tools
+	"find": true, "xargs": true, "tar": true, "gzip": true, "gunzip": true,
+	"zip": true, "unzip": true, "diff": true, "patch": true,
+	"which": true, "whoami": true, "hostname": true, "date": true,
+	"env": true, "echo": true, "printf": true, "tee": true,
+	"bash": true, "sh": true, "zsh": true,
+}
+
+// IsCoreUnixTool returns true if the binary name is a core Unix tool
+func IsCoreUnixTool(name string) bool {
+	return coreUnixTools[name]
+}
+
 // IsBinaryInPath checks if a binary exists and is executable in $PATH
 func IsBinaryInPath(name string) bool {
 	path, err := exec.LookPath(name)
@@ -281,8 +307,15 @@ func IsBinaryInstalled(name string, entry *BinaryEntry) bool {
 func InstallBinary(name string, registry BinaryRegistry, binariesFolder string, customHeaders map[string]string) error {
 	// Check if binary already exists in PATH
 	if IsBinaryInPath(name) {
-		fmt.Printf("[%s] Binary '%s' already available in PATH, copying to external-binaries\n", terminal.Gray(terminal.SymbolBowtie), terminal.HiBlue(name))
-		// Still copy to external-binaries folder even when already in PATH
+		if IsCoreUnixTool(name) {
+			// Core Unix tools: show exists, don't copy
+			fmt.Printf("[%s] Binary '%s' already available in PATH (system tool, skipping copy)\n",
+				terminal.Gray(terminal.SymbolBowtie), terminal.HiBlue(name))
+			return nil
+		}
+		// Non-core tools: show exists, still copy to external-binaries
+		fmt.Printf("[%s] Binary '%s' already available in PATH, copying to external-binaries\n",
+			terminal.Gray(terminal.SymbolBowtie), terminal.HiBlue(name))
 		entry, ok := registry[name]
 		if ok {
 			_ = copyInstalledBinaryToFolder(name, &entry, binariesFolder)

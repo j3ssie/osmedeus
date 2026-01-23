@@ -6,7 +6,7 @@ params:
   - name: inputFile
     default: "{{Target}}"
   - name: httpFile
-    default: "{{Output}}/fingerprint/http-{{Workspace}}.txt"
+    default: "{{Output}}/fingerprint/http-{{TargetSpace}}.txt"
   - name: httpThreads
     default: "{{ threads * 10 }}"
   - name: httpTimeout
@@ -29,4 +29,4 @@ steps:
       -hash sha256 -jarm -tech-detect -status-code -cdn -tls-grab -ztls -vhost
       -follow-host-redirects -include-chain -store-response
       -store-response-dir {{Output}}/fingerprint/raw-data
-      >> {{Output}}/fingerprint/{{Workspace}}-http-overview.txt
+      >> {{Output}}/fingerprint/{{TargetSpace}}-http-overview.txt

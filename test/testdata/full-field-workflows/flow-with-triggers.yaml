@@ -16,7 +16,7 @@ tags: triggers, automation, scheduled
 # Define automatic execution triggers for this workflow
 # Multiple triggers can be defined; any triggered condition will start execution
 # =============================================================================
-trigger:
+triggers:
   # ===========================================================================
   # TRIGGER TYPE: cron
   # Schedule-based execution using cron expressions

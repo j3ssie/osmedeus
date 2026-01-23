@@ -10,19 +10,19 @@ import (
 type Run struct {
 	bun.BaseModel `bun:"table:runs,alias:r"`
 
-	ID            int64                  `bun:"id,pk,autoincrement" json:"id"`
-	RunUUID       string                 `bun:"run_uuid,unique,notnull" json:"run_uuid"`
-	WorkflowName  string                 `bun:"workflow_name,notnull" json:"workflow_name"`
-	WorkflowKind  string                 `bun:"workflow_kind,notnull" json:"workflow_kind"`
-	Target        string                 `bun:"target,notnull" json:"target"`
-	Params        map[string]interface{} `bun:"params,type:json" json:"params"`
-	Status        string                 `bun:"status,notnull" json:"status"`
-	Workspace string                 `bun:"workspace" json:"workspace"`
-	StartedAt     *time.Time             `bun:"started_at" json:"started_at"`
-	CompletedAt   *time.Time             `bun:"completed_at" json:"completed_at"`
-	ErrorMessage  string                 `bun:"error_message" json:"error_message,omitempty"`
-	CreatedAt     time.Time              `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt     time.Time              `bun:"updated_at,notnull,default:current_timestamp" json:"updated_at"`
+	ID           int64                  `bun:"id,pk,autoincrement" json:"id"`
+	RunUUID      string                 `bun:"run_uuid,unique,notnull" json:"run_uuid"`
+	WorkflowName string                 `bun:"workflow_name,notnull" json:"workflow_name"`
+	WorkflowKind string                 `bun:"workflow_kind,notnull" json:"workflow_kind"`
+	Target       string                 `bun:"target,notnull" json:"target"`
+	Params       map[string]interface{} `bun:"params,type:json" json:"params"`
+	Status       string                 `bun:"status,notnull" json:"status"`
+	Workspace    string                 `bun:"workspace" json:"workspace"`
+	StartedAt    *time.Time             `bun:"started_at" json:"started_at"`
+	CompletedAt  *time.Time             `bun:"completed_at" json:"completed_at"`
+	ErrorMessage string                 `bun:"error_message" json:"error_message,omitempty"`
+	CreatedAt    time.Time              `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt    time.Time              `bun:"updated_at,notnull,default:current_timestamp" json:"updated_at"`
 
 	// Scheduling context
 	ScheduleID  string `bun:"schedule_id" json:"schedule_id,omitempty"`
@@ -35,6 +35,9 @@ type Run struct {
 	// Progress tracking
 	TotalSteps     int `bun:"total_steps" json:"total_steps"`
 	CompletedSteps int `bun:"completed_steps" json:"completed_steps"`
+
+	// Process tracking - current running process ID for cancellation support
+	CurrentPID int `bun:"current_pid" json:"current_pid,omitempty"`
 
 	// Relations
 	Steps     []*StepResult `bun:"rel:has-many,join:id=run_id" json:"steps,omitempty"`
@@ -128,13 +131,14 @@ type Artifact struct {
 type EventLog struct {
 	bun.BaseModel `bun:"table:event_logs,alias:el"`
 
-	ID       int64  `bun:"id,pk,autoincrement" json:"id"`
-	Topic    string `bun:"topic,notnull" json:"topic"` // e.g., "webhook.received"
-	EventID  string `bun:"event_id" json:"event_id"`   // UUID
-	Name     string `bun:"name" json:"name"`           // e.g., "scan.started"
-	Source   string `bun:"source" json:"source"`       // e.g., "scheduler", "api"
-	DataType string `bun:"data_type" json:"data_type"` // e.g., "scan", "asset"
-	Data     string `bun:"data" json:"data"`           // JSON payload
+	ID         int64  `bun:"id,pk,autoincrement" json:"id"`
+	Topic      string `bun:"topic,notnull" json:"topic"`     // e.g., "webhook.received"
+	EventID    string `bun:"event_id" json:"event_id"`       // UUID
+	Name       string `bun:"name" json:"name"`               // e.g., "scan.started"
+	SourceType string `bun:"source_type" json:"source_type"` // "run", "eval", "api" - origin of the event
+	Source     string `bun:"source" json:"source"`           // e.g., "scheduler", "api"
+	DataType   string `bun:"data_type" json:"data_type"`     // e.g., "scan", "asset"
+	Data       string `bun:"data" json:"data"`               // JSON payload
 
 	// Context
 	Workspace    string `bun:"workspace" json:"workspace,omitempty"`
@@ -156,13 +160,15 @@ type Schedule struct {
 	ID           string                 `bun:"id,pk,type:text" json:"id"`
 	Name         string                 `bun:"name,notnull" json:"name"`
 	WorkflowName string                 `bun:"workflow_name,notnull" json:"workflow_name"`
-	WorkflowPath string                 `bun:"workflow_path,notnull" json:"workflow_path"`
+	WorkflowKind string                 `bun:"workflow_kind" json:"workflow_kind,omitempty"` // "module" or "flow"
+	Target       string                 `bun:"target" json:"target,omitempty"`               // Target to scan
+	Workspace    string                 `bun:"workspace" json:"workspace,omitempty"`         // Workspace name
+	Params       map[string]interface{} `bun:"params,type:json" json:"params,omitempty"`     // Workflow parameters
 	TriggerName  string                 `bun:"trigger_name,notnull" json:"trigger_name"`
 	TriggerType  string                 `bun:"trigger_type,notnull" json:"trigger_type"`
 	Schedule     string                 `bun:"schedule" json:"schedule,omitempty"`
 	EventTopic   string                 `bun:"event_topic" json:"event_topic,omitempty"`
 	WatchPath    string                 `bun:"watch_path" json:"watch_path,omitempty"`
-	InputConfig  map[string]interface{} `bun:"input_config,type:json" json:"input_config,omitempty"`
 	IsEnabled    bool                   `bun:"is_enabled,default:true" json:"is_enabled"`
 	LastRun      *time.Time             `bun:"last_run" json:"last_run,omitempty"`
 	NextRun      *time.Time             `bun:"next_run" json:"next_run,omitempty"`

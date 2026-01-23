@@ -58,7 +58,7 @@ steps:
 name: triggered-module
 description: Module with triggers
 
-trigger:
+triggers:
   - name: manual
     on: manual
     enabled: true
@@ -266,4 +266,52 @@ func TestLoader_IsManualExecutionAllowed(t *testing.T) {
 	workflow, err = loader.LoadWorkflow("test-module")
 	require.NoError(t, err)
 	assert.True(t, workflow.IsManualExecutionAllowed())
+}
+
+func TestLoader_CacheMtimeInvalidation(t *testing.T) {
+	tmpDir := setupTestWorkflows(t)
+	loader := NewLoader(tmpDir)
+
+	modulePath := filepath.Join(tmpDir, "modules", "test-module.yaml")
+
+	// First load
+	workflow1, err := loader.LoadWorkflow("test-module")
+	require.NoError(t, err)
+	assert.Equal(t, "test-module", workflow1.Name)
+	assert.Len(t, workflow1.Steps, 1)
+
+	// Second load should come from cache (same instance)
+	workflow2, err := loader.LoadWorkflow("test-module")
+	require.NoError(t, err)
+	assert.Same(t, workflow1, workflow2)
+
+	// Modify the file - add a new step
+	modifiedContent := `kind: module
+name: test-module
+description: Test module for unit testing (MODIFIED)
+
+params:
+  - name: target
+    required: true
+  - name: threads
+    default: "10"
+
+steps:
+  - name: echo-test
+    type: bash
+    command: echo "Hello {{target}}"
+  - name: new-step
+    type: bash
+    command: echo "New step"
+`
+	err = os.WriteFile(modulePath, []byte(modifiedContent), 0644)
+	require.NoError(t, err)
+
+	// Third load should detect the change and re-parse (different instance)
+	workflow3, err := loader.LoadWorkflow("test-module")
+	require.NoError(t, err)
+	assert.NotSame(t, workflow1, workflow3)
+	assert.Equal(t, "Test module for unit testing (MODIFIED)", workflow3.Description)
+	assert.Len(t, workflow3.Steps, 2)
+	assert.Equal(t, "new-step", workflow3.Steps[1].Name)
 }

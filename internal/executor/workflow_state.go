@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/goccy/go-yaml"
 	"github.com/j3ssie/osmedeus/v5/internal/core"
-	"gopkg.in/yaml.v3"
 )
 
 // ExportWorkflowState writes the workflow YAML to the state file

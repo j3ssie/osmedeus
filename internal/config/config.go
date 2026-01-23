@@ -121,8 +121,8 @@ server:
     # Secret key for signing JWT tokens (auto-generated if empty)
     secret_signing_key: ""
 
-    # Token expiration time in minutes
-    expiration_minutes: 60
+    # Token expiration time in minutes (default: 1440 = 1 day)
+    expiration_minutes: 1440
 
   # License type shown in HTTP Server header and /server-info endpoint
   license: "open-source"
@@ -131,9 +131,10 @@ server:
   # Set to false to disable metrics collection and endpoint
   enable_metrics: true
 
-  # CORS allowed origins (default: "*" allows all origins)
-  # Use comma-separated list for multiple origins: "https://example.com,https://app.example.com"
-  cors_allowed_origins: "*"
+  # CORS allowed origins (default: "reflect-origin" echoes back the request origin)
+  # Use "reflect-origin" to dynamically reflect the requesting origin (required for credentials)
+  # Use comma-separated list for specific origins: "https://example.com,https://app.example.com"
+  cors_allowed_origins: "reflect-origin"
 
   # API Key Authentication (alternative to JWT login flow)
   # When enabled, all API requests must include header: x-osm-api-key: <your-key>
@@ -438,13 +439,13 @@ type DatabaseConfig struct {
 type ServerConfig struct {
 	Host               string            `yaml:"host"`
 	Port               int               `yaml:"port"`
-	UIPath             string            `yaml:"ui_path"`              // Path to serve static UI files
-	WorkspacePrefixKey string            `yaml:"workspace_prefix_key"` // Random prefix for workspace static files (16 chars)
-	SimpleUserMapKey   map[string]string `yaml:"simple_user_map_key"`  // Map of username:password for authentication
-	JWT                JWTConfig         `yaml:"jwt"`                  // JWT settings
-	License            string            `yaml:"license"`              // License type shown in ServerHeader and /server-info
-	EnabledAuthAPI     bool              `yaml:"enabled_auth_api"`     // Enable API key authentication (default: false)
-	AuthAPIKey         string            `yaml:"auth_api_key"`         // API key for x-osm-api-key header authentication
+	UIPath             string            `yaml:"ui_path"`                        // Path to serve static UI files
+	WorkspacePrefixKey string            `yaml:"workspace_prefix_key"`           // Random prefix for workspace static files (16 chars)
+	SimpleUserMapKey   map[string]string `yaml:"simple_user_map_key"`            // Map of username:password for authentication
+	JWT                JWTConfig         `yaml:"jwt"`                            // JWT settings
+	License            string            `yaml:"license"`                        // License type shown in ServerHeader and /server-info
+	EnabledAuthAPI     bool              `yaml:"enabled_auth_api"`               // Enable API key authentication (default: false)
+	AuthAPIKey         string            `yaml:"auth_api_key"`                   // API key for x-osm-api-key header authentication
 	EnableMetrics      *bool             `yaml:"enable_metrics,omitempty"`       // Enable Prometheus metrics endpoint (default: true)
 	CORSAllowedOrigins string            `yaml:"cors_allowed_origins,omitempty"` // CORS allowed origins (default: "*")
 	EventReceiverURL   string            `yaml:"event_receiver_url,omitempty"`   // URL for event receiver (auto-resolved from host:port if empty)
@@ -460,10 +461,11 @@ func (c *ServerConfig) IsMetricsEnabled() bool {
 }
 
 // GetCORSAllowedOrigins returns the configured CORS allowed origins.
-// Defaults to "*" (all origins) if not explicitly set.
+// Defaults to "reflect-origin" if not explicitly set, which dynamically
+// echoes back the requesting origin (required for credentials support).
 func (c *ServerConfig) GetCORSAllowedOrigins() string {
 	if c.CORSAllowedOrigins == "" {
-		return "*"
+		return "reflect-origin"
 	}
 	return c.CORSAllowedOrigins
 }
@@ -480,6 +482,23 @@ func (c *ServerConfig) GetEventReceiverURL() string {
 		return ""
 	}
 	return fmt.Sprintf("http://%s:%d", c.Host, c.Port)
+}
+
+// GetServerURL returns the server base URL for API calls.
+// Returns EventReceiverURL if set, otherwise computes from Host:Port.
+// Replaces 0.0.0.0 with 127.0.0.1 for local connectivity.
+func (c *ServerConfig) GetServerURL() string {
+	if c.EventReceiverURL != "" {
+		return strings.TrimSuffix(c.EventReceiverURL, "/")
+	}
+	if c.Host == "" || c.Port == 0 {
+		return ""
+	}
+	host := c.Host
+	if host == "0.0.0.0" {
+		host = "127.0.0.1"
+	}
+	return fmt.Sprintf("http://%s:%d", host, c.Port)
 }
 
 // ScanTacticConfig holds scan aggressiveness levels
@@ -549,12 +568,12 @@ type ProviderEndpoint struct {
 
 // ProviderEndpoints maps provider names to their endpoint configurations
 var ProviderEndpoints = map[string]ProviderEndpoint{
-	"r2":     {"%s.r2.cloudflarestorage.com", true, true},        // account_id
-	"gcs":    {"storage.googleapis.com", true, false},            // HMAC keys
-	"spaces": {"%s.digitaloceanspaces.com", true, false},         // region
+	"r2":     {"%s.r2.cloudflarestorage.com", true, true},                // account_id
+	"gcs":    {"storage.googleapis.com", true, false},                    // HMAC keys
+	"spaces": {"%s.digitaloceanspaces.com", true, false},                 // region
 	"oci":    {"%s.compat.objectstorage.%s.oraclecloud.com", true, true}, // namespace, region
-	"s3":     {"s3.%s.amazonaws.com", true, false},               // region
-	"minio":  {"", false, true},                                  // user-provided
+	"s3":     {"s3.%s.amazonaws.com", true, false},                       // region
+	"minio":  {"", false, true},                                          // user-provided
 }
 
 // ResolveEndpoint resolves the endpoint URL based on provider type
@@ -1114,7 +1133,7 @@ func DefaultConfig() *Config {
 			},
 			JWT: JWTConfig{
 				SecretSigningKey:  generateRandomString(64),
-				ExpirationMinutes: 60,
+				ExpirationMinutes: 1440, // 1 day
 			},
 			License:        "open-source",
 			EnabledAuthAPI: true,

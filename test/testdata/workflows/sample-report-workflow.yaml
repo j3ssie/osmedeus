@@ -20,7 +20,7 @@ params:
     description: Target domain for the report
 
 # Variables available in templates:
-#   {{Workspace}}  - Current workspace name (usually the target)
+#   {{TargetSpace}}  - Current workspace name (usually the target)
 #   {{Target}}     - Target domain
 #   {{Output}}     - Output directory path
 #   {{RunUUID}}    - Current run UUID
@@ -42,7 +42,7 @@ steps:
       cat > {{Output}}/templates/demo-report.md << 'TEMPLATE'
       # Security Scan Report
 
-      **Workspace**: {{Workspace}}
+      **Workspace**: {{TargetSpace}}
       **Target**: {{Target}}
       **Generated**: {{TaskDate}}
       **Run UUID**: {{RunUUID}}

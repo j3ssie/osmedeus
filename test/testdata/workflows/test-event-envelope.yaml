@@ -1,0 +1,49 @@
+name: test-event-envelope
+kind: module
+description: Test workflow that prints EventEnvelope variable
+
+triggers:
+  - name: on-test-event
+    on: event
+    event:
+      topic: "test.envelope"
+    # input:
+      # target: event_data.value
+    input:
+      type: event_data
+      field: "value"
+      name: target
+    enabled: true
+
+params:
+  - name: target
+    required: true
+
+steps:
+
+  - name: echo-envelope
+    type: bash
+    commands:
+      - 'echo "Full envelope: {{EventEnvelope}}"'
+      - 'echo "Topic: {{EventTopic}}"'
+      - 'echo "Source: {{EventSource}}"'
+      - 'echo "DataType: {{EventDataType}}"'
+      - 'echo "Timestamp: {{EventTimestamp}}"'
+      - 'echo "Data: {{EventData}}"'
+
+  - name: print-envelope
+    type: function
+    functions:
+      - 'print_green("=== EventEnvelope Test ===")'
+      - 'log_info("Full envelope: {{EventEnvelope}}")'
+      - 'log_info("Topic: {{EventTopic}}")'
+      - 'log_info("Source: {{EventSource}}")'
+      - 'log_info("DataType: {{EventDataType}}")'
+      - 'log_info("Timestamp: {{EventTimestamp}}")'
+      - 'log_info("Data: {{EventData}}")'
+
+  - name: save-envelope
+    type: bash
+    command: |
+      echo '{{EventEnvelope}}' > {{Output}}/event-envelope.json
+      cat {{Output}}/event-envelope.json

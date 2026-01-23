@@ -6,7 +6,7 @@ params:
   - name: target
     required: true
   - name: httpFile
-    default: "{{Output}}/probing/http-{{Workspace}}.txt"
+    default: "{{Output}}/probing/http-{{TargetSpace}}.txt"
   - name: output_dir
     default: "{{Output}}/vuln"
   - name: sign
@@ -116,13 +116,13 @@ steps:
   # ============================================================
   - name: split-input-file
     type: function
-    function: SplitFile("{{httpFile}}", "{{Workspace}}-index", {{splitLines}}, "{{output_dir}}/raw")
+    function: SplitFile("{{httpFile}}", "{{TargetSpace}}-index", {{splitLines}}, "{{output_dir}}/raw")
     exports:
       split_dir: "{{output_dir}}/raw"
 
   - name: list-split-files
     type: bash
-    command: "ls {{output_dir}}/raw/{{Workspace}}-index* 2>/dev/null | head -100 > {{output_dir}}/raw/split-files.txt || touch {{output_dir}}/raw/split-files.txt"
+    command: "ls {{output_dir}}/raw/{{TargetSpace}}-index* 2>/dev/null | head -100 > {{output_dir}}/raw/split-files.txt || touch {{output_dir}}/raw/split-files.txt"
     exports:
       split_files: "{{output_dir}}/raw/split-files.txt"
 
@@ -171,13 +171,13 @@ steps:
     parallel_steps:
       - name: generate-active-report
         type: bash
-        command: "{{Binaries}}/jaeles report -o {{output_dir}}/active/ -R {{output_dir}}/active/{{Workspace}}-report.html 2>/dev/null || true"
+        command: "{{Binaries}}/jaeles report -o {{output_dir}}/active/ -R {{output_dir}}/active/{{TargetSpace}}-report.html 2>/dev/null || true"
         on_error:
           - action: continue
 
       - name: generate-sensitive-report
         type: bash
-        command: "{{Binaries}}/jaeles report -o {{output_dir}}/sensitive/ -R {{output_dir}}/sensitive/{{Workspace}}-sensitive.html 2>/dev/null || true"
+        command: "{{Binaries}}/jaeles report -o {{output_dir}}/sensitive/ -R {{output_dir}}/sensitive/{{TargetSpace}}-sensitive.html 2>/dev/null || true"
         on_error:
           - action: continue
 
@@ -187,17 +187,17 @@ steps:
   - name: copy-active-summary
     type: bash
     pre_condition: 'file_exists("{{output_dir}}/active/jaeles-summary.txt")'
-    command: "cp {{output_dir}}/active/jaeles-summary.txt {{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt"
+    command: "cp {{output_dir}}/active/jaeles-summary.txt {{output_dir}}/active/activescan-{{TargetSpace}}-{{TS}}.txt"
     exports:
-      active_summary: "{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt"
+      active_summary: "{{output_dir}}/active/activescan-{{TargetSpace}}-{{TS}}.txt"
 
   - name: notify-active-results
     type: function
-    pre_condition: 'file_exists("{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt")'
+    pre_condition: 'file_exists("{{output_dir}}/active/activescan-{{TargetSpace}}-{{TS}}.txt")'
     parallel_functions:
-      - TeleMessByFile("#report", "{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt")
-      - Cat("{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt")
-      - TotalVulnerability("{{output_dir}}/active/activescan-{{Workspace}}-{{TS}}.txt")
+      - TeleMessByFile("#report", "{{output_dir}}/active/activescan-{{TargetSpace}}-{{TS}}.txt")
+      - Cat("{{output_dir}}/active/activescan-{{TargetSpace}}-{{TS}}.txt")
+      - TotalVulnerability("{{output_dir}}/active/activescan-{{TargetSpace}}-{{TS}}.txt")
     on_error:
       - action: log
         message: "Failed to notify active scan results"
@@ -206,17 +206,17 @@ steps:
   - name: copy-sensitive-summary
     type: bash
     pre_condition: 'file_exists("{{output_dir}}/sensitive/jaeles-summary.txt")'
-    command: "cp {{output_dir}}/sensitive/jaeles-summary.txt {{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt"
+    command: "cp {{output_dir}}/sensitive/jaeles-summary.txt {{output_dir}}/sensitive/sensitivescan-{{TargetSpace}}-{{TS}}.txt"
     exports:
-      sensitive_summary: "{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt"
+      sensitive_summary: "{{output_dir}}/sensitive/sensitivescan-{{TargetSpace}}-{{TS}}.txt"
 
   - name: notify-sensitive-results
     type: function
-    pre_condition: 'file_exists("{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt")'
+    pre_condition: 'file_exists("{{output_dir}}/sensitive/sensitivescan-{{TargetSpace}}-{{TS}}.txt")'
     parallel_functions:
-      - TeleMessByFile("#sensitive", "{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt")
-      - Cat("{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt")
-      - TotalVulnerability("{{output_dir}}/sensitive/sensitivescan-{{Workspace}}-{{TS}}.txt")
+      - TeleMessByFile("#sensitive", "{{output_dir}}/sensitive/sensitivescan-{{TargetSpace}}-{{TS}}.txt")
+      - Cat("{{output_dir}}/sensitive/sensitivescan-{{TargetSpace}}-{{TS}}.txt")
+      - TotalVulnerability("{{output_dir}}/sensitive/sensitivescan-{{TargetSpace}}-{{TS}}.txt")
     on_error:
       - action: log
         message: "Failed to notify sensitive scan results"
@@ -238,10 +238,10 @@ steps:
         -t ~/nuclei-templates/ \
         -l {{httpFile}} \
         -irr \
-        -o {{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt
+        -o {{output_dir}}/nuclei/{{TargetSpace}}-nuclei-json.txt
     timeout: 28800
     exports:
-      nuclei_json: "{{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt"
+      nuclei_json: "{{output_dir}}/nuclei/{{TargetSpace}}-nuclei-json.txt"
     on_error:
       - action: log
         message: "Nuclei scan failed or timed out"
@@ -249,8 +249,8 @@ steps:
 
   - name: count-nuclei-results
     type: function
-    pre_condition: 'file_exists("{{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt")'
-    function: file_length("{{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt")
+    pre_condition: 'file_exists("{{output_dir}}/nuclei/{{TargetSpace}}-nuclei-json.txt")'
+    function: file_length("{{output_dir}}/nuclei/{{TargetSpace}}-nuclei-json.txt")
     exports:
       nuclei_count: "output"
 
@@ -260,7 +260,7 @@ steps:
   - name: generate-nuclei-report
     type: function
     pre_condition: 'parse_int("{{nuclei_count}}") > 0'
-    function: GenNucleiReport("{{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt", "{{output_dir}}/nuclei/{{Workspace}}-nuclei.html")
+    function: GenNucleiReport("{{output_dir}}/nuclei/{{TargetSpace}}-nuclei-json.txt", "{{output_dir}}/nuclei/{{TargetSpace}}-nuclei.html")
     on_error:
       - action: log
         message: "Failed to generate Nuclei HTML report"
@@ -270,23 +270,23 @@ steps:
     type: bash
     pre_condition: 'parse_int("{{nuclei_count}}") > 0'
     command: |
-      cat {{output_dir}}/nuclei/{{Workspace}}-nuclei-json.txt | \
+      cat {{output_dir}}/nuclei/{{TargetSpace}}-nuclei-json.txt | \
         jq -r '[.info.severity,.\"template-id\",.\"matched-at\",.\"matched-name\"] | join(\" - \")' \
-        > {{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt 2>/dev/null || true
+        > {{output_dir}}/nuclei/{{TargetSpace}}-nuclei-scan.txt 2>/dev/null || true
     exports:
-      nuclei_parsed: "{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt"
+      nuclei_parsed: "{{output_dir}}/nuclei/{{TargetSpace}}-nuclei-scan.txt"
 
   - name: sort-nuclei-results
     type: function
-    pre_condition: 'file_exists("{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt")'
-    function: SortU("{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt")
+    pre_condition: 'file_exists("{{output_dir}}/nuclei/{{TargetSpace}}-nuclei-scan.txt")'
+    function: SortU("{{output_dir}}/nuclei/{{TargetSpace}}-nuclei-scan.txt")
 
   - name: notify-nuclei-results
     type: function
     pre_condition: 'parse_int("{{nuclei_count}}") > 0'
     parallel_functions:
-      - TeleMessByFile("#sensitive", "{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt")
-      - Cat("{{output_dir}}/nuclei/{{Workspace}}-nuclei-scan.txt")
+      - TeleMessByFile("#sensitive", "{{output_dir}}/nuclei/{{TargetSpace}}-nuclei-scan.txt")
+      - Cat("{{output_dir}}/nuclei/{{TargetSpace}}-nuclei-scan.txt")
     on_error:
       - action: log
         message: "Failed to notify Nuclei results"
@@ -308,19 +308,19 @@ steps:
     type: bash
     commands:
       - |
-        echo "=== Vulnerability Scan Report ===" > {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "Target: {{Target}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "Workspace: {{Workspace}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "Date: $(date)" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "=== Statistics ===" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "Input Hosts: {{input_count}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "Nuclei Findings: {{nuclei_count}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "=== Reports Generated ===" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "- Active Scan: {{output_dir}}/active/{{Workspace}}-report.html" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "- Sensitive Scan: {{output_dir}}/sensitive/{{Workspace}}-sensitive.html" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "- Nuclei Scan: {{output_dir}}/nuclei/{{Workspace}}-nuclei.html" >> {{output_dir}}/final-report-{{Workspace}}.txt
+        echo "=== Vulnerability Scan Report ===" > {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "Target: {{Target}}" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "Workspace: {{TargetSpace}}" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "Date: $(date)" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "=== Statistics ===" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "Input Hosts: {{input_count}}" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "Nuclei Findings: {{nuclei_count}}" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "=== Reports Generated ===" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "- Active Scan: {{output_dir}}/active/{{TargetSpace}}-report.html" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "- Sensitive Scan: {{output_dir}}/sensitive/{{TargetSpace}}-sensitive.html" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "- Nuclei Scan: {{output_dir}}/nuclei/{{TargetSpace}}-nuclei.html" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
 
   - name: notify-completion
     type: function

@@ -3,7 +3,7 @@ kind: module
 description: Test workflow that receives events via trigger
 tags: test,event,receiver,trigger
 
-trigger:
+triggers:
   - name: on-new-subdomain
     on: event
     event:

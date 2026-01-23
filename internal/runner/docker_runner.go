@@ -19,6 +19,8 @@ type DockerRunner struct {
 	binaryPath  string
 	containerID string
 	remoteDir   string
+	onPIDStart  PIDCallback
+	onPIDEnd    PIDCallback
 }
 
 // NewDockerRunner creates a new Docker runner
@@ -170,6 +172,12 @@ func (r *DockerRunner) execInContainer(ctx context.Context, command string) (*Co
 		}, nil
 	}
 
+	// Track PID for cancellation support
+	pid := cmd.Process.Pid
+	if r.onPIDStart != nil {
+		r.onPIDStart(pid)
+	}
+
 	// Wait for command completion or context cancellation
 	done := make(chan error, 1)
 	go func() {
@@ -183,13 +191,24 @@ func (r *DockerRunner) execInContainer(ctx context.Context, command string) (*Co
 			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		}
 		<-done
+
+		// Notify PID ended
+		if r.onPIDEnd != nil {
+			r.onPIDEnd(pid)
+		}
+
 		return &CommandResult{
-			Output:   stdout.String() + stderr.String(),
+			Output:   combineOutput(&stdout, &stderr),
 			ExitCode: -1,
 			Error:    ctx.Err(),
 		}, nil
 
 	case err := <-done:
+		// Notify PID ended
+		if r.onPIDEnd != nil {
+			r.onPIDEnd(pid)
+		}
+
 		exitCode := 0
 		if err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
@@ -197,7 +216,7 @@ func (r *DockerRunner) execInContainer(ctx context.Context, command string) (*Co
 			}
 		}
 		return &CommandResult{
-			Output:   stdout.String() + stderr.String(),
+			Output:   combineOutput(&stdout, &stderr),
 			ExitCode: exitCode,
 			Error:    err,
 		}, nil
@@ -252,6 +271,12 @@ func (r *DockerRunner) runEphemeral(ctx context.Context, command string) (*Comma
 		}, nil
 	}
 
+	// Track PID for cancellation support
+	pid := cmd.Process.Pid
+	if r.onPIDStart != nil {
+		r.onPIDStart(pid)
+	}
+
 	// Wait for command completion or context cancellation
 	done := make(chan error, 1)
 	go func() {
@@ -265,13 +290,24 @@ func (r *DockerRunner) runEphemeral(ctx context.Context, command string) (*Comma
 			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		}
 		<-done
+
+		// Notify PID ended
+		if r.onPIDEnd != nil {
+			r.onPIDEnd(pid)
+		}
+
 		return &CommandResult{
-			Output:   stdout.String() + stderr.String(),
+			Output:   combineOutput(&stdout, &stderr),
 			ExitCode: -1,
 			Error:    ctx.Err(),
 		}, nil
 
 	case err := <-done:
+		// Notify PID ended
+		if r.onPIDEnd != nil {
+			r.onPIDEnd(pid)
+		}
+
 		exitCode := 0
 		if err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
@@ -279,11 +315,17 @@ func (r *DockerRunner) runEphemeral(ctx context.Context, command string) (*Comma
 			}
 		}
 		return &CommandResult{
-			Output:   stdout.String() + stderr.String(),
+			Output:   combineOutput(&stdout, &stderr),
 			ExitCode: exitCode,
 			Error:    err,
 		}, nil
 	}
+}
+
+// SetPIDCallbacks sets callbacks for process lifecycle events
+func (r *DockerRunner) SetPIDCallbacks(onStart, onEnd PIDCallback) {
+	r.onPIDStart = onStart
+	r.onPIDEnd = onEnd
 }
 
 // Cleanup stops and removes the container

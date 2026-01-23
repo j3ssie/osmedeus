@@ -356,6 +356,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/osm/api/assets/diffs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a paginated list of stored asset diff snapshots",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Assets"
+                ],
+                "summary": "List asset diff snapshots",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by workspace name",
+                        "name": "workspace",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of records to skip",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Maximum number of records to return",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of asset diff snapshots with pagination",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch asset diff snapshots",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/osm/api/event-logs": {
             "get": {
                 "security": [
@@ -398,8 +453,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Filter by run ID",
-                        "name": "run_id",
+                        "description": "Filter by run UUID",
+                        "name": "run_uuid",
                         "in": "query"
                     },
                     {
@@ -801,6 +856,29 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/logout": {
+            "post": {
+                "description": "Clear the session cookie",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "User logout",
+                "responses": {
+                    "200": {
+                        "description": "Logout message",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -1839,6 +1917,79 @@ const docTemplate = `{
                 }
             }
         },
+        "/osm/api/step-results": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a paginated list of step results with optional filtering",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Steps"
+                ],
+                "summary": "List step results",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by workspace name",
+                        "name": "workspace",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (pending, running, completed, failed)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by step type (bash, function, etc.)",
+                        "name": "step_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by run ID",
+                        "name": "run_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of records to skip",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Maximum number of records to return",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of step results with pagination",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch step results",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/osm/api/tasks": {
             "get": {
                 "security": [
@@ -2190,6 +2341,61 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Failed to get vulnerability diff",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/vulnerabilities/diffs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a paginated list of stored vulnerability diff snapshots",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Vulnerabilities"
+                ],
+                "summary": "List vulnerability diff snapshots",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by workspace name",
+                        "name": "workspace",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of records to skip",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Maximum number of records to return",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of vulnerability diff snapshots with pagination",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch vulnerability diff snapshots",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -3055,14 +3261,15 @@ const docTemplate = `{
                 "enabled": {
                     "type": "boolean"
                 },
+                "event_topic": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
                 "params": {
                     "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
+                    "additionalProperties": true
                 },
                 "runner_type": {
                     "type": "string"
@@ -3074,11 +3281,21 @@ const docTemplate = `{
                 "target": {
                     "type": "string"
                 },
+                "trigger_type": {
+                    "description": "cron, event, watch, manual",
+                    "type": "string"
+                },
+                "watch_path": {
+                    "type": "string"
+                },
                 "workflow_kind": {
-                    "description": "flow or module",
+                    "description": "\"module\" or \"flow\"",
                     "type": "string"
                 },
                 "workflow_name": {
+                    "type": "string"
+                },
+                "workspace": {
                     "type": "string"
                 }
             }
@@ -3437,14 +3654,15 @@ const docTemplate = `{
                 },
                 "params": {
                     "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
+                    "additionalProperties": true
                 },
                 "schedule": {
                     "type": "string"
                 },
                 "target": {
+                    "type": "string"
+                },
+                "workspace": {
                     "type": "string"
                 }
             }

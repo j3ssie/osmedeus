@@ -58,9 +58,9 @@ func (c *Config) Validate() error {
 		c.ScanTactic.Gently = 5
 	}
 
-	// Set defaults for JWT
+	// Set defaults for JWT (1 day = 1440 minutes)
 	if c.Server.JWT.ExpirationMinutes == 0 {
-		c.Server.JWT.ExpirationMinutes = 60
+		c.Server.JWT.ExpirationMinutes = 1440
 	}
 
 	// Set default for snapshot path

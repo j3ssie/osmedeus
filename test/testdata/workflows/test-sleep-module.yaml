@@ -7,7 +7,7 @@ params:
   - name: target
     required: true
   - name: sleep_time
-    default: "5"
+    default: "10"
 
 steps:
   - name: start-task

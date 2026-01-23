@@ -42,6 +42,9 @@ internal/executor/*/run-*.yaml
 test/integration/*-test/
 !test/integration/*_test.go
 
+
+.agents
+.claude
 OPTIMIZE.md
 OPTIMIZE-*.md
 PLANNING.md

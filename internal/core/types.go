@@ -150,11 +150,12 @@ type Event struct {
 	Topic        string                 `json:"topic" yaml:"topic"`                 // e.g., "webhook.received", "assets.new"
 	ID           string                 `json:"id" yaml:"id"`                       // UUID of the event
 	Name         string                 `json:"name" yaml:"name"`                   // e.g., "vulnerability.discovered"
+	SourceType   string                 `json:"source_type" yaml:"source_type"`     // "run", "eval", "api" - origin of the event
 	Source       string                 `json:"source" yaml:"source"`               // e.g., "nuclei", "httpx"
 	Data         string                 `json:"data" yaml:"data"`                   // JSON string payload
 	DataType     string                 `json:"data_type" yaml:"data_type"`         // e.g., "endpoint", "vulnerability"
 	Workspace    string                 `json:"workspace" yaml:"workspace"`         // Workspace/target space for the event
-	RunID        string                 `json:"run_id" yaml:"run_id"`               // Run ID that generated this event
+	RunUUID      string                 `json:"run_uuid" yaml:"run_uuid"`           // Run UUID that generated this event
 	WorkflowName string                 `json:"workflow_name" yaml:"workflow_name"` // Workflow that generated this event
 	Timestamp    time.Time              `json:"timestamp" yaml:"timestamp"`         // When the event occurred
 	ParsedData   map[string]interface{} `json:"-" yaml:"-"`                         // Parsed JSON for filter evaluation

@@ -55,7 +55,7 @@ curl -X POST http://localhost:8002/osm/api/login \
 ## Token Details
 
 - **Algorithm**: HS256 (HMAC-SHA256)
-- **Expiration**: Configurable via `server.jwt.expiration_minutes` in settings (default: 60 minutes)
+- **Expiration**: Configurable via `server.jwt.expiration_minutes` in settings (default: 1440 minutes / 1 day)
 - **Claims**: Contains `username`, `exp` (expiration), and `iat` (issued at)
 
 ## Using the Token

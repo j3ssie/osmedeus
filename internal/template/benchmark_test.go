@@ -9,16 +9,16 @@ import (
 // Benchmark contexts
 var (
 	mediumCtx = map[string]any{
-		"target":     "example.com",
-		"output":     "/tmp/output",
-		"threads":    10,
-		"timeout":    "30s",
-		"user":       "admin",
-		"verbose":    true,
-		"dry_run":    false,
-		"workspace":  "/workspaces/example.com",
-		"binaries":   "/opt/tools",
-		"wordlist":   "/data/wordlists/common.txt",
+		"target":    "example.com",
+		"output":    "/tmp/output",
+		"threads":   10,
+		"timeout":   "30s",
+		"user":      "admin",
+		"verbose":   true,
+		"dry_run":   false,
+		"workspace": "/workspaces/example.com",
+		"binaries":  "/opt/tools",
+		"wordlist":  "/data/wordlists/common.txt",
 	}
 
 	largeCtx = func() map[string]any {

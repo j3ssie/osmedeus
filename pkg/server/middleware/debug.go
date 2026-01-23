@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
@@ -97,13 +98,18 @@ func DebugErrorHandler(c *fiber.Ctx, err error) error {
 		}
 	}
 
-	// Custom message for 403 Forbidden
+	// Custom handling for 403 Forbidden
 	if code == fiber.StatusForbidden {
+		path := c.Path()
+		// Redirect to root for login and schedules routes
+		if path == "/login" || strings.HasPrefix(path, "/schedules") {
+			return c.Redirect("/", fiber.StatusFound)
+		}
 		return c.Status(code).JSON(fiber.Map{
 			"error":   true,
 			"message": "Oh dear! It seems you've wandered off the path. If you'd like to see the UI page, please pop back root route at /",
 			"code":    code,
-			"path":    c.Path(),
+			"path":    path,
 			"method":  c.Method(),
 		})
 	}

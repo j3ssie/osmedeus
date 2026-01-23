@@ -10,7 +10,7 @@ params:
   - name: output_dir
     default: "{{Output}}/portscan"
   - name: httpFile
-    default: "{{Output}}/portscan/http-{{Workspace}}.txt"
+    default: "{{Output}}/portscan/http-{{TargetSpace}}.txt"
   - name: enableScreenshot
     default: "false"
   - name: httpTimeout
@@ -120,7 +120,7 @@ steps:
     parallel_steps:
       - name: httpx-json-fingerprint
         type: bash
-        command: "cat {{httpFile}} | {{Binaries}}/httpx -nf -timeout {{httpTimeout}} -t {{httpThreads}} -no-color -json -title -tech-detect -status-code -silent >> {{output_dir}}/{{Workspace}}-http-overview.txt"
+        command: "cat {{httpFile}} | {{Binaries}}/httpx -nf -timeout {{httpTimeout}} -t {{httpThreads}} -no-color -json -title -tech-detect -status-code -silent >> {{output_dir}}/{{TargetSpace}}-http-overview.txt"
         timeout: 1200
         on_error:
           - action: log
@@ -129,7 +129,7 @@ steps:
 
       - name: extract-technologies
         type: bash
-        command: "cat {{httpFile}} | {{Binaries}}/httpx -nf -timeout {{httpTimeout}} -t {{httpThreads}} -tech-detect -silent >> {{output_dir}}/{{Workspace}}-technologies.txt"
+        command: "cat {{httpFile}} | {{Binaries}}/httpx -nf -timeout {{httpTimeout}} -t {{httpThreads}} -tech-detect -silent >> {{output_dir}}/{{TargetSpace}}-technologies.txt"
         timeout: 600
         on_error:
           - action: continue
@@ -139,15 +139,15 @@ steps:
   # ============================================================
   - name: clean-http-json
     type: function
-    pre_condition: 'file_exists("{{output_dir}}/{{Workspace}}-http-overview.txt")'
-    function: CleanJSONHttpx("{{output_dir}}/{{Workspace}}-http-overview.txt", "{{output_dir}}/{{Workspace}}-raw-overview.txt")
+    pre_condition: 'file_exists("{{output_dir}}/{{TargetSpace}}-http-overview.txt")'
+    function: CleanJSONHttpx("{{output_dir}}/{{TargetSpace}}-http-overview.txt", "{{output_dir}}/{{TargetSpace}}-raw-overview.txt")
     exports:
-      raw_overview: "{{output_dir}}/{{Workspace}}-raw-overview.txt"
+      raw_overview: "{{output_dir}}/{{TargetSpace}}-raw-overview.txt"
 
   - name: beautify-results
     type: bash
-    pre_condition: 'file_exists("{{output_dir}}/{{Workspace}}-raw-overview.txt")'
-    command: "cat {{output_dir}}/{{Workspace}}-raw-overview.txt | csvtk pretty --no-header-row -I -s ' | ' -W 75 > {{output_dir}}/beautify-{{Workspace}}-http.txt"
+    pre_condition: 'file_exists("{{output_dir}}/{{TargetSpace}}-raw-overview.txt")'
+    command: "cat {{output_dir}}/{{TargetSpace}}-raw-overview.txt | csvtk pretty --no-header-row -I -s ' | ' -W 75 > {{output_dir}}/beautify-{{TargetSpace}}-http.txt"
     on_error:
       - action: log
         message: "Beautify failed, copying raw results"
@@ -156,8 +156,8 @@ steps:
 
   - name: fallback-beautify
     type: bash
-    pre_condition: '!file_exists("{{output_dir}}/beautify-{{Workspace}}-http.txt")'
-    command: "cp {{output_dir}}/{{Workspace}}-raw-overview.txt {{output_dir}}/beautify-{{Workspace}}-http.txt 2>/dev/null || touch {{output_dir}}/beautify-{{Workspace}}-http.txt"
+    pre_condition: '!file_exists("{{output_dir}}/beautify-{{TargetSpace}}-http.txt")'
+    command: "cp {{output_dir}}/{{TargetSpace}}-raw-overview.txt {{output_dir}}/beautify-{{TargetSpace}}-http.txt 2>/dev/null || touch {{output_dir}}/beautify-{{TargetSpace}}-http.txt"
 
   # ============================================================
   # Phase 7: Foreach - Detailed Host Analysis
@@ -173,8 +173,8 @@ steps:
       type: bash
       command: |
         echo "Analyzing [[host]]..."
-        curl -s -I "[[host]]" 2>/dev/null | grep -i "server\|x-powered-by\|content-type" >> {{output_dir}}/headers-{{Workspace}}.txt
-        echo "---" >> {{output_dir}}/headers-{{Workspace}}.txt
+        curl -s -I "[[host]]" 2>/dev/null | grep -i "server\|x-powered-by\|content-type" >> {{output_dir}}/headers-{{TargetSpace}}.txt
+        echo "---" >> {{output_dir}}/headers-{{TargetSpace}}.txt
       timeout: 30
 
   # ============================================================
@@ -184,18 +184,18 @@ steps:
     type: bash
     commands:
       - |
-        echo "=== CIDR Probing Report ===" > {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "Target: {{Target}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "Workspace: {{Workspace}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "Date: $(date)" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "=== Statistics ===" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "Open Ports Found: {{open_port_count}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "HTTP Hosts: {{http_host_count}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "=== HTTP Hosts ===" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        cat {{httpFile}} >> {{output_dir}}/final-report-{{Workspace}}.txt 2>/dev/null || echo "No HTTP hosts found"
-      - "cat {{output_dir}}/beautify-{{Workspace}}-http.txt 2>/dev/null || true"
+        echo "=== CIDR Probing Report ===" > {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "Target: {{Target}}" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "Workspace: {{TargetSpace}}" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "Date: $(date)" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "=== Statistics ===" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "Open Ports Found: {{open_port_count}}" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "HTTP Hosts: {{http_host_count}}" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "=== HTTP Hosts ===" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        cat {{httpFile}} >> {{output_dir}}/final-report-{{TargetSpace}}.txt 2>/dev/null || echo "No HTTP hosts found"
+      - "cat {{output_dir}}/beautify-{{TargetSpace}}-http.txt 2>/dev/null || true"
 
   - name: generate-markdown-report
     type: function
@@ -211,10 +211,10 @@ steps:
     pre_condition: '{{open_port_count}} == 0'
     commands:
       - |
-        echo "=== CIDR Probing Report ===" > {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "Target: {{Target}}" >> {{output_dir}}/final-report-{{Workspace}}.txt
-        echo "No open ports found for target." >> {{output_dir}}/final-report-{{Workspace}}.txt
-      - "touch {{output_dir}}/beautify-{{Workspace}}-http.txt"
+        echo "=== CIDR Probing Report ===" > {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "Target: {{Target}}" >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+        echo "No open ports found for target." >> {{output_dir}}/final-report-{{TargetSpace}}.txt
+      - "touch {{output_dir}}/beautify-{{TargetSpace}}-http.txt"
       - "touch {{httpFile}}"
 
   # ============================================================

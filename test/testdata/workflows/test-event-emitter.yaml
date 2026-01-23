@@ -18,19 +18,19 @@ steps:
   - name: emit-single-event
     type: function
     function: |
-      generate_event("{{Workspace}}", "assets.new", "test-emitter", "subdomain", "single.{{target}}")
+      generate_event("{{TargetSpace}}", "assets.new", "test-emitter", "subdomain", "single.{{target}}")
 
   - name: emit-events-from-file
     type: function
     function: |
-      generate_event_from_file("{{Workspace}}", "assets.new", "test-emitter", "subdomain", "{{Output}}/subdomains.txt")
+      generate_event_from_file("{{TargetSpace}}", "assets.new", "test-emitter", "subdomain", "{{Output}}/subdomains.txt")
     exports:
       emitted_count: "{{result}}"
 
   - name: emit-complex-event
     type: function
     function: |
-      generate_event("{{Workspace}}", "vulnerabilities.new", "test-scanner", "finding", {
+      generate_event("{{TargetSpace}}", "vulnerabilities.new", "test-scanner", "finding", {
         url: "https://{{target}}/admin",
         severity: "high",
         template: "exposed-admin-panel",

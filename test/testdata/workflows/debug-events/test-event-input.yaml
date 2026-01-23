@@ -1,0 +1,42 @@
+name: test-event-input
+kind: module
+description: Test new event input syntax (exports-style Vars)
+
+triggers:
+  - name: on-asset-vars
+    on: event
+    event:
+      # topic: "test.asset.vars"
+      topic: "*"
+    input:
+      # New exports-style syntax: variable_name: expression
+      Target: event_data
+      asset_type: event.type
+      source: event.source
+      description: trim(event_data.desc)
+    enabled: true
+
+params:
+  - name: Target
+    required: true
+
+steps:
+  - name: verify-vars
+    type: bash
+    commands:
+      - 'echo "target={{target}}"'
+      - 'echo "Target={{Target}}"'
+      - 'echo "TargetSpace={{TargetSpace}}"'
+      - 'echo "asset_type={{asset_type}}"'
+      - 'echo "source={{source}}"'
+      - 'echo "description={{description}}"'
+
+  - name: echo-envelope
+    type: bash
+    commands:
+      - 'echo "Full envelope: {{EventEnvelope}}"'
+      - 'echo "Topic: {{EventTopic}}"'
+      - 'echo "Source: {{EventSource}}"'
+      - 'echo "DataType: {{EventDataType}}"'
+      - 'echo "Timestamp: {{EventTimestamp}}"'
+      - 'echo "Data: {{EventData}}"'

@@ -13,8 +13,8 @@ func TestGetTypes(t *testing.T) {
 		name     string
 		input    string
 		expected string
-		setup    func() string   // optional setup that returns the actual input
-		cleanup  func(string)    // optional cleanup
+		setup    func() string // optional setup that returns the actual input
+		cleanup  func(string)  // optional cleanup
 	}{
 		// CIDR tests
 		{
@@ -342,8 +342,8 @@ func TestIsCIDR(t *testing.T) {
 		{"172.16.0.0/12", true},
 		{"192.168.1.0/32", true},
 		{"2001:db8::/32", true},
-		{"192.168.1.1", false},      // IP without mask
-		{"192.168.1.0/99", false},   // invalid mask
+		{"192.168.1.1", false},    // IP without mask
+		{"192.168.1.0/99", false}, // invalid mask
 		{"example.com", false},
 		{"not-cidr", false},
 	}
@@ -417,11 +417,11 @@ func TestIsDomain(t *testing.T) {
 		{"a.b.c.example.com", true},
 		{"test-domain.org", true},
 		{"example.co.uk", true},
-		{"192.168.1.1", false},      // IP address
-		{".example.com", false},     // starts with dot
-		{"example-.com", false},     // ends with hyphen before dot
-		{"-example.com", false},     // starts with hyphen
-		{"example", false},          // no TLD
+		{"192.168.1.1", false},        // IP address
+		{".example.com", false},       // starts with dot
+		{"example-.com", false},       // ends with hyphen before dot
+		{"-example.com", false},       // starts with hyphen
+		{"example", false},            // no TLD
 		{"http://example.com", false}, // URL, not domain
 	}
 

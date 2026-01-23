@@ -23,6 +23,8 @@ type SSHRunner struct {
 	remoteDir  string
 	pooled     bool       // true if connection is from pool
 	poolKey    SSHPoolKey // key for releasing back to pool
+	onPIDStart PIDCallback
+	onPIDEnd   PIDCallback
 }
 
 // NewSSHRunner creates a new SSH runner
@@ -267,4 +269,13 @@ func (r *SSHRunner) IsRemote() bool {
 // GetRemoteDir returns the remote directory where binary is stored
 func (r *SSHRunner) GetRemoteDir() string {
 	return r.remoteDir
+}
+
+// SetPIDCallbacks sets callbacks for process lifecycle events.
+// For SSH runner, this is a no-op since processes run on remote machines
+// and cannot be killed from the local host. The context timeout mechanism
+// is used instead to stop commands on the remote host.
+func (r *SSHRunner) SetPIDCallbacks(onStart, onEnd PIDCallback) {
+	r.onPIDStart = onStart
+	r.onPIDEnd = onEnd
 }

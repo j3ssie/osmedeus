@@ -36,7 +36,7 @@ steps:
     type: bash
     command: |
       cat > {{Output}}/templates/sample-markdown-report.md << 'EOF'
-      # Sample Repository Findings - {{Workspace}}
+      # Sample Repository Findings - {{TargetSpace}}
 
       **Target**: {{Target}}
       **Date**: {{TaskDate}}

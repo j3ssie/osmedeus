@@ -5,7 +5,7 @@ kind: module
 description: Simple workflow that receives and processes events
 tags: event,receiver,trigger,example
 
-trigger:
+triggers:
   # Trigger on new asset discovery events
   - name: on-new-asset
     on: event

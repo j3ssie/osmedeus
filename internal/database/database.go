@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/j3ssie/osmedeus/v5/internal/config"
@@ -210,6 +211,11 @@ func Migrate(ctx context.Context) error {
 		return err
 	}
 
+	// Add current_pid column to runs table if it doesn't exist (for existing databases)
+	if err := addRunsPIDColumn(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -229,6 +235,25 @@ func createRunIndexes(ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+// addRunsPIDColumn adds the current_pid column to runs table for existing databases
+// This is safe to run multiple times - it checks if column exists first
+func addRunsPIDColumn(ctx context.Context) error {
+	// SQLite and PostgreSQL have different syntax for adding columns
+	// We use a simple approach: try to add the column and ignore "already exists" errors
+	_, err := db.ExecContext(ctx, "ALTER TABLE runs ADD COLUMN current_pid INTEGER DEFAULT 0")
+	if err != nil {
+		errStr := strings.ToLower(err.Error())
+		// Ignore "column already exists" errors (SQLite and PostgreSQL have different messages)
+		if strings.Contains(errStr, "duplicate column") ||
+			strings.Contains(errStr, "already exists") ||
+			strings.Contains(errStr, "sqlstate 42701") {
+			return nil
+		}
+		return fmt.Errorf("failed to add current_pid column: %w", err)
+	}
 	return nil
 }
 

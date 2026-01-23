@@ -108,11 +108,11 @@ func TestKeyConstants(t *testing.T) {
 	expectedPrefix := "osm:"
 
 	keys := map[string]string{
-		"KeyPrefix":       KeyPrefix,
-		"KeyEventsPrefix": KeyEventsPrefix,
-		"KeyDataRuns":     KeyDataRuns,
-		"KeyDataSteps":    KeyDataSteps,
-		"KeyDataEvents":   KeyDataEvents,
+		"KeyPrefix":        KeyPrefix,
+		"KeyEventsPrefix":  KeyEventsPrefix,
+		"KeyDataRuns":      KeyDataRuns,
+		"KeyDataSteps":     KeyDataSteps,
+		"KeyDataEvents":    KeyDataEvents,
 		"KeyDataArtifacts": KeyDataArtifacts,
 	}
 

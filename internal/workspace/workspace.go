@@ -132,7 +132,7 @@ func (w *Workspace) GetVariables() map[string]interface{} {
 		"output_dir": w.OutputDir,
 		"log_dir":    w.LogDir,
 		"report_dir": w.ReportDir,
-		"run_id":     w.RunUUID,
+		"run_uuid":   w.RunUUID,
 		"target":     w.Target,
 	}
 }

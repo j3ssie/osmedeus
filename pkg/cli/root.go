@@ -347,7 +347,7 @@ func installRequiredBinaries(cfg *config.Config, printer *terminal.Printer) (ins
 		printer.Warning("Failed to create binaries folder: %s", err)
 	}
 
-	// Count binaries to install
+	// Collect all non-optional binaries (InstallBinary handles skip logic and shows names)
 	var toInstall []string
 	for name, entry := range registry {
 		isOptional := false
@@ -357,7 +357,7 @@ func installRequiredBinaries(cfg *config.Config, printer *terminal.Printer) (ins
 				break
 			}
 		}
-		if !isOptional && !installer.IsBinaryInPath(name) {
+		if !isOptional {
 			toInstall = append(toInstall, name)
 		}
 	}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/glamour"
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
 	"github.com/j3ssie/osmedeus/v5/internal/updater"
@@ -102,12 +103,21 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 	if release.ReleaseNotes != "" {
 		printer.Newline()
 		printer.SubSection("Release Notes")
-		// Truncate long notes
-		notes := release.ReleaseNotes
-		if len(notes) > 500 {
-			notes = notes[:500] + "..."
+		// Render release notes as markdown
+		renderer, err := glamour.NewTermRenderer(
+			glamour.WithAutoStyle(),
+			glamour.WithWordWrap(100),
+		)
+		if err == nil {
+			rendered, err := renderer.Render(release.ReleaseNotes)
+			if err == nil {
+				fmt.Print(rendered)
+			} else {
+				fmt.Println(release.ReleaseNotes)
+			}
+		} else {
+			fmt.Println(release.ReleaseNotes)
 		}
-		fmt.Println(notes)
 	}
 	printer.Newline()
 
@@ -182,9 +192,6 @@ func UsageUpdate() string {
 
   ` + terminal.Green("# Update to latest version") + `
   osmedeus update
-
-  ` + terminal.Green("# Update without confirmation") + `
-  osmedeus update ` + terminal.Yellow("--yes") + `
 
   ` + terminal.Green("# Force reinstall current version") + `
   osmedeus update ` + terminal.Yellow("--force") + `

@@ -117,14 +117,28 @@ func (e *coloredConsoleEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcor
 	return newBuf, nil
 }
 
-// colorJSONFields wraps JSON-like content {...} in gray color
+// ansiPattern matches ANSI escape sequences
+var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+// stripANSI removes ANSI escape sequences from a string
+func stripANSI(s string) string {
+	return ansiPattern.ReplaceAllString(s, "")
+}
+
+// colorJSONFields wraps JSON-like content {...} in gray color.
+// It also strips any ANSI codes from within the JSON block to prevent
+// escape sequences from appearing in structured log fields.
 func colorJSONFields(s string) string {
 	const gray = "\033[90m"
 	const reset = "\033[0m"
 
 	// Match JSON-like patterns: {...}
 	re := regexp.MustCompile(`(\{[^}]+\})`)
-	return re.ReplaceAllString(s, gray+"$1"+reset)
+	return re.ReplaceAllStringFunc(s, func(match string) string {
+		// Strip any ANSI codes from within the JSON block first
+		clean := stripANSI(match)
+		return gray + clean + reset
+	})
 }
 
 // DefaultConfig returns a default logger configuration
@@ -168,7 +182,7 @@ func NewLogger(cfg Config) (*zap.Logger, error) {
 		StacktraceKey:    "stacktrace",
 		LineEnding:       zapcore.DefaultLineEnding,
 		EncodeLevel:      ColoredLevelEncoder, // Bold + colored level
-		EncodeTime:       ColoredTimeEncoder,  // Grey ISO 8601 timestamp
+		EncodeTime:       PlainTimeEncoder,    // Plain ISO 8601 timestamp (avoid ANSI codes in data fields)
 		EncodeDuration:   zapcore.SecondsDurationEncoder,
 		EncodeCaller:     ColoredCallerEncoder, // Bright cyan caller location
 		ConsoleSeparator: " ",                  // Single space between fields

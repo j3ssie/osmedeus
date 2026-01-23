@@ -207,11 +207,12 @@ definitions:
     properties:
       enabled:
         type: boolean
+      event_topic:
+        type: string
       name:
         type: string
       params:
-        additionalProperties:
-          type: string
+        additionalProperties: true
         type: object
       runner_type:
         type: string
@@ -220,10 +221,17 @@ definitions:
         type: string
       target:
         type: string
+      trigger_type:
+        description: cron, event, watch, manual
+        type: string
+      watch_path:
+        type: string
       workflow_kind:
-        description: flow or module
+        description: '"module" or "flow"'
         type: string
       workflow_name:
+        type: string
+      workspace:
         type: string
     type: object
   handlers.CreateVulnerabilityInput:
@@ -460,12 +468,13 @@ definitions:
       name:
         type: string
       params:
-        additionalProperties:
-          type: string
+        additionalProperties: true
         type: object
       schedule:
         type: string
       target:
+        type: string
+      workspace:
         type: string
     type: object
 info:
@@ -699,6 +708,42 @@ paths:
       summary: Get asset diff
       tags:
       - Assets
+  /osm/api/assets/diffs:
+    get:
+      description: Get a paginated list of stored asset diff snapshots
+      parameters:
+      - description: Filter by workspace name
+        in: query
+        name: workspace
+        type: string
+      - default: 0
+        description: Number of records to skip
+        in: query
+        name: offset
+        type: integer
+      - default: 20
+        description: Maximum number of records to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of asset diff snapshots with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch asset diff snapshots
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List asset diff snapshots
+      tags:
+      - Assets
   /osm/api/event-logs:
     get:
       description: Get a paginated list of event logs with optional filtering
@@ -719,9 +764,9 @@ paths:
         in: query
         name: workspace
         type: string
-      - description: Filter by run ID
+      - description: Filter by run UUID
         in: query
-        name: run_id
+        name: run_uuid
         type: string
       - description: Filter by workflow name
         in: query
@@ -991,6 +1036,21 @@ paths:
             additionalProperties: true
             type: object
       summary: User login
+      tags:
+      - Auth
+  /osm/api/logout:
+    post:
+      description: Clear the session cookie
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: User logout
       tags:
       - Auth
   /osm/api/registry-info:
@@ -1666,6 +1726,54 @@ paths:
       summary: Get system statistics
       tags:
       - Stats
+  /osm/api/step-results:
+    get:
+      description: Get a paginated list of step results with optional filtering
+      parameters:
+      - description: Filter by workspace name
+        in: query
+        name: workspace
+        type: string
+      - description: Filter by status (pending, running, completed, failed)
+        in: query
+        name: status
+        type: string
+      - description: Filter by step type (bash, function, etc.)
+        in: query
+        name: step_type
+        type: string
+      - description: Filter by run ID
+        in: query
+        name: run_id
+        type: integer
+      - default: 0
+        description: Number of records to skip
+        in: query
+        name: offset
+        type: integer
+      - default: 20
+        description: Maximum number of records to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of step results with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch step results
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List step results
+      tags:
+      - Steps
   /osm/api/tasks:
     get:
       description: Get a list of all running and completed tasks
@@ -1975,6 +2083,42 @@ paths:
       security:
       - BearerAuth: []
       summary: Get vulnerability diff
+      tags:
+      - Vulnerabilities
+  /osm/api/vulnerabilities/diffs:
+    get:
+      description: Get a paginated list of stored vulnerability diff snapshots
+      parameters:
+      - description: Filter by workspace name
+        in: query
+        name: workspace
+        type: string
+      - default: 0
+        description: Number of records to skip
+        in: query
+        name: offset
+        type: integer
+      - default: 20
+        description: Maximum number of records to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of vulnerability diff snapshots with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch vulnerability diff snapshots
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List vulnerability diff snapshots
       tags:
       - Vulnerabilities
   /osm/api/vulnerabilities/summary:

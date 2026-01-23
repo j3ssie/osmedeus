@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -1395,8 +1396,8 @@ func SeedDatabase(ctx context.Context) error {
 			Labels:        "Portal updated with new features",
 			Source:        "httpx",
 			LastSeenAt:    oneHourAgo,
-			CreatedAt:     oneWeekAgo,   // Created a week ago
-			UpdatedAt:     oneHourAgo,   // But updated recently (title changed)
+			CreatedAt:     oneWeekAgo, // Created a week ago
+			UpdatedAt:     oneHourAgo, // But updated recently (title changed)
 		},
 		{
 			Workspace:     "example.com",
@@ -1419,8 +1420,8 @@ func SeedDatabase(ctx context.Context) error {
 			Labels:        "Dashboard version bumped",
 			Source:        "httpx",
 			LastSeenAt:    twoHoursAgo,
-			CreatedAt:     twoWeeksAgo,  // Created two weeks ago
-			UpdatedAt:     twoHoursAgo,  // Updated today (version change)
+			CreatedAt:     twoWeeksAgo, // Created two weeks ago
+			UpdatedAt:     twoHoursAgo, // Updated today (version change)
 		},
 		{
 			Workspace:     "example.com",
@@ -1443,8 +1444,8 @@ func SeedDatabase(ctx context.Context) error {
 			Labels:        "Auth service patched",
 			Source:        "httpx",
 			LastSeenAt:    oneDayAgo,
-			CreatedAt:     oneMonthAgo,  // Created a month ago
-			UpdatedAt:     oneDayAgo,    // Updated yesterday (security patch)
+			CreatedAt:     oneMonthAgo, // Created a month ago
+			UpdatedAt:     oneDayAgo,   // Updated yesterday (security patch)
 		},
 
 		// --- STALE/REMOVED ASSETS (not seen recently) ---
@@ -1467,7 +1468,7 @@ func SeedDatabase(ctx context.Context) error {
 			ResponseTime:  "5000ms",
 			Labels:        "API deprecated and decommissioned",
 			Source:        "httpx",
-			LastSeenAt:    twoWeeksAgo,  // Last seen 2 weeks ago - now gone
+			LastSeenAt:    twoWeeksAgo, // Last seen 2 weeks ago - now gone
 			CreatedAt:     oneMonthAgo,
 			UpdatedAt:     twoWeeksAgo,
 		},
@@ -1489,7 +1490,7 @@ func SeedDatabase(ctx context.Context) error {
 			ResponseTime:  "123ms",
 			Labels:        "Old portal removed after migration",
 			Source:        "httpx",
-			LastSeenAt:    oneWeekAgo,  // Last seen a week ago
+			LastSeenAt:    oneWeekAgo, // Last seen a week ago
 			CreatedAt:     oneMonthAgo,
 			UpdatedAt:     oneWeekAgo,
 		},
@@ -1510,7 +1511,7 @@ func SeedDatabase(ctx context.Context) error {
 			ResponseTime:  "timeout",
 			Labels:        "Test environment taken offline",
 			Source:        "httpx",
-			LastSeenAt:    fiveDaysAgo,  // Last seen 5 days ago - offline
+			LastSeenAt:    fiveDaysAgo, // Last seen 5 days ago - offline
 			CreatedAt:     twoWeeksAgo,
 			UpdatedAt:     fiveDaysAgo,
 		},
@@ -1536,9 +1537,9 @@ func SeedDatabase(ctx context.Context) error {
 			ResponseTime:  "45ms",
 			Labels:        "Stable archive - rarely changes",
 			Source:        "httpx",
-			LastSeenAt:    threeDaysAgo,  // Still accessible but rarely scanned
+			LastSeenAt:    threeDaysAgo, // Still accessible but rarely scanned
 			CreatedAt:     oneMonthAgo,
-			UpdatedAt:     oneMonthAgo,   // Never updated since creation
+			UpdatedAt:     oneMonthAgo, // Never updated since creation
 		},
 	}
 
@@ -1554,6 +1555,7 @@ func SeedDatabase(ctx context.Context) error {
 			Topic:        TopicRunStarted,
 			EventID:      uuid.New().String(),
 			Name:         "subdomain-enum started",
+			SourceType:   "run",
 			Source:       "executor",
 			DataType:     "scan",
 			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"example.com"}`, scan1ID),
@@ -1568,6 +1570,7 @@ func SeedDatabase(ctx context.Context) error {
 			Topic:        TopicRunCompleted,
 			EventID:      uuid.New().String(),
 			Name:         "subdomain-enum completed",
+			SourceType:   "run",
 			Source:       "executor",
 			DataType:     "scan",
 			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"example.com","duration_ms":3600000}`, scan1ID),
@@ -1582,6 +1585,7 @@ func SeedDatabase(ctx context.Context) error {
 			Topic:        TopicAssetDiscovered,
 			EventID:      uuid.New().String(),
 			Name:         "New assets discovered",
+			SourceType:   "run",
 			Source:       "httpx-step",
 			DataType:     "asset",
 			Data:         `{"count":78,"workspace":"example.com"}`,
@@ -1596,6 +1600,7 @@ func SeedDatabase(ctx context.Context) error {
 			Topic:        TopicRunStarted,
 			EventID:      uuid.New().String(),
 			Name:         "port-scan started",
+			SourceType:   "run",
 			Source:       "scheduler",
 			DataType:     "scan",
 			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"api.example.com","trigger":"daily-recon"}`, scan2ID),
@@ -1610,6 +1615,7 @@ func SeedDatabase(ctx context.Context) error {
 			Topic:        TopicRunFailed,
 			EventID:      uuid.New().String(),
 			Name:         "vuln-scan failed",
+			SourceType:   "run",
 			Source:       "executor",
 			DataType:     "scan",
 			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"staging.test.local","error":"nuclei template loading failed"}`, scan3ID),
@@ -1621,20 +1627,22 @@ func SeedDatabase(ctx context.Context) error {
 			CreatedAt:    oneHourAgo,
 		},
 		{
-			Topic:     TopicScheduleTriggered,
-			EventID:   uuid.New().String(),
-			Name:      "daily-recon triggered",
-			Source:    "scheduler",
-			DataType:  "schedule",
-			Data:      `{"schedule_id":"sched-daily-recon","trigger_type":"cron","cron":"0 2 * * *"}`,
-			Processed: true,
-			CreatedAt: thirtyMinsAgo,
+			Topic:      TopicScheduleTriggered,
+			EventID:    uuid.New().String(),
+			Name:       "daily-recon triggered",
+			SourceType: "run",
+			Source:     "scheduler",
+			DataType:   "schedule",
+			Data:       `{"schedule_id":"sched-daily-recon","trigger_type":"cron","cron":"0 2 * * *"}`,
+			Processed:  true,
+			CreatedAt:  thirtyMinsAgo,
 		},
 		// Batch job events for scan4ID (secondary.com)
 		{
 			Topic:        TopicRunStarted,
 			EventID:      uuid.New().String(),
 			Name:         "subdomain-enum started (batch job)",
+			SourceType:   "run",
 			Source:       "executor",
 			DataType:     "scan",
 			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"secondary.com","run_group_id":"%s"}`, scan4ID, runGroup1ID),
@@ -1649,6 +1657,7 @@ func SeedDatabase(ctx context.Context) error {
 			Topic:        TopicRunCompleted,
 			EventID:      uuid.New().String(),
 			Name:         "subdomain-enum completed (batch job)",
+			SourceType:   "run",
 			Source:       "executor",
 			DataType:     "scan",
 			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"secondary.com","run_group_id":"%s","duration_ms":3200000}`, scan4ID, runGroup1ID),
@@ -1663,6 +1672,7 @@ func SeedDatabase(ctx context.Context) error {
 			Topic:        TopicAssetDiscovered,
 			EventID:      uuid.New().String(),
 			Name:         "New assets discovered",
+			SourceType:   "run",
 			Source:       "httpx-step",
 			DataType:     "asset",
 			Data:         `{"count":52,"workspace":"secondary.com"}`,
@@ -1678,6 +1688,7 @@ func SeedDatabase(ctx context.Context) error {
 			Topic:        TopicRunStarted,
 			EventID:      uuid.New().String(),
 			Name:         "subdomain-enum started (batch job)",
+			SourceType:   "run",
 			Source:       "executor",
 			DataType:     "scan",
 			Data:         fmt.Sprintf(`{"scan_id":"%s","target":"tertiary.io","run_group_id":"%s"}`, scan5ID, runGroup1ID),
@@ -1690,14 +1701,15 @@ func SeedDatabase(ctx context.Context) error {
 		},
 		// Batch job started event
 		{
-			Topic:     "job.started",
-			EventID:   uuid.New().String(),
-			Name:      "Batch job started",
-			Source:    "executor",
-			DataType:  "job",
-			Data:      fmt.Sprintf(`{"run_group_id":"%s","targets":["example.com","secondary.com","tertiary.io"],"total_targets":3}`, runGroup1ID),
-			Processed: true,
-			CreatedAt: twoHoursAgo,
+			Topic:      "job.started",
+			EventID:    uuid.New().String(),
+			Name:       "Batch job started",
+			SourceType: "run",
+			Source:     "executor",
+			DataType:   "job",
+			Data:       fmt.Sprintf(`{"run_group_id":"%s","targets":["example.com","secondary.com","tertiary.io"],"total_targets":3}`, runGroup1ID),
+			Processed:  true,
+			CreatedAt:  twoHoursAgo,
 		},
 	}
 
@@ -1715,11 +1727,13 @@ func SeedDatabase(ctx context.Context) error {
 			ID:           "sched-daily-recon",
 			Name:         "Daily Reconnaissance",
 			WorkflowName: "subdomain-enum",
-			WorkflowPath: "workflows/modules/subdomain-enum.yaml",
+			WorkflowKind: "module",
+			Target:       "example.com",
+			Workspace:    "example-recon",
 			TriggerName:  "daily-recon",
 			TriggerType:  "cron",
 			Schedule:     "0 2 * * *",
-			InputConfig:  map[string]interface{}{"target": "example.com", "threads": 10},
+			Params:       map[string]interface{}{"threads": 10},
 			IsEnabled:    true,
 			LastRun:      &twoHoursAgo,
 			NextRun:      &tomorrow,
@@ -1731,11 +1745,13 @@ func SeedDatabase(ctx context.Context) error {
 			ID:           "sched-weekly-vuln",
 			Name:         "Weekly Vulnerability Scan",
 			WorkflowName: "vuln-scan",
-			WorkflowPath: "workflows/flows/vuln-scan.yaml",
+			WorkflowKind: "flow",
+			Target:       "example.com",
+			Workspace:    "example-vulns",
 			TriggerName:  "weekly-vuln",
 			TriggerType:  "cron",
 			Schedule:     "0 0 * * 0",
-			InputConfig:  map[string]interface{}{"severity": "critical,high", "templates": "cves,default"},
+			Params:       map[string]interface{}{"severity": "critical,high", "templates": "cves,default"},
 			IsEnabled:    true,
 			LastRun:      timePtr(now.Add(-3 * 24 * time.Hour)),
 			NextRun:      &nextWeek,
@@ -1747,11 +1763,13 @@ func SeedDatabase(ctx context.Context) error {
 			ID:           "sched-hourly-monitor",
 			Name:         "Hourly Asset Monitor",
 			WorkflowName: "content-discovery",
-			WorkflowPath: "workflows/modules/content-discovery.yaml",
+			WorkflowKind: "module",
+			Target:       "api.example.com",
+			Workspace:    "example-monitor",
 			TriggerName:  "hourly-monitor",
 			TriggerType:  "cron",
 			Schedule:     "0 * * * *",
-			InputConfig:  map[string]interface{}{"wordlist": "quick.txt", "threads": 20},
+			Params:       map[string]interface{}{"wordlist": "quick.txt", "threads": 20},
 			IsEnabled:    true,
 			LastRun:      &oneHourAgo,
 			NextRun:      timePtr(now.Add(1 * time.Hour)),
@@ -1763,11 +1781,13 @@ func SeedDatabase(ctx context.Context) error {
 			ID:           "sched-monthly-full",
 			Name:         "Monthly Full Reconnaissance",
 			WorkflowName: "full-recon",
-			WorkflowPath: "workflows/flows/full-recon.yaml",
+			WorkflowKind: "flow",
+			Target:       "example.com",
+			Workspace:    "example-full",
 			TriggerName:  "monthly-full",
 			TriggerType:  "cron",
 			Schedule:     "0 0 1 * *",
-			InputConfig:  map[string]interface{}{"threads": 30, "timeout": 3600, "include_screenshots": true},
+			Params:       map[string]interface{}{"threads": 30, "timeout": 3600, "include_screenshots": true},
 			IsEnabled:    true,
 			LastRun:      timePtr(now.Add(-15 * 24 * time.Hour)),
 			NextRun:      timePtr(now.Add(15 * 24 * time.Hour)),
@@ -1779,11 +1799,12 @@ func SeedDatabase(ctx context.Context) error {
 			ID:           "sched-event-new-asset",
 			Name:         "New Asset Discovery Trigger",
 			WorkflowName: "port-scan",
-			WorkflowPath: "workflows/modules/port-scan.yaml",
+			WorkflowKind: "module",
+			Target:       "{{event.asset_value}}",
 			TriggerName:  "new-asset-trigger",
 			TriggerType:  "event",
 			EventTopic:   "asset.discovered",
-			InputConfig:  map[string]interface{}{"ports": "1-10000", "rate": 500},
+			Params:       map[string]interface{}{"ports": "1-10000", "rate": 500},
 			IsEnabled:    true,
 			LastRun:      &thirtyMinsAgo,
 			RunCount:     89,
@@ -1794,11 +1815,12 @@ func SeedDatabase(ctx context.Context) error {
 			ID:           "sched-disabled-legacy",
 			Name:         "Legacy Scan (Disabled)",
 			WorkflowName: "subdomain-enum",
-			WorkflowPath: "workflows/modules/subdomain-enum.yaml",
+			WorkflowKind: "module",
+			Target:       "legacy.example.com",
 			TriggerName:  "legacy-scan",
 			TriggerType:  "cron",
 			Schedule:     "0 3 * * *",
-			InputConfig:  map[string]interface{}{"threads": 5},
+			Params:       map[string]interface{}{"threads": 5},
 			IsEnabled:    false,
 			LastRun:      timePtr(now.Add(-30 * 24 * time.Hour)),
 			RunCount:     120,
@@ -2298,7 +2320,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPResponse: "HTTP/1.1 201 Created\nContent-Type: application/json\n\n{\"id\":123,\"body\":\"<script>alert(1)</script>\"}",
 			RawVulnJSON:        `{"template":"stored-xss","severity":"high","host":"v3.example.com"}`,
 			LastSeenAt:         thirtyMinsAgo,
-			CreatedAt:          thirtyMinsAgo,  // Just discovered
+			CreatedAt:          thirtyMinsAgo, // Just discovered
 			UpdatedAt:          thirtyMinsAgo,
 		},
 		{
@@ -2316,7 +2338,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPResponse: "HTTP/1.1 401 Unauthorized (no rate limit headers)",
 			RawVulnJSON:        `{"template":"missing-rate-limit","severity":"medium","host":"new-api.example.com"}`,
 			LastSeenAt:         oneHourAgo,
-			CreatedAt:          oneHourAgo,  // Just discovered
+			CreatedAt:          oneHourAgo, // Just discovered
 			UpdatedAt:          oneHourAgo,
 		},
 
@@ -2327,7 +2349,7 @@ func SeedDatabase(ctx context.Context) error {
 			VulnTitle:          "Information Disclosure - Upgraded to Medium",
 			VulnDesc:           "Previously considered low risk, but new exploit chain discovered that increases impact. Debug endpoints expose internal configuration.",
 			VulnPOC:            "curl 'https://dashboard.example.com/debug/config'",
-			Severity:           "medium",  // Upgraded from low
+			Severity:           "medium", // Upgraded from low
 			Confidence:         "certain",
 			AssetType:          "endpoint",
 			AssetValue:         "dashboard.example.com",
@@ -2336,8 +2358,8 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPResponse: "HTTP/1.1 200 OK\n\n{\"db_host\":\"internal-db.local\",\"api_keys\":{\"stripe\":\"sk_live_...\"}}",
 			RawVulnJSON:        `{"template":"debug-endpoint","severity":"medium","host":"dashboard.example.com"}`,
 			LastSeenAt:         oneHourAgo,
-			CreatedAt:          twoWeeksAgo,  // Found 2 weeks ago
-			UpdatedAt:          oneHourAgo,   // Severity upgraded today
+			CreatedAt:          twoWeeksAgo, // Found 2 weeks ago
+			UpdatedAt:          oneHourAgo,  // Severity upgraded today
 		},
 		{
 			Workspace:          "example.com",
@@ -2354,8 +2376,8 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPResponse: "HTTP/1.1 200 OK\n\n<h1>Admin Panel</h1>",
 			RawVulnJSON:        `{"template":"auth-bypass-variant","severity":"high","host":"portal.example.com"}`,
 			LastSeenAt:         twoHoursAgo,
-			CreatedAt:          oneWeekAgo,   // Original finding
-			UpdatedAt:          twoHoursAgo,  // Updated after retest
+			CreatedAt:          oneWeekAgo,  // Original finding
+			UpdatedAt:          twoHoursAgo, // Updated after retest
 		},
 
 		// --- RESOLVED/STALE VULNERABILITIES (not seen in recent scans) ---
@@ -2373,7 +2395,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "GET /search?q=1'+OR+1=1-- HTTP/1.1\nHost: old-portal.example.com",
 			DetailHTTPResponse: "HTTP/1.1 400 Bad Request (now blocked)",
 			RawVulnJSON:        `{"template":"sqli-fixed","severity":"critical","host":"old-portal.example.com","status":"fixed"}`,
-			LastSeenAt:         twoWeeksAgo,  // Not seen since fix verified
+			LastSeenAt:         twoWeeksAgo, // Not seen since fix verified
 			CreatedAt:          oneMonthAgo,
 			UpdatedAt:          twoWeeksAgo,
 		},
@@ -2391,7 +2413,7 @@ func SeedDatabase(ctx context.Context) error {
 			DetailHTTPRequest:  "GET /users/1 HTTP/1.1\nHost: deprecated-api.example.com",
 			DetailHTTPResponse: "HTTP/1.1 503 Service Unavailable",
 			RawVulnJSON:        `{"template":"idor-historical","severity":"high","host":"deprecated-api.example.com","status":"decommissioned"}`,
-			LastSeenAt:         twoWeeksAgo,  // Service taken down
+			LastSeenAt:         twoWeeksAgo, // Service taken down
 			CreatedAt:          oneMonthAgo,
 			UpdatedAt:          twoWeeksAgo,
 		},
@@ -2516,6 +2538,38 @@ func CleanDatabase(ctx context.Context) error {
 	return nil
 }
 
+// ClearTable removes all data from a specific table
+func ClearTable(ctx context.Context, tableName string) error {
+	if db == nil {
+		return fmt.Errorf("database not connected")
+	}
+
+	// Map table names to models
+	tableModels := map[string]interface{}{
+		"runs":            (*Run)(nil),
+		"step_results":    (*StepResult)(nil),
+		"artifacts":       (*Artifact)(nil),
+		"assets":          (*Asset)(nil),
+		"event_logs":      (*EventLog)(nil),
+		"schedules":       (*Schedule)(nil),
+		"workspaces":      (*Workspace)(nil),
+		"vulnerabilities": (*Vulnerability)(nil),
+		"asset_diffs":     (*AssetDiffSnapshot)(nil),
+		"vuln_diffs":      (*VulnDiffSnapshot)(nil),
+	}
+
+	model, ok := tableModels[tableName]
+	if !ok {
+		return fmt.Errorf("unknown table: %s (valid tables: %s)", tableName, strings.Join(ValidTableNames(), ", "))
+	}
+
+	if _, err := db.NewDelete().Model(model).Where("1=1").Exec(ctx); err != nil {
+		return fmt.Errorf("failed to clear table %s: %w", tableName, err)
+	}
+
+	return nil
+}
+
 // timePtr is a helper to create a pointer to a time.Time value
 func timePtr(t time.Time) *time.Time {
 	return &t
@@ -2586,7 +2640,7 @@ var tableSearchColumns = map[string][]string{
 	"artifacts":       {"id", "run_id", "name", "path", "type", "description"},
 	"assets":          {"workspace", "asset_value", "url", "title", "host_ip", "source", "labels"},
 	"event_logs":      {"event_id", "topic", "name", "source", "workspace", "run_id", "workflow_name", "data"},
-	"schedules":       {"id", "name", "workflow_name", "trigger_name", "schedule"},
+	"schedules":       {"id", "name", "workflow_name", "workflow_kind", "target", "trigger_name", "schedule"},
 	"workspaces":      {"name", "local_path", "data_source", "run_workflow"},
 	"vulnerabilities": {"workspace", "vuln_title", "vuln_info", "severity", "confidence", "asset_value", "asset_type"},
 	"asset_diffs":     {"workspace_name", "diff_data"},
@@ -2600,7 +2654,7 @@ var tableDisplayColumns = map[string][]string{
 	"artifacts":       {"name", "path", "type", "size_bytes", "line_count"},
 	"assets":          {"asset_value", "host_ip", "title", "status_code", "last_seen_at", "url"},
 	"event_logs":      {"topic", "name", "source", "workspace", "created_at"},
-	"schedules":       {"name", "workflow_name", "trigger_type", "schedule", "is_enabled"},
+	"schedules":       {"name", "workflow_name", "workflow_kind", "target", "trigger_type", "schedule", "is_enabled"},
 	"workspaces":      {"name", "data_source", "total_assets", "total_ips", "total_vulns", "risk_score", "last_run"},
 	"vulnerabilities": {"vuln_title", "severity", "confidence", "asset_value", "last_seen_at", "workspace"},
 	"asset_diffs":     {"workspace_name", "from_time", "to_time", "total_added", "total_removed", "total_changed", "created_at"},
@@ -2625,10 +2679,9 @@ var tableAllColumns = map[string][]string{
 	"event_logs": {"id", "topic", "event_id", "name", "source", "data_type", "data",
 		"workspace", "run_id", "workflow_name", "processed", "processed_at",
 		"error", "created_at"},
-	"schedules": {"id", "name", "workflow_name", "workflow_path", "trigger_name",
-		"trigger_type", "schedule", "event_topic", "watch_path",
-		"input_config", "is_enabled", "last_run", "next_run", "run_count",
-		"created_at", "updated_at"},
+	"schedules": {"id", "name", "workflow_name", "workflow_kind", "target", "workspace",
+		"params", "trigger_name", "trigger_type", "schedule", "event_topic", "watch_path",
+		"is_enabled", "last_run", "next_run", "run_count", "created_at", "updated_at"},
 	"workspaces": {"id", "name", "local_path", "data_source", "total_assets", "total_subdomains",
 		"total_urls", "total_ips", "total_links", "total_content", "total_archive",
 		"total_vulns", "vuln_critical", "vuln_high", "vuln_medium", "vuln_low",
@@ -3180,18 +3233,25 @@ type ScheduleResult struct {
 type CreateScheduleInput struct {
 	Name         string
 	WorkflowName string
-	WorkflowKind string
-	Target       string
-	Schedule     string
+	WorkflowKind string                 // "module" or "flow"
+	Target       string                 // Target to scan
+	Workspace    string                 // Workspace name
+	Params       map[string]interface{} // Workflow parameters
+	TriggerType  string                 // cron, event, watch, manual
+	Schedule     string                 // Cron expression (for cron trigger)
+	EventTopic   string                 // Event topic (for event trigger)
+	WatchPath    string                 // Watch path (for watch trigger)
 	Enabled      bool
 }
 
 // UpdateScheduleInput holds input for updating a schedule
 type UpdateScheduleInput struct {
-	Name     string
-	Target   string
-	Schedule string
-	Enabled  *bool
+	Name      string
+	Target    string
+	Workspace string
+	Params    map[string]interface{}
+	Schedule  string
+	Enabled   *bool
 }
 
 // ListSchedules returns paginated schedules
@@ -3254,13 +3314,25 @@ func CreateSchedule(ctx context.Context, input CreateScheduleInput) (*Schedule, 
 		return nil, fmt.Errorf("database not connected")
 	}
 
+	// Default trigger type to cron if not specified
+	triggerType := input.TriggerType
+	if triggerType == "" {
+		triggerType = "cron"
+	}
+
 	schedule := &Schedule{
 		ID:           generateID(),
 		Name:         input.Name,
 		WorkflowName: input.WorkflowName,
-		TriggerType:  "cron",
+		WorkflowKind: input.WorkflowKind,
+		Target:       input.Target,
+		Workspace:    input.Workspace,
+		Params:       input.Params,
+		TriggerType:  triggerType,
 		TriggerName:  input.Name,
 		Schedule:     input.Schedule,
+		EventTopic:   input.EventTopic,
+		WatchPath:    input.WatchPath,
 		IsEnabled:    input.Enabled,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
@@ -3290,6 +3362,15 @@ func UpdateSchedule(ctx context.Context, id string, input UpdateScheduleInput) (
 	if input.Name != "" {
 		schedule.Name = input.Name
 		schedule.TriggerName = input.Name
+	}
+	if input.Target != "" {
+		schedule.Target = input.Target
+	}
+	if input.Workspace != "" {
+		schedule.Workspace = input.Workspace
+	}
+	if input.Params != nil {
+		schedule.Params = input.Params
 	}
 	if input.Schedule != "" {
 		schedule.Schedule = input.Schedule
@@ -3784,6 +3865,8 @@ func UpdateRunStatus(ctx context.Context, runUUID, status, errorMessage string) 
 
 	if status == "completed" || status == "failed" || status == "cancelled" {
 		query = query.Set("completed_at = ?", now)
+		// Clear PID when run ends (no longer actively running)
+		query = query.Set("current_pid = ?", 0)
 	}
 
 	// When completed, set completed_steps equal to total_steps
@@ -3824,6 +3907,48 @@ func IncrementRunCompletedSteps(ctx context.Context, runUUID string) error {
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
 		return fmt.Errorf("run not found")
+	}
+
+	return nil
+}
+
+// UpdateRunPID updates the current process ID for a run
+// This is used for cancellation support - the PID can be used to kill the running process
+func UpdateRunPID(ctx context.Context, runUUID string, pid int) error {
+	if db == nil {
+		return fmt.Errorf("database not connected")
+	}
+
+	now := time.Now()
+	_, err := db.NewUpdate().
+		Model((*Run)(nil)).
+		Set("current_pid = ?", pid).
+		Set("updated_at = ?", now).
+		Where("run_uuid = ?", runUUID).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update run PID: %w", err)
+	}
+
+	return nil
+}
+
+// ClearRunPID clears the current process ID for a run (sets to 0)
+// This should be called when a process completes or the run is cancelled
+func ClearRunPID(ctx context.Context, runUUID string) error {
+	if db == nil {
+		return fmt.Errorf("database not connected")
+	}
+
+	now := time.Now()
+	_, err := db.NewUpdate().
+		Model((*Run)(nil)).
+		Set("current_pid = ?", 0).
+		Set("updated_at = ?", now).
+		Where("run_uuid = ?", runUUID).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to clear run PID: %w", err)
 	}
 
 	return nil

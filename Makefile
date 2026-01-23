@@ -309,6 +309,7 @@ local-release:
 	@echo "$(PREFIX) Building $(BINARY_NAME)..."
 	@mkdir -p $(BINARY_DIR)
 	$(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME) ./cmd/osmedeus
+	@cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/
 	@echo "$(PREFIX) Building local snapshot for mac and linux arm only for testing..."
 	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --config test/goreleaser-debug.yaml --clean --skip=announce,publish,validate
 

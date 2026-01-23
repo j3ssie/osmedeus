@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,6 +17,26 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/executor"
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
 )
+
+// killProcessAndChildren kills a process and all its children using SIGKILL
+// Returns true if the kill signal was sent successfully
+func killProcessAndChildren(pid int) bool {
+	if pid <= 0 {
+		return false
+	}
+
+	// First, try to kill the process group (negative PID kills all processes in the group)
+	// This ensures child processes are also terminated
+	err := syscall.Kill(-pid, syscall.SIGKILL)
+	if err != nil {
+		// Process group kill failed, try killing just the process
+		err = syscall.Kill(pid, syscall.SIGKILL)
+		if err != nil {
+			return false
+		}
+	}
+	return true
+}
 
 // generateEmptyTarget creates a placeholder target name for empty_target mode
 func generateEmptyTarget() string {
@@ -398,11 +419,11 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 			"poll_url":     fmt.Sprintf("/osm/api/jobs/%s", jobID),
 		}
 
-		// For single target, include target field and run_id for backward compatibility
+		// For single target, include target field and run_uuid for backward compatibility
 		if len(targets) == 1 {
 			response["target"] = targets[0]
 			if len(runIDs) > 0 {
-				response["run_id"] = runIDs[0]
+				response["run_uuid"] = runIDs[0]
 			}
 		} else {
 			response["targets"] = targets
@@ -524,7 +545,7 @@ func GetRun(cfg *config.Config) fiber.Handler {
 
 // CancelRun handles cancelling a run
 // @Summary Cancel a run
-// @Description Cancel a running workflow execution
+// @Description Cancel a running workflow execution. This will terminate all running processes associated with the run.
 // @Tags Runs
 // @Produce json
 // @Param id path string true "Run ID or RunID"
@@ -553,7 +574,28 @@ func CancelRun(cfg *config.Config) fiber.Handler {
 			})
 		}
 
-		err = database.UpdateRunStatus(ctx, id, "cancelled", "Cancelled by user")
+		var killedPIDs []int
+		var killMethod string
+
+		// Try to cancel via registry first (kills running processes tracked in memory)
+		registry := executor.GetRunRegistry()
+		registryPIDs, registryErr := registry.Cancel(run.RunUUID)
+
+		if registryErr == nil && len(registryPIDs) > 0 {
+			// Registry had the run and killed processes
+			killedPIDs = registryPIDs
+			killMethod = "registry"
+		} else if run.CurrentPID > 0 {
+			// Run not in registry, but we have a PID from database - kill it directly
+			killed := killProcessAndChildren(run.CurrentPID)
+			if killed {
+				killedPIDs = []int{run.CurrentPID}
+				killMethod = "database_pid"
+			}
+		}
+
+		// Update database status
+		err = database.UpdateRunStatus(ctx, run.RunUUID, "cancelled", "Cancelled by user")
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error":   true,
@@ -561,11 +603,22 @@ func CancelRun(cfg *config.Config) fiber.Handler {
 			})
 		}
 
-		return c.JSON(fiber.Map{
-			"message": "Run cancelled successfully",
-			"id":      run.ID,
-			"run_id":  run.RunUUID,
-		})
+		response := fiber.Map{
+			"message":  "Run cancelled successfully",
+			"id":       run.ID,
+			"run_uuid": run.RunUUID,
+		}
+
+		// Add PID information to response
+		if len(killedPIDs) > 0 {
+			response["killed_pids"] = killedPIDs
+			response["processes_terminated"] = len(killedPIDs)
+			response["kill_method"] = killMethod
+		} else {
+			response["note"] = "No active processes found to terminate; database status updated"
+		}
+
+		return c.JSON(response)
 	}
 }
 

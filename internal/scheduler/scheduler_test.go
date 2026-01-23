@@ -1027,3 +1027,384 @@ func TestEventConfig_HasDeduplication(t *testing.T) {
 		})
 	}
 }
+
+func TestScheduler_ResolveDotNotation(t *testing.T) {
+	scheduler, err := NewScheduler()
+	require.NoError(t, err)
+
+	event := &core.Event{
+		Topic:        "assets.new",
+		Name:         "test-event",
+		Source:       "httpx",
+		ID:           "evt-123",
+		DataType:     "url",
+		Workspace:    "/tmp/workspace",
+		RunUUID:      "run-456",
+		WorkflowName: "test-workflow",
+		ParsedData: map[string]interface{}{
+			"url":    "https://example.com",
+			"status": 200,
+			"metadata": map[string]interface{}{
+				"port":     443,
+				"protocol": "https",
+			},
+		},
+	}
+
+	tests := []struct {
+		name     string
+		expr     string
+		expected string
+	}{
+		{
+			name:     "event_data simple field",
+			expr:     "event_data.url",
+			expected: "https://example.com",
+		},
+		{
+			name:     "event_data nested field",
+			expr:     "event_data.metadata.port",
+			expected: "443",
+		},
+		{
+			name:     "event_data nested string field",
+			expr:     "event_data.metadata.protocol",
+			expected: "https",
+		},
+		{
+			name:     "event.topic",
+			expr:     "event.topic",
+			expected: "assets.new",
+		},
+		{
+			name:     "event.source",
+			expr:     "event.source",
+			expected: "httpx",
+		},
+		{
+			name:     "event.name",
+			expr:     "event.name",
+			expected: "test-event",
+		},
+		{
+			name:     "event.id",
+			expr:     "event.id",
+			expected: "evt-123",
+		},
+		{
+			name:     "event.workspace",
+			expr:     "event.workspace",
+			expected: "/tmp/workspace",
+		},
+		{
+			name:     "event.run_uuid",
+			expr:     "event.run_uuid",
+			expected: "run-456",
+		},
+		{
+			name:     "event.workflow_name",
+			expr:     "event.workflow_name",
+			expected: "test-workflow",
+		},
+		{
+			name:     "non-existent field",
+			expr:     "event_data.nonexistent",
+			expected: "",
+		},
+		{
+			name:     "invalid prefix",
+			expr:     "invalid.field",
+			expected: "",
+		},
+		{
+			name:     "no dot",
+			expr:     "nodot",
+			expected: "nodot",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := scheduler.resolveDotNotation(tt.expr, event)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestScheduler_ResolveEventVars(t *testing.T) {
+	scheduler, err := NewScheduler()
+	require.NoError(t, err)
+
+	event := &core.Event{
+		Topic:  "assets.new",
+		Source: "httpx",
+		ParsedData: map[string]interface{}{
+			"url":  "https://example.com",
+			"type": "subdomain",
+			"desc": "  test description  ",
+		},
+	}
+
+	trigger := &core.Trigger{
+		Name:    "vars-trigger",
+		On:      core.TriggerEvent,
+		Enabled: true,
+		Event:   &core.EventConfig{Topic: "assets.new"},
+		Input: core.TriggerInput{
+			Vars: map[string]string{
+				"target":     "event_data.url",
+				"asset_type": "event_data.type",
+				"source":     "event.source",
+			},
+		},
+	}
+
+	vars := scheduler.resolveEventVars(trigger, event)
+	require.NotNil(t, vars)
+
+	assert.Equal(t, "https://example.com", vars["target"])
+	assert.Equal(t, "subdomain", vars["asset_type"])
+	assert.Equal(t, "httpx", vars["source"])
+}
+
+func TestScheduler_ResolveEventVars_EmptyWhenNoVars(t *testing.T) {
+	scheduler, err := NewScheduler()
+	require.NoError(t, err)
+
+	event := &core.Event{
+		Topic:  "assets.new",
+		Source: "httpx",
+	}
+
+	// Legacy syntax trigger (no Vars)
+	trigger := &core.Trigger{
+		Name:    "legacy-trigger",
+		On:      core.TriggerEvent,
+		Enabled: true,
+		Event:   &core.EventConfig{Topic: "assets.new"},
+		Input: core.TriggerInput{
+			Type:  "event_data",
+			Field: "url",
+			Name:  "target",
+		},
+	}
+
+	vars := scheduler.resolveEventVars(trigger, event)
+	assert.Nil(t, vars)
+}
+
+func TestScheduler_ResolveVarExpression(t *testing.T) {
+	scheduler, err := NewScheduler()
+	require.NoError(t, err)
+
+	event := &core.Event{
+		Topic:  "assets.new",
+		Source: "httpx",
+		ParsedData: map[string]interface{}{
+			"url":  "https://example.com",
+			"desc": "  test description  ",
+		},
+	}
+
+	tests := []struct {
+		name     string
+		expr     string
+		expected string
+	}{
+		{
+			name:     "simple dot notation",
+			expr:     "event_data.url",
+			expected: "https://example.com",
+		},
+		{
+			name:     "event metadata",
+			expr:     "event.source",
+			expected: "httpx",
+		},
+		{
+			name:     "function call - trim",
+			expr:     "trim(event_data.desc)",
+			expected: "test description",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := scheduler.resolveVarExpression(tt.expr, event)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestGetNestedField(t *testing.T) {
+	data := map[string]interface{}{
+		"level1": map[string]interface{}{
+			"level2": map[string]interface{}{
+				"value": "deep-value",
+			},
+			"simple": "simple-value",
+		},
+		"top": "top-value",
+	}
+
+	tests := []struct {
+		name     string
+		path     []string
+		expected interface{}
+	}{
+		{
+			name:     "top level",
+			path:     []string{"top"},
+			expected: "top-value",
+		},
+		{
+			name:     "nested one level",
+			path:     []string{"level1", "simple"},
+			expected: "simple-value",
+		},
+		{
+			name:     "nested two levels",
+			path:     []string{"level1", "level2", "value"},
+			expected: "deep-value",
+		},
+		{
+			name:     "non-existent",
+			path:     []string{"nonexistent"},
+			expected: nil,
+		},
+		{
+			name:     "partial path non-existent",
+			path:     []string{"level1", "nonexistent"},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getNestedField(data, tt.path)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestScheduler_EventInputVarsSyntax(t *testing.T) {
+	scheduler, err := NewScheduler()
+	require.NoError(t, err)
+
+	err = scheduler.Start()
+	require.NoError(t, err)
+	defer func() { _ = scheduler.Stop() }()
+
+	// Track received vars
+	receivedVars := make(chan map[string]string, 1)
+	scheduler.SetEventHandler(string(core.TriggerEvent), func(w *core.Workflow, tr *core.Trigger, input string, envelope string, resolvedVars map[string]string) error {
+		receivedVars <- resolvedVars
+		return nil
+	})
+
+	workflow := &core.Workflow{Name: "test", Kind: core.KindModule}
+
+	// New Vars syntax trigger
+	trigger := &core.Trigger{
+		Name:    "vars-trigger",
+		On:      core.TriggerEvent,
+		Enabled: true,
+		Event:   &core.EventConfig{Topic: "test.vars"},
+		Input: core.TriggerInput{
+			Vars: map[string]string{
+				"target":     "event_data.url",
+				"asset_type": "event_data.type",
+				"source":     "event.source",
+			},
+		},
+	}
+
+	err = scheduler.RegisterTrigger(workflow, trigger)
+	require.NoError(t, err)
+
+	// Emit event
+	event := &core.Event{
+		Topic:  "test.vars",
+		Source: "test-source",
+		ParsedData: map[string]interface{}{
+			"url":  "https://example.com/api",
+			"type": "endpoint",
+		},
+	}
+
+	err = scheduler.EmitEvent(event)
+	require.NoError(t, err)
+
+	select {
+	case vars := <-receivedVars:
+		require.NotNil(t, vars)
+		assert.Equal(t, "https://example.com/api", vars["target"])
+		assert.Equal(t, "endpoint", vars["asset_type"])
+		assert.Equal(t, "test-source", vars["source"])
+	case <-time.After(2 * time.Second):
+		t.Fatal("event trigger did not fire")
+	}
+}
+
+func TestScheduler_EventInputLegacySyntax(t *testing.T) {
+	scheduler, err := NewScheduler()
+	require.NoError(t, err)
+
+	err = scheduler.Start()
+	require.NoError(t, err)
+	defer func() { _ = scheduler.Stop() }()
+
+	// Track received input (legacy style)
+	receivedInput := make(chan string, 1)
+	receivedVars := make(chan map[string]string, 1)
+	scheduler.SetEventHandler(string(core.TriggerEvent), func(w *core.Workflow, tr *core.Trigger, input string, envelope string, resolvedVars map[string]string) error {
+		receivedInput <- input
+		receivedVars <- resolvedVars
+		return nil
+	})
+
+	workflow := &core.Workflow{Name: "test", Kind: core.KindModule}
+
+	// Legacy syntax trigger
+	trigger := &core.Trigger{
+		Name:    "legacy-trigger",
+		On:      core.TriggerEvent,
+		Enabled: true,
+		Event:   &core.EventConfig{Topic: "test.legacy"},
+		Input: core.TriggerInput{
+			Type:  "event_data",
+			Field: "url",
+			Name:  "target",
+		},
+	}
+
+	err = scheduler.RegisterTrigger(workflow, trigger)
+	require.NoError(t, err)
+
+	// Emit event
+	event := &core.Event{
+		Topic:  "test.legacy",
+		Source: "test-source",
+		ParsedData: map[string]interface{}{
+			"url": "https://legacy.example.com",
+		},
+	}
+
+	err = scheduler.EmitEvent(event)
+	require.NoError(t, err)
+
+	select {
+	case input := <-receivedInput:
+		assert.Equal(t, "https://legacy.example.com", input)
+	case <-time.After(2 * time.Second):
+		t.Fatal("event trigger did not fire")
+	}
+
+	// Vars should be nil for legacy syntax
+	select {
+	case vars := <-receivedVars:
+		assert.Nil(t, vars)
+	case <-time.After(100 * time.Millisecond):
+		// OK, might have already drained
+	}
+}

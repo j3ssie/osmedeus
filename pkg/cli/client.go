@@ -511,7 +511,7 @@ func runClientRun(cmd *cobra.Command, args []string) error {
 		}
 
 		printer := terminal.NewPrinter()
-		printer.Success("Run cancelled: %s", resp.RunID)
+		printer.Success("Run cancelled: %s", resp.RunUUID)
 		return nil
 	}
 
@@ -547,8 +547,8 @@ func runClientRun(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Workflow: %s (%s)\n", resp.Workflow, resp.Kind)
 	fmt.Printf("  Target:   %s\n", resp.Target)
 	fmt.Printf("  Job ID:   %s\n", resp.JobID)
-	if resp.RunID != "" {
-		fmt.Printf("  Run ID:   %s\n", resp.RunID)
+	if resp.RunUUID != "" {
+		fmt.Printf("  Run UUID: %s\n", resp.RunUUID)
 	}
 	fmt.Printf("  Status:   %s\n", resp.Status)
 	fmt.Printf("  Poll URL: %s\n", resp.PollURL)
@@ -695,4 +695,3 @@ func printVulnDiffsTable(resp client.VulnDiffsResponse) {
 	}
 	printClientTable("vuln_diffs", resp.Data, clientTableDefaultColumns["vuln_diffs"], resp.Pagination, len(resp.Data))
 }
-

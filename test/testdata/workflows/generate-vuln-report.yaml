@@ -32,7 +32,7 @@ steps:
     type: bash
     command: |
       cat > {{Output}}/templates/high-severity-report.md << 'EOF'
-      # High Severity Findings - {{Workspace}}
+      # High Severity Findings - {{TargetSpace}}
 
       **Target**: {{Target}}
       **Date**: {{TaskDate}}
@@ -40,11 +40,11 @@ steps:
       ## Critical & High Vulnerabilities
 
       ```osm-func
-      db_select_vulnerabilities_filtered("{{Workspace}}", "critical", "", "markdown")
+      db_select_vulnerabilities_filtered("{{TargetSpace}}", "critical", "", "markdown")
       ```
 
       ```osm-func
-      db_select_vulnerabilities_filtered("{{Workspace}}", "high", "", "markdown")
+      db_select_vulnerabilities_filtered("{{TargetSpace}}", "high", "", "markdown")
       ```
 
       ---

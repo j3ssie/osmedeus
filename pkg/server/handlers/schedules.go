@@ -6,9 +6,12 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/j3ssie/osmedeus/v5/internal/config"
+	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
 	"github.com/j3ssie/osmedeus/v5/internal/executor"
+	oslogger "github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
+	"go.uber.org/zap"
 )
 
 // CreateSchedule handles creating a new schedule
@@ -22,8 +25,10 @@ import (
 // @Failure 400 {object} map[string]interface{} "Invalid request"
 // @Security BearerAuth
 // @Router /osm/api/schedules [post]
-func CreateSchedule(cfg *config.Config) fiber.Handler {
+func CreateSchedule(cfg *config.Config, eventReceiver EventReceiverProvider) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		log := oslogger.Get()
+
 		var req CreateScheduleRequest
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -48,7 +53,12 @@ func CreateSchedule(cfg *config.Config) fiber.Handler {
 			WorkflowName: req.WorkflowName,
 			WorkflowKind: req.WorkflowKind,
 			Target:       req.Target,
+			Workspace:    req.Workspace,
+			Params:       req.Params,
+			TriggerType:  req.TriggerType,
 			Schedule:     req.Schedule,
+			EventTopic:   req.EventTopic,
+			WatchPath:    req.WatchPath,
 			Enabled:      req.Enabled,
 		})
 		if err != nil {
@@ -58,11 +68,75 @@ func CreateSchedule(cfg *config.Config) fiber.Handler {
 			})
 		}
 
+		// Log successful creation
+		log.Info("Schedule created",
+			zap.String("id", schedule.ID),
+			zap.String("name", schedule.Name),
+			zap.String("workflow", schedule.WorkflowName),
+			zap.String("trigger_type", schedule.TriggerType),
+			zap.Bool("enabled", schedule.IsEnabled),
+		)
+
+		// Try to register with running scheduler if event receiver is active
+		if eventReceiver != nil && eventReceiver.IsRunning() && schedule.IsEnabled {
+			loader := eventReceiver.GetWorkflowLoader()
+			if loader != nil {
+				workflow, loadErr := loader.LoadWorkflow(schedule.WorkflowName)
+				if loadErr != nil {
+					log.Warn("Failed to load workflow for dynamic registration",
+						zap.String("workflow", schedule.WorkflowName),
+						zap.Error(loadErr),
+					)
+				} else {
+					// Create trigger from schedule
+					trigger := convertScheduleToTrigger(schedule)
+					if regErr := eventReceiver.RegisterSchedule(workflow, trigger); regErr != nil {
+						log.Warn("Failed to register schedule with scheduler",
+							zap.String("schedule", schedule.Name),
+							zap.Error(regErr),
+						)
+					} else {
+						log.Info("Schedule registered with scheduler",
+							zap.String("schedule", schedule.Name),
+							zap.String("workflow", schedule.WorkflowName),
+						)
+					}
+				}
+			}
+		}
+
 		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 			"message": "Schedule created",
 			"data":    schedule,
 		})
 	}
+}
+
+// convertScheduleToTrigger converts a database Schedule to a core.Trigger
+func convertScheduleToTrigger(schedule *database.Schedule) *core.Trigger {
+	trigger := &core.Trigger{
+		Name:       schedule.TriggerName,
+		Enabled:    schedule.IsEnabled,
+		ScheduleID: schedule.ID, // Link to database Schedule for runtime lookups
+	}
+
+	switch schedule.TriggerType {
+	case "cron":
+		trigger.On = core.TriggerCron
+		trigger.Schedule = schedule.Schedule
+	case "event":
+		trigger.On = core.TriggerEvent
+		trigger.Event = &core.EventConfig{
+			Topic: schedule.EventTopic,
+		}
+	case "watch":
+		trigger.On = core.TriggerWatch
+		trigger.Path = schedule.WatchPath
+	default:
+		trigger.On = core.TriggerManual
+	}
+
+	return trigger
 }
 
 // ListSchedules handles listing all schedules
@@ -164,10 +238,12 @@ func UpdateSchedule(cfg *config.Config) fiber.Handler {
 
 		ctx := context.Background()
 		schedule, err := database.UpdateSchedule(ctx, id, database.UpdateScheduleInput{
-			Name:     req.Name,
-			Target:   req.Target,
-			Schedule: req.Schedule,
-			Enabled:  req.Enabled,
+			Name:      req.Name,
+			Target:    req.Target,
+			Workspace: req.Workspace,
+			Params:    req.Params,
+			Schedule:  req.Schedule,
+			Enabled:   req.Enabled,
 		})
 		if err != nil {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -301,8 +377,13 @@ func TriggerSchedule(cfg *config.Config) fiber.Handler {
 		go func() {
 			bgCtx := context.Background()
 			params := make(map[string]string)
-			if schedule.InputConfig != nil {
-				for k, v := range schedule.InputConfig {
+			// Add target from schedule if specified
+			if schedule.Target != "" {
+				params["target"] = schedule.Target
+			}
+			// Add params from schedule
+			if schedule.Params != nil {
+				for k, v := range schedule.Params {
 					if s, ok := v.(string); ok {
 						params[k] = s
 					}

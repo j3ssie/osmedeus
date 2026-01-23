@@ -2,7 +2,10 @@ package scheduler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -18,21 +21,34 @@ import (
 // TriggerHandler is called when a trigger fires
 type TriggerHandler func(workflow *core.Workflow, trigger *core.Trigger, input string) error
 
+// EventTriggerHandler is called when an event trigger fires (includes event envelope and resolved vars)
+// Parameters:
+//   - workflow: the workflow to execute
+//   - trigger: the trigger configuration
+//   - input: the resolved input value (legacy syntax)
+//   - eventEnvelope: JSON-encoded event data
+//   - resolvedVars: map of variable names to resolved values (new Vars syntax), nil if legacy syntax
+type EventTriggerHandler func(workflow *core.Workflow, trigger *core.Trigger, input string, eventEnvelope string, resolvedVars map[string]string) error
+
 // Default configuration values
 const (
-	defaultEventQueueSize       = 1000
-	defaultBackpressureTimeout  = 5 * time.Second
+	defaultEventQueueSize      = 1000
+	defaultBackpressureTimeout = 5 * time.Second
 )
+
+// EventEnvelopeKey is the reserved param key for the full event JSON
+const EventEnvelopeKey = "_event_envelope"
 
 // Scheduler manages workflow triggers and scheduling
 type Scheduler struct {
-	scheduler gocron.Scheduler
-	triggers  map[string]*RegisteredTrigger
-	handlers  map[string]TriggerHandler
-	events    chan *core.Event
-	mu        sync.RWMutex
-	logger    *zap.Logger
-	running   bool
+	scheduler     gocron.Scheduler
+	triggers      map[string]*RegisteredTrigger
+	handlers      map[string]TriggerHandler
+	eventHandlers map[string]EventTriggerHandler // handlers that receive full event envelope
+	events        chan *core.Event
+	mu            sync.RWMutex
+	logger        *zap.Logger
+	running       bool
 
 	// Event queue configuration
 	queueSize           int           // configurable, default 1000
@@ -46,8 +62,10 @@ type Scheduler struct {
 	watcher    *fsnotify.Watcher
 	watchPaths map[string][]*RegisteredTrigger // path → triggers mapping
 
-	// VM pool for JavaScript filter evaluation
+	// VM pool for JavaScript filter evaluation (no utility functions)
 	vmPool *functions.VMPool
+	// VM pool with utility functions for filter_functions evaluation
+	vmPoolWithFunctions *functions.VMPool
 
 	// Debounce state for watch triggers
 	debounceTimers map[string]*debounceState
@@ -136,10 +154,14 @@ func NewSchedulerWithConfig(queueSize int, backpressureTimeout time.Duration) (*
 		backpressureTimeout = defaultBackpressureTimeout
 	}
 
+	// Create GojaRuntime to get a VMPool with all utility functions registered
+	gojaRuntime := functions.NewGojaRuntime()
+
 	return &Scheduler{
 		scheduler:           s,
 		triggers:            make(map[string]*RegisteredTrigger),
 		handlers:            make(map[string]TriggerHandler),
+		eventHandlers:       make(map[string]EventTriggerHandler),
 		events:              make(chan *core.Event, queueSize),
 		queueSize:           queueSize,
 		backpressureTimeout: backpressureTimeout,
@@ -147,6 +169,7 @@ func NewSchedulerWithConfig(queueSize int, backpressureTimeout time.Duration) (*
 		watcher:             watcher,
 		watchPaths:          make(map[string][]*RegisteredTrigger),
 		vmPool:              functions.NewVMPool(nil), // No custom functions needed for filters
+		vmPoolWithFunctions: gojaRuntime.GetPool(),    // Pool with utility functions for filter_functions
 		debounceTimers:      make(map[string]*debounceState),
 		dedupeCache:         newDedupeCache(),
 		stopCleanup:         make(chan struct{}),
@@ -158,6 +181,14 @@ func (s *Scheduler) SetHandler(triggerType string, handler TriggerHandler) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.handlers[triggerType] = handler
+}
+
+// SetEventHandler sets a handler that receives the full event envelope
+// This is preferred for event triggers as it provides access to all event metadata
+func (s *Scheduler) SetEventHandler(triggerType string, handler EventTriggerHandler) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.eventHandlers[triggerType] = handler
 }
 
 // RegisterTrigger registers a workflow trigger
@@ -508,7 +539,13 @@ func (s *Scheduler) EmitEvent(event *core.Event) error {
 		atomic.AddInt64(&s.eventsEnqueued, 1)
 		s.logger.Debug("Event emitted",
 			zap.String("topic", event.Topic),
+			zap.String("id", event.ID),
 			zap.String("name", event.Name),
+			zap.String("source", event.Source),
+			zap.String("data_type", event.DataType),
+			zap.String("data", event.Data),
+			zap.Any("parsed_data", event.ParsedData),
+			zap.Time("timestamp", event.Timestamp),
 		)
 		return nil
 	default:
@@ -569,6 +606,13 @@ func (s *Scheduler) eventListener() {
 			_ = event.ParseData()
 		}
 
+		s.logger.Debug("Processing event from queue",
+			zap.String("topic", event.Topic),
+			zap.String("id", event.ID),
+			zap.String("source", event.Source),
+			zap.Any("parsed_data", event.ParsedData),
+		)
+
 		s.mu.RLock()
 		for _, reg := range s.triggers {
 			if reg.Trigger.On == core.TriggerEvent && reg.Enabled {
@@ -588,9 +632,16 @@ func (s *Scheduler) matchesEventTrigger(trigger *core.Trigger, event *core.Event
 		return false
 	}
 
-	// Evaluate filters if defined
+	// Evaluate filters if defined (simple JS expressions without utility functions)
 	if trigger.HasFilters() {
 		if !s.evaluateFilters(trigger.GetFilters(), event) {
+			return false
+		}
+	}
+
+	// Evaluate filter_functions if defined (JS expressions with utility functions)
+	if trigger.HasFilterFunctions() {
+		if !s.evaluateFilterFunctions(trigger.GetFilterFunctions(), event) {
 			return false
 		}
 	}
@@ -682,10 +733,14 @@ func (s *Scheduler) evaluateFilters(filters []string, event *core.Event) bool {
 
 	// All filters must pass
 	for _, filter := range filters {
-		result, err := vmCtx.Run(filter)
+		// Render template variables in the expression (for consistency with filter_functions)
+		rendered := s.renderFilterFunctionTemplates(filter, event)
+
+		result, err := vmCtx.Run(rendered)
 		if err != nil {
 			s.logger.Warn("Filter evaluation failed",
 				zap.String("filter", filter),
+				zap.String("rendered", rendered),
 				zap.Error(err),
 			)
 			return false
@@ -699,20 +754,113 @@ func (s *Scheduler) evaluateFilters(filters []string, event *core.Event) bool {
 	return true
 }
 
+// evaluateFilterFunctions evaluates filter expressions with utility functions using pooled Goja VMs
+func (s *Scheduler) evaluateFilterFunctions(filterFuncs []string, event *core.Event) bool {
+	vmCtx := s.vmPoolWithFunctions.Get()
+	defer s.vmPoolWithFunctions.Put(vmCtx)
+
+	// Build event object for JS context
+	eventObj := map[string]interface{}{
+		"topic":     event.Topic,
+		"id":        event.ID,
+		"name":      event.Name,
+		"source":    event.Source,
+		"data_type": event.DataType,
+	}
+
+	// Add parsed data if available
+	if event.ParsedData != nil {
+		eventObj["data"] = event.ParsedData
+	} else if event.Data != "" {
+		eventObj["data"] = event.Data
+	}
+
+	if err := vmCtx.SetVariables(map[string]interface{}{"event": eventObj}); err != nil {
+		s.logger.Warn("Failed to set event in JS context for filter_functions", zap.Error(err))
+		return false
+	}
+
+	// All filter functions must pass
+	for _, filterFunc := range filterFuncs {
+		// Render template variables in the expression (e.g., {{event.data.url}})
+		rendered := s.renderFilterFunctionTemplates(filterFunc, event)
+
+		result, err := vmCtx.Run(rendered)
+		if err != nil {
+			s.logger.Warn("Filter function evaluation failed",
+				zap.String("filter_function", filterFunc),
+				zap.String("rendered", rendered),
+				zap.Error(err),
+			)
+			return false
+		}
+
+		if !result.ToBoolean() {
+			return false
+		}
+	}
+
+	return true
+}
+
+// renderFilterFunctionTemplates replaces template variables like {{event.data.field}} with actual values
+func (s *Scheduler) renderFilterFunctionTemplates(expr string, event *core.Event) string {
+	result := expr
+
+	// Replace event fields
+	result = replaceTemplateVar(result, "event.topic", event.Topic)
+	result = replaceTemplateVar(result, "event.name", event.Name)
+	result = replaceTemplateVar(result, "event.source", event.Source)
+	result = replaceTemplateVar(result, "event.id", event.ID)
+	result = replaceTemplateVar(result, "event.data_type", event.DataType)
+
+	// Replace event.data fields if parsed data is available
+	if event.ParsedData != nil {
+		result = s.replaceDataFields(result, event.ParsedData, "event.data")
+	}
+
+	return result
+}
+
 // handleEventTrigger handles an event-based trigger
 func (s *Scheduler) handleEventTrigger(reg *RegisteredTrigger, event *core.Event) {
 	s.mu.RLock()
-	handler, ok := s.handlers[string(core.TriggerEvent)]
+	eventHandler, hasEventHandler := s.eventHandlers[string(core.TriggerEvent)]
+	legacyHandler, hasLegacyHandler := s.handlers[string(core.TriggerEvent)]
 	s.mu.RUnlock()
 
-	if !ok {
+	if !hasEventHandler && !hasLegacyHandler {
 		return
 	}
 
-	// Resolve input from event
-	input := s.resolveEventInput(reg.Trigger, event)
+	// Try new Vars syntax first
+	var resolvedVars map[string]string
+	if reg.Trigger.Input.HasVars() {
+		resolvedVars = s.resolveEventVars(reg.Trigger, event)
+	}
 
-	if err := handler(reg.Workflow, reg.Trigger, input); err != nil {
+	// Resolve legacy input (will be empty string if Vars syntax is used)
+	input := ""
+	if resolvedVars == nil {
+		input = s.resolveEventInput(reg.Trigger, event)
+	}
+
+	// Prefer EventTriggerHandler (with envelope) over legacy TriggerHandler
+	if hasEventHandler {
+		envelope := s.serializeEventEnvelope(event)
+		if err := eventHandler(reg.Workflow, reg.Trigger, input, envelope, resolvedVars); err != nil {
+			s.logger.Error("Event trigger handler failed",
+				zap.String("workflow", reg.Workflow.Name),
+				zap.String("event", event.Name),
+				zap.String("topic", event.Topic),
+				zap.Error(err),
+			)
+		}
+		return
+	}
+
+	// Fall back to legacy handler (doesn't support Vars syntax)
+	if err := legacyHandler(reg.Workflow, reg.Trigger, input); err != nil {
 		s.logger.Error("Event trigger handler failed",
 			zap.String("workflow", reg.Workflow.Name),
 			zap.String("event", event.Name),
@@ -720,6 +868,31 @@ func (s *Scheduler) handleEventTrigger(reg *RegisteredTrigger, event *core.Event
 			zap.Error(err),
 		)
 	}
+}
+
+// serializeEventEnvelope serializes an event to JSON for the EventEnvelope template variable
+func (s *Scheduler) serializeEventEnvelope(event *core.Event) string {
+	// Create envelope structure with all event fields
+	envelope := map[string]interface{}{
+		"topic":         event.Topic,
+		"id":            event.ID,
+		"name":          event.Name,
+		"source":        event.Source,
+		"data":          event.ParsedData,
+		"data_raw":      event.Data,
+		"data_type":     event.DataType,
+		"workspace":     event.Workspace,
+		"run_uuid":      event.RunUUID,
+		"workflow_name": event.WorkflowName,
+		"timestamp":     event.Timestamp.Format(time.RFC3339),
+	}
+
+	jsonBytes, err := json.Marshal(envelope)
+	if err != nil {
+		s.logger.Warn("Failed to serialize event envelope", zap.Error(err))
+		return "{}"
+	}
+	return string(jsonBytes)
 }
 
 // resolveEventInput resolves the input value from an event based on trigger configuration
@@ -788,6 +961,132 @@ func (s *Scheduler) resolveEventFunction(funcExpr string, event *core.Event) str
 	}
 
 	return fmt.Sprintf("%v", result)
+}
+
+// functionCallPattern matches function calls like trim(...), jq(...)
+var functionCallPattern = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*\s*\(`)
+
+// resolveEventVars resolves all variables from the new Vars syntax
+func (s *Scheduler) resolveEventVars(trigger *core.Trigger, event *core.Event) map[string]string {
+	if !trigger.Input.HasVars() {
+		return nil
+	}
+
+	result := make(map[string]string, len(trigger.Input.Vars))
+	for varName, expr := range trigger.Input.Vars {
+		result[varName] = s.resolveVarExpression(expr, event)
+	}
+	return result
+}
+
+// resolveVarExpression resolves a single expression from the Vars syntax.
+// Supports:
+//   - event_data.field - access parsed event data fields
+//   - event.topic, event.source, etc. - access event metadata
+//   - trim(event_data.desc) - function calls with dot notation arguments
+func (s *Scheduler) resolveVarExpression(expr string, event *core.Event) string {
+	// Check for function call pattern (e.g., trim(...), jq(...))
+	if functionCallPattern.MatchString(expr) {
+		return s.resolveVarFunction(expr, event)
+	}
+
+	// Handle dot notation: event_data.field or event.topic
+	return s.resolveDotNotation(expr, event)
+}
+
+// resolveVarFunction resolves a function call expression in Vars syntax.
+// It first replaces dot notation references with their values, then executes the function.
+func (s *Scheduler) resolveVarFunction(expr string, event *core.Event) string {
+	// Replace event_data.* references with actual values
+	rendered := s.replaceDotNotationInExpr(expr, event)
+
+	// Execute the function expression using the existing function execution infrastructure
+	ctx := map[string]interface{}{
+		"event": map[string]interface{}{
+			"topic":     event.Topic,
+			"id":        event.ID,
+			"name":      event.Name,
+			"source":    event.Source,
+			"data":      event.ParsedData,
+			"data_type": event.DataType,
+		},
+	}
+
+	result, err := functions.Execute(rendered, ctx)
+	if err != nil {
+		s.logger.Warn("Failed to execute var function",
+			zap.String("expr", expr),
+			zap.String("rendered", rendered),
+			zap.Error(err),
+		)
+		return ""
+	}
+
+	return fmt.Sprintf("%v", result)
+}
+
+// replaceDotNotationInExpr replaces dot notation references like event_data.url with quoted string values
+func (s *Scheduler) replaceDotNotationInExpr(expr string, event *core.Event) string {
+	// Pattern to match event_data.field or event.field references
+	dotNotationPattern := regexp.MustCompile(`(event_data|event)\.([a-zA-Z_][a-zA-Z0-9_.]*)`)
+
+	return dotNotationPattern.ReplaceAllStringFunc(expr, func(match string) string {
+		value := s.resolveDotNotation(match, event)
+		// Return as a quoted string for function arguments
+		return fmt.Sprintf("%q", value)
+	})
+}
+
+// resolveDotNotation handles "prefix.field" field access for event data
+func (s *Scheduler) resolveDotNotation(expr string, event *core.Event) string {
+	parts := strings.Split(expr, ".")
+	if len(parts) < 2 {
+		return expr
+	}
+
+	switch parts[0] {
+	case "event_data":
+		// Access parsed event data fields
+		if event.ParsedData != nil {
+			if val := getNestedField(event.ParsedData, parts[1:]); val != nil {
+				return fmt.Sprintf("%v", val)
+			}
+		}
+	case "event":
+		// Access event metadata
+		switch parts[1] {
+		case "topic":
+			return event.Topic
+		case "source":
+			return event.Source
+		case "name":
+			return event.Name
+		case "id":
+			return event.ID
+		case "data_type":
+			return event.DataType
+		case "workspace":
+			return event.Workspace
+		case "run_uuid":
+			return event.RunUUID
+		case "workflow_name":
+			return event.WorkflowName
+		}
+	}
+	return ""
+}
+
+// getNestedField retrieves a nested value from a map using a path like ["foo", "bar"]
+func getNestedField(data map[string]interface{}, path []string) interface{} {
+	current := interface{}(data)
+	for _, key := range path {
+		if m, ok := current.(map[string]interface{}); ok {
+			current = m[key]
+		} else {
+			return nil
+		}
+	}
+	return current
 }
 
 // replaceTemplateVar replaces {{varName}} with value

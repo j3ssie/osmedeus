@@ -3,7 +3,7 @@ kind: module
 description: Stage 2 of event chain - probing (triggered by stage1)
 tags: test,event,chain
 
-trigger:
+triggers:
   - name: on-stage1-complete
     on: event
     event:
@@ -30,5 +30,5 @@ steps:
   - name: emit-probe-complete
     type: function
     function: |
-      generate_event("{{Workspace}}", "stage2.complete", "chain-stage2", "probed-host", "{{target}}")
+      generate_event("{{TargetSpace}}", "stage2.complete", "chain-stage2", "probed-host", "{{target}}")
       log_info("Stage 2 complete - probed {{target}}")

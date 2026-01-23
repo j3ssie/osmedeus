@@ -52,6 +52,18 @@ func TestShardedEngine_Render(t *testing.T) {
 			ctx:      map[string]any{},
 			want:     "Value: ",
 		},
+		{
+			name:     "JSON with quotes not HTML escaped",
+			template: "echo '{{EventData}}'",
+			ctx:      map[string]any{"EventData": `{"sample":"docs.hackerone.com"}`},
+			want:     `echo '{"sample":"docs.hackerone.com"}'`,
+		},
+		{
+			name:     "HTML special chars not escaped",
+			template: "x={{html}}!",
+			ctx:      map[string]any{"html": `<a href="test">`},
+			want:     `x=<a href="test">!`,
+		},
 	}
 
 	for _, tt := range tests {

@@ -14,7 +14,7 @@ params:
     default: true
 
 # Triggers for automated execution
-trigger:
+triggers:
   - name: manual-trigger
     on: manual
     enabled: true

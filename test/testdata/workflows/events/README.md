@@ -27,7 +27,7 @@ Emit a single event with optional structured data. The workspace parameter ident
 ```yaml
 - type: function
   function: |
-    generate_event("{{Workspace}}", "discovery.asset", "my-scanner", "subdomain", "api.example.com")
+    generate_event("{{TargetSpace}}", "discovery.asset", "my-scanner", "subdomain", "api.example.com")
 ```
 
 ### generate_event_from_file(workspace, topic, source, data_type, file_path)
@@ -36,7 +36,7 @@ Emit one event per line from a file. Returns the count of events emitted.
 ```yaml
 - type: function
   functions:
-    - 'generate_event_from_file("{{Workspace}}", "discovery.asset", "my-scanner", "subdomain", "{{Output}}/subdomains.txt")'
+    - 'generate_event_from_file("{{TargetSpace}}", "discovery.asset", "my-scanner", "subdomain", "{{Output}}/subdomains.txt")'
 ```
 
 ## Trigger Configuration

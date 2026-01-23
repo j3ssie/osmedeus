@@ -82,7 +82,7 @@ func (d *DirectDownloader) UpdateBinary(ctx context.Context, release *Release) e
 	if err != nil {
 		return fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	// Build the asset URL
 	assetURL := d.BuildAssetURL(release.Version)
@@ -168,13 +168,13 @@ func atomicReplace(src, dst string) error {
 	// Clean up temp file if something goes wrong
 	defer func() {
 		if err != nil {
-			os.Remove(tmpPath)
+			_ = os.Remove(tmpPath)
 		}
 	}()
 
 	// Write the new binary
 	if _, err = tmpFile.Write(data); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 	if err = tmpFile.Close(); err != nil {
@@ -193,16 +193,16 @@ func atomicReplace(src, dst string) error {
 		// 2. Rename the new file to the target
 		// 3. Delete the old file
 		oldPath := dst + ".old"
-		os.Remove(oldPath) // Remove any leftover from previous update
+		_ = os.Remove(oldPath) // Remove any leftover from previous update
 		if err = os.Rename(dst, oldPath); err != nil {
 			return fmt.Errorf("failed to rename old binary: %w", err)
 		}
 		if err = os.Rename(tmpPath, dst); err != nil {
 			// Try to restore the old binary
-			os.Rename(oldPath, dst)
+			_ = os.Rename(oldPath, dst)
 			return fmt.Errorf("failed to rename new binary: %w", err)
 		}
-		os.Remove(oldPath) // Clean up old binary
+		_ = os.Remove(oldPath) // Clean up old binary
 	} else {
 		if err = os.Rename(tmpPath, dst); err != nil {
 			return fmt.Errorf("failed to rename: %w", err)

@@ -5,7 +5,7 @@ kind: module
 description: Workflow with event deduplication to avoid processing duplicates
 tags: event,receiver,dedupe,example
 
-trigger:
+triggers:
   # Deduplicate events by URL within a 5 minute window
   - name: on-new-url-dedupe
     on: event

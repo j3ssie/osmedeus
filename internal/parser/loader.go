@@ -7,18 +7,26 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"go.uber.org/zap"
 )
 
+// CacheEntry holds a cached workflow with metadata for invalidation
+type CacheEntry struct {
+	Workflow *core.Workflow
+	FilePath string    // Absolute path for mtime check
+	ModTime  time.Time // File modification time when cached
+}
+
 // Loader loads and caches workflows
 type Loader struct {
 	workflowsDir string
 	modulesDir   string
 	parser       *Parser
-	cache        map[string]*core.Workflow
+	cache        map[string]*CacheEntry
 	mu           sync.RWMutex
 }
 
@@ -28,8 +36,20 @@ func NewLoader(workflowsDir string) *Loader {
 		workflowsDir: workflowsDir,
 		modulesDir:   filepath.Join(workflowsDir, "modules"),
 		parser:       NewParser(),
-		cache:        make(map[string]*core.Workflow),
+		cache:        make(map[string]*CacheEntry),
 	}
+}
+
+// isCacheValid checks if a cache entry is still valid by comparing file mtime
+func (l *Loader) isCacheValid(entry *CacheEntry) bool {
+	if entry == nil || entry.FilePath == "" {
+		return false
+	}
+	info, err := os.Stat(entry.FilePath)
+	if err != nil {
+		return false // File gone or inaccessible
+	}
+	return !info.ModTime().After(entry.ModTime)
 }
 
 // LoadWorkflow loads a single workflow by name or path
@@ -52,12 +72,15 @@ func (l *Loader) LoadWorkflow(name string) (*core.Workflow, error) {
 		return l.LoadWorkflowByPath(name)
 	}
 
-	// Check cache first
+	// Check cache first with mtime validation
 	l.mu.RLock()
-	if w, ok := l.cache[name]; ok {
-		l.mu.RUnlock()
-		log.Debug("Workflow loaded from cache", zap.String("name", name))
-		return w, nil
+	if entry, ok := l.cache[name]; ok {
+		if l.isCacheValid(entry) {
+			l.mu.RUnlock()
+			log.Debug("Workflow loaded from cache (mtime valid)", zap.String("name", name))
+			return entry.Workflow, nil
+		}
+		log.Debug("Cache entry invalid (file modified), will re-parse", zap.String("name", name))
 	}
 	l.mu.RUnlock()
 
@@ -174,9 +197,21 @@ func (l *Loader) loadAndCache(name, path string) (*core.Workflow, error) {
 		zap.String("cache_key", name),
 	)
 
-	// Cache the workflow
+	// Get file modification time for cache invalidation
+	absPath, _ := filepath.Abs(path)
+	var modTime time.Time
+	if info, err := os.Stat(absPath); err == nil {
+		modTime = info.ModTime()
+	}
+
+	// Cache the workflow with metadata
+	entry := &CacheEntry{
+		Workflow: workflow,
+		FilePath: absPath,
+		ModTime:  modTime,
+	}
 	l.mu.Lock()
-	l.cache[name] = workflow
+	l.cache[name] = entry
 	l.mu.Unlock()
 
 	return workflow, nil
@@ -276,7 +311,7 @@ func (l *Loader) findYAMLFiles(dir string, recursive bool) ([]string, error) {
 // ReloadWorkflows clears cache and reloads all workflows
 func (l *Loader) ReloadWorkflows() error {
 	l.mu.Lock()
-	l.cache = make(map[string]*core.Workflow)
+	l.cache = make(map[string]*CacheEntry)
 	l.mu.Unlock()
 
 	_, err := l.LoadAllWorkflows()
@@ -287,8 +322,11 @@ func (l *Loader) ReloadWorkflows() error {
 func (l *Loader) GetWorkflow(name string) (*core.Workflow, bool) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
-	w, ok := l.cache[name]
-	return w, ok
+	entry, ok := l.cache[name]
+	if !ok || entry == nil {
+		return nil, false
+	}
+	return entry.Workflow, true
 }
 
 // GetAllCached returns all cached workflows
@@ -297,8 +335,10 @@ func (l *Loader) GetAllCached() []*core.Workflow {
 	defer l.mu.RUnlock()
 
 	workflows := make([]*core.Workflow, 0, len(l.cache))
-	for _, w := range l.cache {
-		workflows = append(workflows, w)
+	for _, entry := range l.cache {
+		if entry != nil && entry.Workflow != nil {
+			workflows = append(workflows, entry.Workflow)
+		}
 	}
 	return workflows
 }
@@ -343,5 +383,5 @@ func (l *Loader) ListModules() ([]string, error) {
 func (l *Loader) ClearCache() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.cache = make(map[string]*core.Workflow)
+	l.cache = make(map[string]*CacheEntry)
 }

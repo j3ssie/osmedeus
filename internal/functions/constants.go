@@ -131,21 +131,21 @@ const (
 
 // Event Generation Functions - Generate structured events
 const (
-	FnGenerateEvent         = "generate_event"           // generate_event(topic, source, data_type, data) -> bool
-	FnGenerateEventFromFile = "generate_event_from_file" // generate_event_from_file(topic, source, data_type, path) -> int
+	FnGenerateEvent         = "generate_event"           // generate_event(workspace, topic, source, data_type, data) -> bool
+	FnGenerateEventFromFile = "generate_event_from_file" // generate_event_from_file(workspace, topic, source, data_type, path) -> int
 )
 
 // CDN/Storage Functions - Cloud storage operations
 const (
-	FnCdnUpload          = "cdn_upload"           // cdn_upload(localPath, remotePath) -> bool
-	FnCdnDownload        = "cdn_download"         // cdn_download(remotePath, localPath) -> bool
-	FnCdnExists          = "cdn_exists"           // cdn_exists(remotePath) -> bool
-	FnCdnDelete          = "cdn_delete"           // cdn_delete(remotePath) -> bool
-	FnCdnSyncUpload      = "cdn_sync_upload"      // cdn_sync_upload(localDir, remotePrefix) -> object
-	FnCdnSyncDownload    = "cdn_sync_download"    // cdn_sync_download(remotePrefix, localDir) -> object
+	FnCdnUpload          = "cdn_upload"            // cdn_upload(localPath, remotePath) -> bool
+	FnCdnDownload        = "cdn_download"          // cdn_download(remotePath, localPath) -> bool
+	FnCdnExists          = "cdn_exists"            // cdn_exists(remotePath) -> bool
+	FnCdnDelete          = "cdn_delete"            // cdn_delete(remotePath) -> bool
+	FnCdnSyncUpload      = "cdn_sync_upload"       // cdn_sync_upload(localDir, remotePrefix) -> object
+	FnCdnSyncDownload    = "cdn_sync_download"     // cdn_sync_download(remotePrefix, localDir) -> object
 	FnCdnGetPresignedURL = "cdn_get_presigned_url" // cdn_get_presigned_url(remotePath, expiryMins?) -> string
-	FnCdnList            = "cdn_list"             // cdn_list(prefix?) -> []object
-	FnCdnStat            = "cdn_stat"             // cdn_stat(remotePath) -> object|null
+	FnCdnList            = "cdn_list"              // cdn_list(prefix?) -> []object
+	FnCdnStat            = "cdn_stat"              // cdn_stat(remotePath) -> object|null
 )
 
 // Unix Command Wrappers - Wrappers around common Unix commands
@@ -164,9 +164,9 @@ const (
 
 // Installer Functions - Download and install packages
 const (
-	FnGoGetter           = "go_getter"            // go_getter(url, dest) -> bool
+	FnGoGetter           = "go_getter"             // go_getter(url, dest) -> bool
 	FnGoGetterWithSSHKey = "go_getter_with_sshkey" // go_getter_with_sshkey(ssh_key_path, git_url, dest) -> bool
-	FnNixInstall         = "nix_install"          // nix_install(package, dest?) -> bool
+	FnNixInstall         = "nix_install"           // nix_install(package, dest?) -> bool
 )
 
 // Environment Functions - Environment variable operations
@@ -670,8 +670,8 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnSendWebhookEvent, "send_webhook_event(eventType, data)", "Send event to all webhooks", "bool", "send_webhook_event('scan_complete', {target: '{{Target}}'})"},
 		},
 		CategoryEventGeneration: {
-			{FnGenerateEvent, "generate_event(topic, source, data_type, data)", "Generate structured event with metadata", "bool", "generate_event('discovery', 'subdomain-scan', 'domain', 'api.example.com')"},
-			{FnGenerateEventFromFile, "generate_event_from_file(topic, source, data_type, path)", "Generate events from file (one per line)", "int", "generate_event_from_file('discovery', 'amass', 'subdomain', '{{Output}}/subdomains.txt')"},
+			{FnGenerateEvent, "generate_event(workspace, topic, source, data_type, data)", "Generate structured event with metadata", "bool", "generate_event('{{Workspace}}', 'discovery', 'subdomain-scan', 'domain', 'api.example.com')"},
+			{FnGenerateEventFromFile, "generate_event_from_file(workspace, topic, source, data_type, path)", "Generate events from file (one per line)", "int", "generate_event_from_file('{{Workspace}}', 'discovery', 'amass', 'subdomain', '{{Output}}/subdomains.txt')"},
 		},
 		CategoryCDNStorage: {
 			{FnCdnUpload, "cdn_upload(localPath, remotePath)", "Upload file to cloud storage", "bool", "cdn_upload('{{Output}}/report.zip', 'scans/{{Target}}/report.zip')"},

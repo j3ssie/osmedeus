@@ -31,6 +31,8 @@ var (
 	dbListColumns    bool
 	dbExcludeColumns string
 	dbRefresh        string
+	dbClear          bool
+	dbListTables     bool
 )
 
 // defaultHiddenColumns are columns hidden by default for all tables
@@ -43,7 +45,7 @@ var tableDefaultColumns = map[string][]string{
 	"artifacts":       {"name", "path", "type", "size_bytes", "line_count"},
 	"assets":          {"asset_value", "host_ip", "title", "status_code", "last_seen_at", "technologies"},
 	"event_logs":      {"topic", "source", "processed", "data_type", "workspace", "data"},
-	"schedules":       {"name", "workflow_name", "trigger_type", "schedule", "is_enabled", "run_count"},
+	"schedules":       {"name", "workflow_name", "workflow_kind", "target", "trigger_type", "schedule", "is_enabled", "run_count"},
 	"workspaces":      {"name", "data_source", "total_assets", "total_ips", "total_vulns", "risk_score"},
 	"vulnerabilities": {"vuln_title", "severity", "confidence", "asset_value", "last_seen_at", "workspace"},
 }
@@ -128,6 +130,8 @@ func init() {
 	dbCmd.PersistentFlags().BoolVar(&dbListColumns, "list-columns", false, "list all available columns for the specified table")
 	dbCmd.PersistentFlags().StringVar(&dbExcludeColumns, "exclude-columns", "", "comma-separated column names to exclude from output")
 	dbCmd.PersistentFlags().StringVar(&dbRefresh, "refresh", "", "auto-refresh interval (e.g., 5s, 1m, 30s)")
+	dbCmd.PersistentFlags().BoolVar(&dbListTables, "list", false, "list all available table names")
+	dbCmd.PersistentFlags().BoolVar(&dbClear, "clear", false, "clear all records from the specified table (requires --table and --force)")
 
 	dbIndexWorkflowCmd.Flags().BoolVar(&dbIndexForce, "force", false, "force re-index all workflows regardless of checksum")
 
@@ -315,6 +319,32 @@ func runDBList(cmd *cobra.Command, args []string) error {
 	// Ensure tables exist
 	if err := database.Migrate(ctx); err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	// Handle --list flag (list table names only)
+	if dbListTables {
+		tables := database.ValidTableNames()
+		for _, t := range tables {
+			fmt.Println(t)
+		}
+		return nil
+	}
+
+	// Handle --clear flag
+	if dbClear {
+		if dbTable == "" {
+			return fmt.Errorf("--clear requires --table/-t flag")
+		}
+		if !globalForce {
+			printer.Warning("This will delete ALL records from table '%s'!", dbTable)
+			printer.Warning("Use --force to confirm")
+			return fmt.Errorf("operation aborted: use --force to confirm")
+		}
+		if err := database.ClearTable(ctx, dbTable); err != nil {
+			return fmt.Errorf("failed to clear table: %w", err)
+		}
+		printer.Success("Cleared all records from table '%s'", dbTable)
+		return nil
 	}
 
 	// Handle --list-columns flag

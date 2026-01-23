@@ -55,7 +55,7 @@ steps:
     parallel_steps:
       - name: run-subfinder
         type: bash
-        command: "{{Binaries}}/subfinder -d {{Target}} -provider-config {{subfinderConfig}} -t {{subfinderThreads}} -o {{Output}}/web-recon/subdomains/{{Workspace}}-subfinder.txt -silent"
+        command: "{{Binaries}}/subfinder -d {{Target}} -provider-config {{subfinderConfig}} -t {{subfinderThreads}} -o {{Output}}/web-recon/subdomains/{{TargetSpace}}-subfinder.txt -silent"
         timeout: 600
         on_error:
           - action: log
@@ -64,14 +64,14 @@ steps:
 
       - name: run-assetfinder
         type: bash
-        command: "{{Binaries}}/assetfinder -subs-only {{Target}} > {{Output}}/web-recon/subdomains/{{Workspace}}-assetfinder.txt"
+        command: "{{Binaries}}/assetfinder -subs-only {{Target}} > {{Output}}/web-recon/subdomains/{{TargetSpace}}-assetfinder.txt"
         timeout: 300
         on_error:
           - action: continue
 
       - name: run-findomain
         type: bash
-        command: "{{Binaries}}/findomain -u {{Output}}/web-recon/subdomains/{{Workspace}}-findomain.txt -t {{Target}} 2>/dev/null"
+        command: "{{Binaries}}/findomain -u {{Output}}/web-recon/subdomains/{{TargetSpace}}-findomain.txt -t {{Target}} 2>/dev/null"
         timeout: 300
         on_error:
           - action: continue
@@ -82,10 +82,10 @@ steps:
   - name: merge-subdomains
     type: bash
     commands:
-      - "cat {{Output}}/web-recon/subdomains/{{Workspace}}-*.txt 2>/dev/null | sort -u > {{Output}}/web-recon/subdomains/all-{{Workspace}}.txt"
-      - "cat {{Output}}/web-recon/subdomains/all-{{Workspace}}.txt | {{Binaries}}/cleansub -t '{{Target}}' > {{Output}}/web-recon/subdomains/final-{{Workspace}}.txt 2>/dev/null || cp {{Output}}/web-recon/subdomains/all-{{Workspace}}.txt {{Output}}/web-recon/subdomains/final-{{Workspace}}.txt"
+      - "cat {{Output}}/web-recon/subdomains/{{TargetSpace}}-*.txt 2>/dev/null | sort -u > {{Output}}/web-recon/subdomains/all-{{TargetSpace}}.txt"
+      - "cat {{Output}}/web-recon/subdomains/all-{{TargetSpace}}.txt | {{Binaries}}/cleansub -t '{{Target}}' > {{Output}}/web-recon/subdomains/final-{{TargetSpace}}.txt 2>/dev/null || cp {{Output}}/web-recon/subdomains/all-{{TargetSpace}}.txt {{Output}}/web-recon/subdomains/final-{{TargetSpace}}.txt"
     exports:
-      subdomains_file: "{{Output}}/web-recon/subdomains/final-{{Workspace}}.txt"
+      subdomains_file: "{{Output}}/web-recon/subdomains/final-{{TargetSpace}}.txt"
 
   - name: count-subdomains
     type: function
@@ -113,10 +113,10 @@ steps:
   # ============================================================
   - name: http-probing
     type: bash
-    command: "{{Binaries}}/httpx -l {{subdomains_file}} -threads {{httpxThreads}} -timeout {{httpxTimeout}} -silent -o {{Output}}/web-recon/probing/live-{{Workspace}}.txt -json -output {{Output}}/web-recon/probing/httpx-{{Workspace}}.json"
+    command: "{{Binaries}}/httpx -l {{subdomains_file}} -threads {{httpxThreads}} -timeout {{httpxTimeout}} -silent -o {{Output}}/web-recon/probing/live-{{TargetSpace}}.txt -json -output {{Output}}/web-recon/probing/httpx-{{TargetSpace}}.json"
     timeout: 900
     exports:
-      live_hosts_file: "{{Output}}/web-recon/probing/live-{{Workspace}}.txt"
+      live_hosts_file: "{{Output}}/web-recon/probing/live-{{TargetSpace}}.txt"
     on_error:
       - action: log
         message: "HTTP probing failed"
@@ -125,10 +125,10 @@ steps:
 
   - name: fallback-probing
     type: bash
-    pre_condition: "!file_exists('{{Output}}/web-recon/probing/live-{{Workspace}}.txt')"
-    command: "cat {{subdomains_file}} | xargs -I {} curl -s -o /dev/null -w '%{http_code} {}\\n' http://{} 2>/dev/null | grep '^200' | awk '{print $2}' > {{Output}}/web-recon/probing/live-{{Workspace}}.txt"
+    pre_condition: "!file_exists('{{Output}}/web-recon/probing/live-{{TargetSpace}}.txt')"
+    command: "cat {{subdomains_file}} | xargs -I {} curl -s -o /dev/null -w '%{http_code} {}\\n' http://{} 2>/dev/null | grep '^200' | awk '{print $2}' > {{Output}}/web-recon/probing/live-{{TargetSpace}}.txt"
     exports:
-      live_hosts_file: "{{Output}}/web-recon/probing/live-{{Workspace}}.txt"
+      live_hosts_file: "{{Output}}/web-recon/probing/live-{{TargetSpace}}.txt"
 
   - name: count-live-hosts
     type: function
@@ -153,7 +153,7 @@ steps:
             - "{{Output}}/web-recon:/output"
           workdir: /output
           env:
-            TARGETS_FILE: "/output/probing/live-{{Workspace}}.txt"
+            TARGETS_FILE: "/output/probing/live-{{TargetSpace}}.txt"
         command: |
           echo "Capturing screenshots for live hosts..."
           cat $TARGETS_FILE | head -20
@@ -177,14 +177,14 @@ steps:
             SEVERITY: "{{nucleiSeverity}}"
             THREADS: "{{nucleiThreads}}"
         command: |
-          nuclei -l /output/probing/live-{{Workspace}}.txt \
+          nuclei -l /output/probing/live-{{TargetSpace}}.txt \
             -severity $SEVERITY \
             -c $THREADS \
-            -json-export /output/nuclei/results-{{Workspace}}.json \
+            -json-export /output/nuclei/results-{{TargetSpace}}.json \
             -silent
         timeout: 3600
         exports:
-          nuclei_results: "{{Output}}/web-recon/nuclei/results-{{Workspace}}.json"
+          nuclei_results: "{{Output}}/web-recon/nuclei/results-{{TargetSpace}}.json"
         on_error:
           - action: log
             message: "Nuclei scan failed"
@@ -204,8 +204,8 @@ steps:
       type: bash
       command: |
         echo "Analyzing [[host]]..."
-        curl -s -I "[[host]]" 2>/dev/null | head -20 >> {{Output}}/web-recon/probing/headers-{{Workspace}}.txt
-        echo "---" >> {{Output}}/web-recon/probing/headers-{{Workspace}}.txt
+        curl -s -I "[[host]]" 2>/dev/null | head -20 >> {{Output}}/web-recon/probing/headers-{{TargetSpace}}.txt
+        echo "---" >> {{Output}}/web-recon/probing/headers-{{TargetSpace}}.txt
       timeout: 30
 
   # ============================================================
@@ -213,11 +213,11 @@ steps:
   # ============================================================
   - name: process-nuclei-results
     type: function
-    pre_condition: 'file_exists("{{Output}}/web-recon/nuclei/results-{{Workspace}}.json")'
+    pre_condition: 'file_exists("{{Output}}/web-recon/nuclei/results-{{TargetSpace}}.json")'
     parallel_functions:
-      - db_vuln_critical("{{Output}}/web-recon/nuclei/results-{{Workspace}}.json")
-      - db_vuln_high("{{Output}}/web-recon/nuclei/results-{{Workspace}}.json")
-      - db_vuln_medium("{{Output}}/web-recon/nuclei/results-{{Workspace}}.json")
+      - db_vuln_critical("{{Output}}/web-recon/nuclei/results-{{TargetSpace}}.json")
+      - db_vuln_high("{{Output}}/web-recon/nuclei/results-{{TargetSpace}}.json")
+      - db_vuln_medium("{{Output}}/web-recon/nuclei/results-{{TargetSpace}}.json")
     exports:
       vuln_stats: "output"
 
@@ -225,37 +225,37 @@ steps:
     type: bash
     commands:
       - |
-        echo "=== Web Reconnaissance Report ===" > {{Output}}/web-recon/final-report-{{Workspace}}.txt
-        echo "Target: {{Target}}" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
-        echo "Workspace: {{Workspace}}" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
-        echo "Date: $(date)" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
-        echo "" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
-        echo "=== Statistics ===" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
-        echo "Total Subdomains: {{subdomain_count}}" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
-        echo "Live Hosts: {{live_host_count}}" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
-        echo "" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
-        echo "=== Live Hosts ===" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
-        cat {{live_hosts_file}} >> {{Output}}/web-recon/final-report-{{Workspace}}.txt 2>/dev/null || echo "No live hosts found"
-      - "cp {{live_hosts_file}} {{Output}}/web-recon/live-hosts-{{Workspace}}.txt 2>/dev/null || touch {{Output}}/web-recon/live-hosts-{{Workspace}}.txt"
-      - "cp {{Output}}/web-recon/nuclei/results-{{Workspace}}.json {{Output}}/web-recon/vulnerabilities-{{Workspace}}.json 2>/dev/null || echo '[]' > {{Output}}/web-recon/vulnerabilities-{{Workspace}}.json"
+        echo "=== Web Reconnaissance Report ===" > {{Output}}/web-recon/final-report-{{TargetSpace}}.txt
+        echo "Target: {{Target}}" >> {{Output}}/web-recon/final-report-{{TargetSpace}}.txt
+        echo "Workspace: {{TargetSpace}}" >> {{Output}}/web-recon/final-report-{{TargetSpace}}.txt
+        echo "Date: $(date)" >> {{Output}}/web-recon/final-report-{{TargetSpace}}.txt
+        echo "" >> {{Output}}/web-recon/final-report-{{TargetSpace}}.txt
+        echo "=== Statistics ===" >> {{Output}}/web-recon/final-report-{{TargetSpace}}.txt
+        echo "Total Subdomains: {{subdomain_count}}" >> {{Output}}/web-recon/final-report-{{TargetSpace}}.txt
+        echo "Live Hosts: {{live_host_count}}" >> {{Output}}/web-recon/final-report-{{TargetSpace}}.txt
+        echo "" >> {{Output}}/web-recon/final-report-{{TargetSpace}}.txt
+        echo "=== Live Hosts ===" >> {{Output}}/web-recon/final-report-{{TargetSpace}}.txt
+        cat {{live_hosts_file}} >> {{Output}}/web-recon/final-report-{{TargetSpace}}.txt 2>/dev/null || echo "No live hosts found"
+      - "cp {{live_hosts_file}} {{Output}}/web-recon/live-hosts-{{TargetSpace}}.txt 2>/dev/null || touch {{Output}}/web-recon/live-hosts-{{TargetSpace}}.txt"
+      - "cp {{Output}}/web-recon/nuclei/results-{{TargetSpace}}.json {{Output}}/web-recon/vulnerabilities-{{TargetSpace}}.json 2>/dev/null || echo '[]' > {{Output}}/web-recon/vulnerabilities-{{TargetSpace}}.json"
 
   - name: generate-empty-report
     type: bash
     pre_condition: '"{{has_subdomains}}" == "false"'
     commands:
       - |
-        echo "=== Web Reconnaissance Report ===" > {{Output}}/web-recon/final-report-{{Workspace}}.txt
-        echo "Target: {{Target}}" >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
-        echo "No subdomains found for target." >> {{Output}}/web-recon/final-report-{{Workspace}}.txt
-      - "touch {{Output}}/web-recon/live-hosts-{{Workspace}}.txt"
-      - "echo '[]' > {{Output}}/web-recon/vulnerabilities-{{Workspace}}.json"
+        echo "=== Web Reconnaissance Report ===" > {{Output}}/web-recon/final-report-{{TargetSpace}}.txt
+        echo "Target: {{Target}}" >> {{Output}}/web-recon/final-report-{{TargetSpace}}.txt
+        echo "No subdomains found for target." >> {{Output}}/web-recon/final-report-{{TargetSpace}}.txt
+      - "touch {{Output}}/web-recon/live-hosts-{{TargetSpace}}.txt"
+      - "echo '[]' > {{Output}}/web-recon/vulnerabilities-{{TargetSpace}}.json"
 
   # ============================================================
   # Phase 8: Cleanup and Notifications
   # ============================================================
   - name: final-cleanup
     type: function
-    function: SortU("{{Output}}/web-recon/live-hosts-{{Workspace}}.txt")
+    function: SortU("{{Output}}/web-recon/live-hosts-{{TargetSpace}}.txt")
 
   - name: notify-completion
     type: function

@@ -66,7 +66,7 @@ steps:
 name: scan-module
 description: Scan module for testing
 
-trigger:
+triggers:
   - name: manual
     on: manual
     enabled: true

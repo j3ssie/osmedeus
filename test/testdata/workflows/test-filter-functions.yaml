@@ -1,0 +1,77 @@
+name: test-filter-functions
+kind: module
+description: Test filter_functions in event triggers
+
+triggers:
+  - name: on-api-endpoint
+    on: event
+    event:
+      topic: "assets.new"
+      # Simple filters (no utility functions)
+      # filters:
+        # - "event.source == 'httpx'"
+      # Filter functions with utility functions available
+      filter_functions:
+        - "contains(event.data.url, '/api/')"
+        - "!ends_with(event.data.url, '.js')"
+    input:
+      type: event_data
+      field: "url"
+      name: target
+    enabled: true
+
+  - name: on-vuln-cve
+    on: event
+    event:
+      topic: "vulns.discovered"
+      filters:
+        - "event.source == 'nuclei'"
+      filter_functions:
+        - "contains(event.data.template_id, 'CVE')"
+        - "starts_with(event.data.severity, 'critical') || starts_with(event.data.severity, 'high')"
+    input:
+      type: event_data
+      field: "template_id"
+      name: vuln_id
+    enabled: true
+
+  - name: on-file-output
+    on: event
+    event:
+      topic: "scan.completed"
+      # Filter functions with file system checks and template variables
+      filter_functions:
+        - 'file_exists("{{event.data.output_path}}/results.json")'
+        - "file_length(event.data.results_file) > 0"
+    input:
+      type: event_data
+      field: "output_path"
+      name: output_dir
+    enabled: true
+
+params:
+  - name: target
+    required: false
+  - name: vuln_id
+    required: false
+  - name: output_dir
+    required: false
+
+steps:
+  - name: log-api-endpoint
+    type: function
+    condition: '!is_empty(target)'
+    functions:
+      - 'log_info("Received API endpoint: {{target}}")'
+
+  - name: log-vuln
+    type: function
+    condition: '!is_empty(vuln_id)'
+    functions:
+      - 'log_info("Received CVE vulnerability: {{vuln_id}}")'
+
+  - name: log-output
+    type: function
+    condition: '!is_empty(output_dir)'
+    functions:
+      - 'log_info("Scan completed with output in: {{output_dir}}")'

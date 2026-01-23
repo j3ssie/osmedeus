@@ -151,7 +151,7 @@ func (b *RedisEventBroker) PublishEventData(ctx context.Context, workspace, topi
 		Source:       source,
 		DataType:     dataType,
 		Workspace:    workspace,
-		RunID:        runID,
+		RunUUID:      runID,
 		WorkflowName: workflowName,
 		Data:         dataJSON,
 		Timestamp:    time.Now(),

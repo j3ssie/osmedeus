@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/dop251/goja"
+	"github.com/j3ssie/osmedeus/v5/internal/fileio"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
 	"go.uber.org/zap"
@@ -33,7 +34,8 @@ func (vf *vmFunc) fileExists(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(exists)
 }
 
-// fileLength returns the number of lines in a file
+// fileLength returns the number of lines in a file.
+// Uses memory-mapped I/O for large files (>1MB) for better performance.
 func (vf *vmFunc) fileLength(call goja.FunctionCall) goja.Value {
 	path := call.Argument(0).String()
 	logger.Get().Debug("Calling "+terminal.HiGreen("fileLength"), zap.String("path", path))
@@ -43,19 +45,10 @@ func (vf *vmFunc) fileLength(call goja.FunctionCall) goja.Value {
 		return vf.vm.ToValue(0)
 	}
 
-	file, err := os.Open(path)
+	count, err := fileio.CountNonEmptyLines(path)
 	if err != nil {
-		logger.Get().Warn("fileLength: failed to open file", zap.String("path", path), zap.Error(err))
+		logger.Get().Warn("fileLength: failed to count lines", zap.String("path", path), zap.Error(err))
 		return vf.vm.ToValue(0)
-	}
-	defer func() { _ = file.Close() }()
-
-	count := 0
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		if strings.TrimSpace(scanner.Text()) != "" {
-			count++
-		}
 	}
 
 	logger.Get().Debug(terminal.HiGreen("fileLength")+" result", zap.String("path", path), zap.Int("count", count))

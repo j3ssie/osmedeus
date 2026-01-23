@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/dop251/goja"
+	"github.com/google/uuid"
 	"github.com/j3ssie/osmedeus/v5/internal/notify"
 	"go.uber.org/zap"
 )
@@ -39,13 +40,22 @@ func (vf *vmFunc) generateEvent(call goja.FunctionCall) goja.Value {
 
 	// Get runtime context for RunID and WorkflowName
 	var runID, workflowName string
+	sourceType := "eval" // Default to "eval" for events generated via osmedeus eval
 	if ctx := vf.getContext(); ctx != nil {
 		runID = ctx.scanID
 		workflowName = ctx.workflowName
+		if runID != "" {
+			sourceType = "run" // From workflow execution
+		}
+	}
+
+	// Generate UUID if no run context (e.g., from osmedeus eval)
+	if runID == "" {
+		runID = uuid.New().String()[:8] // Short UUID for eval-generated events
 	}
 
 	// Use SendEventWithFallback to try server first, then queue to DB, and also send to webhooks
-	err := notify.SendEventWithFallback(workspace, topic, source, dataType, runID, workflowName, data)
+	err := notify.SendEventWithFallback(workspace, topic, source, dataType, runID, workflowName, sourceType, data)
 	if err != nil {
 		zap.L().Debug("generateEvent: server delivery failed (event queued or webhook sent)",
 			zap.String("topic", topic),
@@ -89,9 +99,18 @@ func (vf *vmFunc) generateEventFromFile(call goja.FunctionCall) goja.Value {
 
 	// Get runtime context for RunID and WorkflowName
 	var runID, workflowName string
+	sourceType := "eval" // Default to "eval" for events generated via osmedeus eval
 	if ctx := vf.getContext(); ctx != nil {
 		runID = ctx.scanID
 		workflowName = ctx.workflowName
+		if runID != "" {
+			sourceType = "run" // From workflow execution
+		}
+	}
+
+	// Generate UUID if no run context (e.g., from osmedeus eval)
+	if runID == "" {
+		runID = uuid.New().String()[:8] // Short UUID for eval-generated events
 	}
 
 	count := 0
@@ -103,7 +122,7 @@ func (vf *vmFunc) generateEventFromFile(call goja.FunctionCall) goja.Value {
 		}
 
 		// Use SendEventWithFallback to try server first, then queue to DB, and also send to webhooks
-		_ = notify.SendEventWithFallback(workspace, topic, source, dataType, runID, workflowName, line)
+		_ = notify.SendEventWithFallback(workspace, topic, source, dataType, runID, workflowName, sourceType, line)
 		count++ // Count all attempts since events are queued if server unavailable
 	}
 

@@ -3,7 +3,7 @@ kind: module
 description: Test file watch trigger
 tags: test,trigger,watch
 
-trigger:
+triggers:
   - name: watch-files
     on: watch
     path: "/tmp/watch-test"

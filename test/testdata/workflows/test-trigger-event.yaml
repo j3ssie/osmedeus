@@ -3,7 +3,7 @@ kind: module
 description: Test event-based trigger
 tags: test,trigger,event
 
-trigger:
+triggers:
   - name: on-new-asset
     on: event
     event:

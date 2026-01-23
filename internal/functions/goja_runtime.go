@@ -345,3 +345,9 @@ func (r *GojaRuntime) Register(name string, fn interface{}) error {
 func (r *GojaRuntime) Clone() *GojaRuntime {
 	return r
 }
+
+// GetPool returns the underlying VMPool.
+// This allows external callers (e.g., scheduler) to use VMs with all utility functions registered.
+func (r *GojaRuntime) GetPool() *VMPool {
+	return r.pool
+}

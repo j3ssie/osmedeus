@@ -51,23 +51,28 @@ type CreateRunRequest struct {
 
 // CreateScheduleRequest represents a schedule creation request
 type CreateScheduleRequest struct {
-	Name         string            `json:"name"`
-	WorkflowName string            `json:"workflow_name"`
-	WorkflowKind string            `json:"workflow_kind"` // flow or module
-	Target       string            `json:"target"`
-	Schedule     string            `json:"schedule"` // cron expression
-	Params       map[string]string `json:"params,omitempty"`
-	Enabled      bool              `json:"enabled"`
-	RunnerType   string            `json:"runner_type,omitempty"`
+	Name         string                 `json:"name"`
+	WorkflowName string                 `json:"workflow_name"`
+	WorkflowKind string                 `json:"workflow_kind,omitempty"` // "module" or "flow"
+	Target       string                 `json:"target,omitempty"`
+	Workspace    string                 `json:"workspace,omitempty"`
+	Schedule     string                 `json:"schedule"` // cron expression
+	Params       map[string]interface{} `json:"params,omitempty"`
+	EventTopic   string                 `json:"event_topic,omitempty"`
+	WatchPath    string                 `json:"watch_path,omitempty"`
+	TriggerType  string                 `json:"trigger_type,omitempty"` // cron, event, watch, manual
+	Enabled      bool                   `json:"enabled"`
+	RunnerType   string                 `json:"runner_type,omitempty"`
 }
 
 // UpdateScheduleRequest represents a schedule update request
 type UpdateScheduleRequest struct {
-	Name     string            `json:"name,omitempty"`
-	Target   string            `json:"target,omitempty"`
-	Schedule string            `json:"schedule,omitempty"`
-	Params   map[string]string `json:"params,omitempty"`
-	Enabled  *bool             `json:"enabled,omitempty"`
+	Name      string                 `json:"name,omitempty"`
+	Target    string                 `json:"target,omitempty"`
+	Workspace string                 `json:"workspace,omitempty"`
+	Schedule  string                 `json:"schedule,omitempty"`
+	Params    map[string]interface{} `json:"params,omitempty"`
+	Enabled   *bool                  `json:"enabled,omitempty"`
 }
 
 // BinaryStatusEntry represents a binary with its registry info and installation status

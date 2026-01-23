@@ -15,6 +15,8 @@ import (
 // HostRunner executes commands on the local machine
 type HostRunner struct {
 	binariesPath string
+	onPIDStart   PIDCallback
+	onPIDEnd     PIDCallback
 }
 
 // NewHostRunner creates a new host runner
@@ -59,6 +61,12 @@ func (r *HostRunner) Execute(ctx context.Context, command string) (*CommandResul
 		}, nil
 	}
 
+	// Track PID for cancellation support
+	pid := cmd.Process.Pid
+	if r.onPIDStart != nil {
+		r.onPIDStart(pid)
+	}
+
 	// Wait for command completion or context cancellation
 	done := make(chan error, 1)
 	go func() {
@@ -73,14 +81,24 @@ func (r *HostRunner) Execute(ctx context.Context, command string) (*CommandResul
 			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		}
 		<-done // Wait for process to exit
+
+		// Notify PID ended
+		if r.onPIDEnd != nil {
+			r.onPIDEnd(pid)
+		}
+
 		return &CommandResult{
-			Output:   stdout.String() + stderr.String(),
+			Output:   combineOutput(&stdout, &stderr),
 			ExitCode: -1,
 			Error:    ctx.Err(),
 		}, nil
 
 	case err := <-done:
-		// Normal completion
+		// Normal completion - notify PID ended
+		if r.onPIDEnd != nil {
+			r.onPIDEnd(pid)
+		}
+
 		exitCode := 0
 		if err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
@@ -88,11 +106,17 @@ func (r *HostRunner) Execute(ctx context.Context, command string) (*CommandResul
 			}
 		}
 		return &CommandResult{
-			Output:   stdout.String() + stderr.String(),
+			Output:   combineOutput(&stdout, &stderr),
 			ExitCode: exitCode,
 			Error:    err,
 		}, nil
 	}
+}
+
+// SetPIDCallbacks sets callbacks for process lifecycle events
+func (r *HostRunner) SetPIDCallbacks(onStart, onEnd PIDCallback) {
+	r.onPIDStart = onStart
+	r.onPIDEnd = onEnd
 }
 
 // Setup is a no-op for host runner

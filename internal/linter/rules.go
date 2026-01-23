@@ -100,8 +100,7 @@ var builtInVariables = map[string]bool{
 	"scripts":  true,
 	"Cloud":    true,
 	"cloud":    true,
-	"RunID":    true,
-	"run_id":   true,
+	"run_uuid": true,
 }
 
 // Regex patterns for variable extraction
@@ -175,9 +174,11 @@ func (r *UnusedVariableRule) Check(wast *WorkflowAST) []LintIssue {
 // UndefinedVariableRule checks for variables referenced but not defined
 type UndefinedVariableRule struct{}
 
-func (r *UndefinedVariableRule) Name() string        { return "undefined-variable" }
-func (r *UndefinedVariableRule) Description() string { return "Detects variables referenced but not defined" }
-func (r *UndefinedVariableRule) Severity() Severity  { return SeverityWarning }
+func (r *UndefinedVariableRule) Name() string { return "undefined-variable" }
+func (r *UndefinedVariableRule) Description() string {
+	return "Detects variables referenced but not defined"
+}
+func (r *UndefinedVariableRule) Severity() Severity { return SeverityWarning }
 
 func (r *UndefinedVariableRule) Check(wast *WorkflowAST) []LintIssue {
 	var issues []LintIssue
@@ -251,9 +252,11 @@ func (r *UndefinedVariableRule) Check(wast *WorkflowAST) []LintIssue {
 // CircularDependencyRule checks for circular step dependencies
 type CircularDependencyRule struct{}
 
-func (r *CircularDependencyRule) Name() string        { return "circular-dependency" }
-func (r *CircularDependencyRule) Description() string { return "Detects circular references in step dependencies" }
-func (r *CircularDependencyRule) Severity() Severity  { return SeverityWarning }
+func (r *CircularDependencyRule) Name() string { return "circular-dependency" }
+func (r *CircularDependencyRule) Description() string {
+	return "Detects circular references in step dependencies"
+}
+func (r *CircularDependencyRule) Severity() Severity { return SeverityWarning }
 
 func (r *CircularDependencyRule) Check(wast *WorkflowAST) []LintIssue {
 	var issues []LintIssue
@@ -384,9 +387,11 @@ func (r *EmptyStepRule) Check(wast *WorkflowAST) []LintIssue {
 // InvalidGotoRule checks for decision goto references to non-existent steps
 type InvalidGotoRule struct{}
 
-func (r *InvalidGotoRule) Name() string        { return "invalid-goto" }
-func (r *InvalidGotoRule) Description() string { return "Detects decision goto references to non-existent steps" }
-func (r *InvalidGotoRule) Severity() Severity  { return SeverityWarning }
+func (r *InvalidGotoRule) Name() string { return "invalid-goto" }
+func (r *InvalidGotoRule) Description() string {
+	return "Detects decision goto references to non-existent steps"
+}
+func (r *InvalidGotoRule) Severity() Severity { return SeverityWarning }
 
 func (r *InvalidGotoRule) Check(wast *WorkflowAST) []LintIssue {
 	var issues []LintIssue
@@ -444,9 +449,11 @@ func (r *InvalidGotoRule) Check(wast *WorkflowAST) []LintIssue {
 // DuplicateStepNameRule checks for multiple steps with the same name
 type DuplicateStepNameRule struct{}
 
-func (r *DuplicateStepNameRule) Name() string        { return "duplicate-step-name" }
-func (r *DuplicateStepNameRule) Description() string { return "Detects multiple steps with the same name" }
-func (r *DuplicateStepNameRule) Severity() Severity  { return SeverityWarning }
+func (r *DuplicateStepNameRule) Name() string { return "duplicate-step-name" }
+func (r *DuplicateStepNameRule) Description() string {
+	return "Detects multiple steps with the same name"
+}
+func (r *DuplicateStepNameRule) Severity() Severity { return SeverityWarning }
 
 func (r *DuplicateStepNameRule) Check(wast *WorkflowAST) []LintIssue {
 	var issues []LintIssue
@@ -476,9 +483,11 @@ func (r *DuplicateStepNameRule) Check(wast *WorkflowAST) []LintIssue {
 // MissingRequiredFieldRule checks for required fields that are missing
 type MissingRequiredFieldRule struct{}
 
-func (r *MissingRequiredFieldRule) Name() string        { return "missing-required-field" }
-func (r *MissingRequiredFieldRule) Description() string { return "Detects required fields that are missing" }
-func (r *MissingRequiredFieldRule) Severity() Severity  { return SeverityWarning }
+func (r *MissingRequiredFieldRule) Name() string { return "missing-required-field" }
+func (r *MissingRequiredFieldRule) Description() string {
+	return "Detects required fields that are missing"
+}
+func (r *MissingRequiredFieldRule) Severity() Severity { return SeverityWarning }
 
 func (r *MissingRequiredFieldRule) Check(wast *WorkflowAST) []LintIssue {
 	var issues []LintIssue
@@ -558,9 +567,11 @@ func (r *MissingRequiredFieldRule) Check(wast *WorkflowAST) []LintIssue {
 // InvalidDependsOnRule checks for depends_on referencing non-existent steps
 type InvalidDependsOnRule struct{}
 
-func (r *InvalidDependsOnRule) Name() string        { return "invalid-depends-on" }
-func (r *InvalidDependsOnRule) Description() string { return "Detects depends_on references to non-existent steps" }
-func (r *InvalidDependsOnRule) Severity() Severity  { return SeverityWarning }
+func (r *InvalidDependsOnRule) Name() string { return "invalid-depends-on" }
+func (r *InvalidDependsOnRule) Description() string {
+	return "Detects depends_on references to non-existent steps"
+}
+func (r *InvalidDependsOnRule) Severity() Severity { return SeverityWarning }
 
 func (r *InvalidDependsOnRule) Check(wast *WorkflowAST) []LintIssue {
 	var issues []LintIssue

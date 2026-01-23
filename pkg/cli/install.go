@@ -673,6 +673,9 @@ func installBinariesViaNix(names []string, registry installer.BinaryRegistry, bi
 	var lastErr error
 	var failed []string
 	for _, name := range names {
+		// Always show the binary name being processed
+		printer.Info("Processing binary: %s", terminal.HiBlue(name))
+
 		// Check if already in PATH
 		if installer.IsBinaryInPath(name) {
 			printer.Info("Binary '%s' already available in PATH, skipping", terminal.HiBlue(name))

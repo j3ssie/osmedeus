@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -60,15 +61,14 @@ type Executor struct {
 	isSchedulerInvocation bool // true when invoked by scheduler (cron/event/watch), allows bypassing manual trigger check
 	serverMode            bool // true when invoked via server API, enables file logging
 	progressBar           *terminal.ProgressBar
-	disableWorkflowState  bool                  // disable writing workflow YAML to output directory
-	skipValidation        bool                  // skip target type validation from dependencies.variables
-	dbRunUUID             string                // database run UUID for tracking progress
-	dbRunID               int64                 // database run ID for step result foreign keys
-	onStepCompleted       StepCompletedCallback // callback after each step completes
-	loader                *parser.Loader        // workflow loader for loading nested modules in flows
-	consoleCapture        *console.Capture      // console output capture for run-console.log
-	stepResultBuffer      *database.StepResultBuffer  // buffer for batch step result insertion
-	progressTracker       *database.ProgressTracker   // tracker for batch progress updates
+	disableWorkflowState  bool                       // disable writing workflow YAML to output directory
+	skipValidation        bool                       // skip target type validation from dependencies.variables
+	dbRunUUID             string                     // database run UUID for tracking progress
+	dbRunID               int64                      // database run ID for step result foreign keys
+	onStepCompleted       StepCompletedCallback      // callback after each step completes
+	loader                *parser.Loader             // workflow loader for loading nested modules in flows
+	consoleCapture        *console.Capture           // console output capture for run-console.log
+	writeCoordinator      *database.WriteCoordinator // unified coordinator for batch database writes
 }
 
 // NewExecutor creates a new workflow executor
@@ -133,15 +133,15 @@ func (e *Executor) SetProgressBar(pb *terminal.ProgressBar) {
 // SetDBRunUUID sets the database run UUID for progress tracking
 func (e *Executor) SetDBRunUUID(runUUID string) {
 	e.dbRunUUID = runUUID
-	// Initialize progress tracker with RunUUID
-	e.progressTracker = database.NewProgressTracker(runUUID, nil)
 }
 
 // SetDBRunID sets the database run ID for step result foreign keys
 func (e *Executor) SetDBRunID(runID int64) {
 	e.dbRunID = runID
-	// Initialize step result buffer with Run.ID (foreign key)
-	e.stepResultBuffer = database.NewStepResultBuffer(runID, nil)
+	// Initialize write coordinator with both RunID and RunUUID
+	if e.dbRunUUID != "" {
+		e.writeCoordinator = database.NewWriteCoordinator(runID, e.dbRunUUID, nil)
+	}
 }
 
 // SetOnStepCompleted sets the callback for step completion
@@ -311,6 +311,35 @@ func (e *Executor) injectBuiltinVariables(cfg *config.Config, params map[string]
 	if v, ok := params["chunk_end"]; ok && v != "" {
 		if chunkEnd, err := strconv.Atoi(v); err == nil {
 			execCtx.SetVariable("ChunkEnd", chunkEnd)
+		}
+	}
+
+	// Event envelope (only for event-triggered workflows)
+	if eventEnvelope, ok := params["_event_envelope"]; ok && eventEnvelope != "" {
+		execCtx.SetVariable("EventEnvelope", eventEnvelope)
+
+		// Parse envelope and extract convenience variables
+		var envelope map[string]interface{}
+		if err := json.Unmarshal([]byte(eventEnvelope), &envelope); err == nil {
+			if topic, ok := envelope["topic"].(string); ok {
+				execCtx.SetVariable("EventTopic", topic)
+			}
+			if source, ok := envelope["source"].(string); ok {
+				execCtx.SetVariable("EventSource", source)
+			}
+			if dataType, ok := envelope["data_type"].(string); ok {
+				execCtx.SetVariable("EventDataType", dataType)
+			}
+			if timestamp, ok := envelope["timestamp"].(string); ok {
+				execCtx.SetVariable("EventTimestamp", timestamp)
+			}
+			// EventData is the parsed data object as JSON string
+			if data := envelope["data"]; data != nil {
+				dataJSON, err := json.Marshal(data)
+				if err == nil {
+					execCtx.SetVariable("EventData", string(dataJSON))
+				}
+			}
 		}
 	}
 }
@@ -667,6 +696,21 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 		return nil, fmt.Errorf("workflow is not a module")
 	}
 
+	// Create cancellable context for run registry support
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Register with run registry if we have a database run UUID
+	// This enables API-based cancellation of the run
+	if e.dbRunUUID != "" {
+		activeRun := GetRunRegistry().Register(e.dbRunUUID, cancel)
+		defer GetRunRegistry().Unregister(e.dbRunUUID)
+		e.logger.Debug("Registered run with registry",
+			zap.String("run_uuid", e.dbRunUUID),
+			zap.Time("started_at", activeRun.StartedAt),
+		)
+	}
+
 	// Check if manual execution is allowed (for CLI invocation)
 	if !e.isSchedulerInvocation && !module.IsManualExecutionAllowed() {
 		e.logger.Info("Skipping module - manual trigger disabled",
@@ -713,6 +757,23 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 
 	// Set runner on step dispatcher
 	e.stepDispatcher.SetRunner(r)
+
+	// Set PID callbacks for cancellation support
+	if e.dbRunUUID != "" {
+		runUUID := e.dbRunUUID
+		r.SetPIDCallbacks(
+			func(pid int) {
+				GetRunRegistry().AddPID(runUUID, pid)
+				// Update database with current PID for API visibility
+				_ = database.UpdateRunPID(ctx, runUUID, pid)
+			},
+			func(pid int) {
+				GetRunRegistry().RemovePID(runUUID, pid)
+				// Clear PID from database when process ends
+				_ = database.ClearRunPID(ctx, runUUID)
+			},
+		)
+	}
 
 	// Set config on step dispatcher for executors that need it (e.g., LLM)
 	e.stepDispatcher.SetConfig(cfg)
@@ -1056,14 +1117,11 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 		}
 	}
 
-	// Flush batch buffers at workflow completion
-	if e.stepResultBuffer != nil {
-		if err := e.stepResultBuffer.Flush(context.Background()); err != nil {
-			execCtx.Logger.Warn("Failed to flush step result buffer", zap.Error(err))
+	// Flush write coordinator at workflow completion
+	if e.writeCoordinator != nil {
+		if err := e.writeCoordinator.FlushAll(context.Background()); err != nil {
+			execCtx.Logger.Warn("Failed to flush write coordinator", zap.Error(err))
 		}
-	}
-	if e.progressTracker != nil {
-		e.progressTracker.Stop()
 	}
 
 	return result, nil
@@ -1297,6 +1355,21 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 
 	if !flow.IsFlow() {
 		return nil, fmt.Errorf("workflow is not a flow")
+	}
+
+	// Create cancellable context for run registry support
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Register with run registry if we have a database run UUID
+	// This enables API-based cancellation of the run
+	if e.dbRunUUID != "" {
+		activeRun := GetRunRegistry().Register(e.dbRunUUID, cancel)
+		defer GetRunRegistry().Unregister(e.dbRunUUID)
+		e.logger.Debug("Registered flow with registry",
+			zap.String("run_uuid", e.dbRunUUID),
+			zap.Time("started_at", activeRun.StartedAt),
+		)
 	}
 
 	// Check loader is configured for loading nested modules
@@ -1744,14 +1817,11 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 		}
 	}
 
-	// Flush batch buffers at workflow completion
-	if e.stepResultBuffer != nil {
-		if err := e.stepResultBuffer.Flush(context.Background()); err != nil {
-			execCtx.Logger.Warn("Failed to flush step result buffer", zap.Error(err))
+	// Flush write coordinator at workflow completion
+	if e.writeCoordinator != nil {
+		if err := e.writeCoordinator.FlushAll(context.Background()); err != nil {
+			execCtx.Logger.Warn("Failed to flush write coordinator", zap.Error(err))
 		}
-	}
-	if e.progressTracker != nil {
-		e.progressTracker.Stop()
 	}
 
 	return result, nil
@@ -1990,22 +2060,18 @@ func (e *Executor) executeStep(ctx context.Context, step *core.Step, execCtx *co
 		zap.String("output", result.Output),
 	)
 
-	// Buffer step result for batch insertion
-	if e.stepResultBuffer != nil && !e.dryRun {
+	// Buffer step result and progress for batch insertion via write coordinator
+	if e.writeCoordinator != nil && !e.dryRun {
 		startedAt := result.StartTime
 		completedAt := result.EndTime
 		errorMsg := ""
 		if result.Error != nil {
 			errorMsg = result.Error.Error()
 		}
-		_ = e.stepResultBuffer.Add(ctx, step.Name, string(step.Type), string(result.Status),
+		e.writeCoordinator.AddStepResult(step.Name, string(step.Type), string(result.Status),
 			stepCommand, result.Output, errorMsg, result.Exports,
 			result.Duration.Milliseconds(), &startedAt, &completedAt)
-	}
-
-	// Increment progress tracker
-	if e.progressTracker != nil && !e.dryRun {
-		e.progressTracker.IncrementSteps(1)
+		e.writeCoordinator.IncrementProgress(1)
 	}
 
 	return result, nil
@@ -2013,7 +2079,13 @@ func (e *Executor) executeStep(ctx context.Context, step *core.Step, execCtx *co
 
 // initializeParams initializes parameters from defaults, generators, and provided values
 func (e *Executor) initializeParams(workflow *core.Workflow, params map[string]string, execCtx *core.ExecutionContext) error {
-	// First, set defaults and generate values
+	// FIRST: Set ALL provided params as variables immediately
+	// This ensures event trigger vars are available before required param validation
+	for name, value := range params {
+		execCtx.SetVariable(name, value)
+	}
+
+	// THEN: Validate required params and apply defaults/generators
 	for _, param := range workflow.Params {
 		var value string
 		var hasValue bool
@@ -2065,14 +2137,6 @@ func (e *Executor) initializeParams(workflow *core.Workflow, params map[string]s
 			execCtx.SetParam(param.Name, boolVal)
 		} else {
 			execCtx.SetParam(param.Name, value)
-		}
-	}
-
-	// Also add all provided params as variables (for flow exports propagation)
-	// This ensures exports from previous modules are available for template rendering
-	for name, value := range params {
-		if _, exists := execCtx.GetVariable(name); !exists {
-			execCtx.SetVariable(name, value)
 		}
 	}
 

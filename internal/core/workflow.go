@@ -31,7 +31,7 @@ type Workflow struct {
 	Tags         TagList       `yaml:"tags,omitempty"`
 	Hidden       bool          `yaml:"hidden,omitempty"`
 	Params       []Param       `yaml:"params"`
-	Triggers     []Trigger     `yaml:"trigger"`
+	Triggers     []Trigger     `yaml:"triggers"`
 	Dependencies *Dependencies `yaml:"dependencies"`
 	Reports      []Report      `yaml:"reports"`
 
@@ -143,6 +143,17 @@ func (w *Workflow) GetEventTriggers() []Trigger {
 	var triggers []Trigger
 	for _, t := range w.Triggers {
 		if t.On == TriggerEvent && t.Enabled {
+			triggers = append(triggers, t)
+		}
+	}
+	return triggers
+}
+
+// GetCronTriggers returns all enabled cron-type triggers
+func (w *Workflow) GetCronTriggers() []Trigger {
+	var triggers []Trigger
+	for _, t := range w.Triggers {
+		if t.On == TriggerCron && t.Enabled {
 			triggers = append(triggers, t)
 		}
 	}

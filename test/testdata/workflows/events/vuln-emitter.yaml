@@ -25,7 +25,7 @@ steps:
     type: function
     description: Emit a critical severity finding
     function: |
-      generate_event("{{Workspace}}", "scan.finding", "vuln-scanner", "vulnerability", {
+      generate_event("{{TargetSpace}}", "scan.finding", "vuln-scanner", "vulnerability", {
         url: "https://{{target}}/admin",
         severity: "critical",
         template_id: "exposed-admin-panel",
@@ -40,7 +40,7 @@ steps:
     type: function
     description: Emit a high severity finding
     function: |
-      generate_event("{{Workspace}}", "scan.finding", "vuln-scanner", "vulnerability", {
+      generate_event("{{TargetSpace}}", "scan.finding", "vuln-scanner", "vulnerability", {
         url: "https://{{target}}/api/v1/users",
         severity: "high",
         template_id: "api-info-disclosure",
@@ -55,7 +55,7 @@ steps:
     type: function
     description: Emit a low severity finding (should not trigger filtered-receiver)
     function: |
-      generate_event("{{Workspace}}", "scan.finding", "vuln-scanner", "vulnerability", {
+      generate_event("{{TargetSpace}}", "scan.finding", "vuln-scanner", "vulnerability", {
         url: "https://{{target}}/robots.txt",
         severity: "low",
         template_id: "robots-txt-exposed",
@@ -68,7 +68,7 @@ steps:
     type: function
     description: Emit scan completion event with summary
     function: |
-      generate_event("{{Workspace}}", "scan.complete", "vuln-scanner", "summary", {
+      generate_event("{{TargetSpace}}", "scan.complete", "vuln-scanner", "summary", {
         target: "{{target}}",
         finding_count: 3,
         critical_count: 1,

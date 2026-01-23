@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/j3ssie/osmedeus/v5/internal/core"
+	oslogger "github.com/j3ssie/osmedeus/v5/internal/logger"
+	"go.uber.org/zap"
 )
 
 // EventReceiverProvider is an interface for event receiver operations.
@@ -15,6 +18,16 @@ type EventReceiverProvider interface {
 	GetRegisteredWorkflows() []*core.Workflow
 	GetRegisteredTriggersInfo() []*EventReceiverTriggerInfo
 	EmitEvent(event *core.Event) error
+	// RegisterSchedule dynamically registers a trigger with the running scheduler
+	RegisterSchedule(workflow *core.Workflow, trigger *core.Trigger) error
+	// GetWorkflowLoader returns the workflow loader for dynamic schedule registration
+	GetWorkflowLoader() WorkflowLoader
+}
+
+// WorkflowLoader is an interface for loading workflows.
+// This allows handlers to load workflows without importing the parser package directly.
+type WorkflowLoader interface {
+	LoadWorkflow(name string) (*core.Workflow, error)
 }
 
 // EventReceiverTriggerInfo holds workflow and trigger info for API responses.
@@ -28,10 +41,10 @@ type EventReceiverTriggerInfo struct {
 
 // EventReceiverStatusResponse represents the event receiver status
 type EventReceiverStatusResponse struct {
-	Enabled        bool `json:"enabled"`
-	Running        bool `json:"running"`
-	WorkflowCount  int  `json:"workflow_count"`
-	TriggerCount   int  `json:"trigger_count"`
+	Enabled       bool `json:"enabled"`
+	Running       bool `json:"running"`
+	WorkflowCount int  `json:"workflow_count"`
+	TriggerCount  int  `json:"trigger_count"`
 }
 
 // EventReceiverWorkflowResponse represents a registered event-triggered workflow
@@ -202,10 +215,27 @@ func EmitEvent(provider EventReceiverProvider) fiber.Handler {
 		event := &core.Event{
 			Topic:      req.Topic,
 			Name:       req.Name,
+			SourceType: "api", // Events via API are from "api" source type
 			Source:     req.Source,
 			DataType:   req.DataType,
 			ParsedData: req.Data,
 			Timestamp:  time.Now(),
+		}
+
+		// Debug log the raw event structure
+		log := oslogger.Get()
+		if log != nil {
+			eventJSON, _ := json.Marshal(map[string]interface{}{
+				"topic":     event.Topic,
+				"name":      event.Name,
+				"source":    event.Source,
+				"data_type": event.DataType,
+				"data":      req.Data,
+				"timestamp": event.Timestamp,
+			})
+			log.Debug("Event received via API",
+				zap.String("raw_event", string(eventJSON)),
+			)
 		}
 
 		// Emit the event

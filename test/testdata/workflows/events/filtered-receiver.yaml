@@ -5,7 +5,7 @@ kind: module
 description: Workflow with filtered event triggers and complex input extraction
 tags: event,receiver,filter,example
 
-trigger:
+triggers:
   # Only trigger on high/critical severity findings
   - name: on-high-severity-finding
     on: event

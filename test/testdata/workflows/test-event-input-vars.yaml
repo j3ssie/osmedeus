@@ -1,0 +1,37 @@
+name: test-event-input-vars
+kind: module
+description: Test new event input syntax (exports-style Vars)
+
+triggers:
+  - name: on-asset-vars
+    on: event
+    event:
+      topic: "test.asset.vars"
+      # topic: "*"
+    input:
+      # New exports-style syntax: variable_name: expression
+      target: event_data.url
+      asset_type: event_data.type
+      source: event.source
+      description: trim(event_data.desc)
+    enabled: true
+
+  - name: on-asset-legacy
+    on: event
+    event:
+      topic: "test.asset.legacy"
+    input:
+      # Legacy syntax (for backward compatibility)
+      type: event_data
+      field: url
+      name: target
+    enabled: true
+
+steps:
+  - name: verify-vars
+    type: function
+    functions:
+      - 'log_info("target={{target}}")'
+      - 'log_info("asset_type={{asset_type}}")'
+      - 'log_info("source={{source}}")'
+      - 'log_info("description={{description}}")'

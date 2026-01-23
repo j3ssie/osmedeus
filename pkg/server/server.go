@@ -136,9 +136,13 @@ func New(cfg *config.Config, opts *Options) (*Server, error) {
 	app.Use(recover.New())
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: cfg.Server.GetCORSAllowedOrigins(),
-		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS,HEAD",
-		AllowHeaders: "Origin,Content-Type,Accept,Authorization",
+		AllowOriginsFunc: func(origin string) bool {
+			// Reflect all origins - returns true to allow and echo back the origin
+			return true
+		},
+		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS,HEAD",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowCredentials: true,
 	}))
 
 	// Apply Prometheus metrics middleware (conditional)
@@ -316,7 +320,7 @@ func (s *Server) setupRoutes() {
 
 	// Schedules
 	api.Get("/schedules", handlers.ListSchedules(s.config))
-	api.Post("/schedules", handlers.CreateSchedule(s.config))
+	api.Post("/schedules", handlers.CreateSchedule(s.config, s.eventReceiver))
 	api.Get("/schedules/:id", handlers.GetSchedule(s.config))
 	api.Put("/schedules/:id", handlers.UpdateSchedule(s.config))
 	api.Delete("/schedules/:id", handlers.DeleteSchedule(s.config))
@@ -490,8 +494,13 @@ func errorHandler(c *fiber.Ctx, err error) error {
 		code = e.Code
 	}
 
-	// Custom message for 403 Forbidden
+	// Custom handling for 403 Forbidden
 	if code == fiber.StatusForbidden {
+		path := c.Path()
+		// Redirect to root for login and schedules routes
+		if path == "/login" || strings.HasPrefix(path, "/schedules") || strings.HasPrefix(path, "/inventory") {
+			return c.Redirect("/", fiber.StatusFound)
+		}
 		return c.Status(code).JSON(fiber.Map{
 			"error":   true,
 			"message": "Oh dear! It seems you've wandered off the path. If you'd like to see the UI page, please pop back root route at /",

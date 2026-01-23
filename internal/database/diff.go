@@ -41,13 +41,13 @@ type DiffSummary struct {
 
 // VulnerabilityDiff represents the difference between two scans for vulnerabilities
 type VulnerabilityDiff struct {
-	WorkspaceName string              `json:"workspace_name"`
-	FromTime      time.Time           `json:"from_time"`
-	ToTime        time.Time           `json:"to_time"`
-	Added         []Vulnerability     `json:"added"`
-	Removed       []Vulnerability     `json:"removed"`
+	WorkspaceName string                `json:"workspace_name"`
+	FromTime      time.Time             `json:"from_time"`
+	ToTime        time.Time             `json:"to_time"`
+	Added         []Vulnerability       `json:"added"`
+	Removed       []Vulnerability       `json:"removed"`
 	Changed       []VulnerabilityChange `json:"changed"`
-	Summary       DiffSummary         `json:"summary"`
+	Summary       DiffSummary           `json:"summary"`
 }
 
 // VulnerabilityChange represents a changed vulnerability

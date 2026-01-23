@@ -74,8 +74,18 @@ func (p *ParamOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var scalar interface{}
 	if err := unmarshal(&scalar); err == nil {
 		switch v := scalar.(type) {
-		case string, bool, int, int64, float64:
+		case string, bool, float64:
 			p.Default = v
+			return nil
+		case int:
+			p.Default = v
+			return nil
+		case int64:
+			p.Default = int(v)
+			return nil
+		case uint64:
+			// goccy/go-yaml returns uint64 for positive integers
+			p.Default = int(v)
 			return nil
 		case nil:
 			// nil value is valid, means no default
@@ -94,7 +104,15 @@ func (p *ParamOverride) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	if v, ok := m["default"]; ok {
-		p.Default = v
+		// Normalize integer types
+		switch val := v.(type) {
+		case int64:
+			p.Default = int(val)
+		case uint64:
+			p.Default = int(val)
+		default:
+			p.Default = v
+		}
 	}
 	if v, ok := m["type"].(string); ok {
 		p.Type = &v

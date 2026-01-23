@@ -7,7 +7,7 @@ params:
     default: "not-set"
 
   - name: anotherParam2
-    default: "{{Output}}/another2-{{Workspace}}.txt"
+    default: "{{Output}}/another2-{{TargetSpace}}.txt"
 
   - name: anotherParam3as1
     default: "{{Output}}/another1-{{TargetSpace}}.txt"

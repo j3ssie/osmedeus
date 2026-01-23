@@ -124,8 +124,14 @@ func (er *EventReceiver) Start(ctx context.Context) error {
 		}
 	}
 
-	// Set handler for event triggers
-	er.scheduler.SetHandler(string(core.TriggerEvent), er.handleEventTrigger)
+	// Set handler for event triggers (use SetEventHandler to receive full event envelope)
+	er.scheduler.SetEventHandler(string(core.TriggerEvent), er.handleEventTriggerWithEnvelope)
+
+	// Set handler for cron triggers
+	er.scheduler.SetHandler(string(core.TriggerCron), er.handleCronTrigger)
+
+	// Set handler for watch triggers
+	er.scheduler.SetHandler(string(core.TriggerWatch), er.handleWatchTrigger)
 
 	// Start the scheduler
 	if err := er.scheduler.Start(); err != nil {
@@ -170,28 +176,80 @@ func (er *EventReceiver) Stop() error {
 	return nil
 }
 
-// handleEventTrigger is called when an event matches a trigger.
-// It executes the workflow in a goroutine with server mode enabled.
-func (er *EventReceiver) handleEventTrigger(workflow *core.Workflow, trigger *core.Trigger, input string) error {
+// handleEventTriggerWithEnvelope is called when an event matches a trigger.
+// It receives the full event envelope JSON and resolved variables (from the new Vars syntax).
+func (er *EventReceiver) handleEventTriggerWithEnvelope(workflow *core.Workflow, trigger *core.Trigger, input string, eventEnvelope string, resolvedVars map[string]string) error {
 	er.logger.Info("Event trigger fired",
 		zap.String("workflow", workflow.Name),
 		zap.String("trigger", trigger.Name),
 		zap.String("input", input),
 	)
+	er.logger.Debug("Event envelope received",
+		zap.String("event_envelope", eventEnvelope),
+	)
+	if resolvedVars != nil {
+		er.logger.Debug("Resolved vars from Vars syntax",
+			zap.Any("resolved_vars", resolvedVars),
+		)
+	}
 
 	// Execute workflow in goroutine to not block the scheduler
 	go func() {
 		// Build params from trigger input
 		params := make(map[string]string)
 
-		// Set the input parameter using the trigger's input.name field
-		if trigger.Input.Name != "" {
-			params[trigger.Input.Name] = input
+		// If this trigger is linked to a Schedule record, look it up to get Target/Params first
+		if trigger.ScheduleID != "" {
+			schedule, err := database.GetScheduleByID(er.ctx, trigger.ScheduleID)
+			if err != nil {
+				er.logger.Warn("Failed to load schedule for event trigger",
+					zap.String("schedule_id", trigger.ScheduleID),
+					zap.Error(err),
+				)
+			} else {
+				// Skip execution if schedule is disabled
+				if !schedule.IsEnabled {
+					er.logger.Info("Skipping disabled schedule",
+						zap.String("schedule_id", trigger.ScheduleID),
+						zap.String("workflow", workflow.Name),
+					)
+					return
+				}
+				// Use target from schedule (can be overridden by event input)
+				if schedule.Target != "" {
+					params["target"] = schedule.Target
+				}
+				// Use params from schedule
+				if schedule.Params != nil {
+					for k, v := range schedule.Params {
+						if s, ok := v.(string); ok {
+							params[k] = s
+						}
+					}
+				}
+			}
 		}
 
-		// Default to "target" if no input name specified
-		if input != "" && trigger.Input.Name == "" {
-			params["target"] = input
+		// New Vars syntax: set all resolved variables (overrides schedule params)
+		if resolvedVars != nil {
+			for name, value := range resolvedVars {
+				params[name] = value
+			}
+		} else {
+			// Legacy syntax: set the input parameter using the trigger's input.name field
+			if trigger.Input.Name != "" {
+				params[trigger.Input.Name] = input
+			}
+
+			// Default to "target" if no input name specified
+			if input != "" && trigger.Input.Name == "" {
+				params["target"] = input
+			}
+		}
+
+		// Pass the event envelope as a special parameter
+		if eventEnvelope != "" {
+			params[scheduler.EventEnvelopeKey] = eventEnvelope
 		}
 
 		// Create executor with server mode
@@ -219,6 +277,172 @@ func (er *EventReceiver) handleEventTrigger(workflow *core.Workflow, trigger *co
 		}
 
 		er.logger.Info("Event-triggered workflow completed",
+			zap.String("workflow", workflow.Name),
+			zap.String("status", string(result.Status)),
+			zap.Duration("duration", result.EndTime.Sub(result.StartTime)),
+		)
+	}()
+
+	return nil
+}
+
+// handleCronTrigger is called when a cron trigger fires.
+func (er *EventReceiver) handleCronTrigger(workflow *core.Workflow, trigger *core.Trigger, input string) error {
+	er.logger.Info("Cron trigger fired",
+		zap.String("workflow", workflow.Name),
+		zap.String("trigger", trigger.Name),
+	)
+
+	go func() {
+		params := make(map[string]string)
+
+		// If this trigger is linked to a Schedule record, look it up to get Target/Params
+		if trigger.ScheduleID != "" {
+			schedule, err := database.GetScheduleByID(er.ctx, trigger.ScheduleID)
+			if err != nil {
+				er.logger.Warn("Failed to load schedule for cron trigger",
+					zap.String("schedule_id", trigger.ScheduleID),
+					zap.Error(err),
+				)
+			} else {
+				// Skip execution if schedule is disabled
+				if !schedule.IsEnabled {
+					er.logger.Info("Skipping disabled schedule",
+						zap.String("schedule_id", trigger.ScheduleID),
+						zap.String("workflow", workflow.Name),
+					)
+					return
+				}
+				// Use target from schedule
+				if schedule.Target != "" {
+					params["target"] = schedule.Target
+				}
+				// Use params from schedule
+				if schedule.Params != nil {
+					for k, v := range schedule.Params {
+						if s, ok := v.(string); ok {
+							params[k] = s
+						}
+					}
+				}
+				er.logger.Debug("Loaded schedule params for cron trigger",
+					zap.String("schedule_id", trigger.ScheduleID),
+					zap.String("target", schedule.Target),
+					zap.Int("param_count", len(schedule.Params)),
+				)
+			}
+		}
+
+		// Set input parameter if specified (can override schedule params)
+		if trigger.Input.Name != "" && input != "" {
+			params[trigger.Input.Name] = input
+		}
+
+		exec := executor.NewExecutor()
+		exec.SetServerMode(true)
+		exec.SetSchedulerInvocation(true)
+		exec.SetLoader(er.loader)
+
+		var err error
+		var result *core.WorkflowResult
+
+		if workflow.IsFlow() {
+			result, err = exec.ExecuteFlow(er.ctx, workflow, params, er.config)
+		} else {
+			result, err = exec.ExecuteModule(er.ctx, workflow, params, er.config)
+		}
+
+		if err != nil {
+			er.logger.Error("Cron-triggered workflow failed",
+				zap.String("workflow", workflow.Name),
+				zap.String("trigger", trigger.Name),
+				zap.Error(err),
+			)
+			return
+		}
+
+		er.logger.Info("Cron-triggered workflow completed",
+			zap.String("workflow", workflow.Name),
+			zap.String("status", string(result.Status)),
+			zap.Duration("duration", result.EndTime.Sub(result.StartTime)),
+		)
+	}()
+
+	return nil
+}
+
+// handleWatchTrigger is called when a file watch trigger fires.
+func (er *EventReceiver) handleWatchTrigger(workflow *core.Workflow, trigger *core.Trigger, input string) error {
+	er.logger.Info("Watch trigger fired",
+		zap.String("workflow", workflow.Name),
+		zap.String("trigger", trigger.Name),
+		zap.String("path", trigger.Path),
+	)
+
+	go func() {
+		params := make(map[string]string)
+
+		// If this trigger is linked to a Schedule record, look it up to get Target/Params
+		if trigger.ScheduleID != "" {
+			schedule, err := database.GetScheduleByID(er.ctx, trigger.ScheduleID)
+			if err != nil {
+				er.logger.Warn("Failed to load schedule for watch trigger",
+					zap.String("schedule_id", trigger.ScheduleID),
+					zap.Error(err),
+				)
+			} else {
+				// Skip execution if schedule is disabled
+				if !schedule.IsEnabled {
+					er.logger.Info("Skipping disabled schedule",
+						zap.String("schedule_id", trigger.ScheduleID),
+						zap.String("workflow", workflow.Name),
+					)
+					return
+				}
+				// Use target from schedule
+				if schedule.Target != "" {
+					params["target"] = schedule.Target
+				}
+				// Use params from schedule
+				if schedule.Params != nil {
+					for k, v := range schedule.Params {
+						if s, ok := v.(string); ok {
+							params[k] = s
+						}
+					}
+				}
+			}
+		}
+
+		// Set input parameter if specified (can override schedule params)
+		if trigger.Input.Name != "" && input != "" {
+			params[trigger.Input.Name] = input
+		}
+
+		exec := executor.NewExecutor()
+		exec.SetServerMode(true)
+		exec.SetSchedulerInvocation(true)
+		exec.SetLoader(er.loader)
+
+		var err error
+		var result *core.WorkflowResult
+
+		if workflow.IsFlow() {
+			result, err = exec.ExecuteFlow(er.ctx, workflow, params, er.config)
+		} else {
+			result, err = exec.ExecuteModule(er.ctx, workflow, params, er.config)
+		}
+
+		if err != nil {
+			er.logger.Error("Watch-triggered workflow failed",
+				zap.String("workflow", workflow.Name),
+				zap.String("trigger", trigger.Name),
+				zap.Error(err),
+			)
+			return
+		}
+
+		er.logger.Info("Watch-triggered workflow completed",
 			zap.String("workflow", workflow.Name),
 			zap.String("status", string(result.Status)),
 			zap.Duration("duration", result.EndTime.Sub(result.StartTime)),
@@ -284,6 +508,41 @@ func (er *EventReceiver) GetRegisteredTriggersInfo() []*handlers.EventReceiverTr
 		})
 	}
 	return result
+}
+
+// GetWorkflowLoader returns the workflow loader for dynamic schedule registration.
+// This implements the EventReceiverProvider interface method.
+func (er *EventReceiver) GetWorkflowLoader() handlers.WorkflowLoader {
+	return er.loader
+}
+
+// RegisterSchedule dynamically registers a trigger with the running scheduler.
+// This implements the EventReceiverProvider interface method.
+func (er *EventReceiver) RegisterSchedule(workflow *core.Workflow, trigger *core.Trigger) error {
+	if !er.running {
+		return fmt.Errorf("event receiver not running")
+	}
+
+	err := er.scheduler.RegisterTrigger(workflow, trigger)
+	if err != nil {
+		return err
+	}
+
+	// Track the trigger
+	er.mu.Lock()
+	er.triggers = append(er.triggers, &RegisteredEventTrigger{
+		Workflow: workflow,
+		Trigger:  trigger,
+	})
+	er.mu.Unlock()
+
+	er.logger.Info("Dynamically registered trigger",
+		zap.String("workflow", workflow.Name),
+		zap.String("trigger", trigger.Name),
+		zap.String("type", string(trigger.On)),
+	)
+
+	return nil
 }
 
 // processQueuedEvents processes any unprocessed events from the database.

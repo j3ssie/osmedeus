@@ -11,8 +11,8 @@ type RunResult struct {
 	// WorkflowName is the name of the executed workflow
 	WorkflowName string
 
-	// RunID is the unique identifier for this execution
-	RunID string
+	// RunUUID is the unique identifier for this execution
+	RunUUID string
 
 	// Target is the scan target
 	Target string
@@ -192,7 +192,7 @@ func fromWorkflowResult(result *core.WorkflowResult, outputPath string) *RunResu
 
 	runResult := &RunResult{
 		WorkflowName: result.WorkflowName,
-		RunID:        result.RunUUID,
+		RunUUID:      result.RunUUID,
 		Target:       result.Target,
 		Status:       string(result.Status),
 		StartTime:    result.StartTime,

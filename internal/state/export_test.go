@@ -21,7 +21,7 @@ func TestExport_WithoutDatabase(t *testing.T) {
 	// Create context without database
 	now := time.Now()
 	ctx := &ExportContext{
-		RunUUID:          "test-run-123",
+		RunUUID:        "test-run-123",
 		WorkflowName:   "test-workflow",
 		WorkflowKind:   "module",
 		Target:         "example.com",
@@ -111,7 +111,7 @@ func TestExport_MinimalContext(t *testing.T) {
 
 	// Create minimal context
 	ctx := &ExportContext{
-		RunUUID:         "minimal-run",
+		RunUUID:       "minimal-run",
 		WorkspaceName: "minimal-workspace",
 	}
 

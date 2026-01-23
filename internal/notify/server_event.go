@@ -32,10 +32,11 @@ type ServerEventClient struct {
 type ServerEventRequest struct {
 	Topic        string                 `json:"topic"`
 	Name         string                 `json:"name,omitempty"`
+	SourceType   string                 `json:"source_type,omitempty"` // "run", "eval", "api" - origin of the event
 	Source       string                 `json:"source,omitempty"`
 	DataType     string                 `json:"data_type,omitempty"`
 	Workspace    string                 `json:"workspace,omitempty"`
-	RunID        string                 `json:"run_id,omitempty"`
+	RunUUID      string                 `json:"run_uuid,omitempty"`
 	WorkflowName string                 `json:"workflow_name,omitempty"`
 	Data         map[string]interface{} `json:"data,omitempty"`
 }
@@ -84,7 +85,7 @@ func NewServerEventClientFromConfig(cfg *config.Config) *ServerEventClient {
 
 // SendEvent sends an event to the server's /osm/api/events/emit endpoint.
 // Returns nil on success or an error if the request fails.
-func (c *ServerEventClient) SendEvent(workspace, topic, source, dataType, runID, workflowName string, data interface{}) error {
+func (c *ServerEventClient) SendEvent(workspace, topic, source, dataType, runID, workflowName, sourceType string, data interface{}) error {
 	if c == nil || c.serverURL == "" {
 		return fmt.Errorf("server event client not configured")
 	}
@@ -92,10 +93,11 @@ func (c *ServerEventClient) SendEvent(workspace, topic, source, dataType, runID,
 	// Build the request
 	reqData := ServerEventRequest{
 		Topic:        topic,
+		SourceType:   sourceType,
 		Source:       source,
 		DataType:     dataType,
 		Workspace:    workspace,
-		RunID:        runID,
+		RunUUID:      runID,
 		WorkflowName: workflowName,
 	}
 
@@ -193,7 +195,7 @@ func (c *ServerEventClient) generateJWT() (string, error) {
 
 // QueueEventToDatabase stores an event in the database for later processing.
 // This is used as a fallback when the server is unavailable.
-func QueueEventToDatabase(ctx context.Context, topic, source, dataType string, data interface{}, errMsg string) error {
+func QueueEventToDatabase(ctx context.Context, topic, source, dataType, sourceType string, data interface{}, errMsg string) error {
 	db := database.GetDB()
 	if db == nil {
 		return fmt.Errorf("database not initialized")
@@ -214,14 +216,15 @@ func QueueEventToDatabase(ctx context.Context, topic, source, dataType string, d
 	}
 
 	eventLog := &database.EventLog{
-		Topic:     topic,
-		EventID:   uuid.New().String(),
-		Source:    source,
-		DataType:  dataType,
-		Data:      dataJSON,
-		Processed: false,
-		Error:     errMsg,
-		CreatedAt: time.Now(),
+		Topic:      topic,
+		EventID:    uuid.New().String(),
+		SourceType: sourceType,
+		Source:     source,
+		DataType:   dataType,
+		Data:       dataJSON,
+		Processed:  false,
+		Error:      errMsg,
+		CreatedAt:  time.Now(),
 	}
 
 	repo := repository.NewEventLogRepository(db)
@@ -246,7 +249,8 @@ func SendEventViaRedis(workspace, topic, source, dataType, runID, workflowName s
 // If the server is unavailable, it queues the event to the database.
 // It also sends the event to configured webhooks (existing behavior).
 // In distributed mode with Redis configured, it uses Redis pub/sub.
-func SendEventWithFallback(workspace, topic, source, dataType, runID, workflowName string, data interface{}) error {
+// sourceType indicates the origin of the event: "run", "eval", or "api".
+func SendEventWithFallback(workspace, topic, source, dataType, runID, workflowName, sourceType string, data interface{}) error {
 	log := logger.Get()
 	ctx := context.Background()
 	cfg := config.Get()
@@ -258,6 +262,7 @@ func SendEventWithFallback(workspace, topic, source, dataType, runID, workflowNa
 			log.Debug("Event published via Redis",
 				zap.String("topic", topic),
 				zap.String("source", source),
+				zap.String("source_type", sourceType),
 				zap.String("workspace", workspace),
 				zap.String("run_id", runID),
 				zap.String("workflow_name", workflowName),
@@ -278,11 +283,12 @@ func SendEventWithFallback(workspace, topic, source, dataType, runID, workflowNa
 	var serverErr error
 
 	if client != nil {
-		serverErr = client.SendEvent(workspace, topic, source, dataType, runID, workflowName, data)
+		serverErr = client.SendEvent(workspace, topic, source, dataType, runID, workflowName, sourceType, data)
 		if serverErr == nil {
 			log.Debug("Event sent to server successfully",
 				zap.String("topic", topic),
 				zap.String("source", source),
+				zap.String("source_type", sourceType),
 			)
 		} else {
 			log.Debug("Failed to send event to server, queuing to database",
@@ -290,7 +296,7 @@ func SendEventWithFallback(workspace, topic, source, dataType, runID, workflowNa
 				zap.Error(serverErr),
 			)
 			// Queue to database as fallback
-			if queueErr := QueueEventToDatabase(ctx, topic, source, dataType, data, serverErr.Error()); queueErr != nil {
+			if queueErr := QueueEventToDatabase(ctx, topic, source, dataType, sourceType, data, serverErr.Error()); queueErr != nil {
 				log.Warn("Failed to queue event to database",
 					zap.String("topic", topic),
 					zap.Error(queueErr),
@@ -299,7 +305,7 @@ func SendEventWithFallback(workspace, topic, source, dataType, runID, workflowNa
 		}
 	} else {
 		// No server configured, just queue to database
-		if queueErr := QueueEventToDatabase(ctx, topic, source, dataType, data, "server not configured"); queueErr != nil {
+		if queueErr := QueueEventToDatabase(ctx, topic, source, dataType, sourceType, data, "server not configured"); queueErr != nil {
 			log.Debug("Failed to queue event to database (no server configured)",
 				zap.String("topic", topic),
 				zap.Error(queueErr),

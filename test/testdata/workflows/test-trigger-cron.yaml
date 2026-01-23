@@ -3,7 +3,7 @@ kind: module
 description: Test cron trigger
 tags: test,trigger,cron
 
-trigger:
+triggers:
   - name: every-minute
     on: cron
     schedule: "* * * * *"

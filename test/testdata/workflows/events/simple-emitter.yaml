@@ -26,21 +26,21 @@ steps:
     type: function
     description: Emit a single event for a specific asset
     functions:
-      - 'generate_event("{{Workspace}}", "discovery.asset", "simple-emitter", "subdomain", "new.{{target}}")'
+      - 'generate_event("{{TargetSpace}}", "discovery.asset", "simple-emitter", "subdomain", "new.{{target}}")'
       - 'print_blue("Emitted single event for new.{{target}}")'
 
   - name: emit-events-from-file
     type: function
     description: Emit events for each line in a file
     functions:
-      - 'set_var("count", generate_event_from_file("{{Workspace}}", "discovery.asset", "simple-emitter", "subdomain", "{{Output}}/assets.txt"))'
+      - 'set_var("count", generate_event_from_file("{{TargetSpace}}", "discovery.asset", "simple-emitter", "subdomain", "{{Output}}/assets.txt"))'
       - 'print_green("Emitted " + get_var("count") + " events from file")'
 
   - name: emit-structured-event
     type: function
     description: Emit an event with structured JSON data
     function: |
-      generate_event("{{Workspace}}", "discovery.complete", "simple-emitter", "summary", {
+      generate_event("{{TargetSpace}}", "discovery.complete", "simple-emitter", "summary", {
         target: "{{target}}",
         asset_count: 3,
         status: "completed"

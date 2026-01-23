@@ -91,7 +91,7 @@ type CreateRunResponse struct {
 	Status      string   `json:"status"`
 	PollURL     string   `json:"poll_url"`
 	Target      string   `json:"target,omitempty"`
-	RunID       string   `json:"run_id,omitempty"`
+	RunUUID     string   `json:"run_uuid,omitempty"`
 	Targets     []string `json:"targets,omitempty"`
 	Concurrency int      `json:"concurrency,omitempty"`
 }
@@ -100,7 +100,7 @@ type CreateRunResponse struct {
 type CancelRunResponse struct {
 	Message string `json:"message"`
 	ID      int64  `json:"id"`
-	RunID   string `json:"run_id"`
+	RunUUID string `json:"run_uuid"`
 }
 
 // AssetsResponse represents the response from listing assets
@@ -241,6 +241,7 @@ type EventLog struct {
 	Topic        string     `json:"topic"`
 	EventID      string     `json:"event_id,omitempty"`
 	Name         string     `json:"name,omitempty"`
+	SourceType   string     `json:"source_type,omitempty"` // "run", "eval", "api" - origin of the event
 	Source       string     `json:"source,omitempty"`
 	DataType     string     `json:"data_type,omitempty"`
 	Data         string     `json:"data,omitempty"`
@@ -264,13 +265,15 @@ type Schedule struct {
 	ID           string                 `json:"id"`
 	Name         string                 `json:"name"`
 	WorkflowName string                 `json:"workflow_name"`
-	WorkflowPath string                 `json:"workflow_path"`
+	WorkflowKind string                 `json:"workflow_kind,omitempty"`
+	Target       string                 `json:"target,omitempty"`
+	Workspace    string                 `json:"workspace,omitempty"`
+	Params       map[string]interface{} `json:"params,omitempty"`
 	TriggerName  string                 `json:"trigger_name"`
 	TriggerType  string                 `json:"trigger_type"`
 	Schedule     string                 `json:"schedule,omitempty"`
 	EventTopic   string                 `json:"event_topic,omitempty"`
 	WatchPath    string                 `json:"watch_path,omitempty"`
-	InputConfig  map[string]interface{} `json:"input_config,omitempty"`
 	IsEnabled    bool                   `json:"is_enabled"`
 	LastRun      *time.Time             `json:"last_run,omitempty"`
 	NextRun      *time.Time             `json:"next_run,omitempty"`

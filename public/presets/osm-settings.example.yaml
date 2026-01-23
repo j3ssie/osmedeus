@@ -117,9 +117,10 @@ server:
   # Set to false to disable metrics collection and endpoint
   enable_metrics: true
 
-  # CORS allowed origins (default: "*" allows all origins)
-  # Use comma-separated list for multiple origins: "https://example.com,https://app.example.com"
-  cors_allowed_origins: "*"
+  # CORS allowed origins (default: "reflect-origin" echoes back the request origin)
+  # Use "reflect-origin" to dynamically reflect the requesting origin (required for credentials)
+  # Use comma-separated list for specific origins: "https://example.com,https://app.example.com"
+  cors_allowed_origins: "reflect-origin"
 
   # API Key Authentication (alternative to JWT login flow)
   # When enabled, all API requests must include header: x-osm-api-key: <your-key>
