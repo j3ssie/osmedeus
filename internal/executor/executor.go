@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -223,6 +224,13 @@ func (e *Executor) injectBuiltinVariables(cfg *config.Config, params map[string]
 	// Version info
 	execCtx.SetVariable("Version", core.VERSION)
 
+	// Platform detection variables
+	execCtx.SetVariable("PlatformOS", runtime.GOOS)
+	execCtx.SetVariable("PlatformArch", runtime.GOARCH)
+	execCtx.SetVariable("PlatformInDocker", DetectDocker())
+	execCtx.SetVariable("PlatformInKubernetes", DetectKubernetes())
+	execCtx.SetVariable("PlatformCloudProvider", DetectCloudProvider())
+
 	// Target-based variables
 	target := params["target"]
 	targetFileParam := params["target_file"]
@@ -373,7 +381,7 @@ func (e *Executor) debugLogTargetVariables(execCtx *core.ExecutionContext) {
 
 	execCtx.Logger.Debug("Target variables",
 		zap.String("workflow", execCtx.WorkflowName),
-		zap.String("run_id", execCtx.RunUUID),
+		zap.String("run_uuid", execCtx.RunUUID),
 		zap.String("Target", getStr("Target")),
 		zap.String("TargetSpace", getStr("TargetSpace")),
 		zap.String("Output", getStr("Output")),
@@ -725,13 +733,16 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	}
 
 	// Create execution context
-	runID := uuid.New().String()[:8]
+	runUUID := e.dbRunUUID
+	if runUUID == "" {
+		runUUID = uuid.New().String() // Full UUID when not in server mode
+	}
 	e.logger.Debug("Created execution context",
-		zap.String("run_id", runID),
+		zap.String("run_uuid", runUUID),
 		zap.String("target", params["target"]),
 	)
-	execCtx := core.NewExecutionContext(module.Name, core.KindModule, runID, params["target"])
-	execCtx.Logger = logger.WithWorkflow(module.Name, runID)
+	execCtx := core.NewExecutionContext(module.Name, core.KindModule, runUUID, params["target"])
+	execCtx.Logger = logger.WithWorkflow(module.Name, runUUID)
 
 	// Create and setup runner based on workflow configuration
 	binaryPath, _ := os.Executable()
@@ -860,7 +871,7 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	result := &core.WorkflowResult{
 		WorkflowName: module.Name,
 		WorkflowKind: core.KindModule,
-		RunUUID:      runID,
+		RunUUID:      runUUID,
 		Target:       params["target"],
 		Status:       core.RunStatusRunning,
 		StartTime:    time.Now(),
@@ -1378,13 +1389,16 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	}
 
 	// Create execution context
-	runID := uuid.New().String()[:8]
+	runUUID := e.dbRunUUID
+	if runUUID == "" {
+		runUUID = uuid.New().String() // Full UUID when not in server mode
+	}
 	e.logger.Debug("Created flow execution context",
-		zap.String("run_id", runID),
+		zap.String("run_uuid", runUUID),
 		zap.String("target", params["target"]),
 	)
-	execCtx := core.NewExecutionContext(flow.Name, core.KindFlow, runID, params["target"])
-	execCtx.Logger = logger.WithWorkflow(flow.Name, runID)
+	execCtx := core.NewExecutionContext(flow.Name, core.KindFlow, runUUID, params["target"])
+	execCtx.Logger = logger.WithWorkflow(flow.Name, runUUID)
 
 	// Inject builtin variables
 	e.logger.Debug("Injecting builtin variables for flow")
@@ -1455,7 +1469,7 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	result := &core.WorkflowResult{
 		WorkflowName: flow.Name,
 		WorkflowKind: core.KindFlow,
-		RunUUID:      runID,
+		RunUUID:      runUUID,
 		Target:       params["target"],
 		Status:       core.RunStatusRunning,
 		StartTime:    time.Now(),

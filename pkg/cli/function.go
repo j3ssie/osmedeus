@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
+	"github.com/j3ssie/osmedeus/v5/internal/executor"
 	"github.com/j3ssie/osmedeus/v5/internal/functions"
 	"github.com/j3ssie/osmedeus/v5/internal/template"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
@@ -290,6 +292,14 @@ func runBulkFunctionEval(printer *terminal.Printer, script string) error {
 func executeFunctionForTarget(printer *terminal.Printer, script, target string) error {
 	// Build context with target and params
 	ctx := make(map[string]interface{})
+
+	// Inject platform detection variables (always available, even without target)
+	ctx["PlatformOS"] = runtime.GOOS
+	ctx["PlatformArch"] = runtime.GOARCH
+	ctx["PlatformInDocker"] = executor.DetectDocker()
+	ctx["PlatformInKubernetes"] = executor.DetectKubernetes()
+	ctx["PlatformCloudProvider"] = executor.DetectCloudProvider()
+
 	if target != "" {
 		ctx["target"] = target
 	}
