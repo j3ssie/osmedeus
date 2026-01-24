@@ -30,21 +30,25 @@ const (
 
 // String Functions - String manipulation operations
 const (
-	FnTrim          = "trim"           // trim(str) -> string
-	FnSplit         = "split"          // split(str, delim) -> []string
-	FnJoin          = "join"           // join(arr, delim) -> string
-	FnReplace       = "replace"        // replace(str, old, new) -> string
-	FnContains      = "contains"       // contains(str, substr) -> bool
-	FnStartsWith    = "starts_with"    // starts_with(str, prefix) -> bool
-	FnEndsWith      = "ends_with"      // ends_with(str, suffix) -> bool
-	FnToLowerCase   = "to_lower_case"  // to_lower_case(str) -> string
-	FnToUpperCase   = "to_upper_case"  // to_upper_case(str) -> string
-	FnMatch         = "match"          // match(str, pattern) -> bool
-	FnRegexMatch    = "regex_match"    // regex_match(pattern, str) -> bool (pattern first)
-	FnCutWithDelim  = "cut_with_delim" // cut_with_delim(input, delim, field) -> string (1-indexed like cut)
-	FnNormalizePath = "normalize_path" // normalize_path(input) -> string (replace / | : etc with _)
-	FnNormalPath    = "normal_path"    // normal_path(input) -> string (same as {{TargetSpace}}: sanitize + truncate)
-	FnCleanSub      = "clean_sub"      // clean_sub(path, target?) -> bool (clean and deduplicate subdomains in file)
+	FnTrim           = "trim"             // trim(str) -> string
+	FnTrimString     = "trim_string"      // trim_string(input, substring) -> string (trim substring from both ends)
+	FnTrimLeft       = "trim_left"        // trim_left(input, substring) -> string (trim substring from left/start)
+	FnTrimRight      = "trim_right"       // trim_right(input, substring) -> string (trim substring from right/end)
+	FnSplit          = "split"            // split(str, delim) -> []string
+	FnJoin           = "join"             // join(arr, delim) -> string
+	FnReplace        = "replace"          // replace(str, old, new) -> string
+	FnContains       = "contains"         // contains(str, substr) -> bool
+	FnStartsWith     = "starts_with"      // starts_with(str, prefix) -> bool
+	FnEndsWith       = "ends_with"        // ends_with(str, suffix) -> bool
+	FnToLowerCase    = "to_lower_case"    // to_lower_case(str) -> string
+	FnToUpperCase    = "to_upper_case"    // to_upper_case(str) -> string
+	FnMatch          = "match"            // match(str, pattern) -> bool
+	FnRegexMatch     = "regex_match"      // regex_match(pattern, str) -> bool (pattern first)
+	FnCutWithDelim   = "cut_with_delim"   // cut_with_delim(input, delim, field) -> string (1-indexed like cut)
+	FnCut            = "cut"              // cut(input, delim, field) -> string (alias for cut_with_delim)
+	FnNormalizePath  = "normalize_path"   // normalize_path(input) -> string (replace / | : etc with _)
+	FnGetTargetSpace = "get_target_space" // get_target_space(input) -> string (same as {{TargetSpace}}: sanitize + truncate)
+	FnCleanSub       = "clean_sub"        // clean_sub(path, target?) -> bool (clean and deduplicate subdomains in file)
 )
 
 // Type Detection Functions - Detect input types
@@ -71,6 +75,7 @@ const (
 	FnExecCmd       = "exec_cmd"       // exec_cmd(command) -> string (execute bash command, return stdout)
 	FnSleep         = "sleep"          // sleep(seconds) -> void (pause for n seconds)
 	FnCommandExists = "command_exists" // command_exists(command) -> bool (check if command exists in PATH)
+	FnPickValid     = "pick_valid"     // pick_valid(v1, v2, ..., v10) -> any (first valid value)
 )
 
 // Logging Functions - Log messages with level prefixes
@@ -221,6 +226,7 @@ const (
 const (
 	FnDBUpdate                        = "db_update"                          // db_update(table, key, field, value) -> bool
 	FnDBImportAsset                   = "db_import_asset"                    // db_import_asset(workspace, json_data) -> bool
+	FnDBQuickImportAsset              = "db_quick_import_asset"              // db_quick_import_asset(workspace, asset_value, asset_type?) -> bool
 	FnDBRawInsertAsset                = "db_raw_insert_asset"                // db_raw_insert_asset(workspace, json_data) -> int (asset ID)
 	FnDBTotalURLs                     = "db_total_urls"                      // db_total_urls(file_path) -> int (count lines, update workspace)
 	FnDBTotalSubdomains               = "db_total_subdomains"                // db_total_subdomains(file_path) -> int
@@ -269,6 +275,9 @@ const (
 	// Run status functions - query run records
 	FnDBSelectRuns      = "run_status"         // run_status(workspace, format) -> string
 	FnDBSelectRunByUUID = "run_status_by_uuid" // run_status_by_uuid(uuid, format) -> string
+
+	// Event log management functions
+	FnDBResetEventLogs = "db_reset_event_logs" // db_reset_event_logs(workspace?, topic_pattern?) -> {reset: int, total: int}
 )
 
 // AllFunctions returns a list of all available function names
@@ -298,6 +307,9 @@ func AllFunctions() []string {
 
 		// String Functions
 		FnTrim,
+		FnTrimString,
+		FnTrimLeft,
+		FnTrimRight,
 		FnSplit,
 		FnJoin,
 		FnReplace,
@@ -309,8 +321,9 @@ func AllFunctions() []string {
 		FnMatch,
 		FnRegexMatch,
 		FnCutWithDelim,
+		FnCut,
 		FnNormalizePath,
-		FnNormalPath,
+		FnGetTargetSpace,
 		FnCleanSub,
 
 		// Type Detection Functions
@@ -332,6 +345,7 @@ func AllFunctions() []string {
 		FnExecCmd,
 		FnSleep,
 		FnCommandExists,
+		FnPickValid,
 
 		// Logging Functions
 		FnLogDebug,
@@ -433,6 +447,7 @@ func AllFunctions() []string {
 		// Database Functions
 		FnDBUpdate,
 		FnDBImportAsset,
+		FnDBQuickImportAsset,
 		FnDBRawInsertAsset,
 		FnDBTotalURLs,
 		FnDBTotalSubdomains,
@@ -477,6 +492,9 @@ func AllFunctions() []string {
 		FnDBVulnDiffToFile,
 		FnDBSelectRuns,
 		FnDBSelectRunByUUID,
+
+		// Event log management functions
+		FnDBResetEventLogs,
 
 		// Installer functions
 		FnGoGetter,
@@ -592,6 +610,9 @@ func FunctionRegistry() map[string][]FunctionInfo {
 		},
 		CategoryString: {
 			{FnTrim, "trim(str)", "Trim whitespace", "string", "trim('  hello  ')"},
+			{FnTrimString, "trim_string(input, substring)", "Trim substring from both ends", "string", "trim_string('  hello  ', ' ')"},
+			{FnTrimLeft, "trim_left(input, substring)", "Trim substring from left/start", "string", "trim_left('///path/to/file', '/')"},
+			{FnTrimRight, "trim_right(input, substring)", "Trim substring from right/end", "string", "trim_right('example.com///', '/')"},
 			{FnSplit, "split(str, delim)", "Split string by delimiter", "[]string", "split('a,b,c', ',')"},
 			{FnJoin, "join(arr, delim)", "Join array with delimiter", "string", "join(['a','b','c'], ',')"},
 			{FnReplace, "replace(str, old, new)", "Replace all occurrences", "string", "replace('hello', 'l', 'L')"},
@@ -603,8 +624,9 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnMatch, "match(str, pattern)", "Check if string matches regex", "bool", "match('test123', '[0-9]+')"},
 			{FnRegexMatch, "regex_match(pattern, str)", "Check if string matches regex (pattern first)", "bool", "regex_match('[0-9]+', 'test123')"},
 			{FnCutWithDelim, "cut_with_delim(input, delim, field)", "Extract field by delimiter (1-indexed)", "string", "cut_with_delim('a:b:c', ':', 2)"},
+			{FnCut, "cut(input, delim, field)", "Extract field by delimiter (1-indexed, alias for cut_with_delim)", "string", "cut('a:b:c', ':', 2)"},
 			{FnNormalizePath, "normalize_path(input)", "Replace special chars with underscore", "string", "normalize_path('test/path:file')"},
-			{FnNormalPath, "normal_path(input)", "Normalize to path-friendly format (same as {{TargetSpace}})", "string", "normal_path('https://example.com/path')"},
+			{FnGetTargetSpace, "get_target_space(input)", "Normalize to path-friendly format (same as {{TargetSpace}})", "string", "get_target_space('https://example.com/path')"},
 			{FnCleanSub, "clean_sub(path, target?)", "Clean and deduplicate subdomains in file, optionally filter by target domain", "bool", "clean_sub('{{Output}}/subdomains.txt', 'example.com')"},
 		},
 		CategoryTypeConversion: {
@@ -623,6 +645,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnExecCmd, "exec_cmd(command)", "Execute bash command and return output", "string", "exec_cmd('whoami')"},
 			{FnSleep, "sleep(seconds)", "Pause for n seconds", "void", "sleep(5)"},
 			{FnCommandExists, "command_exists(command)", "Check if command exists in PATH", "bool", "command_exists('nmap')"},
+			{FnPickValid, "pick_valid(v1, v2, ..., v10)", "Return first valid value from up to 10 arguments", "any", "pick_valid('', '', 'hello', 'world')"},
 		},
 		CategoryLogging: {
 			{FnLogDebug, "log_debug(message)", "Log debug message with [DEBUG] prefix", "void", "log_debug('Processing target')"},
@@ -726,6 +749,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnStoreArtifact, "store_artifact(path)", "Store file as run artifact for current workspace", "bool", "store_artifact('{{Output}}/report.md')"},
 			{FnDBUpdate, "db_update(table, key, field, value)", "Update database field", "bool", "db_update('workspaces', '{{Workspace}}', 'status', 'completed')"},
 			{FnDBImportAsset, "db_import_asset(workspace, json)", "Import asset from JSON (upsert)", "bool", "db_import_asset('{{Workspace}}', '{\"asset_value\":\"sub.example.com\"}')"},
+			{FnDBQuickImportAsset, "db_quick_import_asset(workspace, asset_value, asset_type?)", "Quick import asset without JSON, creates db.new.asset event for new assets", "bool", "db_quick_import_asset('{{Workspace}}', 'sub.example.com', 'domain')"},
 			{FnDBRawInsertAsset, "db_raw_insert_asset(workspace, json)", "Insert asset from JSON (pure insert)", "int", "db_raw_insert_asset('{{Workspace}}', '{\"asset_value\":\"api.example.com\"}')"},
 			{FnDBTotalURLs, "db_total_urls(path)", "Count lines, update workspace URLs", "int", "db_total_urls('{{Output}}/urls.txt')"},
 			{FnDBTotalSubdomains, "db_total_subdomains(path)", "Count lines, update workspace subdomains", "int", "db_total_subdomains('{{Output}}/subdomains.txt')"},
@@ -764,6 +788,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnDBVulnDiffToFile, "db_vuln_diff_to_file(workspace, dest)", "Write vulnerability diff to JSONL file", "bool", "db_vuln_diff_to_file('{{Workspace}}', '{{Output}}/vuln-diff.jsonl')"},
 			{FnDBSelectRuns, "run_status(workspace, format)", "Query run records by workspace. Format: markdown or jsonl", "string", "run_status('{{Workspace}}', 'markdown')"},
 			{FnDBSelectRunByUUID, "run_status_by_uuid(uuid, format)", "Query run record by UUID. Format: markdown or jsonl", "string", "run_status_by_uuid('abc-123', 'jsonl')"},
+			{FnDBResetEventLogs, "db_reset_event_logs(workspace?, topic_pattern?)", "Reset processed event logs to unprocessed state with optional filters", "object", "db_reset_event_logs('example.com', 'db.*')"},
 		},
 		CategoryInstaller: {
 			{FnGoGetter, "go_getter(url, dest)", "Download files/repos using go-getter", "bool", "go_getter('https://github.com/user/repo.git?ref=main', '{{Output}}/repo')"},

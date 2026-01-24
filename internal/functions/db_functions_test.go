@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
@@ -370,4 +371,241 @@ func TestMapJSONToVuln_MatchedAtFallback(t *testing.T) {
 
 	// When host is not present, matched-at is used as fallback
 	assert.Equal(t, "http://example.com/path", vuln.AssetValue)
+}
+
+func TestDbQuickImportAsset(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	// Import a domain without specifying asset_type (should auto-classify)
+	result, err := registry.Execute(
+		`db_quick_import_asset("test-workspace", "sub.example.com")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, true, result)
+
+	// Verify asset was imported
+	ctx := context.Background()
+	db := database.GetDB()
+	require.NotNil(t, db)
+
+	var asset database.Asset
+	err = db.NewSelect().Model(&asset).
+		Where("workspace = ? AND asset_value = ?", "test-workspace", "sub.example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "domain", asset.AssetType)
+	assert.Equal(t, "test-workspace", asset.Workspace)
+
+	// Verify event log was created for new asset
+	var eventLog database.EventLog
+	err = db.NewSelect().Model(&eventLog).
+		Where("topic = ? AND workspace = ?", "db.new.asset", "test-workspace").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "db.new.asset", eventLog.Topic)
+	assert.Equal(t, "db_quick_import_asset", eventLog.Source)
+	assert.Equal(t, "function", eventLog.SourceType)
+	assert.Contains(t, eventLog.Data, "sub.example.com")
+}
+
+func TestDbQuickImportAsset_WithType(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	// Import an IP with explicit asset_type
+	result, err := registry.Execute(
+		`db_quick_import_asset("test-workspace", "192.168.1.1", "ip")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, true, result)
+
+	// Verify asset was imported with specified type
+	ctx := context.Background()
+	db := database.GetDB()
+	require.NotNil(t, db)
+
+	var asset database.Asset
+	err = db.NewSelect().Model(&asset).
+		Where("workspace = ? AND asset_value = ?", "test-workspace", "192.168.1.1").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "ip", asset.AssetType)
+}
+
+func TestDbQuickImportAsset_NoEventOnUpdate(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	// Import asset first time
+	_, err := registry.Execute(
+		`db_quick_import_asset("test-workspace", "existing.example.com")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	db := database.GetDB()
+	require.NotNil(t, db)
+
+	// Count event logs
+	count, err := db.NewSelect().Model((*database.EventLog)(nil)).
+		Where("topic = ? AND workspace = ?", "db.new.asset", "test-workspace").
+		Count(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	// Import same asset again (update)
+	result, err := registry.Execute(
+		`db_quick_import_asset("test-workspace", "existing.example.com")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, true, result)
+
+	// Verify no new event log was created (still 1)
+	count, err = db.NewSelect().Model((*database.EventLog)(nil)).
+		Where("topic = ? AND workspace = ?", "db.new.asset", "test-workspace").
+		Count(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count, "should not create event log on update")
+}
+
+func TestDbQuickImportAsset_MissingArgs(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	result, err := registry.Execute(
+		`db_quick_import_asset("test-workspace")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Contains(t, result.(string), "error:")
+}
+
+func TestDbResetEventLogs(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	db := database.GetDB()
+	require.NotNil(t, db)
+
+	// Create some test event logs
+	now := time.Now()
+	events := []database.EventLog{
+		{Topic: "db.new.asset", Workspace: "workspace1", Processed: true, ProcessedAt: &now},
+		{Topic: "db.updated.asset", Workspace: "workspace1", Processed: true, ProcessedAt: &now},
+		{Topic: "run.started", Workspace: "workspace1", Processed: true, ProcessedAt: &now},
+		{Topic: "db.new.asset", Workspace: "workspace2", Processed: true, ProcessedAt: &now},
+		{Topic: "run.completed", Workspace: "workspace2", Processed: false}, // Not processed
+	}
+	for _, e := range events {
+		_, err := db.NewInsert().Model(&e).Exec(ctx)
+		require.NoError(t, err)
+	}
+
+	registry := NewRegistry()
+
+	// Test 1: Reset all event logs (no filters)
+	result, err := registry.Execute(
+		`db_reset_event_logs()`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	stats := result.(map[string]interface{})
+	assert.Equal(t, int64(4), stats["reset"]) // 4 were processed=true
+	assert.Equal(t, 4, stats["total"])
+
+	// Verify all are now unprocessed
+	count, err := db.NewSelect().Model((*database.EventLog)(nil)).
+		Where("processed = ?", false).
+		Count(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 5, count)
+
+	// Reset for next test - mark some as processed again
+	_, err = db.NewUpdate().Model((*database.EventLog)(nil)).
+		Set("processed = ?", true).
+		Set("processed_at = ?", now).
+		Where("topic LIKE ?", "db.%").
+		Exec(ctx)
+	require.NoError(t, err)
+
+	// Test 2: Reset with workspace filter
+	result, err = registry.Execute(
+		`db_reset_event_logs("workspace1")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	stats = result.(map[string]interface{})
+	assert.Equal(t, int64(2), stats["reset"]) // workspace1 has 2 db.* events that are processed
+
+	// Test 3: Reset with topic pattern filter
+	// First, mark events processed again for workspace2
+	_, err = db.NewUpdate().Model((*database.EventLog)(nil)).
+		Set("processed = ?", true).
+		Set("processed_at = ?", now).
+		Where("workspace = ?", "workspace2").
+		Where("topic LIKE ?", "db.%").
+		Exec(ctx)
+	require.NoError(t, err)
+
+	result, err = registry.Execute(
+		`db_reset_event_logs("", "db.*")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	stats = result.(map[string]interface{})
+	assert.Equal(t, int64(1), stats["reset"]) // Only workspace2's db.new.asset is processed
+
+	// Test 4: Reset with both filters
+	// Mark all as processed first
+	_, err = db.NewUpdate().Model((*database.EventLog)(nil)).
+		Set("processed = ?", true).
+		Set("processed_at = ?", now).
+		Where("1 = 1").
+		Exec(ctx)
+	require.NoError(t, err)
+
+	result, err = registry.Execute(
+		`db_reset_event_logs("workspace1", "run.*")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	stats = result.(map[string]interface{})
+	assert.Equal(t, int64(1), stats["reset"]) // workspace1 has 1 run.* event
+	assert.Equal(t, 1, stats["total"])
+}
+
+func TestGlobToSQLLike(t *testing.T) {
+	tests := []struct {
+		pattern  string
+		expected string
+	}{
+		{"db.*", "db.%"},
+		{"run.*", "run.%"},
+		{"*", "%"},
+		{"db.?.asset", "db._.asset"},
+		{"test%pattern", "test\\%pattern"},
+		{"test_pattern", "test\\_pattern"},
+		{"*.asset*", "%.asset%"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.pattern, func(t *testing.T) {
+			result := globToSQLLike(tt.pattern)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }

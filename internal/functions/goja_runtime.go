@@ -70,6 +70,9 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 
 	// String functions
 	_ = vm.Set(FnTrim, vf.trim)
+	_ = vm.Set(FnTrimString, vf.trimString)
+	_ = vm.Set(FnTrimLeft, vf.trimLeft)
+	_ = vm.Set(FnTrimRight, vf.trimRight)
 	_ = vm.Set(FnSplit, vf.split)
 	_ = vm.Set(FnJoin, vf.join)
 	_ = vm.Set(FnReplace, vf.replace)
@@ -81,8 +84,9 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnMatch, vf.match)
 	_ = vm.Set(FnRegexMatch, vf.regexMatch)
 	_ = vm.Set(FnCutWithDelim, vf.cutWithDelim)
+	_ = vm.Set(FnCut, vf.cutWithDelim) // alias for cut_with_delim
 	_ = vm.Set(FnNormalizePath, vf.normalizePath)
-	_ = vm.Set(FnNormalPath, vf.normalPath)
+	_ = vm.Set(FnGetTargetSpace, vf.getTargetSpace)
 	_ = vm.Set(FnCleanSub, vf.cleanSub)
 
 	// Type detection functions
@@ -104,6 +108,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnExecCmd, vf.execCmd)
 	_ = vm.Set(FnSleep, vf.sleep)
 	_ = vm.Set(FnCommandExists, vf.commandExists)
+	_ = vm.Set(FnPickValid, vf.pickValid)
 
 	// Logging functions
 	_ = vm.Set(FnLogDebug, vf.logDebug)
@@ -205,6 +210,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	// Database functions
 	_ = vm.Set(FnDBUpdate, vf.dbUpdate)
 	_ = vm.Set(FnDBImportAsset, vf.dbImportAsset)
+	_ = vm.Set(FnDBQuickImportAsset, vf.dbQuickImportAsset)
 	_ = vm.Set(FnDBRawInsertAsset, vf.dbRawInsertAsset)
 	_ = vm.Set(FnDBTotalURLs, vf.dbTotalURLs)
 	_ = vm.Set(FnDBTotalSubdomains, vf.dbTotalSubdomains)
@@ -251,6 +257,9 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnDBVulnDiffToFile, vf.dbVulnDiffToFile)
 	_ = vm.Set(FnDBSelectRuns, vf.dbSelectRuns)
 	_ = vm.Set(FnDBSelectRunByUUID, vf.dbSelectRunByUUID)
+
+	// Event log management functions
+	_ = vm.Set(FnDBResetEventLogs, vf.dbResetEventLogs)
 
 	// Installer functions
 	_ = vm.Set(FnGoGetter, vf.goGetter)

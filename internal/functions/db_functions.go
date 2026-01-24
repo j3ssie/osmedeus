@@ -201,6 +201,83 @@ func (vf *vmFunc) dbImportAsset(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(true)
 }
 
+// dbQuickImportAsset imports an asset with just workspace and asset_value
+// Usage: db_quick_import_asset('example.com', 'sub.example.com')
+// Usage: db_quick_import_asset('example.com', 'sub.example.com', 'domain')
+// Creates EventLog with topic "db.new.asset" when a new asset is created
+func (vf *vmFunc) dbQuickImportAsset(call goja.FunctionCall) goja.Value {
+	if len(call.Arguments) < 2 {
+		return vf.errorValue("db_quick_import_asset requires at least 2 arguments: workspace, asset_value")
+	}
+
+	workspace := call.Argument(0).String()
+	assetValue := call.Argument(1).String()
+
+	// Optional asset_type (3rd argument)
+	var assetType string
+	if len(call.Arguments) >= 3 {
+		assetType = call.Argument(2).String()
+	}
+	if assetType == "" {
+		assetType = database.ClassifyAssetType(assetValue)
+	}
+
+	db := database.GetDB()
+	if db == nil {
+		return vf.errorValue("database not connected")
+	}
+
+	ctx := context.Background()
+
+	// Check if asset already exists
+	exists, err := db.NewSelect().
+		Model((*database.Asset)(nil)).
+		Where("workspace = ? AND asset_value = ?", workspace, assetValue).
+		Exists(ctx)
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("check failed: %v", err))
+	}
+
+	now := time.Now()
+	asset := &database.Asset{
+		Workspace:  workspace,
+		AssetValue: assetValue,
+		AssetType:  assetType,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+
+	// Insert or update
+	_, err = db.NewInsert().Model(asset).
+		On("CONFLICT (workspace, asset_value, url) DO UPDATE").
+		Set("updated_at = EXCLUDED.updated_at").
+		Set("asset_type = EXCLUDED.asset_type").
+		Exec(ctx)
+
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("import failed: %v", err))
+	}
+
+	// Create event log for new assets only
+	if !exists {
+		eventLog := &database.EventLog{
+			Topic:      "db.new.asset",
+			EventID:    uuid.New().String(),
+			Name:       "New asset imported",
+			Source:     "db_quick_import_asset",
+			SourceType: "function",
+			DataType:   "asset",
+			Data:       fmt.Sprintf(`{"workspace":"%s","asset_value":"%s","asset_type":"%s"}`, workspace, assetValue, assetType),
+			Workspace:  workspace,
+			Processed:  false,
+			CreatedAt:  now,
+		}
+		_, _ = db.NewInsert().Model(eventLog).Exec(ctx)
+	}
+
+	return vf.vm.ToValue(true)
+}
+
 // dbRawInsertAsset inserts an asset from JSON data (pure insert, fails if duplicate exists)
 // Usage: db_raw_insert_asset('example.com', '{"asset_value":"sub.example.com","asset_type":"subdomain","url":"https://..."}')
 // Returns: asset ID (int) on success, error string on failure
@@ -2649,4 +2726,100 @@ func (vf *vmFunc) dbSelectRunByUUID(call goja.FunctionCall) goja.Value {
 	}
 
 	return vf.vm.ToValue(output)
+}
+
+// dbResetEventLogs resets the processed status of event logs from true to false
+// Usage: db_reset_event_logs(workspace?, topic_pattern?) -> {reset: int, total: int}
+func (vf *vmFunc) dbResetEventLogs(call goja.FunctionCall) goja.Value {
+	logger.Get().Debug("Calling " + terminal.HiGreen(FnDBResetEventLogs))
+
+	db := database.GetDB()
+	if db == nil {
+		return vf.errorValue("database not connected")
+	}
+
+	// Extract optional parameters
+	workspace := ""
+	topicPattern := ""
+	if len(call.Arguments) >= 1 {
+		workspace = call.Argument(0).String()
+		if workspace == "undefined" {
+			workspace = ""
+		}
+	}
+	if len(call.Arguments) >= 2 {
+		topicPattern = call.Argument(1).String()
+		if topicPattern == "undefined" {
+			topicPattern = ""
+		}
+	}
+
+	ctx := context.Background()
+
+	// Build query to count matching processed=true events
+	countQuery := db.NewSelect().
+		Model((*database.EventLog)(nil)).
+		Where("processed = ?", true)
+
+	if workspace != "" {
+		countQuery = countQuery.Where("workspace = ?", workspace)
+	}
+	if topicPattern != "" {
+		likePattern := globToSQLLike(topicPattern)
+		countQuery = countQuery.Where("topic LIKE ?", likePattern)
+	}
+
+	total, err := countQuery.Count(ctx)
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to count events: %v", err))
+	}
+
+	// Build update query
+	updateQuery := db.NewUpdate().
+		Model((*database.EventLog)(nil)).
+		Set("processed = ?", false).
+		Set("processed_at = NULL").
+		Where("processed = ?", true)
+
+	if workspace != "" {
+		updateQuery = updateQuery.Where("workspace = ?", workspace)
+	}
+	if topicPattern != "" {
+		likePattern := globToSQLLike(topicPattern)
+		updateQuery = updateQuery.Where("topic LIKE ?", likePattern)
+	}
+
+	result, err := updateQuery.Exec(ctx)
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to reset events: %v", err))
+	}
+
+	resetCount, _ := result.RowsAffected()
+
+	return vf.vm.ToValue(map[string]interface{}{
+		"reset": resetCount,
+		"total": total,
+	})
+}
+
+// globToSQLLike converts a glob pattern to SQL LIKE pattern
+// * -> % (match any characters)
+// ? -> _ (match single character)
+func globToSQLLike(pattern string) string {
+	var sb strings.Builder
+	for _, c := range pattern {
+		switch c {
+		case '*':
+			sb.WriteRune('%')
+		case '?':
+			sb.WriteRune('_')
+		case '%', '_':
+			// Escape SQL LIKE special chars
+			sb.WriteRune('\\')
+			sb.WriteRune(c)
+		default:
+			sb.WriteRune(c)
+		}
+	}
+	return sb.String()
 }
