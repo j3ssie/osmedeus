@@ -473,6 +473,7 @@ func (c *ServerConfig) GetCORSAllowedOrigins() string {
 // GetEventReceiverURL returns the event receiver URL.
 // If EventReceiverURL is explicitly set, returns that.
 // Otherwise, constructs URL from Host and Port if both are set.
+// Replaces 0.0.0.0 with 127.0.0.1 for local connectivity.
 // Returns empty string if neither option is available.
 func (c *ServerConfig) GetEventReceiverURL() string {
 	if c.EventReceiverURL != "" {
@@ -481,7 +482,11 @@ func (c *ServerConfig) GetEventReceiverURL() string {
 	if c.Host == "" || c.Port == 0 {
 		return ""
 	}
-	return fmt.Sprintf("http://%s:%d", c.Host, c.Port)
+	host := c.Host
+	if host == "0.0.0.0" {
+		host = "127.0.0.1"
+	}
+	return fmt.Sprintf("http://%s:%d", host, c.Port)
 }
 
 // GetServerURL returns the server base URL for API calls.

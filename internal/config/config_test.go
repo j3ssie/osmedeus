@@ -100,12 +100,12 @@ func TestServerConfig_GetEventReceiverURL(t *testing.T) {
 			want: "http://localhost:8002",
 		},
 		{
-			name: "0.0.0.0 NOT converted (uses raw host)",
+			name: "0.0.0.0 converted to 127.0.0.1",
 			config: ServerConfig{
 				Host: "0.0.0.0",
 				Port: 8002,
 			},
-			want: "http://0.0.0.0:8002",
+			want: "http://127.0.0.1:8002",
 		},
 	}
 

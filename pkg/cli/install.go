@@ -1658,13 +1658,16 @@ func splitIntoRows(names []string, perRow int) [][]string {
 // renderMultiRowDisplay renders rows of binaries with spinners
 // Each row gets its own spinner if any binary in that row is pending
 func renderMultiRowDisplay(rows [][]string, status map[string]string, spinnerFrames []string,
-	spinnerIdx int, mu *sync.Mutex, showSpinner bool) {
-	// Move cursor up to beginning of display area
-	lineCount := len(rows)
-	fmt.Printf("\033[%dA\r", lineCount)
-
+	spinnerIdx int, mu *sync.Mutex, showSpinner bool, isFirstRender *bool) {
 	mu.Lock()
 	defer mu.Unlock()
+
+	// Only move cursor up if not the first render (avoids race condition with initial output)
+	lineCount := len(rows)
+	if !*isFirstRender {
+		fmt.Printf("\033[%dA\r", lineCount)
+	}
+	*isFirstRender = false
 
 	for _, row := range rows {
 		fmt.Print("\033[K") // Clear line
@@ -1720,24 +1723,37 @@ func installBinariesParallel(names []string, registry installer.BinaryRegistry,
 
 	// Spinner configuration
 	spinnerFrames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+
+	// Pre-check which binaries are already installed
+	var toInstall []string
+	for _, name := range names {
+		if installer.IsBinaryInPath(name) {
+			status[name] = "installed"
+		} else {
+			toInstall = append(toInstall, name)
+		}
+	}
+
+	// If all binaries are already installed, just show final state and return
+	if len(toInstall) == 0 {
+		if !silent {
+			isFirst := true
+			renderMultiRowDisplay(rows, status, spinnerFrames, 0, &statusMu, false, &isFirst)
+		}
+		return nil
+	}
 	spinnerIdx := 0
 	spinnerDone := make(chan struct{})
 
-	// Print initial rows (skip in silent mode)
+	// Start spinner display (skip in silent mode)
 	if !silent {
-		for _, row := range rows {
-			fmt.Printf("  %s %s ", terminal.Cyan(spinnerFrames[0]), terminal.SymbolBullet)
-			for i, name := range row {
-				if i > 0 {
-					fmt.Print(" ")
-				}
-				fmt.Print(terminal.Gray(name))
-			}
-			fmt.Println()
-		}
+		isFirstRender := true
 
 		// Start spinner goroutine (only in non-silent mode)
 		go func() {
+			// Do immediate first render to avoid race condition
+			renderMultiRowDisplay(rows, status, spinnerFrames, spinnerIdx, &statusMu, true, &isFirstRender)
+
 			ticker := time.NewTicker(80 * time.Millisecond)
 			defer ticker.Stop()
 			for {
@@ -1746,14 +1762,14 @@ func installBinariesParallel(names []string, registry installer.BinaryRegistry,
 					return
 				case <-ticker.C:
 					spinnerIdx = (spinnerIdx + 1) % len(spinnerFrames)
-					renderMultiRowDisplay(rows, status, spinnerFrames, spinnerIdx, &statusMu, true)
+					renderMultiRowDisplay(rows, status, spinnerFrames, spinnerIdx, &statusMu, true, &isFirstRender)
 				}
 			}
 		}()
 	}
 
 	// Create work channel and results
-	workCh := make(chan string, len(names))
+	workCh := make(chan string, len(toInstall))
 	var wg sync.WaitGroup
 	var failedMu sync.Mutex
 
@@ -1781,8 +1797,8 @@ func installBinariesParallel(names []string, registry installer.BinaryRegistry,
 		}()
 	}
 
-	// Send work
-	for _, name := range names {
+	// Send work (only binaries that need installation)
+	for _, name := range toInstall {
 		workCh <- name
 	}
 	close(workCh)
@@ -1794,7 +1810,8 @@ func installBinariesParallel(names []string, registry installer.BinaryRegistry,
 	if !silent {
 		time.Sleep(100 * time.Millisecond)
 		// Final render without spinners
-		renderMultiRowDisplay(rows, status, spinnerFrames, 0, &statusMu, false)
+		isFirstFinal := false
+		renderMultiRowDisplay(rows, status, spinnerFrames, 0, &statusMu, false, &isFirstFinal)
 	}
 
 	return failed

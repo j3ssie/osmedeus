@@ -562,8 +562,14 @@ func (s *Server) PrintStartupInfo(addr string) {
 		terminal.Red("<3"),
 		terminal.Yellow(core.AUTHOR))
 
-	// Starting server
-	p.Info("Starting Osmedeus server %s", terminal.Cyan("http://"+addr))
+	// Starting server - show both addresses when binding to 0.0.0.0
+	if port, found := strings.CutPrefix(addr, "0.0.0.0:"); found {
+		p.Info("Starting Osmedeus server %s and %s",
+			terminal.Cyan("http://"+addr),
+			terminal.Cyan("http://localhost:"+port))
+	} else {
+		p.Info("Starting Osmedeus server %s", terminal.Cyan("http://"+addr))
+	}
 
 	// Database info
 	p.Info("Database initialized %s", terminal.Cyan(s.config.Database.DBEngine))
