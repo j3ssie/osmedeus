@@ -92,16 +92,18 @@ type BinaryStatusEntry struct {
 	MultiCommandsDarwin []string          `json:"multi-commands-darwin,omitempty"`
 	Installed           bool              `json:"installed"`
 	Path                string            `json:"path,omitempty"`
+	Optional            bool              `json:"optional"`
 }
 
 // InstallRequest represents an installation request
 type InstallRequest struct {
-	Type         string   `json:"type"`                    // "binary" or "workflow"
-	Names        []string `json:"names,omitempty"`         // Binary names to install (for type=binary)
-	Source       string   `json:"source,omitempty"`        // Git URL, zip URL, or file path (for type=workflow)
-	RegistryURL  string   `json:"registry_url,omitempty"`  // Custom registry URL (optional, for type=binary)
-	InstallAll   bool     `json:"install_all,omitempty"`   // Install all binaries from registry (for type=binary)
-	RegistryMode string   `json:"registry_mode,omitempty"` // "direct-fetch" or "nix-build" (default: direct-fetch)
+	Type            string   `json:"type"`                       // "binary" or "workflow"
+	Names           []string `json:"names,omitempty"`            // Binary names to install (for type=binary)
+	Source          string   `json:"source,omitempty"`           // Git URL, zip URL, or file path (for type=workflow)
+	RegistryURL     string   `json:"registry_url,omitempty"`     // Custom registry URL (optional, for type=binary)
+	InstallAll      bool     `json:"install_all,omitempty"`      // Install all binaries from registry (for type=binary)
+	InstallOptional bool     `json:"install_optional,omitempty"` // Include optional binaries (only with install_all)
+	RegistryMode    string   `json:"registry_mode,omitempty"`    // "direct-fetch" or "nix-build" (default: direct-fetch)
 }
 
 // FunctionEvalRequest represents a function evaluation request

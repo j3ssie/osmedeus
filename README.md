@@ -26,15 +26,17 @@ Built for both beginners and experts, it delivers powerful, composable automatio
 - **Two Workflow Types** - Modules for single execution units, Flows for multi-module orchestration
 - **Multiple Runners** - Execute on local host, Docker containers, or remote machines via SSH
 - **Distributed Execution** - Scale with Redis-based master-worker pattern for parallel scanning
-- **Event-Driven Triggers** - Cron scheduling, file watching, and event-based workflow triggers with deduplication
+- **Event-Driven Triggers** - Cron scheduling, file watching, and event-based workflow triggers with deduplication and filter functions
 - **Decision Routing** - Conditional workflow branching with switch/case syntax
 - **Template Engine** - Powerful variable interpolation with built-in and custom variables
 - **Utility Functions** - Rich function library with event generation, bulk processing, and JSON operations
-- **REST API Server** - Manage and trigger workflows programmatically
+- **REST API Server** - Manage, trigger, and cancel workflows programmatically
+- **Run Cancellation** - Cancel running workflows via API with process termination
 - **Database Support** - SQLite (default) and PostgreSQL for asset tracking
 - **Notifications** - Telegram bot and webhook integrations
 - **Cloud Storage** - S3-compatible storage for artifact management
 - **LLM Integration** - AI-powered workflow steps with chat completions and embeddings
+- **Platform Detection** - Built-in variables for Docker, Kubernetes, and cloud provider detection
 
 See [Documentation Page](https://docs.osmedeus.org/) for more details.
 
@@ -77,7 +79,10 @@ osmedeus db list --table event_logs --search "nuclei"
 
 # Evaluate utility functions
 osmedeus func eval 'log_info("hello")'
-osmedeus func eval -e 'httpGet("https://example.com")' -T targets.txt -c 10
+osmedeus func eval -e 'http_get("https://example.com")' -T targets.txt -c 10
+
+# Platform variables available in eval
+osmedeus func eval 'log_info("OS: " + PlatformOS + ", Arch: " + PlatformArch)'
 
 # Show all usage examples
 osmedeus --usage-example
@@ -96,80 +101,28 @@ docker run --rm -v $(pwd)/output:/root/workspaces-osmedeus \
 
 For more CLI usage and example commands, refer to the [CLI Reference](https://docs.osmedeus.org/getting-started/cli).
 
+## High-Level Architecture
 
-## Core Components
-
-### Trigger
-
-| Type | Description | Use Case |
-|------|-------------|----------|
-| **Cron** | Schedule workflows at specific times | Regular scans |
-| **File Watch** | Trigger workflows when files change | Continuous monitoring |
-| **Event** | Trigger workflows based on external events | Integration with other tools |
-| **Webhook** | Trigger workflows based on HTTP requests | External system integration |
-| **Manual** | Trigger workflows manually via CLI or API | One-time tasks |
-
-### Workflows
-
-| Type | Description | Use Case |
-|------|-------------|----------|
-| **Module** | Single execution unit with sequential/parallel steps | Individual scanning tasks |
-| **Flow** | Orchestrates multiple modules with dependencies | Complete reconnaissance pipelines |
-
-### Runners
-
-| Runner | Description |
-|--------|-------------|
-| **Host** | Local machine execution (default) |
-| **Docker** | Container-based execution |
-| **SSH** | Remote machine execution |
-
-### Step Types
-
-| Type | Description |
-|------|-------------|
-| `bash` | Execute shell commands |
-| `function` | Call utility functions |
-| `foreach` | Iterate over file contents |
-| `parallel-steps` | Run multiple steps concurrently |
-| `remote-bash` | Per-step Docker/SSH execution |
-| `http` | Make HTTP requests |
-| `llm` | AI-powered processing |
-
-### Workflow Example
-
-```yaml
-kind: module
-name: demo-bash
-description: Demo bash steps with functions and exports
-
-params:
-  - name: target
-    required: true
-
-steps:
-  - name: setup
-    type: bash
-    command: mkdir -p {{Output}}/demo && echo "{{Target}}" > {{Output}}/demo/target.txt
-    exports:
-      target_file: "{{Output}}/demo/target.txt"
-
-  - name: run-parallel
-    type: bash
-    parallel_commands:
-      - 'echo "Thread 1: {{Target}}" >> {{Output}}/demo/results.txt'
-      - 'echo "Thread 2: {{Target}}" >> {{Output}}/demo/results.txt'
-
-  - name: check-result
-    type: function
-    function: 'fileLength("{{Output}}/demo/results.txt")'
-    exports:
-      line_count: "output"
-
-  - name: summary
-    type: bash
-    command: 'echo "Processed {{Target}} with {{line_count}} lines"'
-
+```plaintext
+┌───────────────────────────────────────────────────────────────────────────┐
+│                        OSMEDEUS WORKFLOW ENGINE                           │
+├───────────────────────────────────────────────────────────────────────────┤
+│  ENTRY POINTS                                                             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────────┐                │
+│  │   CLI    │  │ REST API │  │Scheduler │  │ Distributed │                │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └─────┬───────┘                │
+│       └─────────────┴─────────────┴──────────────┘                        │
+│                              │                                            │
+│                              ▼                                            │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ CONFIG ──▶ PARSER ──▶ EXECUTOR ──▶ STEP DISPATCHER ──▶ RUNNER       │  │
+│  │                          │                                          │  │
+│  │  Step Executors: bash | function | parallel | foreach | remote-bash │  │
+│  │                  http | llm                                         │  │
+│  │                          │                                          │  │
+│  │  Runners: HostRunner | DockerRunner | SSHRunner                     │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────────────────────────┘
 ```
 
 For writing your first workflow, refer to the [Workflow Overview](https://docs.osmedeus.org/workflows/overview).

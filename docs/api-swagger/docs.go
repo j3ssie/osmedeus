@@ -3674,6 +3674,10 @@ const docTemplate = `{
                     "description": "Install all binaries from registry (for type=binary)",
                     "type": "boolean"
                 },
+                "install_optional": {
+                    "description": "Include optional binaries (only with install_all)",
+                    "type": "boolean"
+                },
                 "names": {
                     "description": "Binary names to install (for type=binary)",
                     "type": "array",

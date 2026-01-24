@@ -668,7 +668,7 @@
       "system",
       "core"
     ],
-    "valide-command": "sort -h",
+    "valide-command": "sort --help",
     "multi-commands-linux": [
       "<auto_detect_package_manager> install coreutils"
     ],

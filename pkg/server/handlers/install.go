@@ -65,6 +65,7 @@ func getDirectFetchRegistry(c *fiber.Ctx) error {
 			MultiCommandsDarwin: entry.MultiCommandsDarwin,
 			Installed:           installer.IsBinaryInstalled(name, &entry),
 			Path:                path,
+			Optional:            containsOptionalTag(entry.Tags),
 		}
 	}
 
@@ -201,16 +202,14 @@ func installBinaries(c *fiber.Ctx, cfg *config.Config, inst *installer.Installer
 	case "direct-fetch":
 		fallthrough
 	default:
-		return installBinariesDirectFetch(c, inst, req)
+		return installBinariesDirectFetch(c, cfg, inst, req)
 	}
 }
 
 // installBinariesDirectFetch handles binary installation via direct download
-func installBinariesDirectFetch(c *fiber.Ctx, inst *installer.Installer, req InstallRequest) error {
+func installBinariesDirectFetch(c *fiber.Ctx, cfg *config.Config, inst *installer.Installer, req InstallRequest) error {
+	// Note: Empty registryURL is intentional - LoadRegistry uses embedded registry when empty
 	registryURL := req.RegistryURL
-	if registryURL == "" {
-		registryURL = installer.DefaultRegistryURL
-	}
 
 	// Load registry first
 	registry, err := installer.LoadRegistry(registryURL, nil)
@@ -221,13 +220,23 @@ func installBinariesDirectFetch(c *fiber.Ctx, inst *installer.Installer, req Ins
 		})
 	}
 
+	// Determine binaries folder with fallback (match CLI behavior)
+	binariesFolder := cfg.BinariesPath
+	if binariesFolder == "" {
+		binariesFolder = filepath.Join(cfg.BaseFolder, "binaries")
+	}
+
 	var installed []string
 	var failed []map[string]string
 
 	if req.InstallAll {
-		// Install all binaries from registry
-		for name := range registry {
-			if err := installer.InstallBinary(name, registry, inst.BinariesFolder, nil); err != nil {
+		// Install all binaries from registry (skip optional unless install_optional is true)
+		for name, entry := range registry {
+			// Skip optional binaries unless explicitly requested
+			if !req.InstallOptional && containsOptionalTag(entry.Tags) {
+				continue
+			}
+			if err := installer.InstallBinary(name, registry, binariesFolder, nil); err != nil {
 				failed = append(failed, map[string]string{
 					"name":  name,
 					"error": err.Error(),
@@ -246,7 +255,7 @@ func installBinariesDirectFetch(c *fiber.Ctx, inst *installer.Installer, req Ins
 		}
 
 		for _, name := range req.Names {
-			if err := installer.InstallBinary(name, registry, inst.BinariesFolder, nil); err != nil {
+			if err := installer.InstallBinary(name, registry, binariesFolder, nil); err != nil {
 				failed = append(failed, map[string]string{
 					"name":  name,
 					"error": err.Error(),
@@ -262,7 +271,7 @@ func installBinariesDirectFetch(c *fiber.Ctx, inst *installer.Installer, req Ins
 		"registry_mode":   "direct-fetch",
 		"installed":       installed,
 		"installed_count": len(installed),
-		"binaries_folder": inst.BinariesFolder,
+		"binaries_folder": binariesFolder,
 	}
 
 	if len(failed) > 0 {
@@ -369,4 +378,14 @@ func installWorkflow(c *fiber.Ctx, inst *installer.Installer, req InstallRequest
 		"source":          req.Source,
 		"workflow_folder": inst.WorkflowFolder,
 	})
+}
+
+// containsOptionalTag checks if tags slice contains "optional"
+func containsOptionalTag(tags []string) bool {
+	for _, tag := range tags {
+		if tag == "optional" {
+			return true
+		}
+	}
+	return false
 }

@@ -33,6 +33,7 @@ osmedeus/
 │   ├── database/           # SQLite/PostgreSQL via Bun ORM
 │   ├── distributed/        # Distributed execution (master/worker)
 │   ├── executor/           # Workflow execution engine
+│   ├── fileio/             # High-performance file I/O (mmap)
 │   ├── functions/          # Utility functions (Goja JS runtime)
 │   ├── heuristics/         # Target type detection
 │   ├── installer/          # Binary installation (direct/Nix)
@@ -356,6 +357,36 @@ Built-in executors registered at startup:
 - `HTTPExecutor` - handles `http` steps
 - `LLMExecutor` - handles `llm` steps
 
+## Run Registry
+
+The run registry tracks active workflow executions for cancellation support:
+
+```go
+// internal/executor/run_registry.go
+
+type RunRegistry struct {
+    mu   sync.RWMutex
+    runs map[string]*ActiveRun
+}
+
+type ActiveRun struct {
+    RunUUID   string
+    Cancel    context.CancelFunc
+    PIDs      *sync.Map  // Currently running process IDs
+    StartedAt time.Time
+}
+
+// Key operations
+func (r *RunRegistry) Register(runUUID string, cancel context.CancelFunc) *ActiveRun
+func (r *RunRegistry) Cancel(runUUID string) ([]int, error)  // Returns killed PIDs
+func (r *RunRegistry) AddPID(runUUID string, pid int)
+func (r *RunRegistry) RemovePID(runUUID string, pid int)
+```
+
+The registry is accessed via `GetRunRegistry()` singleton. When a run is cancelled:
+1. Context is cancelled to stop new operations
+2. All tracked PIDs are killed via SIGKILL (including process groups)
+
 ## Runner System
 
 ### Interface
@@ -524,29 +555,26 @@ Foreach uses `[[variable]]` syntax (double brackets) to avoid conflicts with tem
 
 ## Function Registry
 
-### Otto JavaScript Runtime
+### Goja JavaScript Runtime
 
-Functions are implemented in Go and exposed to an Otto JavaScript VM:
+Functions are implemented in Go and exposed to a Goja JavaScript VM with pooling for performance:
 
 ```go
-// internal/functions/otto_runtime.go
+// internal/functions/goja_runtime.go
 
-type OttoRuntime struct {
-    vm *otto.Otto
+type GojaRuntime struct {
+    pool *GojaPool  // Pool of pre-warmed VMs
 }
 
-func NewOttoRuntime() *OttoRuntime {
-    vm := otto.New()
-    runtime := &OttoRuntime{vm: vm}
-    runtime.registerFunctions()
-    return runtime
+func NewGojaRuntime() *GojaRuntime {
+    pool := NewGojaPool(4)  // Pool size
+    return &GojaRuntime{pool: pool}
 }
 
-func (r *OttoRuntime) registerFunctions() {
-    r.vm.Set("fileExists", r.fileExists)
-    r.vm.Set("fileLength", r.fileLength)
-    r.vm.Set("trim", r.trim)
-    // ... register all functions
+// Pool provides thread-safe VM reuse with compiled program caching
+type GojaPool struct {
+    vms           []*gojaVM
+    compiledProgs sync.Map  // Cached compiled JS programs
 }
 ```
 
@@ -557,18 +585,23 @@ func (r *OttoRuntime) registerFunctions() {
 ```go
 // internal/functions/file_functions.go
 
-func (r *OttoRuntime) myNewFunction(call otto.FunctionCall) otto.Value {
+func (vf *vmFunc) myNewFunction(call goja.FunctionCall) goja.Value {
     arg := call.Argument(0).String()
     // ... implementation
-    result, _ := r.vm.ToValue(output)
-    return result
+    return vf.vm.ToValue(output)
 }
 ```
 
-2. Register in `registerFunctions()`:
+2. Register in `goja_runtime.go`:
 
 ```go
-r.vm.Set("myNewFunction", r.myNewFunction)
+_ = vm.Set("my_new_function", vf.myNewFunction)
+```
+
+3. Add constant in `constants.go`:
+
+```go
+const FnMyNewFunction = "my_new_function"
 ```
 
 ### Output and Control Functions
@@ -693,17 +726,57 @@ func (s *Scheduler) Stop() error    // Stops all and closes watcher
 
 File watching uses fsnotify for instant inotify-based notifications (sub-millisecond latency) instead of polling.
 
+### Event Trigger Input Syntax
+
+Event triggers support two syntaxes for extracting variables from events:
+
+**New exports-style syntax (recommended for multiple variables):**
+```yaml
+triggers:
+  - name: on-new-asset
+    on: event
+    event:
+      topic: assets.new
+      filters:
+        - "event.data_type == 'subdomain'"
+      filter_functions:
+        - "contains(event_data.url, '/api/')"  # Utility functions available
+    input:
+      target: event_data.url
+      description: trim(event_data.desc)
+      source: event.source
+```
+
+**Legacy syntax (single input):**
+```yaml
+input:
+  type: event_data
+  field: url
+  name: target
+```
+
+The `filter_functions` field allows using utility functions (like `contains()`, `starts_with()`, etc.) in filters, while `filters` uses plain JavaScript expressions.
+
+### Event Envelope
+
+The full event context is available in triggered workflows via the `event` object:
+- `event.topic` - Event topic
+- `event.source` - Event source
+- `event.data_type` - Data type
+- `event_data.*` - Event data fields (shorthand for `event.data.*`)
+
 ### Event Filtering
 
-Events are matched using JavaScript expressions:
+Events are matched using JavaScript expressions with Goja runtime:
 
 ```go
 func (s *Scheduler) evaluateFilters(filters []string, event *core.Event) bool {
-    vm := otto.New()
+    vm := goja.New()
     vm.Set("event", eventObj)
+    vm.Set("event_data", event.Data)  // Shorthand access
 
     for _, filter := range filters {
-        result, _ := vm.Run(filter)
+        result, _ := vm.RunString(filter)
         if !result.ToBoolean() {
             return false
         }
@@ -833,6 +906,50 @@ func GetDefaultRules() []LinterRule {
 }
 ```
 
+## Write Coordinator
+
+The write coordinator batches database operations to reduce I/O by ~70%:
+
+```go
+// internal/database/write_coordinator.go
+
+type WriteCoordinator struct {
+    runID          int64
+    stepResults    []*StepResult      // Buffered step results
+    progressDelta  int                // Accumulated progress updates
+    artifacts      []*Artifact        // Buffered artifacts
+    flushThreshold int                // Flush after N step results (default: 10)
+    flushInterval  time.Duration      // Flush every interval (default: 5s)
+}
+
+// Usage
+wc := NewWriteCoordinator(runID, runUUID, nil)  // nil uses defaults
+defer wc.Close()  // Final flush
+
+wc.AddStepResult(stepName, stepType, status, command, output, ...)
+wc.IncrementProgress(1)
+wc.AddArtifact(path, artifactType)
+```
+
+## Platform Detection
+
+Platform detection functions for environment-aware workflows:
+
+```go
+// internal/executor/platform.go
+
+func DetectDocker() bool       // Checks /.dockerenv and /proc/1/cgroup
+func DetectKubernetes() bool   // Checks service account directory
+func DetectCloudProvider() string  // Returns: aws, gcp, azure, or local
+```
+
+These are exposed as template variables:
+- `{{PlatformOS}}` - runtime.GOOS
+- `{{PlatformArch}}` - runtime.GOARCH
+- `{{PlatformInDocker}}` - "true" or "false"
+- `{{PlatformInKubernetes}}` - "true" or "false"
+- `{{PlatformCloudProvider}}` - aws/gcp/azure/local
+
 ## Database Layer
 
 ### Multi-Engine Support
@@ -953,7 +1070,10 @@ type Schedule struct {
     Schedule     string    // Cron expression
     EventTopic   string
     WatchPath    string
-    InputConfig  map[string]string  // JSON params
+    Target       string    // Default target for scheduled runs
+    Workspace    string    // Default workspace
+    Params       map[string]string  // Additional parameters (JSON)
+    InputConfig  map[string]string  // JSON params (deprecated, use Params)
     IsEnabled    bool
     LastRun      time.Time
     NextRun      time.Time
@@ -1002,6 +1122,25 @@ type JSONLImporter struct {
 
 func (i *JSONLImporter) ImportAssets(ctx context.Context, filePath, workspace, source string) (*ImportResult, error)
 ```
+
+### Event Log Management
+
+The `db_reset_event_logs` utility function enables event reprocessing:
+
+```go
+// internal/functions/db_functions.go
+
+// db_reset_event_logs(workspace?, topic_pattern?) -> {reset: int, total: int}
+// Resets processed event logs back to unprocessed state
+
+// Examples:
+db_reset_event_logs()                          // Reset all processed events
+db_reset_event_logs("example.com")             // Reset events for workspace
+db_reset_event_logs("", "db.*")                // Reset events matching topic pattern (glob)
+db_reset_event_logs("example.com", "assets.*") // Both filters
+```
+
+Topic patterns use glob syntax (`*` matches any characters, `?` matches single character).
 
 ## Testing
 
