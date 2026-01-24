@@ -10,10 +10,6 @@ triggers:
       topic: "stage1.complete"
       filters:
         - "event.source == 'chain-stage1'"
-    input:
-      type: event_data
-      field: "value"
-      name: target
     enabled: true
 
 params:

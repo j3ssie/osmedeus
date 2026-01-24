@@ -40,6 +40,7 @@ type Options struct {
 	Debug               bool                // Enable debug mode (log request bodies, detailed errors)
 	HotReload           bool                // Enable config hot reload (watches osm-settings.yaml for changes)
 	EnableEventReceiver bool                // Enable event receiver for event-triggered workflows (default: true)
+	EnableScheduler     bool                // Enable scheduler for cron, watch, and event triggers (default: true)
 }
 
 // cachedServerInfo holds server info read once at startup to avoid reading config on every request
@@ -191,7 +192,8 @@ func New(cfg *config.Config, opts *Options) (*Server, error) {
 	}
 
 	// Initialize event receiver if enabled (default: true when not explicitly disabled)
-	if opts.EnableEventReceiver {
+	// Event receiver requires scheduler to be enabled (it contains the scheduler)
+	if opts.EnableEventReceiver && opts.EnableScheduler {
 		er, err := NewEventReceiver(cfg)
 		if err != nil {
 			oslogger.Get().Warn("Failed to initialize event receiver", zap.Error(err))
@@ -267,6 +269,8 @@ func (s *Server) setupRoutes() {
 	api.Get("/runs", handlers.ListRuns(s.config))
 	api.Get("/runs/:id", handlers.GetRun(s.config))
 	api.Delete("/runs/:id", handlers.CancelRun(s.config))
+	api.Post("/runs/:id/duplicate", handlers.DuplicateRun(s.config))
+	api.Post("/runs/:id/start", handlers.StartRun(s.config))
 	api.Get("/runs/:id/steps", handlers.GetRunSteps)
 	api.Get("/runs/:id/artifacts", handlers.GetRunArtifacts)
 
@@ -330,6 +334,10 @@ func (s *Server) setupRoutes() {
 
 	// Event logs
 	api.Get("/event-logs", handlers.ListEventLogs(s.config))
+
+	// Database management
+	api.Get("/database/tables", handlers.ListDatabaseTables(s.config))
+	api.Post("/database/tables/:table/clear", handlers.ClearDatabaseTable(s.config))
 
 	// Functions
 	api.Post("/functions/eval", handlers.FunctionEval(s.config))
@@ -497,8 +505,17 @@ func errorHandler(c *fiber.Ctx, err error) error {
 	// Custom handling for 403 Forbidden
 	if code == fiber.StatusForbidden {
 		path := c.Path()
-		// Redirect to root for login and schedules routes
-		if path == "/login" || strings.HasPrefix(path, "/schedules") || strings.HasPrefix(path, "/inventory") {
+		// Redirect to root for UI routes that return 403
+		if path == "/login" ||
+			strings.HasPrefix(path, "/events") ||
+			strings.HasPrefix(path, "/inventory") ||
+			strings.HasPrefix(path, "/llm") ||
+			strings.HasPrefix(path, "/registry") ||
+			strings.HasPrefix(path, "/scans") ||
+			strings.HasPrefix(path, "/schedules") ||
+			strings.HasPrefix(path, "/utilities") ||
+			strings.HasPrefix(path, "/vuln") ||
+			strings.HasPrefix(path, "/workflow") {
 			return c.Redirect("/", fiber.StatusFound)
 		}
 		return c.Status(code).JSON(fiber.Map{
@@ -593,8 +610,11 @@ func (s *Server) PrintStartupInfo(addr string) {
 			p.Info("Event receiver initialized %s", terminal.Gray("(no event triggers)"))
 			p.Info("Scheduler started")
 		}
+	} else if !s.options.EnableScheduler {
+		// Scheduler explicitly disabled
+		p.Info("Scheduler %s", terminal.Gray("(disabled)"))
 	} else {
-		// No event receiver, but still show scheduler status
+		// Event receiver disabled but scheduler not explicitly disabled
 		p.Info("Scheduler started")
 	}
 

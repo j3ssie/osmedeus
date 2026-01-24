@@ -471,6 +471,7 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 // @Param status query string false "Filter by status (pending, running, completed, failed, cancelled)"
 // @Param workflow query string false "Filter by workflow name"
 // @Param target query string false "Filter by target (partial match)"
+// @Param workspace query string false "Filter by workspace name (exact match)"
 // @Success 200 {object} map[string]interface{} "List of runs"
 // @Security BearerAuth
 // @Router /osm/api/runs [get]
@@ -481,6 +482,7 @@ func ListRuns(cfg *config.Config) fiber.Handler {
 		status := c.Query("status")
 		workflow := c.Query("workflow")
 		target := c.Query("target")
+		workspace := c.Query("workspace")
 
 		if offset < 0 {
 			offset = 0
@@ -493,7 +495,7 @@ func ListRuns(cfg *config.Config) fiber.Handler {
 		}
 
 		ctx := context.Background()
-		result, err := database.ListRuns(ctx, offset, limit, status, workflow, target)
+		result, err := database.ListRuns(ctx, offset, limit, status, workflow, target, workspace)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error":   true,
@@ -644,4 +646,170 @@ func DownloadArtifact(c *fiber.Ctx) error {
 		"error":   true,
 		"message": "Artifact not found",
 	})
+}
+
+// convertParamsToStringMap converts map[string]interface{} to map[string]string
+func convertParamsToStringMap(params map[string]interface{}) map[string]string {
+	result := make(map[string]string)
+	for k, v := range params {
+		if s, ok := v.(string); ok {
+			result[k] = s
+		} else {
+			result[k] = fmt.Sprintf("%v", v)
+		}
+	}
+	return result
+}
+
+// DuplicateRun duplicates an existing run with pending status
+// @Summary Duplicate a run
+// @Description Create a copy of an existing run with pending status. The duplicate will have the same workflow, target, and parameters but a new UUID.
+// @Tags Runs
+// @Produce json
+// @Param id path string true "Run ID or RunUUID"
+// @Success 201 {object} map[string]interface{} "Run duplicated"
+// @Failure 404 {object} map[string]interface{} "Run not found"
+// @Security BearerAuth
+// @Router /osm/api/runs/{id}/duplicate [post]
+func DuplicateRun(cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		ctx := context.Background()
+
+		// Get original run
+		original, err := database.GetRunByID(ctx, id, false, false)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error":   true,
+				"message": "Run not found",
+			})
+		}
+
+		// Create duplicate with new UUID and pending status
+		newRun := &database.Run{
+			RunUUID:      uuid.New().String(),
+			WorkflowName: original.WorkflowName,
+			WorkflowKind: original.WorkflowKind,
+			Target:       original.Target,
+			Params:       original.Params,
+			Workspace:    original.Workspace,
+			Status:       "pending",
+			TriggerType:  "api",
+			TotalSteps:   original.TotalSteps,
+			// Reset timing/progress fields (StartedAt, CompletedAt, CompletedSteps are zero values)
+		}
+
+		if err := database.CreateRun(ctx, newRun); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   true,
+				"message": "Failed to create duplicate run",
+			})
+		}
+
+		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+			"message":           "Run duplicated",
+			"original_run_uuid": original.RunUUID,
+			"run_uuid":          newRun.RunUUID,
+			"workflow":          newRun.WorkflowName,
+			"target":            newRun.Target,
+			"status":            newRun.Status,
+		})
+	}
+}
+
+// StartRun starts a pending run (triggers workflow execution)
+// @Summary Start a pending run
+// @Description Start a run that is in pending status. This triggers the workflow execution.
+// @Tags Runs
+// @Produce json
+// @Param id path string true "Run ID or RunUUID"
+// @Success 202 {object} map[string]interface{} "Run started"
+// @Failure 400 {object} map[string]interface{} "Run cannot be started (not in pending status)"
+// @Failure 404 {object} map[string]interface{} "Run or workflow not found"
+// @Security BearerAuth
+// @Router /osm/api/runs/{id}/start [post]
+func StartRun(cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		ctx := context.Background()
+
+		// Get run record
+		run, err := database.GetRunByID(ctx, id, false, false)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error":   true,
+				"message": "Run not found",
+			})
+		}
+
+		// Verify status is pending
+		if run.Status != "pending" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":   true,
+				"message": fmt.Sprintf("Cannot start run with status '%s'. Only runs with 'pending' status can be started.", run.Status),
+			})
+		}
+
+		// Load workflow
+		loader := parser.NewLoader(cfg.WorkflowsPath)
+		workflow, err := loader.LoadWorkflow(run.WorkflowName)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error":   true,
+				"message": fmt.Sprintf("Workflow '%s' not found", run.WorkflowName),
+			})
+		}
+
+		// Update status to running and set start time
+		now := time.Now()
+		if err := database.UpdateRunStatus(ctx, run.RunUUID, "running", ""); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   true,
+				"message": "Failed to update run status",
+			})
+		}
+
+		// Convert params and execute in goroutine
+		params := convertParamsToStringMap(run.Params)
+		params["target"] = run.Target
+
+		cfgCopy := config.Get()
+		isFlow := run.WorkflowKind == string(core.KindFlow)
+
+		go func(runUUID string, runID int64, startTime time.Time) {
+			execCtx := context.Background()
+
+			// Create executor
+			exec := executor.NewExecutor()
+			exec.SetServerMode(true)
+			exec.SetDBRunUUID(runUUID)
+			exec.SetDBRunID(runID)
+			exec.SetOnStepCompleted(func(stepCtx context.Context, dbRunUUID string) {
+				_ = database.IncrementRunCompletedSteps(stepCtx, dbRunUUID)
+			})
+
+			var execErr error
+			if isFlow && workflow.IsFlow() {
+				_, execErr = exec.ExecuteFlow(execCtx, workflow, params, cfgCopy)
+			} else {
+				_, execErr = exec.ExecuteModule(execCtx, workflow, params, cfgCopy)
+			}
+
+			// Update final status
+			if execErr != nil {
+				_ = database.UpdateRunStatus(execCtx, runUUID, "failed", execErr.Error())
+			} else {
+				_ = database.UpdateRunStatus(execCtx, runUUID, "completed", "")
+			}
+		}(run.RunUUID, run.ID, now)
+
+		return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+			"message":  "Run started",
+			"run_uuid": run.RunUUID,
+			"workflow": run.WorkflowName,
+			"kind":     run.WorkflowKind,
+			"target":   run.Target,
+			"status":   "running",
+		})
+	}
 }

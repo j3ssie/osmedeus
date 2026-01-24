@@ -43,21 +43,17 @@ Emit one event per line from a file. Returns the count of events emitted.
 
 ### Basic Event Trigger
 ```yaml
-trigger:
+triggers:
   - name: on-new-asset
     on: event
     event:
       topic: "discovery.asset"
-    input:
-      type: event_data
-      field: "value"
-      name: target
     enabled: true
 ```
 
 ### Filtered Event Trigger
 ```yaml
-trigger:
+triggers:
   - name: on-high-severity
     on: event
     event:
@@ -65,26 +61,18 @@ trigger:
       filters:
         - "event.data.severity == 'high'"
         - "event.data.confirmed == true"
-    input:
-      type: function
-      function: 'jq("{{event.data}}", ".url")'
-      name: target
     enabled: true
 ```
 
 ### Deduplicated Event Trigger
 ```yaml
-trigger:
+triggers:
   - name: on-url-dedupe
     on: event
     event:
       topic: "crawler.url"
       dedupe_key: "{{event.data.url}}"
       dedupe_window: "5m"
-    input:
-      type: event_data
-      field: "value"
-      name: target
     enabled: true
 ```
 

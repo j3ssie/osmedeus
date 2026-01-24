@@ -15,6 +15,7 @@ import (
 	oslogger "github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
 	"github.com/j3ssie/osmedeus/v5/internal/scheduler"
+	"github.com/j3ssie/osmedeus/v5/internal/terminal"
 	"github.com/j3ssie/osmedeus/v5/pkg/server/handlers"
 	"go.uber.org/zap"
 )
@@ -193,6 +194,12 @@ func (er *EventReceiver) handleEventTriggerWithEnvelope(workflow *core.Workflow,
 		)
 	}
 
+	// Print resolved variables to console
+	if len(resolvedVars) > 0 {
+		printer := terminal.NewPrinter()
+		printer.EventTriggerInfo(trigger.Name, workflow.Name, resolvedVars)
+	}
+
 	// Execute workflow in goroutine to not block the scheduler
 	go func() {
 		// Build params from trigger input
@@ -234,6 +241,13 @@ func (er *EventReceiver) handleEventTriggerWithEnvelope(workflow *core.Workflow,
 		if resolvedVars != nil {
 			for name, value := range resolvedVars {
 				params[name] = value
+			}
+			// Normalize "Target" (capital T) to "target" (lowercase) for builtin variable derivation
+			// This allows event input `Target: event_data.url` to behave like CLI `-t` flag
+			if targetVal, hasTarget := resolvedVars["Target"]; hasTarget && targetVal != "" {
+				if _, hasLowercase := params["target"]; !hasLowercase {
+					params["target"] = targetVal
+				}
 			}
 		} else {
 			// Legacy syntax: set the input parameter using the trigger's input.name field

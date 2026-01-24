@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -144,6 +146,7 @@ func (i *JSONLImporter) insertAssetBatch(ctx context.Context, assets []*Asset) (
 		Set("lines = EXCLUDED.lines").
 		Set("remarks = EXCLUDED.remarks").
 		Set("raw_data = EXCLUDED.raw_data").
+		Set("asset_type = EXCLUDED.asset_type").
 		Set("updated_at = EXCLUDED.updated_at").
 		Exec(ctx)
 
@@ -238,6 +241,9 @@ func ParseAssetLine(line []byte, defaultWorkspace, source string) (*Asset, error
 	if v, ok := raw["remarks"].(string); ok {
 		asset.Labels = v
 	}
+	if v, ok := raw["asset_type"].(string); ok {
+		asset.AssetType = v
+	}
 
 	// Validate required fields
 	if asset.AssetValue == "" {
@@ -245,6 +251,11 @@ func ParseAssetLine(line []byte, defaultWorkspace, source string) (*Asset, error
 	}
 	if asset.Workspace == "" {
 		return nil, fmt.Errorf("workspace is required")
+	}
+
+	// Auto-classify asset type if not provided
+	if asset.AssetType == "" {
+		asset.AssetType = ClassifyAssetType(asset.AssetValue)
 	}
 
 	return asset, nil
@@ -345,4 +356,33 @@ func truncateString(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen] + "..."
+}
+
+// ClassifyAssetType determines the asset type from the asset value
+// Returns: "domain", "url", "ip", "repo_name", or "unknown"
+func ClassifyAssetType(assetValue string) string {
+	// Check for URL (starts with http:// or https://)
+	if strings.HasPrefix(assetValue, "http://") || strings.HasPrefix(assetValue, "https://") {
+		return "url"
+	}
+
+	// Check for IP address (IPv4 or IPv6)
+	if net.ParseIP(assetValue) != nil {
+		return "ip"
+	}
+
+	// Check for repo_name pattern (org/repo or user/repo)
+	if strings.Count(assetValue, "/") == 1 && !strings.Contains(assetValue, ".") {
+		parts := strings.Split(assetValue, "/")
+		if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
+			return "repo_name"
+		}
+	}
+
+	// Check for domain (contains dot, no spaces, alphanumeric with hyphens)
+	if strings.Contains(assetValue, ".") && !strings.Contains(assetValue, " ") {
+		return "domain"
+	}
+
+	return "unknown"
 }

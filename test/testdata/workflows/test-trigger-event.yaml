@@ -10,10 +10,6 @@ triggers:
       topic: "assets.new"
       filters:
         - "event.source == 'test'"
-    input:
-      type: event_data
-      field: "url"
-      name: target
     enabled: true
 
     

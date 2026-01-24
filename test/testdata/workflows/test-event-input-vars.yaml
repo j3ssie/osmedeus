@@ -21,10 +21,8 @@ triggers:
     event:
       topic: "test.asset.legacy"
     input:
-      # Legacy syntax (for backward compatibility)
-      type: event_data
-      field: url
-      name: target
+      # New exports-style syntax
+      target: event_data.url
     enabled: true
 
 steps:

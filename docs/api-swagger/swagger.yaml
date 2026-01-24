@@ -138,6 +138,12 @@ definitions:
       total:
         type: integer
     type: object
+  handlers.ClearTableRequest:
+    properties:
+      force:
+        description: Must be true to confirm the destructive operation
+        type: boolean
+    type: object
   handlers.CreateRunRequest:
     properties:
       concurrency:
@@ -744,6 +750,69 @@ paths:
       summary: List asset diff snapshots
       tags:
       - Assets
+  /osm/api/database/tables:
+    get:
+      description: Get list of all database tables with row counts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of tables with counts
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List database tables
+      tags:
+      - Database
+  /osm/api/database/tables/{table}/clear:
+    post:
+      consumes:
+      - application/json
+      description: Delete all records from a specific database table (destructive
+        operation)
+      parameters:
+      - description: Table name (runs, step_results, event_logs, artifacts, assets,
+          schedules, workspaces, vulnerabilities, asset_diffs, vuln_diffs)
+        in: path
+        name: table
+        required: true
+        type: string
+      - description: Confirmation with force=true required
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ClearTableRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Table cleared successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or missing force confirmation
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to clear table
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Clear database table
+      tags:
+      - Database
   /osm/api/event-logs:
     get:
       description: Get a paginated list of event logs with optional filtering
@@ -1142,6 +1211,10 @@ paths:
         in: query
         name: target
         type: string
+      - description: Filter by workspace name (exact match)
+        in: query
+        name: workspace
+        type: string
       produces:
       - application/json
       responses:
@@ -1194,7 +1267,8 @@ paths:
       - Runs
   /osm/api/runs/{id}:
     delete:
-      description: Cancel a running workflow execution
+      description: Cancel a running workflow execution. This will terminate all running
+        processes associated with the run.
       parameters:
       - description: Run ID or RunID
         in: path
@@ -1258,6 +1332,67 @@ paths:
       security:
       - BearerAuth: []
       summary: Get run details
+      tags:
+      - Runs
+  /osm/api/runs/{id}/duplicate:
+    post:
+      description: Create a copy of an existing run with pending status. The duplicate
+        will have the same workflow, target, and parameters but a new UUID.
+      parameters:
+      - description: Run ID or RunUUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Run duplicated
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Run not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Duplicate a run
+      tags:
+      - Runs
+  /osm/api/runs/{id}/start:
+    post:
+      description: Start a run that is in pending status. This triggers the workflow
+        execution.
+      parameters:
+      - description: Run ID or RunUUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Run started
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Run cannot be started (not in pending status)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Run or workflow not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Start a pending run
       tags:
       - Runs
   /osm/api/schedules:
@@ -1742,10 +1877,10 @@ paths:
         in: query
         name: step_type
         type: string
-      - description: Filter by run ID
+      - description: Filter by run UUID
         in: query
-        name: run_id
-        type: integer
+        name: run_uuid
+        type: string
       - default: 0
         description: Number of records to skip
         in: query

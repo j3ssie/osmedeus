@@ -14,10 +14,6 @@ triggers:
       filters:
         - "event.data.severity == 'high' || event.data.severity == 'critical'"
         - "event.data.confirmed == true"
-    input:
-      type: function
-      function: 'jq("{{event.data}}", ".url")'
-      name: target
     enabled: true
 
   # Trigger on completed scans with results
@@ -27,10 +23,6 @@ triggers:
       topic: "scan.complete"
       filters:
         - "event.data.finding_count > 0"
-    input:
-      type: event_data
-      field: "data.target"
-      name: target
     enabled: true
 
 params:

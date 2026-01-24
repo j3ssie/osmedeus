@@ -7,12 +7,6 @@ triggers:
     on: event
     event:
       topic: "test.envelope"
-    # input:
-      # target: event_data.value
-    input:
-      type: event_data
-      field: "value"
-      name: target
     enabled: true
 
 params:

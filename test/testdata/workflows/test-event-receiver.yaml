@@ -11,10 +11,6 @@ triggers:
       filters:
         - "event.source == 'test-emitter'"
         - "event.data_type == 'subdomain'"
-    input:
-      type: event_data
-      field: "value"
-      name: target
     enabled: true
 
   - name: on-vulnerability
@@ -24,10 +20,6 @@ triggers:
       filters:
         - "event.source == 'test-scanner'"
         - "event.data.severity == 'high' || event.data.severity == 'critical'"
-    input:
-      type: function
-      function: 'jq("{{event.data}}", ".url")'
-      name: target
     enabled: true
 
 params:

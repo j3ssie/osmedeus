@@ -37,6 +37,54 @@ func (vf *vmFunc) trim(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(strings.TrimSpace(s))
 }
 
+// trimString trims a specific substring from both ends of the input
+// Usage: trim_string(input, substring) -> string
+func (vf *vmFunc) trimString(call goja.FunctionCall) goja.Value {
+	input := call.Argument(0).String()
+	substring := call.Argument(1).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("trim_string"),
+		zap.String("input", input), zap.String("substring", substring))
+
+	if input == "undefined" || substring == "undefined" || substring == "" {
+		return vf.vm.ToValue(input)
+	}
+
+	result := strings.Trim(input, substring)
+	return vf.vm.ToValue(result)
+}
+
+// trimLeft trims a specific substring from the left/start of the input
+// Usage: trim_left(input, substring) -> string
+func (vf *vmFunc) trimLeft(call goja.FunctionCall) goja.Value {
+	input := call.Argument(0).String()
+	substring := call.Argument(1).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("trim_left"),
+		zap.String("input", input), zap.String("substring", substring))
+
+	if input == "undefined" || substring == "undefined" || substring == "" {
+		return vf.vm.ToValue(input)
+	}
+
+	result := strings.TrimLeft(input, substring)
+	return vf.vm.ToValue(result)
+}
+
+// trimRight trims a specific substring from the right/end of the input
+// Usage: trim_right(input, substring) -> string
+func (vf *vmFunc) trimRight(call goja.FunctionCall) goja.Value {
+	input := call.Argument(0).String()
+	substring := call.Argument(1).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("trim_right"),
+		zap.String("input", input), zap.String("substring", substring))
+
+	if input == "undefined" || substring == "undefined" || substring == "" {
+		return vf.vm.ToValue(input)
+	}
+
+	result := strings.TrimRight(input, substring)
+	return vf.vm.ToValue(result)
+}
+
 // split splits a string by delimiter
 func (vf *vmFunc) split(call goja.FunctionCall) goja.Value {
 	s := call.Argument(0).String()
@@ -247,21 +295,21 @@ func (vf *vmFunc) normalizePath(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(normalized)
 }
 
-// normalPath normalizes input to a path-friendly format (same logic as {{TargetSpace}})
+// getTargetSpace normalizes input to a path-friendly format (same logic as {{TargetSpace}})
 // Replaces unsafe characters and truncates long strings with hash
-// Usage: normal_path(input) -> string
-func (vf *vmFunc) normalPath(call goja.FunctionCall) goja.Value {
+// Usage: get_target_space(input) -> string
+func (vf *vmFunc) getTargetSpace(call goja.FunctionCall) goja.Value {
 	input := call.Argument(0).String()
 	log := logger.Get()
 
-	log.Debug("Calling "+terminal.HiGreen("normal_path"), zap.String("input", input))
+	log.Debug("Calling "+terminal.HiGreen("get_target_space"), zap.String("input", input))
 
 	if input == "undefined" || input == "" {
 		return vf.vm.ToValue("")
 	}
 
 	result := sanitizeToPathFriendly(input)
-	log.Debug(terminal.HiGreen("normal_path")+" result", zap.String("result", result))
+	log.Debug(terminal.HiGreen("get_target_space")+" result", zap.String("result", result))
 
 	return vf.vm.ToValue(result)
 }
@@ -534,6 +582,58 @@ func (vf *vmFunc) isNotEmpty(call goja.FunctionCall) goja.Value {
 	isEmpty := vf.isEmpty(call)
 	b := isEmpty.ToBoolean()
 	return vf.vm.ToValue(!b)
+}
+
+// pickValid returns the first valid value from up to 10 arguments
+// Invalid values: undefined, null, empty string, "undefined" string, false, empty array/object
+func (vf *vmFunc) pickValid(call goja.FunctionCall) goja.Value {
+	for i, arg := range call.Arguments {
+		if i >= 10 {
+			break // Max 10 arguments
+		}
+
+		// Skip undefined/null
+		if goja.IsUndefined(arg) || goja.IsNull(arg) {
+			continue
+		}
+
+		// Export to check actual value
+		exported := arg.Export()
+		if exported == nil {
+			continue
+		}
+
+		// Check by type
+		switch v := exported.(type) {
+		case bool:
+			if !v { // false is invalid
+				continue
+			}
+			return arg
+		case string:
+			trimmed := strings.TrimSpace(v)
+			if trimmed == "" || trimmed == "undefined" {
+				continue
+			}
+			return arg
+		case []interface{}:
+			if len(v) == 0 {
+				continue
+			}
+			return arg
+		case map[string]interface{}:
+			if len(v) == 0 {
+				continue
+			}
+			return arg
+		default:
+			// Other types (int, float, etc.) are valid
+			return arg
+		}
+	}
+
+	// No valid value found, return empty string
+	return vf.vm.ToValue("")
 }
 
 // Helper function to convert interface to string

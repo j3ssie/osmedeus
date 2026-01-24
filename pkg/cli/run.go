@@ -1286,7 +1286,7 @@ func printResultSummary(result *core.WorkflowResult) {
 	// Log execution summary to state execution log file
 	logger.Get().Info("Execution Summary",
 		zap.String("workflow", result.WorkflowName),
-		zap.String("run_id", result.RunUUID),
+		zap.String("run_uuid", result.RunUUID),
 		zap.String("target", result.Target),
 		zap.String("status", string(result.Status)),
 		zap.Duration("duration", result.EndTime.Sub(result.StartTime)),

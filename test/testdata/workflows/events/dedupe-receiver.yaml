@@ -15,10 +15,6 @@ triggers:
         - "event.data_type == 'url'"
       dedupe_key: "{{event.data.url}}"
       dedupe_window: "5m"
-    input:
-      type: event_data
-      field: "value"
-      name: target
     enabled: true
 
   # Deduplicate by composite key (source + target)
@@ -28,10 +24,6 @@ triggers:
       topic: "discovery.asset"
       dedupe_key: "{{event.source}}-{{event.data.value}}"
       dedupe_window: "1h"
-    input:
-      type: event_data
-      field: "value"
-      name: target
     enabled: true
 
 params:

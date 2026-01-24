@@ -397,3 +397,22 @@ func (p *Printer) VerboseInfo(msg, source string) {
 		_, _ = fmt.Fprintf(os.Stdout, "  %s\n", Gray(source))
 	}
 }
+
+// EventTriggerInfo prints event trigger metadata with resolved variables
+func (p *Printer) EventTriggerInfo(triggerName, workflowName string, resolvedVars map[string]string) {
+	if IsCIMode() {
+		printJSONL(map[string]interface{}{
+			"type":          "event_triggered",
+			"trigger":       triggerName,
+			"workflow":      workflowName,
+			"resolved_vars": resolvedVars,
+		})
+		return
+	}
+	_, _ = fmt.Fprintf(os.Stdout, "\n%s %s %s\n", Yellow(SymbolStar), Bold("Event Triggered:"), triggerName)
+	_, _ = fmt.Fprintf(os.Stdout, "  %s %s\n", Gray("Workflow:"), workflowName)
+	for name, value := range resolvedVars {
+		_, _ = fmt.Fprintf(os.Stdout, "  %s %s\n", Gray(name+":"), value)
+	}
+	_, _ = fmt.Fprintln(os.Stdout)
+}

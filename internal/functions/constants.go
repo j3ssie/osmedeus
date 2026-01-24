@@ -172,6 +172,7 @@ const (
 	FnGoGetter           = "go_getter"             // go_getter(url, dest) -> bool
 	FnGoGetterWithSSHKey = "go_getter_with_sshkey" // go_getter_with_sshkey(ssh_key_path, git_url, dest) -> bool
 	FnNixInstall         = "nix_install"           // nix_install(package, dest?) -> bool
+	FnFilepathInstaller  = "filepath_installer"    // filepath_installer(local_path, tool_name, dest?) -> bool
 )
 
 // Environment Functions - Environment variable operations
@@ -500,6 +501,7 @@ func AllFunctions() []string {
 		FnGoGetter,
 		FnGoGetterWithSSHKey,
 		FnNixInstall,
+		FnFilepathInstaller,
 
 		// Environment functions
 		FnOsGetenv,
@@ -794,6 +796,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnGoGetter, "go_getter(url, dest)", "Download files/repos using go-getter", "bool", "go_getter('https://github.com/user/repo.git?ref=main', '{{Output}}/repo')"},
 			{FnGoGetterWithSSHKey, "go_getter_with_sshkey(ssh_key_path, git_url, dest)", "Clone git repo via SSH with auto-encoded key", "bool", "go_getter_with_sshkey('~/.ssh/id_rsa', 'git@github.com:user/private-repo.git', '{{Output}}/repo')"},
 			{FnNixInstall, "nix_install(package, dest?)", "Install package via Nix", "bool", "nix_install('nuclei', '{{Binaries}}')"},
+			{FnFilepathInstaller, "filepath_installer(local_path, tool_name, dest?)", "Install local archive or binary to binaries folder", "bool", "filepath_installer('/tmp/nuclei.tar.gz', 'nuclei', '{{Binaries}}')"},
 		},
 		CategoryEnvironment: {
 			{FnOsGetenv, "os_getenv(name)", "Get environment variable", "string", "os_getenv('HOME')"},

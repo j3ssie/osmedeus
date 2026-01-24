@@ -101,8 +101,17 @@ func DebugErrorHandler(c *fiber.Ctx, err error) error {
 	// Custom handling for 403 Forbidden
 	if code == fiber.StatusForbidden {
 		path := c.Path()
-		// Redirect to root for login and schedules routes
-		if path == "/login" || strings.HasPrefix(path, "/schedules") {
+		// Redirect to root for UI routes that return 403
+		if path == "/login" ||
+			strings.HasPrefix(path, "/events") ||
+			strings.HasPrefix(path, "/inventory") ||
+			strings.HasPrefix(path, "/llm") ||
+			strings.HasPrefix(path, "/registry") ||
+			strings.HasPrefix(path, "/scans") ||
+			strings.HasPrefix(path, "/schedules") ||
+			strings.HasPrefix(path, "/utilities") ||
+			strings.HasPrefix(path, "/vuln") ||
+			strings.HasPrefix(path, "/workflow") {
 			return c.Redirect("/", fiber.StatusFound)
 		}
 		return c.Status(code).JSON(fiber.Map{

@@ -6,9 +6,6 @@ extends: test-extends-base
 
 override:
   params:
-    threads:
-      default: "50"
-    rate_limit:
-      default: "500"
-    verbose:
-      default: "true"
+    threads: "50"
+    rate_limit: "500"
+    verbose: "true"

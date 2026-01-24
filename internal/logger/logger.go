@@ -301,18 +301,18 @@ func Get() *zap.Logger {
 }
 
 // WithWorkflow returns a logger with workflow context
-func WithWorkflow(workflowName, runID string) *zap.Logger {
+func WithWorkflow(workflowName, runUUID string) *zap.Logger {
 	return Get().With(
 		zap.String("workflow", workflowName),
-		zap.String("run_id", runID),
+		zap.String("run_uuid", runUUID),
 	)
 }
 
 // WithStep returns a logger with step context
-func WithStep(workflowName, runID, stepName string) *zap.Logger {
+func WithStep(workflowName, runUUID, stepName string) *zap.Logger {
 	return Get().With(
 		zap.String("workflow", workflowName),
-		zap.String("run_id", runID),
+		zap.String("run_uuid", runUUID),
 		zap.String("step", stepName),
 	)
 }
@@ -352,7 +352,7 @@ func Sync() error {
 
 // NewFileLogger creates a logger that writes to a specific file
 // This is useful for server mode where logs should also go to a workspace file
-func NewFileLogger(logFilePath, workflowName, runID string) (*zap.Logger, error) {
+func NewFileLogger(logFilePath, workflowName, runUUID string) (*zap.Logger, error) {
 	if logFilePath == "" {
 		return nil, nil
 	}
@@ -394,7 +394,7 @@ func NewFileLogger(logFilePath, workflowName, runID string) (*zap.Logger, error)
 
 	return zap.New(fileCore).With(
 		zap.String("workflow", workflowName),
-		zap.String("run_id", runID),
+		zap.String("run_uuid", runUUID),
 	), nil
 }
 
@@ -444,7 +444,7 @@ func WithFileOutput(baseLogger *zap.Logger, logFilePath string) (*zap.Logger, er
 }
 
 // NewStepLogger creates a logger for a specific step that writes to a file
-func NewStepLogger(logDir, workflowName, runID, stepName string) (*zap.Logger, error) {
+func NewStepLogger(logDir, workflowName, runUUID, stepName string) (*zap.Logger, error) {
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return nil, err
 	}
@@ -473,7 +473,7 @@ func NewStepLogger(logDir, workflowName, runID, stepName string) (*zap.Logger, e
 
 	return zap.New(core).With(
 		zap.String("workflow", workflowName),
-		zap.String("run_id", runID),
+		zap.String("run_uuid", runUUID),
 		zap.String("step", stepName),
 	), nil
 }

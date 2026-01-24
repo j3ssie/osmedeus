@@ -24,6 +24,7 @@ var (
 	redisURLServe        string
 	disableHotReload     bool
 	disableEventReceiver bool
+	disableScheduler     bool
 )
 
 // serveCmd represents the serve command
@@ -43,6 +44,7 @@ func init() {
 	serveCmd.Flags().StringVar(&redisURLServe, "redis-url", "", "Redis connection URL for master mode (overrides settings)")
 	serveCmd.Flags().BoolVar(&disableHotReload, "no-hot-reload", false, "disable config hot reload (default: hot reload is enabled)")
 	serveCmd.Flags().BoolVar(&disableEventReceiver, "no-event-receiver", false, "disable automatic event receiver (event-triggered workflows)")
+	serveCmd.Flags().BoolVar(&disableScheduler, "no-schedule", false, "disable scheduler (cron, watch, and event triggers)")
 }
 
 func runServer(cmd *cobra.Command, args []string) error {
@@ -124,6 +126,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 		Debug:               debug,
 		HotReload:           !disableHotReload,
 		EnableEventReceiver: !disableEventReceiver,
+		EnableScheduler:     !disableScheduler,
 	}
 	srv, err := server.New(cfg, opts)
 	if err != nil {

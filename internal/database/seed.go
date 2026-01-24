@@ -1543,8 +1543,12 @@ func SeedDatabase(ctx context.Context) error {
 		},
 	}
 
-	for _, asset := range assets {
-		if _, err := db.NewInsert().Model(&asset).Exec(ctx); err != nil {
+	for i := range assets {
+		// Auto-classify asset type if not provided
+		if assets[i].AssetType == "" {
+			assets[i].AssetType = ClassifyAssetType(assets[i].AssetValue)
+		}
+		if _, err := db.NewInsert().Model(&assets[i]).Exec(ctx); err != nil {
 			return fmt.Errorf("failed to insert asset: %w", err)
 		}
 	}
@@ -3718,7 +3722,7 @@ type RunResult struct {
 }
 
 // ListRuns returns paginated runs with optional filters
-func ListRuns(ctx context.Context, offset, limit int, status, workflow, target string) (*RunResult, error) {
+func ListRuns(ctx context.Context, offset, limit int, status, workflow, target, workspace string) (*RunResult, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database not connected")
 	}
@@ -3739,6 +3743,9 @@ func ListRuns(ctx context.Context, offset, limit int, status, workflow, target s
 	if target != "" {
 		query = query.Where("target LIKE ?", "%"+target+"%")
 	}
+	if workspace != "" {
+		query = query.Where("workspace = ?", workspace)
+	}
 
 	totalCount, err := query.Count(ctx)
 	if err != nil {
@@ -3758,6 +3765,9 @@ func ListRuns(ctx context.Context, offset, limit int, status, workflow, target s
 			}
 			if target != "" {
 				q = q.Where("target LIKE ?", "%"+target+"%")
+			}
+			if workspace != "" {
+				q = q.Where("workspace = ?", workspace)
 			}
 			return q
 		}).
@@ -4007,7 +4017,7 @@ type StepResultQuery struct {
 	Workspace string
 	Status    string
 	StepType  string
-	RunID     int64
+	RunUUID   string
 	Offset    int
 	Limit     int
 }
@@ -4032,8 +4042,12 @@ func ListStepResults(ctx context.Context, query StepResultQuery) (*StepResultRes
 	}
 
 	applyFilters := func(q *bun.SelectQuery) *bun.SelectQuery {
-		if query.RunID > 0 {
-			q = q.Where("sr.run_id = ?", query.RunID)
+		// Join with runs table if filtering by RunUUID or Workspace
+		if query.RunUUID != "" || query.Workspace != "" {
+			q = q.Join("JOIN runs r ON r.id = sr.run_id")
+		}
+		if query.RunUUID != "" {
+			q = q.Where("r.run_uuid = ?", query.RunUUID)
 		}
 		if query.Status != "" {
 			q = q.Where("sr.status = ?", query.Status)
@@ -4042,9 +4056,7 @@ func ListStepResults(ctx context.Context, query StepResultQuery) (*StepResultRes
 			q = q.Where("sr.step_type = ?", query.StepType)
 		}
 		if query.Workspace != "" {
-			// Join with runs table to filter by workspace
-			q = q.Join("JOIN runs r ON r.id = sr.run_id").
-				Where("r.workspace = ?", query.Workspace)
+			q = q.Where("r.workspace = ?", query.Workspace)
 		}
 		return q
 	}
@@ -4060,7 +4072,7 @@ func ListStepResults(ctx context.Context, query StepResultQuery) (*StepResultRes
 	baseQuery := db.NewSelect().Model(&result.Data)
 	baseQuery = applyFilters(baseQuery)
 	err = baseQuery.
-		Order("sr.created_at DESC").
+		Order("sr.completed_at ASC").
 		Offset(query.Offset).
 		Limit(query.Limit).
 		Scan(ctx)

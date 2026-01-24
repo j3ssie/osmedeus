@@ -264,7 +264,7 @@ func SendEventWithFallback(workspace, topic, source, dataType, runID, workflowNa
 				zap.String("source", source),
 				zap.String("source_type", sourceType),
 				zap.String("workspace", workspace),
-				zap.String("run_id", runID),
+				zap.String("run_uuid", runID),
 				zap.String("workflow_name", workflowName),
 			)
 			// Also send to webhooks

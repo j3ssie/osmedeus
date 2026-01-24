@@ -13,9 +13,6 @@ triggers:
     path: "{{output}}/assets.txt"
     debounce: 500ms
     enabled: true
-    input:
-      type: file
-      path: "{{output}}/assets.txt"
 
   # Event trigger with deduplication - ignores duplicate events within 10s window
   - name: on-new-asset
@@ -25,10 +22,6 @@ triggers:
       dedupe_key: "{{event.source}}-{{event.data.url}}"
       dedupe_window: 10s
     enabled: true
-    input:
-      type: event_data
-      field: url
-      name: target
 
   # Event trigger with filters and deduplication
   - name: on-critical-vuln
@@ -40,10 +33,6 @@ triggers:
       dedupe_key: "{{event.data.template}}-{{event.data.host}}"
       dedupe_window: 5m
     enabled: true
-    input:
-      type: event_data
-      field: host
-      name: target
 
 steps:
   - name: log-event

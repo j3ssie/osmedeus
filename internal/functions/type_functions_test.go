@@ -206,7 +206,7 @@ func TestGetTypes_FileAndFolder(t *testing.T) {
 	})
 }
 
-func TestNormalPath(t *testing.T) {
+func TestGetTargetSpace(t *testing.T) {
 	runtime := NewGojaRuntime()
 
 	tests := []struct {
@@ -254,7 +254,7 @@ func TestNormalPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			expr := "normal_path('" + tt.input + "')"
+			expr := "get_target_space('" + tt.input + "')"
 			result, err := runtime.Execute(expr, nil)
 			if err != nil {
 				t.Fatalf("Execute failed: %v", err)
@@ -284,7 +284,7 @@ func TestNormalPath(t *testing.T) {
 				}
 			} else {
 				if resultStr != tt.expected {
-					t.Errorf("normal_path(%q) = %q, want %q", tt.input, resultStr, tt.expected)
+					t.Errorf("get_target_space(%q) = %q, want %q", tt.input, resultStr, tt.expected)
 				}
 			}
 		})

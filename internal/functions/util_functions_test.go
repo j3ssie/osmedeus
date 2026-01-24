@@ -515,6 +515,117 @@ func TestSetGetVar(t *testing.T) {
 	})
 }
 
+func TestPickValid(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("returns first valid string", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid("", "", "hello")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "hello", result)
+	})
+
+	t.Run("skips false and empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid(false, "", "world")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "world", result)
+	})
+
+	t.Run("returns number when valid", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid("", false, 123)`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, int64(123), result)
+	})
+
+	t.Run("returns first valid when multiple valid", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid("first", "second")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "first", result)
+	})
+
+	t.Run("returns empty string when all invalid", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid("", "", "")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("returns empty string with no arguments", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid()`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("skips undefined string value", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid("undefined", "valid")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "valid", result)
+	})
+
+	t.Run("skips null value", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid(null, "valid")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "valid", result)
+	})
+
+	t.Run("skips undefined value", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid(undefined, "valid")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "valid", result)
+	})
+
+	t.Run("skips empty array", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid([], "valid")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "valid", result)
+	})
+
+	t.Run("skips empty object", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid({}, "valid")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "valid", result)
+	})
+
+	t.Run("returns true boolean", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid(false, true, "string")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+	})
+
+	t.Run("returns non-empty array", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid([], [1, 2, 3])`, nil)
+		require.NoError(t, err)
+		arr, ok := result.([]interface{})
+		require.True(t, ok)
+		assert.Len(t, arr, 3)
+	})
+
+	t.Run("returns non-empty object", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid({}, {key: "value"})`, nil)
+		require.NoError(t, err)
+		obj, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "value", obj["key"])
+	})
+
+	t.Run("returns zero as valid number", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid("", 0, "fallback")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, int64(0), result)
+	})
+
+	t.Run("handles whitespace-only string as invalid", func(t *testing.T) {
+		result, err := runtime.Execute(`pick_valid("   ", "valid")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "valid", result)
+	})
+
+	t.Run("respects 10 argument limit", func(t *testing.T) {
+		// Arguments 1-10 are empty, 11th is "valid" - should return empty
+		result, err := runtime.Execute(`pick_valid("", "", "", "", "", "", "", "", "", "", "valid")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+}
+
 func TestMoveFile(t *testing.T) {
 	runtime := NewOttoRuntime()
 

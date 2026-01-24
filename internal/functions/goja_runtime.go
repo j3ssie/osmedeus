@@ -265,6 +265,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnGoGetter, vf.goGetter)
 	_ = vm.Set(FnGoGetterWithSSHKey, vf.goGetterWithSSHKey)
 	_ = vm.Set(FnNixInstall, vf.nixInstall)
+	_ = vm.Set(FnFilepathInstaller, vf.filepathInstaller)
 
 	// Environment functions
 	_ = vm.Set(FnOsGetenv, vf.osGetenv)

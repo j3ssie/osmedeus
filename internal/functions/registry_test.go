@@ -269,6 +269,135 @@ func TestRegistry_Trim(t *testing.T) {
 	assert.Equal(t, "hello", result)
 }
 
+func TestRegistry_TrimString(t *testing.T) {
+	registry := NewRegistry()
+
+	tests := []struct {
+		name     string
+		input    string
+		substr   string
+		expected string
+	}{
+		{
+			name:     "Trim spaces from both ends",
+			input:    "  hello  ",
+			substr:   " ",
+			expected: "hello",
+		},
+		{
+			name:     "Trim slashes from both ends",
+			input:    "///path/to/file///",
+			substr:   "/",
+			expected: "path/to/file",
+		},
+		{
+			name:     "No trimming needed",
+			input:    "hello",
+			substr:   "/",
+			expected: "hello",
+		},
+		{
+			name:     "Empty substring returns original",
+			input:    "hello",
+			substr:   "",
+			expected: "hello",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := registry.Execute(
+				`trim_string("`+tt.input+`", "`+tt.substr+`")`,
+				map[string]interface{}{},
+			)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestRegistry_TrimLeft(t *testing.T) {
+	registry := NewRegistry()
+
+	tests := []struct {
+		name     string
+		input    string
+		substr   string
+		expected string
+	}{
+		{
+			name:     "Trim slashes from left",
+			input:    "///path/to/file",
+			substr:   "/",
+			expected: "path/to/file",
+		},
+		{
+			name:     "Only trims from left, not right",
+			input:    "///path/to/file///",
+			substr:   "/",
+			expected: "path/to/file///",
+		},
+		{
+			name:     "No trimming needed",
+			input:    "hello",
+			substr:   "/",
+			expected: "hello",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := registry.Execute(
+				`trim_left("`+tt.input+`", "`+tt.substr+`")`,
+				map[string]interface{}{},
+			)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestRegistry_TrimRight(t *testing.T) {
+	registry := NewRegistry()
+
+	tests := []struct {
+		name     string
+		input    string
+		substr   string
+		expected string
+	}{
+		{
+			name:     "Trim slashes from right",
+			input:    "example.com///",
+			substr:   "/",
+			expected: "example.com",
+		},
+		{
+			name:     "Only trims from right, not left",
+			input:    "///example.com///",
+			substr:   "/",
+			expected: "///example.com",
+		},
+		{
+			name:     "No trimming needed",
+			input:    "hello",
+			substr:   "/",
+			expected: "hello",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := registry.Execute(
+				`trim_right("`+tt.input+`", "`+tt.substr+`")`,
+				map[string]interface{}{},
+			)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestRegistry_Contains(t *testing.T) {
 	registry := NewRegistry()
 

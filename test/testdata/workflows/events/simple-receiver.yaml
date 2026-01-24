@@ -14,10 +14,6 @@ triggers:
       filters:
         - "event.source == 'simple-emitter'"
         - "event.data_type == 'subdomain'"
-    input:
-      type: event_data
-      field: "value"
-      name: target
     enabled: true
   - name: manual-trigger
     on: manual

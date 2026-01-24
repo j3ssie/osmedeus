@@ -17,7 +17,7 @@ import (
 // @Param workspace query string false "Filter by workspace name"
 // @Param status query string false "Filter by status (pending, running, completed, failed)"
 // @Param step_type query string false "Filter by step type (bash, function, etc.)"
-// @Param run_id query int false "Filter by run ID"
+// @Param run_uuid query string false "Filter by run UUID"
 // @Param offset query int false "Number of records to skip" default(0)
 // @Param limit query int false "Maximum number of records to return" default(20)
 // @Success 200 {object} map[string]interface{} "List of step results with pagination"
@@ -30,7 +30,7 @@ func ListStepResults(cfg *config.Config) fiber.Handler {
 		workspace := c.Query("workspace")
 		status := c.Query("status")
 		stepType := c.Query("step_type")
-		runID, _ := strconv.ParseInt(c.Query("run_id", "0"), 10, 64)
+		runUUID := c.Query("run_uuid")
 		offset, _ := strconv.Atoi(c.Query("offset", "0"))
 		limit, _ := strconv.Atoi(c.Query("limit", "20"))
 
@@ -52,7 +52,7 @@ func ListStepResults(cfg *config.Config) fiber.Handler {
 			Workspace: workspace,
 			Status:    status,
 			StepType:  stepType,
-			RunID:     runID,
+			RunUUID:   runUUID,
 			Offset:    offset,
 			Limit:     limit,
 		})

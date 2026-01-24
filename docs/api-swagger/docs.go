@@ -411,6 +411,100 @@ const docTemplate = `{
                 }
             }
         },
+        "/osm/api/database/tables": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get list of all database tables with row counts",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Database"
+                ],
+                "summary": "List database tables",
+                "responses": {
+                    "200": {
+                        "description": "List of tables with counts",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/database/tables/{table}/clear": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete all records from a specific database table (destructive operation)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Database"
+                ],
+                "summary": "Clear database table",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Table name (runs, step_results, event_logs, artifacts, assets, schedules, workspaces, vulnerabilities, asset_diffs, vuln_diffs)",
+                        "name": "table",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Confirmation with force=true required",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ClearTableRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Table cleared successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or missing force confirmation",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to clear table",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/osm/api/event-logs": {
             "get": {
                 "security": [
@@ -1027,6 +1121,12 @@ const docTemplate = `{
                         "description": "Filter by target (partial match)",
                         "name": "target",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by workspace name (exact match)",
+                        "name": "workspace",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1153,7 +1253,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Cancel a running workflow execution",
+                "description": "Cancel a running workflow execution. This will terminate all running processes associated with the run.",
                 "produces": [
                     "application/json"
                 ],
@@ -1187,6 +1287,97 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Run not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/runs/{id}/duplicate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a copy of an existing run with pending status. The duplicate will have the same workflow, target, and parameters but a new UUID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Runs"
+                ],
+                "summary": "Duplicate a run",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Run ID or RunUUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Run duplicated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Run not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/osm/api/runs/{id}/start": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Start a run that is in pending status. This triggers the workflow execution.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Runs"
+                ],
+                "summary": "Start a pending run",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Run ID or RunUUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Run started",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Run cannot be started (not in pending status)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Run or workflow not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1952,9 +2143,9 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "integer",
-                        "description": "Filter by run ID",
-                        "name": "run_id",
+                        "type": "string",
+                        "description": "Filter by run UUID",
+                        "name": "run_uuid",
                         "in": "query"
                     },
                     {
@@ -3163,6 +3354,15 @@ const docTemplate = `{
             "properties": {
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "handlers.ClearTableRequest": {
+            "type": "object",
+            "properties": {
+                "force": {
+                    "description": "Must be true to confirm the destructive operation",
+                    "type": "boolean"
                 }
             }
         },
