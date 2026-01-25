@@ -15,6 +15,8 @@ type ServerInfoData struct {
 	Repo    string
 	Author  string
 	Docs    string
+	Build   string
+	Commit  string
 }
 
 // cachedServerInfo holds server info set once at startup
@@ -68,6 +70,8 @@ func Root(cfg *config.Config) fiber.Handler {
 			"author":  cachedServerInfo.Author,
 			"docs":    cachedServerInfo.Docs,
 			"license": cachedServerInfo.License,
+			"build":   cachedServerInfo.Build,
+			"commit":  cachedServerInfo.Commit,
 		})
 	}
 }
@@ -88,6 +92,8 @@ func ServerInfo(cfg *config.Config) fiber.Handler {
 			"author":  cachedServerInfo.Author,
 			"docs":    cachedServerInfo.Docs,
 			"license": cachedServerInfo.License,
+			"build":   cachedServerInfo.Build,
+			"commit":  cachedServerInfo.Commit,
 		})
 	}
 }

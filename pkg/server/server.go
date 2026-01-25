@@ -51,6 +51,8 @@ var cachedServerInfo struct {
 	Repo    string
 	Author  string
 	Docs    string
+	Build   string
+	Commit  string
 }
 
 // Server represents the web server
@@ -107,6 +109,8 @@ func New(cfg *config.Config, opts *Options) (*Server, error) {
 	cachedServerInfo.Repo = core.REPO_URL
 	cachedServerInfo.Author = core.AUTHOR
 	cachedServerInfo.Docs = core.DOCS
+	cachedServerInfo.Build = core.BuildTime
+	cachedServerInfo.Commit = core.CommitHash
 
 	// Set cached info for handlers to use
 	handlers.SetServerInfo(&handlers.ServerInfoData{
@@ -116,6 +120,8 @@ func New(cfg *config.Config, opts *Options) (*Server, error) {
 		Repo:    cachedServerInfo.Repo,
 		Author:  cachedServerInfo.Author,
 		Docs:    cachedServerInfo.Docs,
+		Build:   cachedServerInfo.Build,
+		Commit:  cachedServerInfo.Commit,
 	})
 
 	// Select error handler based on debug mode

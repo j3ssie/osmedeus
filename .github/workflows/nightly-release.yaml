@@ -24,20 +24,15 @@ jobs:
         with:
           go-version: '1.25'
 
-      - name: Delete existing nightly release
+      - name: Delete existing nightly release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Delete release if exists (tag will be force-updated)
-          gh release delete v0.0.0-nightly --yes || true
-
-      - name: Create or update nightly tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Use semver-compliant tag for GoReleaser v2
-          git tag -fa v0.0.0-nightly -m "Nightly build $(date -u +%Y-%m-%d)"
-          git push origin v0.0.0-nightly --force
+          TAG="v0.0.0-nightly"
+          gh release view "$TAG" --json assets -q '.assets[].name' | while read -r asset; do
+            echo "Deleting asset: $asset"
+            gh release delete-asset "$TAG" "$asset" --yes
+          done
 
       - name: Create release notes
         run: |

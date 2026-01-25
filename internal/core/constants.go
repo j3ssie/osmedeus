@@ -29,3 +29,6 @@ const (
 	// DefaultUA is the default User-Agent for HTTP clients
 	DefaultUA = "Mozilla/5.0 (compatible; Osmedeus/" + VERSION + "; +" + REPO_URL + ")"
 )
+
+var BuildTime = "unknown"
+var CommitHash = "unknown"

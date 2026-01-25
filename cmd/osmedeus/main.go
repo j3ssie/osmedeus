@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/pkg/cli"
 )
 
@@ -32,6 +33,8 @@ var (
 // @description JWT Bearer token authentication. Format: "Bearer {token}"
 
 func main() {
+	core.BuildTime = BuildTime
+	core.CommitHash = CommitHash
 	cli.SetBuildInfo(BuildTime, CommitHash)
 	cli.Execute()
 }
