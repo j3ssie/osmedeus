@@ -23,20 +23,15 @@ Built for both beginners and experts, it delivers powerful, composable automatio
 ## Features
 
 - **Declarative YAML Workflows** - Define reconnaissance pipelines using simple, readable YAML syntax
-- **Two Workflow Types** - Modules for single execution units, Flows for multi-module orchestration
 - **Multiple Runners** - Execute on local host, Docker containers, or remote machines via SSH
-- **Distributed Execution** - Scale with Redis-based master-worker pattern for parallel scanning
 - **Event-Driven Triggers** - Cron scheduling, file watching, and event-based workflow triggers with deduplication and filter functions
-- **Decision Routing** - Conditional workflow branching with switch/case syntax
 - **Template Engine** - Powerful variable interpolation with built-in and custom variables
 - **Utility Functions** - Rich function library with event generation, bulk processing, and JSON operations
 - **REST API Server** - Manage, trigger, and cancel workflows programmatically
-- **Run Cancellation** - Cancel running workflows via API with process termination
-- **Database Support** - SQLite (default) and PostgreSQL for asset tracking
+- **Distributed Execution** - Scale with Redis-based master-worker pattern for parallel scanning
 - **Notifications** - Telegram bot and webhook integrations
 - **Cloud Storage** - S3-compatible storage for artifact management
 - **LLM Integration** - AI-powered workflow steps with chat completions and embeddings
-- **Platform Detection** - Built-in variables for Docker, Kubernetes, and cloud provider detection
 
 See [Documentation Page](https://docs.osmedeus.org/) for more details.
 
@@ -125,7 +120,7 @@ For more CLI usage and example commands, refer to the [CLI Reference](https://do
 └───────────────────────────────────────────────────────────────────────────┘
 ```
 
-For writing your first workflow, refer to the [Workflow Overview](https://docs.osmedeus.org/workflows/overview).
+For more information about the architecture, refer to the [Architecture Documentation](https://docs.osmedeus.org/architecture).
 
 ## Roadmap and Status
 
@@ -137,8 +132,8 @@ The high-level ambitious plan for the project, in order:
 |  2  | Flexible workflows and step types                                             |   ✅   |
 |  3  | Event-driven architectural model and the different trigger event categories   |   ✅   |
 |  4  | Beautiful UI for visualize results and workflow diagram                       |   ✅   |
-|  5  | Rewriting the workflow to adapt to new architecture and syntax                |   ⚠️   |
-|  6  | Testing more utility functions like notifications                             |   ⚠️   |
+|  5  | Rewriting the workflow to adapt to new architecture and syntax                |   ✅   |
+|  6  | Testing more utility functions like notifications                             |   ✅   |
 |  7  | Generate diff reports showing new/removed/unchanged assets between runs.      |   ❌   |
 |  8  | Adding step type from cloud provider that can be run via serverless           |   ❌   |
 |  N  | Fancy features (to be discussed later)                                        |   ❌   |

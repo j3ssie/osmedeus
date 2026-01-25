@@ -1023,6 +1023,11 @@ func setNotificationValue(cfg *config.Config, parts []string, value string) erro
 			return fmt.Errorf("missing telegram field")
 		}
 		return setTelegramValue(cfg, parts[1:], value)
+	case "webhooks":
+		if len(parts) < 2 {
+			return fmt.Errorf("missing webhooks index and field (e.g., webhooks.0.url)")
+		}
+		return setWebhooksValue(cfg, parts[1:], value)
 	default:
 		return fmt.Errorf("unknown notification field: %s", parts[0])
 	}
@@ -1051,6 +1056,56 @@ func setTelegramValue(cfg *config.Config, parts []string, value string) error {
 		cfg.Notification.Telegram.Enabled = enabled
 	default:
 		return fmt.Errorf("unknown telegram field: %s", parts[0])
+	}
+	return nil
+}
+
+// setWebhooksValue sets webhook config fields (notification.webhooks.<index>.<field>)
+func setWebhooksValue(cfg *config.Config, parts []string, value string) error {
+	if len(parts) < 2 {
+		return fmt.Errorf("missing webhook index and field (e.g., webhooks.0.url)")
+	}
+
+	index, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return fmt.Errorf("webhook index must be a number: %s", parts[0])
+	}
+
+	// Ensure webhooks slice is large enough
+	for len(cfg.Notification.Webhooks) <= index {
+		cfg.Notification.Webhooks = append(cfg.Notification.Webhooks, config.WebhookConfig{})
+	}
+
+	field := parts[1]
+	switch field {
+	case "url":
+		cfg.Notification.Webhooks[index].URL = value
+	case "enabled":
+		enabled, err := strconv.ParseBool(value)
+		if err != nil {
+			return fmt.Errorf("enabled must be true or false")
+		}
+		cfg.Notification.Webhooks[index].Enabled = enabled
+	case "timeout":
+		timeout, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("timeout must be a number")
+		}
+		cfg.Notification.Webhooks[index].Timeout = timeout
+	case "retry_count":
+		retryCount, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("retry_count must be a number")
+		}
+		cfg.Notification.Webhooks[index].RetryCount = retryCount
+	case "skip_tls_verify":
+		skip, err := strconv.ParseBool(value)
+		if err != nil {
+			return fmt.Errorf("skip_tls_verify must be true or false")
+		}
+		cfg.Notification.Webhooks[index].SkipTLSVerify = skip
+	default:
+		return fmt.Errorf("unknown webhook field: %s (available: url, enabled, timeout, retry_count, skip_tls_verify)", field)
 	}
 	return nil
 }

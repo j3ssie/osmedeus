@@ -420,7 +420,13 @@ func UsageConfigSet() string {
   ` + terminal.Yellow("redis.port") + `                     Redis port
   ` + terminal.Yellow("global_vars.<name>") + `             Set a global variable
   ` + terminal.Yellow("notification.enabled") + `           Enable notifications (true/false)
-  ` + terminal.Yellow("notification.telegram.bot_token") + ` Telegram bot token
+  ` + terminal.Yellow("notification.provider") + `          Notification provider (telegram, webhook)
+  ` + terminal.Yellow("notification.telegram.enabled") + `  Enable Telegram notifications (true/false)
+  ` + terminal.Yellow("notification.telegram.bot_token") + ` Telegram bot token from @BotFather
+  ` + terminal.Yellow("notification.telegram.chat_id") + `  Telegram chat ID to send messages to
+  ` + terminal.Yellow("notification.webhooks.0.url") + `    Webhook URL (use index 0, 1, 2... for multiple)
+  ` + terminal.Yellow("notification.webhooks.0.enabled") + ` Enable webhook (true/false)
+  ` + terminal.Yellow("notification.webhooks.0.timeout") + ` Webhook timeout in seconds
   ` + terminal.Yellow("environments.external_binaries_path") + ` Binaries directory
   ` + terminal.Yellow("storage.enabled") + `                Enable cloud storage (true/false)
 

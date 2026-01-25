@@ -3,7 +3,9 @@ package functions
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/storage"
+	"github.com/j3ssie/osmedeus/v5/internal/terminal"
 	"go.uber.org/zap"
 )
 
@@ -434,4 +437,191 @@ func (vf *vmFunc) cdnStat(call goja.FunctionCall) goja.Value {
 
 	logger.Get().Debug("cdnStat result", zap.String("remotePath", remotePath), zap.Int64("size", info.Size))
 	return vf.vm.ToValue(string(jsonBytes))
+}
+
+// cdnLsTree lists files from cloud storage in a tree format
+// Usage: cdnLsTree(prefix?) -> string (tree format output)
+func (vf *vmFunc) cdnLsTree(call goja.FunctionCall) goja.Value {
+	prefix := ""
+	if len(call.Arguments) > 0 && !goja.IsUndefined(call.Argument(0)) {
+		prefix = call.Argument(0).String()
+		if prefix == "undefined" {
+			prefix = ""
+		}
+	}
+	depth := int64(1)
+	if len(call.Arguments) > 1 && !goja.IsUndefined(call.Argument(1)) && !goja.IsNull(call.Argument(1)) {
+		depth = call.Argument(1).ToInteger()
+		if depth < 1 {
+			depth = 1
+		}
+	}
+	logger.Get().Debug("Calling cdnLsTree", zap.String("prefix", prefix))
+
+	client, err := storage.GetClient()
+	if err != nil {
+		logger.Get().Warn("cdnLsTree: failed to get storage client", zap.Error(err))
+		return vf.vm.ToValue("")
+	}
+
+	ctx := context.Background()
+	files, err := client.ListWithInfo(ctx, prefix)
+	if err != nil {
+		logger.Get().Warn("cdnLsTree: list failed", zap.String("prefix", prefix), zap.Error(err))
+		return vf.vm.ToValue("")
+	}
+
+	// Build tree structure
+	tree := buildFileTree(files, prefix)
+	output := renderTree(tree, prefix, int(depth))
+
+	logger.Get().Debug("cdnLsTree result", zap.String("prefix", prefix), zap.Int("files", len(files)))
+	return vf.vm.ToValue(output)
+}
+
+// treeNode represents a node in the file tree
+type treeNode struct {
+	name     string
+	isDir    bool
+	size     int64
+	children map[string]*treeNode
+}
+
+// buildFileTree builds a tree structure from flat file list
+func buildFileTree(files []storage.FileInfo, prefix string) *treeNode {
+	root := &treeNode{
+		name:     prefix,
+		isDir:    true,
+		children: make(map[string]*treeNode),
+	}
+
+	for _, f := range files {
+		// Remove prefix from key for relative path
+		relPath := f.Key
+		if prefix != "" {
+			relPath = strings.TrimPrefix(f.Key, prefix)
+		}
+		relPath = strings.TrimPrefix(relPath, "/")
+
+		if relPath == "" {
+			continue
+		}
+
+		parts := strings.Split(relPath, "/")
+		current := root
+
+		for i, part := range parts {
+			if part == "" {
+				continue
+			}
+
+			if current.children[part] == nil {
+				isDir := i < len(parts)-1
+				current.children[part] = &treeNode{
+					name:     part,
+					isDir:    isDir,
+					children: make(map[string]*treeNode),
+				}
+			}
+			if i == len(parts)-1 {
+				current.children[part].size = f.Size
+			}
+			current = current.children[part]
+		}
+	}
+
+	return root
+}
+
+// renderTree renders the tree structure as a string
+func renderTree(root *treeNode, prefix string, depth int) string {
+	var sb strings.Builder
+
+	// Write root
+	rootName := prefix
+	if rootName == "" {
+		rootName = "."
+	}
+	sb.WriteString(terminal.Cyan(rootName))
+	sb.WriteString("\n")
+
+	// Get sorted children
+	if depth >= 1 {
+		children := getSortedChildren(root)
+		for i, child := range children {
+			isLast := i == len(children)-1
+			renderTreeNode(&sb, child, "", isLast, depth, 1)
+		}
+	}
+
+	return sb.String()
+}
+
+// renderTreeNode recursively renders a tree node
+func renderTreeNode(sb *strings.Builder, node *treeNode, indent string, isLast bool, depth, level int) {
+	// Choose connector
+	connector := "├── "
+	if isLast {
+		connector = "└── "
+	}
+
+	sb.WriteString(indent)
+	sb.WriteString(connector)
+	if node.isDir {
+		sb.WriteString(terminal.Cyan(node.name))
+	} else {
+		sb.WriteString(terminal.Green(node.name))
+	}
+	if !node.isDir {
+		fmt.Fprintf(sb, " (%s)", formatSize(node.size))
+	}
+	sb.WriteString("\n")
+
+	// Update indent for children
+	childIndent := indent
+	if isLast {
+		childIndent += "    "
+	} else {
+		childIndent += "│   "
+	}
+
+	// Render children
+	if node.isDir && level < depth {
+		children := getSortedChildren(node)
+		for i, child := range children {
+			renderTreeNode(sb, child, childIndent, i == len(children)-1, depth, level+1)
+		}
+	}
+}
+
+// getSortedChildren returns children sorted: directories first, then files, alphabetically
+func getSortedChildren(node *treeNode) []*treeNode {
+	var dirs, files []*treeNode
+	for _, child := range node.children {
+		if child.isDir {
+			dirs = append(dirs, child)
+		} else {
+			files = append(files, child)
+		}
+	}
+
+	// Sort each group alphabetically
+	sort.Slice(dirs, func(i, j int) bool { return dirs[i].name < dirs[j].name })
+	sort.Slice(files, func(i, j int) bool { return files[i].name < files[j].name })
+
+	return append(dirs, files...)
+}
+
+// formatSize formats bytes into human-readable size
+func formatSize(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }

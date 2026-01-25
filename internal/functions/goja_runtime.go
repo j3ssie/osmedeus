@@ -174,6 +174,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnCdnList, vf.cdnList)
 	_ = vm.Set(FnCdnStat, vf.cdnStat)
 	_ = vm.Set(FnCdnRead, vf.cdnRead)
+	_ = vm.Set(FnCdnLsTree, vf.cdnLsTree)
 
 	// Unix command wrappers
 	_ = vm.Set(FnSortUnix, vf.sortUnix)

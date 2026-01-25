@@ -172,8 +172,8 @@ func runFunctionEval(cmd *cobra.Command, args []string) error {
 			}
 			script = fmt.Sprintf("%s(%s)", args[0], strings.Join(quotedArgs, ", "))
 		} else {
-			// Single arg: use as-is (could be full expression or function name with no args)
-			script = args[0]
+			// Single arg: check if it is a bare function name and add () if needed
+			script = normalizeScriptExpression(args[0])
 		}
 	} else if evalScript != "" {
 		// Script provided via -e flag
@@ -186,6 +186,10 @@ func runFunctionEval(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to read from stdin: %w", err)
 		}
 		script = strings.TrimSpace(string(data))
+	}
+
+	if script != "" {
+		script = normalizeScriptExpression(script)
 	}
 
 	if script == "" {
@@ -442,4 +446,30 @@ func runFunctionList(cmd *cobra.Command, args []string) error {
 		printMarkdownTable(headers, rows)
 	}
 	return nil
+}
+
+// normalizeScriptExpression checks if the input is a bare function name (without parentheses)
+// and adds () to make it a valid function call. This allows "osmedeus eval cdn_ls_tree"
+// to work the same as "osmedeus eval cdn_ls_tree()"
+func normalizeScriptExpression(expr string) string {
+	expr = strings.TrimSpace(expr)
+	
+	// If it already has parentheses, return as-is
+	if strings.Contains(expr, "(") {
+		return expr
+	}
+	
+	// Check if it's a known function name
+	allFuncs := functions.AllFunctions()
+	for _, fn := range allFuncs {
+		if expr == fn {
+			if fn == functions.FnCdnLsTree {
+				return expr + "(\"\")"
+			}
+			return expr + "()"
+		}
+	}
+	
+	// Not a known function, return as-is (could be a variable or expression)
+	return expr
 }

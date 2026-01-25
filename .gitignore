@@ -22,6 +22,7 @@ coverage.html
 .DS_Store
 .idea/
 .vscode/
+.trae
 
 # cgo / compiler outputs
 *.o

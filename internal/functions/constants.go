@@ -128,14 +128,14 @@ const (
 
 // Notification Functions - Send notifications via various channels
 const (
-	FnNotifyTelegram                     = "notify_telegram"                        // notify_telegram(message) -> bool
-	FnSendTelegramFile                   = "send_telegram_file"                     // send_telegram_file(path, caption?) -> bool
-	FnNotifyTelegramChannel              = "notify_telegram_channel"                // notify_telegram_channel(channel, message) -> bool
-	FnSendTelegramFileChannel            = "send_telegram_file_channel"             // send_telegram_file_channel(channel, path, caption?) -> bool
-	FnNotifyMessageAsFileTelegram        = "notify_message_as_file_telegram"        // notify_message_as_file_telegram(path) -> bool
+	FnNotifyTelegram                     = "notify_telegram"                         // notify_telegram(message) -> bool
+	FnSendTelegramFile                   = "send_telegram_file"                      // send_telegram_file(path, caption?) -> bool
+	FnNotifyTelegramChannel              = "notify_telegram_channel"                 // notify_telegram_channel(channel, message) -> bool
+	FnSendTelegramFileChannel            = "send_telegram_file_channel"              // send_telegram_file_channel(channel, path, caption?) -> bool
+	FnNotifyMessageAsFileTelegram        = "notify_message_as_file_telegram"         // notify_message_as_file_telegram(path) -> bool
 	FnNotifyMessageAsFileTelegramChannel = "notify_message_as_file_telegram_channel" // notify_message_as_file_telegram_channel(channel, path) -> bool
-	FnNotifyWebhook                      = "notify_webhook"                         // notify_webhook(message) -> bool
-	FnSendWebhookEvent                   = "send_webhook_event"                     // send_webhook_event(eventType, data) -> bool
+	FnNotifyWebhook                      = "notify_webhook"                          // notify_webhook(message) -> bool
+	FnSendWebhookEvent                   = "send_webhook_event"                      // send_webhook_event(eventType, data) -> bool
 )
 
 // Event Generation Functions - Generate structured events
@@ -156,6 +156,7 @@ const (
 	FnCdnList            = "cdn_list"              // cdn_list(prefix?) -> []object
 	FnCdnStat            = "cdn_stat"              // cdn_stat(remotePath) -> object|null
 	FnCdnRead            = "cdn_read"              // cdn_read(remotePath) -> string
+	FnCdnLsTree          = "cdn_ls_tree"           // cdn_ls_tree(prefix?) -> string (tree format)
 )
 
 // Unix Command Wrappers - Wrappers around common Unix commands
@@ -417,6 +418,7 @@ func AllFunctions() []string {
 		FnCdnList,
 		FnCdnStat,
 		FnCdnRead,
+		FnCdnLsTree,
 
 		// Unix Command Wrappers
 		FnSortUnix,
@@ -723,6 +725,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnCdnList, "cdn_list(pattern?)", "List files with metadata from cloud storage (supports glob patterns)", "JSON string", "cdn_list('scans/')"},
 			{FnCdnStat, "cdn_stat(remotePath)", "Get file metadata from cloud storage", "JSON string", "cdn_stat('scans/target/report.zip')"},
 			{FnCdnRead, "cdn_read(remotePath)", "Read file content from cloud storage", "string", "cdn_read('config/settings.yaml')"},
+			{FnCdnLsTree, "cdn_ls_tree(prefix?, depth?)", "List files from cloud storage in tree format", "string", "cdn_ls_tree('scans/', 2)"},
 		},
 		CategoryUnixCommands: {
 			{FnSortUnix, "sort_unix(input, output?)", "Sort file with LC_ALL=C sort -u", "bool", "sort_unix('{{Output}}/urls.txt')"},
