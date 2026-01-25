@@ -2,6 +2,9 @@ package functions
 
 import (
 	"context"
+	"encoding/json"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/dop251/goja"
@@ -108,7 +111,7 @@ func (vf *vmFunc) cdnDelete(call goja.FunctionCall) goja.Value {
 }
 
 // cdnSyncUpload synchronizes a local directory to cloud storage
-// Usage: cdnSyncUpload(localDir, remotePrefix) -> {success: bool, uploaded: [], skipped: [], errors: []}
+// Usage: cdnSyncUpload(localDir, remotePrefix) -> JSON string {success: bool, uploaded: [], skipped: [], errors: []}
 func (vf *vmFunc) cdnSyncUpload(call goja.FunctionCall) goja.Value {
 	localDir := call.Argument(0).String()
 	remotePrefix := call.Argument(1).String()
@@ -124,20 +127,23 @@ func (vf *vmFunc) cdnSyncUpload(call goja.FunctionCall) goja.Value {
 
 	if localDir == "undefined" || localDir == "" {
 		logger.Get().Warn("cdnSyncUpload: empty local directory provided")
-		return vf.vm.ToValue(result)
+		jsonBytes, _ := json.Marshal(result)
+		return vf.vm.ToValue(string(jsonBytes))
 	}
 
 	client, err := storage.GetClient()
 	if err != nil {
 		logger.Get().Warn("cdnSyncUpload: failed to get storage client", zap.Error(err))
-		return vf.vm.ToValue(result)
+		jsonBytes, _ := json.Marshal(result)
+		return vf.vm.ToValue(string(jsonBytes))
 	}
 
 	ctx := context.Background()
 	syncResult, err := client.SyncUpload(ctx, localDir, remotePrefix, nil)
 	if err != nil {
 		logger.Get().Warn("cdnSyncUpload: sync failed", zap.String("localDir", localDir), zap.Error(err))
-		return vf.vm.ToValue(result)
+		jsonBytes, _ := json.Marshal(result)
+		return vf.vm.ToValue(string(jsonBytes))
 	}
 
 	result["success"] = len(syncResult.Errors) == 0
@@ -153,11 +159,16 @@ func (vf *vmFunc) cdnSyncUpload(call goja.FunctionCall) goja.Value {
 		zap.Int("skipped", len(syncResult.Skipped)),
 		zap.Int("errors", len(syncResult.Errors)))
 
-	return vf.vm.ToValue(result)
+	jsonBytes, err := json.Marshal(result)
+	if err != nil {
+		logger.Get().Warn("cdnSyncUpload: failed to marshal result", zap.Error(err))
+		return vf.vm.ToValue("{}")
+	}
+	return vf.vm.ToValue(string(jsonBytes))
 }
 
 // cdnSyncDownload synchronizes cloud storage to a local directory
-// Usage: cdnSyncDownload(remotePrefix, localDir) -> {success: bool, downloaded: [], skipped: [], errors: []}
+// Usage: cdnSyncDownload(remotePrefix, localDir) -> JSON string {success: bool, downloaded: [], skipped: [], errors: []}
 func (vf *vmFunc) cdnSyncDownload(call goja.FunctionCall) goja.Value {
 	remotePrefix := call.Argument(0).String()
 	localDir := call.Argument(1).String()
@@ -173,20 +184,23 @@ func (vf *vmFunc) cdnSyncDownload(call goja.FunctionCall) goja.Value {
 
 	if localDir == "undefined" || localDir == "" {
 		logger.Get().Warn("cdnSyncDownload: empty local directory provided")
-		return vf.vm.ToValue(result)
+		jsonBytes, _ := json.Marshal(result)
+		return vf.vm.ToValue(string(jsonBytes))
 	}
 
 	client, err := storage.GetClient()
 	if err != nil {
 		logger.Get().Warn("cdnSyncDownload: failed to get storage client", zap.Error(err))
-		return vf.vm.ToValue(result)
+		jsonBytes, _ := json.Marshal(result)
+		return vf.vm.ToValue(string(jsonBytes))
 	}
 
 	ctx := context.Background()
 	syncResult, err := client.SyncDownload(ctx, remotePrefix, localDir, nil)
 	if err != nil {
 		logger.Get().Warn("cdnSyncDownload: sync failed", zap.String("remotePrefix", remotePrefix), zap.Error(err))
-		return vf.vm.ToValue(result)
+		jsonBytes, _ := json.Marshal(result)
+		return vf.vm.ToValue(string(jsonBytes))
 	}
 
 	result["success"] = len(syncResult.Errors) == 0
@@ -202,7 +216,12 @@ func (vf *vmFunc) cdnSyncDownload(call goja.FunctionCall) goja.Value {
 		zap.Int("skipped", len(syncResult.Skipped)),
 		zap.Int("errors", len(syncResult.Errors)))
 
-	return vf.vm.ToValue(result)
+	jsonBytes, err := json.Marshal(result)
+	if err != nil {
+		logger.Get().Warn("cdnSyncDownload: failed to marshal result", zap.Error(err))
+		return vf.vm.ToValue("{}")
+	}
+	return vf.vm.ToValue(string(jsonBytes))
 }
 
 // cdnGetPresignedURL generates a presigned URL for file access
@@ -252,34 +271,50 @@ func (vf *vmFunc) cdnGetPresignedURL(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(url)
 }
 
-// cdnList lists files with metadata from cloud storage
-// Usage: cdnList(prefix?) -> [{key, size, lastModified, etag, contentType}]
+// cdnList lists files with metadata from cloud storage with optional glob pattern
+// Usage: cdnList(pattern?) -> JSON string of [{key, size, lastModified, etag, contentType}]
+// Supports glob patterns like "*", "scans/*", "de*", "/reports/*.html"
 func (vf *vmFunc) cdnList(call goja.FunctionCall) goja.Value {
-	prefix := ""
+	pattern := ""
 	if len(call.Arguments) > 0 && !goja.IsUndefined(call.Argument(0)) {
-		prefix = call.Argument(0).String()
-		if prefix == "undefined" {
-			prefix = ""
+		pattern = call.Argument(0).String()
+		if pattern == "undefined" {
+			pattern = ""
 		}
 	}
-	logger.Get().Debug("Calling cdnList", zap.String("prefix", prefix))
+	logger.Get().Debug("Calling cdnList", zap.String("pattern", pattern))
 
 	client, err := storage.GetClient()
 	if err != nil {
 		logger.Get().Warn("cdnList: failed to get storage client", zap.Error(err))
-		return vf.vm.ToValue([]interface{}{})
+		return vf.vm.ToValue("[]")
 	}
+
+	// Extract prefix for efficient listing (everything before the first wildcard)
+	prefix := extractPrefixFromPattern(pattern)
 
 	ctx := context.Background()
 	files, err := client.ListWithInfo(ctx, prefix)
 	if err != nil {
-		logger.Get().Warn("cdnList: list failed", zap.String("prefix", prefix), zap.Error(err))
-		return vf.vm.ToValue([]interface{}{})
+		logger.Get().Warn("cdnList: list failed", zap.String("pattern", pattern), zap.Error(err))
+		return vf.vm.ToValue("[]")
 	}
 
-	// Convert to JavaScript-friendly format
-	result := make([]map[string]interface{}, 0, len(files))
-	for _, f := range files {
+	// Filter by glob pattern if specified
+	var filtered []storage.FileInfo
+	if pattern != "" && pattern != prefix {
+		for _, f := range files {
+			if matchGlobPattern(pattern, f.Key) {
+				filtered = append(filtered, f)
+			}
+		}
+	} else {
+		filtered = files
+	}
+
+	// Convert to JSON-friendly format
+	result := make([]map[string]interface{}, 0, len(filtered))
+	for _, f := range filtered {
 		result = append(result, map[string]interface{}{
 			"key":          f.Key,
 			"size":         f.Size,
@@ -289,37 +324,98 @@ func (vf *vmFunc) cdnList(call goja.FunctionCall) goja.Value {
 		})
 	}
 
-	logger.Get().Debug("cdnList result", zap.String("prefix", prefix), zap.Int("count", len(result)))
-	return vf.vm.ToValue(result)
+	jsonBytes, err := json.Marshal(result)
+	if err != nil {
+		logger.Get().Warn("cdnList: failed to marshal result", zap.Error(err))
+		return vf.vm.ToValue("[]")
+	}
+
+	logger.Get().Debug("cdnList result", zap.String("pattern", pattern), zap.Int("count", len(result)))
+	return vf.vm.ToValue(string(jsonBytes))
+}
+
+// extractPrefixFromPattern extracts the prefix before any wildcard character
+func extractPrefixFromPattern(pattern string) string {
+	for i, c := range pattern {
+		if c == '*' || c == '?' || c == '[' {
+			return pattern[:i]
+		}
+	}
+	return pattern
+}
+
+// matchGlobPattern matches a key against a glob pattern
+func matchGlobPattern(pattern, key string) bool {
+	matched, err := filepath.Match(pattern, key)
+	if err != nil {
+		return false
+	}
+	if matched {
+		return true
+	}
+	// Also try matching just the filename for patterns like "*.html"
+	if !strings.Contains(pattern, "/") {
+		matched, _ = filepath.Match(pattern, filepath.Base(key))
+		return matched
+	}
+	return false
+}
+
+// cdnRead reads a file from cloud storage and returns its content
+// Usage: cdnRead(remotePath) -> string
+func (vf *vmFunc) cdnRead(call goja.FunctionCall) goja.Value {
+	remotePath := call.Argument(0).String()
+	logger.Get().Debug("Calling cdnRead", zap.String("remotePath", remotePath))
+
+	if remotePath == "undefined" || remotePath == "" {
+		logger.Get().Warn("cdnRead: empty remote path provided")
+		return vf.vm.ToValue("")
+	}
+
+	client, err := storage.GetClient()
+	if err != nil {
+		logger.Get().Warn("cdnRead: failed to get storage client", zap.Error(err))
+		return vf.vm.ToValue("")
+	}
+
+	ctx := context.Background()
+	content, err := client.ReadContent(ctx, remotePath)
+	if err != nil {
+		logger.Get().Warn("cdnRead: read failed", zap.String("remotePath", remotePath), zap.Error(err))
+		return vf.vm.ToValue("")
+	}
+
+	logger.Get().Debug("cdnRead result", zap.String("remotePath", remotePath), zap.Int("length", len(content)))
+	return vf.vm.ToValue(content)
 }
 
 // cdnStat returns metadata for a single file from cloud storage
-// Usage: cdnStat(remotePath) -> {key, size, lastModified, etag, contentType} | null
+// Usage: cdnStat(remotePath) -> JSON string {key, size, lastModified, etag, contentType} | "null"
 func (vf *vmFunc) cdnStat(call goja.FunctionCall) goja.Value {
 	remotePath := call.Argument(0).String()
 	logger.Get().Debug("Calling cdnStat", zap.String("remotePath", remotePath))
 
 	if remotePath == "undefined" || remotePath == "" {
 		logger.Get().Warn("cdnStat: empty remote path provided")
-		return goja.Null()
+		return vf.vm.ToValue("null")
 	}
 
 	client, err := storage.GetClient()
 	if err != nil {
 		logger.Get().Warn("cdnStat: failed to get storage client", zap.Error(err))
-		return goja.Null()
+		return vf.vm.ToValue("null")
 	}
 
 	ctx := context.Background()
 	info, err := client.Stat(ctx, remotePath)
 	if err != nil {
 		logger.Get().Warn("cdnStat: stat failed", zap.String("remotePath", remotePath), zap.Error(err))
-		return goja.Null()
+		return vf.vm.ToValue("null")
 	}
 
 	if info == nil {
 		logger.Get().Debug("cdnStat: file not found", zap.String("remotePath", remotePath))
-		return goja.Null()
+		return vf.vm.ToValue("null")
 	}
 
 	result := map[string]interface{}{
@@ -330,6 +426,12 @@ func (vf *vmFunc) cdnStat(call goja.FunctionCall) goja.Value {
 		"contentType":  info.ContentType,
 	}
 
+	jsonBytes, err := json.Marshal(result)
+	if err != nil {
+		logger.Get().Warn("cdnStat: failed to marshal result", zap.Error(err))
+		return vf.vm.ToValue("null")
+	}
+
 	logger.Get().Debug("cdnStat result", zap.String("remotePath", remotePath), zap.Int64("size", info.Size))
-	return vf.vm.ToValue(result)
+	return vf.vm.ToValue(string(jsonBytes))
 }

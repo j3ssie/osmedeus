@@ -155,6 +155,7 @@ const (
 	FnCdnGetPresignedURL = "cdn_get_presigned_url" // cdn_get_presigned_url(remotePath, expiryMins?) -> string
 	FnCdnList            = "cdn_list"              // cdn_list(prefix?) -> []object
 	FnCdnStat            = "cdn_stat"              // cdn_stat(remotePath) -> object|null
+	FnCdnRead            = "cdn_read"              // cdn_read(remotePath) -> string
 )
 
 // Unix Command Wrappers - Wrappers around common Unix commands
@@ -415,6 +416,7 @@ func AllFunctions() []string {
 		FnCdnGetPresignedURL,
 		FnCdnList,
 		FnCdnStat,
+		FnCdnRead,
 
 		// Unix Command Wrappers
 		FnSortUnix,
@@ -715,11 +717,12 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnCdnDownload, "cdn_download(remotePath, localPath)", "Download file from cloud storage", "bool", "cdn_download('wordlists/common.txt', '/tmp/common.txt')"},
 			{FnCdnExists, "cdn_exists(remotePath)", "Check if file exists in cloud storage", "bool", "cdn_exists('scans/{{Target}}/report.zip')"},
 			{FnCdnDelete, "cdn_delete(remotePath)", "Delete file from cloud storage", "bool", "cdn_delete('scans/{{Target}}/old-report.zip')"},
-			{FnCdnSyncUpload, "cdn_sync_upload(localDir, remotePrefix)", "Sync local directory to cloud storage (delta)", "object", "cdn_sync_upload('{{Output}}', 'scans/{{Target}}/')"},
-			{FnCdnSyncDownload, "cdn_sync_download(remotePrefix, localDir)", "Sync cloud storage to local directory (delta)", "object", "cdn_sync_download('base-setup/', '{{BaseFolder}}')"},
+			{FnCdnSyncUpload, "cdn_sync_upload(localDir, remotePrefix)", "Sync local directory to cloud storage (delta)", "JSON string", "cdn_sync_upload('{{Output}}', 'scans/{{Target}}/')"},
+			{FnCdnSyncDownload, "cdn_sync_download(remotePrefix, localDir)", "Sync cloud storage to local directory (delta)", "JSON string", "cdn_sync_download('base-setup/', '{{BaseFolder}}')"},
 			{FnCdnGetPresignedURL, "cdn_get_presigned_url(remotePath, expiryMins?)", "Generate presigned URL for file access", "string", "cdn_get_presigned_url('report.zip', 60)"},
-			{FnCdnList, "cdn_list(prefix?)", "List files with metadata from cloud storage", "[]object", "cdn_list('scans/')"},
-			{FnCdnStat, "cdn_stat(remotePath)", "Get file metadata from cloud storage", "object|null", "cdn_stat('scans/target/report.zip')"},
+			{FnCdnList, "cdn_list(pattern?)", "List files with metadata from cloud storage (supports glob patterns)", "JSON string", "cdn_list('scans/')"},
+			{FnCdnStat, "cdn_stat(remotePath)", "Get file metadata from cloud storage", "JSON string", "cdn_stat('scans/target/report.zip')"},
+			{FnCdnRead, "cdn_read(remotePath)", "Read file content from cloud storage", "string", "cdn_read('config/settings.yaml')"},
 		},
 		CategoryUnixCommands: {
 			{FnSortUnix, "sort_unix(input, output?)", "Sort file with LC_ALL=C sort -u", "bool", "sort_unix('{{Output}}/urls.txt')"},

@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -94,9 +95,12 @@ func TestCdnSyncUpload_EmptyLocalDir(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	// Should return object with success: false
-	resultMap, ok := result.(map[string]interface{})
+	// Should return JSON string with success: false
+	resultStr, ok := result.(string)
 	require.True(t, ok)
+	var resultMap map[string]interface{}
+	err = json.Unmarshal([]byte(resultStr), &resultMap)
+	require.NoError(t, err)
 	assert.Equal(t, false, resultMap["success"])
 }
 
@@ -108,8 +112,12 @@ func TestCdnSyncUpload_UndefinedArguments(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	resultMap, ok := result.(map[string]interface{})
+	// Should return JSON string with success: false
+	resultStr, ok := result.(string)
 	require.True(t, ok)
+	var resultMap map[string]interface{}
+	err = json.Unmarshal([]byte(resultStr), &resultMap)
+	require.NoError(t, err)
 	assert.Equal(t, false, resultMap["success"])
 }
 
@@ -121,8 +129,12 @@ func TestCdnSyncDownload_EmptyLocalDir(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	resultMap, ok := result.(map[string]interface{})
+	// Should return JSON string with success: false
+	resultStr, ok := result.(string)
 	require.True(t, ok)
+	var resultMap map[string]interface{}
+	err = json.Unmarshal([]byte(resultStr), &resultMap)
+	require.NoError(t, err)
 	assert.Equal(t, false, resultMap["success"])
 }
 
@@ -134,8 +146,12 @@ func TestCdnSyncDownload_UndefinedArguments(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	resultMap, ok := result.(map[string]interface{})
+	// Should return JSON string with success: false
+	resultStr, ok := result.(string)
 	require.True(t, ok)
+	var resultMap map[string]interface{}
+	err = json.Unmarshal([]byte(resultStr), &resultMap)
+	require.NoError(t, err)
 	assert.Equal(t, false, resultMap["success"])
 }
 
@@ -182,9 +198,12 @@ func TestCdnList_EmptyPrefix(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	// Should return empty array when storage not configured
-	resultSlice, ok := result.([]interface{})
+	// Should return empty JSON array when storage not configured
+	resultStr, ok := result.(string)
 	require.True(t, ok)
+	var resultSlice []interface{}
+	err = json.Unmarshal([]byte(resultStr), &resultSlice)
+	require.NoError(t, err)
 	assert.Equal(t, 0, len(resultSlice))
 }
 
@@ -196,8 +215,12 @@ func TestCdnList_WithPrefix(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	resultSlice, ok := result.([]interface{})
+	// Should return empty JSON array when storage not configured
+	resultStr, ok := result.(string)
 	require.True(t, ok)
+	var resultSlice []interface{}
+	err = json.Unmarshal([]byte(resultStr), &resultSlice)
+	require.NoError(t, err)
 	assert.Equal(t, 0, len(resultSlice))
 }
 
@@ -209,8 +232,12 @@ func TestCdnList_NoArguments(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	resultSlice, ok := result.([]interface{})
+	// Should return empty JSON array when storage not configured
+	resultStr, ok := result.(string)
 	require.True(t, ok)
+	var resultSlice []interface{}
+	err = json.Unmarshal([]byte(resultStr), &resultSlice)
+	require.NoError(t, err)
 	assert.Equal(t, 0, len(resultSlice))
 }
 
@@ -222,8 +249,10 @@ func TestCdnStat_EmptyPath(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	// Should return null for empty path
-	assert.Nil(t, result)
+	// Should return "null" string for empty path
+	resultStr, ok := result.(string)
+	require.True(t, ok)
+	assert.Equal(t, "null", resultStr)
 }
 
 func TestCdnStat_NonExistentFile(t *testing.T) {
@@ -234,8 +263,10 @@ func TestCdnStat_NonExistentFile(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	// Should return null when storage not configured
-	assert.Nil(t, result)
+	// Should return "null" string when storage not configured
+	resultStr, ok := result.(string)
+	require.True(t, ok)
+	assert.Equal(t, "null", resultStr)
 }
 
 func TestCdnStat_UndefinedArgument(t *testing.T) {
@@ -246,7 +277,10 @@ func TestCdnStat_UndefinedArgument(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	assert.Nil(t, result)
+	// Should return "null" string for undefined argument
+	resultStr, ok := result.(string)
+	require.True(t, ok)
+	assert.Equal(t, "null", resultStr)
 }
 
 // Test return types for sync operations
@@ -258,8 +292,11 @@ func TestCdnSyncUpload_ReturnStructure(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	resultMap, ok := result.(map[string]interface{})
+	resultStr, ok := result.(string)
 	require.True(t, ok)
+	var resultMap map[string]interface{}
+	err = json.Unmarshal([]byte(resultStr), &resultMap)
+	require.NoError(t, err)
 
 	// Check all expected fields exist
 	_, hasSuccess := resultMap["success"]
@@ -283,8 +320,11 @@ func TestCdnSyncDownload_ReturnStructure(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	resultMap, ok := result.(map[string]interface{})
+	resultStr, ok := result.(string)
 	require.True(t, ok)
+	var resultMap map[string]interface{}
+	err = json.Unmarshal([]byte(resultStr), &resultMap)
+	require.NoError(t, err)
 
 	// Check all expected fields exist
 	_, hasSuccess := resultMap["success"]

@@ -117,6 +117,9 @@ type Provider interface {
 
 	// Stat returns metadata for a single file
 	Stat(ctx context.Context, remotePath string) (*FileInfo, error)
+
+	// ReadContent reads a remote file and returns its content as a string
+	ReadContent(ctx context.Context, remotePath string) (string, error)
 }
 
 // Client wraps the storage provider with common functionality
@@ -431,6 +434,21 @@ func (c *S3Client) Stat(ctx context.Context, remotePath string) (*FileInfo, erro
 	}, nil
 }
 
+// ReadContent reads a remote file and returns its content as a string
+func (c *S3Client) ReadContent(ctx context.Context, remotePath string) (string, error) {
+	obj, err := c.client.GetObject(ctx, c.bucket, remotePath, minio.GetObjectOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to get object: %w", err)
+	}
+	defer func() { _ = obj.Close() }()
+
+	content, err := io.ReadAll(obj)
+	if err != nil {
+		return "", fmt.Errorf("failed to read object content: %w", err)
+	}
+	return string(content), nil
+}
+
 // Client wrapper methods
 
 // Upload uploads a local file to cloud storage
@@ -491,6 +509,11 @@ func (c *Client) ListWithInfo(ctx context.Context, prefix string) ([]FileInfo, e
 // Stat returns metadata for a single file
 func (c *Client) Stat(ctx context.Context, remotePath string) (*FileInfo, error) {
 	return c.provider.Stat(ctx, remotePath)
+}
+
+// ReadContent reads a remote file and returns its content as a string
+func (c *Client) ReadContent(ctx context.Context, remotePath string) (string, error) {
+	return c.provider.ReadContent(ctx, remotePath)
 }
 
 // SyncUpload synchronizes a local directory to remote storage
