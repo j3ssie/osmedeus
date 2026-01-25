@@ -160,6 +160,8 @@ func executeRunsConcurrently(
 		maxConcurrency = 1
 	}
 
+	loader := parser.NewLoader(cfg.WorkflowsPath)
+
 	sem := make(chan struct{}, maxConcurrency) // Semaphore
 	var wg sync.WaitGroup
 
@@ -193,6 +195,7 @@ func executeRunsConcurrently(
 			// Execute workflow
 			exec := executor.NewExecutor()
 			exec.SetServerMode(true) // Enable file logging for server mode
+			exec.SetLoader(loader)
 
 			// Set up database progress tracking
 			if runUUID != "" {
@@ -370,6 +373,7 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 
 			exec := executor.NewExecutor()
 			exec.SetServerMode(true) // Enable file logging for server mode
+			exec.SetLoader(loader)
 
 			// Set up database progress tracking
 			if run != nil {
@@ -782,6 +786,7 @@ func StartRun(cfg *config.Config) fiber.Handler {
 			// Create executor
 			exec := executor.NewExecutor()
 			exec.SetServerMode(true)
+			exec.SetLoader(loader)
 			exec.SetDBRunUUID(runUUID)
 			exec.SetDBRunID(runID)
 			exec.SetOnStepCompleted(func(stepCtx context.Context, dbRunUUID string) {
