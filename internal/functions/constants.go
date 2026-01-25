@@ -128,10 +128,14 @@ const (
 
 // Notification Functions - Send notifications via various channels
 const (
-	FnNotifyTelegram   = "notify_telegram"    // notify_telegram(message) -> bool
-	FnSendTelegramFile = "send_telegram_file" // send_telegram_file(path, caption?) -> bool
-	FnNotifyWebhook    = "notify_webhook"     // notify_webhook(message) -> bool
-	FnSendWebhookEvent = "send_webhook_event" // send_webhook_event(eventType, data) -> bool
+	FnNotifyTelegram                     = "notify_telegram"                        // notify_telegram(message) -> bool
+	FnSendTelegramFile                   = "send_telegram_file"                     // send_telegram_file(path, caption?) -> bool
+	FnNotifyTelegramChannel              = "notify_telegram_channel"                // notify_telegram_channel(channel, message) -> bool
+	FnSendTelegramFileChannel            = "send_telegram_file_channel"             // send_telegram_file_channel(channel, path, caption?) -> bool
+	FnNotifyMessageAsFileTelegram        = "notify_message_as_file_telegram"        // notify_message_as_file_telegram(path) -> bool
+	FnNotifyMessageAsFileTelegramChannel = "notify_message_as_file_telegram_channel" // notify_message_as_file_telegram_channel(channel, path) -> bool
+	FnNotifyWebhook                      = "notify_webhook"                         // notify_webhook(message) -> bool
+	FnSendWebhookEvent                   = "send_webhook_event"                     // send_webhook_event(eventType, data) -> bool
 )
 
 // Event Generation Functions - Generate structured events
@@ -390,6 +394,10 @@ func AllFunctions() []string {
 		// Notification Functions
 		FnNotifyTelegram,
 		FnSendTelegramFile,
+		FnNotifyTelegramChannel,
+		FnSendTelegramFileChannel,
+		FnNotifyMessageAsFileTelegram,
+		FnNotifyMessageAsFileTelegramChannel,
 		FnNotifyWebhook,
 		FnSendWebhookEvent,
 
@@ -689,8 +697,12 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnJQFromFile, "jq_from_file(path, query)", "Extract data using jq from JSON file", "any", "jq_from_file('{{Output}}/data.json', '.name')"},
 		},
 		CategoryNotification: {
-			{FnNotifyTelegram, "notify_telegram(message)", "Send message to Telegram", "bool", "notify_telegram('Scan finished for {{Target}}')"},
-			{FnSendTelegramFile, "send_telegram_file(path, caption?)", "Send file to Telegram", "bool", "send_telegram_file('{{Output}}/report.pdf', 'Scan report')"},
+			{FnNotifyTelegram, "notify_telegram(message)", "Send markdown message to Telegram", "bool", "notify_telegram('Scan finished for {{Target}}')"},
+			{FnSendTelegramFile, "send_telegram_file(path, caption?)", "Send file to Telegram (supports ~ and $HOME paths)", "bool", "send_telegram_file('~/reports/scan.pdf', 'Scan report')"},
+			{FnNotifyTelegramChannel, "notify_telegram_channel(channel, message)", "Send markdown message to specific Telegram channel (#name or numeric ID)", "bool", "notify_telegram_channel('#alerts', 'New finding!')"},
+			{FnSendTelegramFileChannel, "send_telegram_file_channel(channel, path, caption?)", "Send file to specific Telegram channel (supports ~ and $HOME paths)", "bool", "send_telegram_file_channel('#reports', '~/reports/scan.pdf', 'Scan report')"},
+			{FnNotifyMessageAsFileTelegram, "notify_message_as_file_telegram(path)", "Read file content and send as markdown message to Telegram", "bool", "notify_message_as_file_telegram('~/reports/summary.md')"},
+			{FnNotifyMessageAsFileTelegramChannel, "notify_message_as_file_telegram_channel(channel, path)", "Read file content and send as markdown message to Telegram channel", "bool", "notify_message_as_file_telegram_channel('#alerts', '~/reports/summary.md')"},
 			{FnNotifyWebhook, "notify_webhook(message)", "Send message to all webhooks", "bool", "notify_webhook('Scan finished for {{Target}}')"},
 			{FnSendWebhookEvent, "send_webhook_event(eventType, data)", "Send event to all webhooks", "bool", "send_webhook_event('scan_complete', {target: '{{Target}}'})"},
 		},

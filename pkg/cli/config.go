@@ -66,6 +66,7 @@ var configListCmd = &cobra.Command{
 func init() {
 	configCmd.AddCommand(configCleanCmd)
 	configCmd.AddCommand(configSetCmd)
+	configSetCmd.Flags().SetInterspersed(false) // Allow negative numbers as positional args
 	configCmd.AddCommand(configViewCmd)
 	configCmd.AddCommand(configListCmd)
 

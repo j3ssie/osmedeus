@@ -232,6 +232,13 @@ notification:
     # Enable Telegram notifications
     enabled: false
 
+    # Channel map for sending to specific channels/groups by name
+    # Use notify_telegram_channel("#name", "message") or send_telegram_file_channel("#name", "/path/to/file")
+    # You can also use numeric chat IDs directly: notify_telegram_channel("-1001234567890", "message")
+    telegram_channel_map:
+      # alerts: -1001234567890
+      # reports: -1009876543210
+
   # Webhook settings
   # Configure multiple webhook endpoints for notifications
   # Webhooks are triggered on workflow events (completed, failed, etc.)

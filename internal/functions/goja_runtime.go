@@ -152,6 +152,10 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	// Notification functions
 	_ = vm.Set(FnNotifyTelegram, vf.notifyTelegram)
 	_ = vm.Set(FnSendTelegramFile, vf.sendTelegramFile)
+	_ = vm.Set(FnNotifyTelegramChannel, vf.notifyTelegramChannel)
+	_ = vm.Set(FnSendTelegramFileChannel, vf.sendTelegramFileChannel)
+	_ = vm.Set(FnNotifyMessageAsFileTelegram, vf.notifyMessageAsFileTelegram)
+	_ = vm.Set(FnNotifyMessageAsFileTelegramChannel, vf.notifyMessageAsFileTelegramChannel)
 	_ = vm.Set(FnNotifyWebhook, vf.notifyWebhook)
 	_ = vm.Set(FnSendWebhookEvent, vf.sendWebhookEvent)
 

@@ -531,9 +531,10 @@ type RedisConfig struct {
 
 // TelegramConfig holds Telegram bot settings
 type TelegramConfig struct {
-	BotToken string `yaml:"bot_token"`
-	ChatID   int64  `yaml:"chat_id"`
-	Enabled  bool   `yaml:"enabled"`
+	BotToken           string           `yaml:"bot_token"`
+	ChatID             int64            `yaml:"chat_id"`
+	Enabled            bool             `yaml:"enabled"`
+	TelegramChannelMap map[string]int64 `yaml:"telegram_channel_map,omitempty"`
 }
 
 // WebhookConfig holds configuration for a single webhook endpoint
