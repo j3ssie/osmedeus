@@ -45,6 +45,22 @@ func TestExecCmd(t *testing.T) {
 	})
 }
 
+func TestBash(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("simple echo command", func(t *testing.T) {
+		result, err := runtime.Execute(`bash("echo hello")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "hello", result)
+	})
+
+	t.Run("empty command returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`bash("")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+}
+
 func TestCutWithDelim(t *testing.T) {
 	runtime := NewOttoRuntime()
 

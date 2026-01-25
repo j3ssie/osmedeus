@@ -90,7 +90,7 @@ func TestCdnDelete_EmptyPath(t *testing.T) {
 func TestCdnSyncUpload_EmptyLocalDir(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`cdn_sync_upload("", "remote/prefix/")`,
+		`cdn_sync_upload("", "remote/prefix/", "json")`,
 		map[string]interface{}{},
 	)
 
@@ -107,7 +107,7 @@ func TestCdnSyncUpload_EmptyLocalDir(t *testing.T) {
 func TestCdnSyncUpload_UndefinedArguments(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`cdn_sync_upload()`,
+		`cdn_sync_upload(undefined, undefined, "json")`,
 		map[string]interface{}{},
 	)
 
@@ -124,7 +124,7 @@ func TestCdnSyncUpload_UndefinedArguments(t *testing.T) {
 func TestCdnSyncDownload_EmptyLocalDir(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`cdn_sync_download("remote/prefix/", "")`,
+		`cdn_sync_download("remote/prefix/", "", "json")`,
 		map[string]interface{}{},
 	)
 
@@ -141,7 +141,7 @@ func TestCdnSyncDownload_EmptyLocalDir(t *testing.T) {
 func TestCdnSyncDownload_UndefinedArguments(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`cdn_sync_download()`,
+		`cdn_sync_download(undefined, undefined, "json")`,
 		map[string]interface{}{},
 	)
 
@@ -287,7 +287,7 @@ func TestCdnStat_UndefinedArgument(t *testing.T) {
 func TestCdnSyncUpload_ReturnStructure(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`cdn_sync_upload("/nonexistent", "prefix/")`,
+		`cdn_sync_upload("/nonexistent", "prefix/", "json")`,
 		map[string]interface{}{},
 	)
 
@@ -315,7 +315,7 @@ func TestCdnSyncUpload_ReturnStructure(t *testing.T) {
 func TestCdnSyncDownload_ReturnStructure(t *testing.T) {
 	registry := NewRegistry()
 	result, err := registry.Execute(
-		`cdn_sync_download("prefix/", "/nonexistent")`,
+		`cdn_sync_download("prefix/", "/nonexistent", "json")`,
 		map[string]interface{}{},
 	)
 

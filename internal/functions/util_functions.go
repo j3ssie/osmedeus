@@ -730,6 +730,10 @@ func (vf *vmFunc) execCmd(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(strings.TrimSpace(string(output)))
 }
 
+func (vf *vmFunc) bash(call goja.FunctionCall) goja.Value {
+	return vf.execCmd(call)
+}
+
 // commandExists checks if a command is available in PATH
 // Usage: commandExists(command) -> bool
 func (vf *vmFunc) commandExists(call goja.FunctionCall) goja.Value {

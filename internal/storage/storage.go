@@ -64,12 +64,18 @@ type SyncResult struct {
 	Errors     []error  `json:"-"`
 }
 
+type SyncEvent struct {
+	Action string
+	Path   string
+}
+
 // SyncOptions configures sync behavior
 type SyncOptions struct {
 	Delete      bool             // Delete remote files not in local
 	DryRun      bool             // Don't actually transfer
 	Progress    ProgressCallback // Optional progress callback
 	Concurrency int              // Parallel transfers (default: 4)
+	Event       func(SyncEvent)
 }
 
 // Singleton client pattern
@@ -581,12 +587,18 @@ func (c *Client) SyncUpload(ctx context.Context, localDir, remotePrefix string, 
 			// Skip if remote file is same size and modified time is not older
 			if remoteInfo.Size == localInfo.Size() && !remoteInfo.LastModified.Before(localInfo.ModTime()) {
 				result.Skipped = append(result.Skipped, remotePath)
+				if opts.Event != nil {
+					opts.Event(SyncEvent{Action: "skipped", Path: remotePath})
+				}
 				continue
 			}
 		}
 
 		// Upload file
 		if !opts.DryRun {
+			if opts.Event != nil {
+				opts.Event(SyncEvent{Action: "uploading", Path: remotePath})
+			}
 			if opts.Progress != nil {
 				err = c.UploadWithProgress(ctx, absPath, remotePath, opts.Progress)
 			} else {
@@ -594,10 +606,16 @@ func (c *Client) SyncUpload(ctx context.Context, localDir, remotePrefix string, 
 			}
 			if err != nil {
 				result.Errors = append(result.Errors, fmt.Errorf("upload %s: %w", absPath, err))
+				if opts.Event != nil {
+					opts.Event(SyncEvent{Action: "error", Path: remotePath})
+				}
 				continue
 			}
 		}
 		result.Uploaded = append(result.Uploaded, remotePath)
+		if opts.Event != nil {
+			opts.Event(SyncEvent{Action: "uploaded", Path: remotePath})
+		}
 	}
 
 	// Handle deletion of remote files not in local
@@ -613,10 +631,16 @@ func (c *Client) SyncUpload(ctx context.Context, localDir, remotePrefix string, 
 				if !opts.DryRun {
 					if err := c.Delete(ctx, remotePath); err != nil {
 						result.Errors = append(result.Errors, fmt.Errorf("delete %s: %w", remotePath, err))
+						if opts.Event != nil {
+							opts.Event(SyncEvent{Action: "error", Path: remotePath})
+						}
 						continue
 					}
 				}
 				result.Deleted = append(result.Deleted, remotePath)
+				if opts.Event != nil {
+					opts.Event(SyncEvent{Action: "deleted", Path: remotePath})
+				}
 			}
 		}
 	}
@@ -691,12 +715,18 @@ func (c *Client) SyncDownload(ctx context.Context, remotePrefix, localDir string
 		if localInfo, err := os.Stat(localPath); err == nil {
 			if localInfo.Size() == remoteInfo.Size && !localInfo.ModTime().Before(remoteInfo.LastModified) {
 				result.Skipped = append(result.Skipped, remoteInfo.Key)
+				if opts.Event != nil {
+					opts.Event(SyncEvent{Action: "skipped", Path: remoteInfo.Key})
+				}
 				continue
 			}
 		}
 
 		// Download file
 		if !opts.DryRun {
+			if opts.Event != nil {
+				opts.Event(SyncEvent{Action: "downloading", Path: remoteInfo.Key})
+			}
 			if opts.Progress != nil {
 				err = c.DownloadWithProgress(ctx, remoteInfo.Key, localPath, opts.Progress)
 			} else {
@@ -704,10 +734,16 @@ func (c *Client) SyncDownload(ctx context.Context, remotePrefix, localDir string
 			}
 			if err != nil {
 				result.Errors = append(result.Errors, fmt.Errorf("download %s: %w", remoteInfo.Key, err))
+				if opts.Event != nil {
+					opts.Event(SyncEvent{Action: "error", Path: remoteInfo.Key})
+				}
 				continue
 			}
 		}
 		result.Downloaded = append(result.Downloaded, remoteInfo.Key)
+		if opts.Event != nil {
+			opts.Event(SyncEvent{Action: "downloaded", Path: remoteInfo.Key})
+		}
 	}
 
 	// Handle deletion of local files not in remote
@@ -718,10 +754,16 @@ func (c *Client) SyncDownload(ctx context.Context, remotePrefix, localDir string
 				if !opts.DryRun {
 					if err := os.Remove(localPath); err != nil {
 						result.Errors = append(result.Errors, fmt.Errorf("delete local %s: %w", localPath, err))
+						if opts.Event != nil {
+							opts.Event(SyncEvent{Action: "error", Path: localPath})
+						}
 						continue
 					}
 				}
 				result.Deleted = append(result.Deleted, relPath)
+				if opts.Event != nil {
+					opts.Event(SyncEvent{Action: "deleted", Path: localPath})
+				}
 			}
 		}
 	}

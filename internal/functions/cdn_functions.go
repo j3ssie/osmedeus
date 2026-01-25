@@ -103,14 +103,68 @@ func (vf *vmFunc) cdnDelete(call goja.FunctionCall) goja.Value {
 		return vf.vm.ToValue(false)
 	}
 
-	ctx := context.Background()
-	err := storage.DeleteFile(ctx, remotePath)
+	client, err := storage.GetClient()
 	if err != nil {
-		logger.Get().Warn("cdnDelete: delete failed", zap.String("remotePath", remotePath), zap.Error(err))
-	} else {
-		logger.Get().Debug("cdnDelete result", zap.String("remotePath", remotePath), zap.Bool("success", true))
+		logger.Get().Warn("cdnDelete: failed to get storage client", zap.Error(err))
+		return vf.vm.ToValue(false)
 	}
-	return vf.vm.ToValue(err == nil)
+
+	ctx := context.Background()
+	deletedCount := 0
+	errorCount := 0
+	folderMode := strings.HasSuffix(remotePath, "/")
+
+	if !folderMode {
+		exists, existsErr := client.Exists(ctx, remotePath)
+		if existsErr != nil {
+			logger.Get().Warn("cdnDelete: failed to check existence", zap.String("remotePath", remotePath), zap.Error(existsErr))
+		}
+		if exists {
+			if err := client.Delete(ctx, remotePath); err != nil {
+				logger.Get().Warn("cdnDelete: delete failed", zap.String("remotePath", remotePath), zap.Error(err))
+				errorCount++
+			} else {
+				deletedCount++
+			}
+		} else {
+			folderMode = true
+		}
+	}
+
+	if folderMode {
+		prefix := remotePath
+		if !strings.HasSuffix(prefix, "/") {
+			prefix += "/"
+		}
+		files, listErr := client.List(ctx, prefix)
+		if listErr != nil {
+			logger.Get().Warn("cdnDelete: list failed", zap.String("prefix", prefix), zap.Error(listErr))
+			errorCount++
+		} else {
+			for _, key := range files {
+				if err := client.Delete(ctx, key); err != nil {
+					logger.Get().Warn("cdnDelete: delete failed", zap.String("remotePath", key), zap.Error(err))
+					errorCount++
+				} else {
+					deletedCount++
+				}
+			}
+		}
+	}
+
+	if errorCount > 0 {
+		logger.Get().Warn("cdnDelete: completed with errors",
+			zap.String("remotePath", remotePath),
+			zap.Int("deleted", deletedCount),
+			zap.Int("errors", errorCount))
+		return vf.vm.ToValue(false)
+	}
+
+	logger.Get().Debug("cdnDelete result",
+		zap.String("remotePath", remotePath),
+		zap.Int("deleted", deletedCount),
+		zap.Bool("success", deletedCount > 0))
+	return vf.vm.ToValue(deletedCount > 0)
 }
 
 // cdnSyncUpload synchronizes a local directory to cloud storage
@@ -118,6 +172,11 @@ func (vf *vmFunc) cdnDelete(call goja.FunctionCall) goja.Value {
 func (vf *vmFunc) cdnSyncUpload(call goja.FunctionCall) goja.Value {
 	localDir := call.Argument(0).String()
 	remotePrefix := call.Argument(1).String()
+	mode := ""
+	if len(call.Arguments) > 2 && !goja.IsUndefined(call.Argument(2)) {
+		mode = strings.ToLower(call.Argument(2).String())
+	}
+	jsonOnly := mode == "json"
 	logger.Get().Debug("Calling cdnSyncUpload", zap.String("localDir", localDir), zap.String("remotePrefix", remotePrefix))
 
 	result := map[string]interface{}{
@@ -131,22 +190,55 @@ func (vf *vmFunc) cdnSyncUpload(call goja.FunctionCall) goja.Value {
 	if localDir == "undefined" || localDir == "" {
 		logger.Get().Warn("cdnSyncUpload: empty local directory provided")
 		jsonBytes, _ := json.Marshal(result)
-		return vf.vm.ToValue(string(jsonBytes))
+		if jsonOnly {
+			return vf.vm.ToValue(string(jsonBytes))
+		}
+		return vf.vm.ToValue("uploaded=0 skipped=0 deleted=0 errors=0")
 	}
 
 	client, err := storage.GetClient()
 	if err != nil {
 		logger.Get().Warn("cdnSyncUpload: failed to get storage client", zap.Error(err))
 		jsonBytes, _ := json.Marshal(result)
-		return vf.vm.ToValue(string(jsonBytes))
+		if jsonOnly {
+			return vf.vm.ToValue(string(jsonBytes))
+		}
+		return vf.vm.ToValue("uploaded=0 skipped=0 deleted=0 errors=0")
 	}
 
 	ctx := context.Background()
-	syncResult, err := client.SyncUpload(ctx, localDir, remotePrefix, nil)
+	if !jsonOnly {
+		prefix := terminal.InfoSymbol() + " " + terminal.HiBlue("cdn_sync_upload")
+		fmt.Printf("%s %s %s\n", prefix, terminal.Cyan("started"), terminal.Gray(fmt.Sprintf("%s -> %s", localDir, remotePrefix)))
+	}
+	opts := &storage.SyncOptions{}
+	if !jsonOnly {
+		infoPrefix := terminal.InfoSymbol() + " " + terminal.HiBlue("cdn_sync_upload")
+		warnPrefix := terminal.WarningSymbol() + " " + terminal.HiBlue("cdn_sync_upload")
+		errPrefix := terminal.ErrorSymbol() + " " + terminal.HiBlue("cdn_sync_upload")
+		opts.Event = func(event storage.SyncEvent) {
+			switch event.Action {
+			case "uploading":
+				fmt.Printf("%s %s %s\n", infoPrefix, terminal.Blue("uploading"), terminal.Gray(event.Path))
+			case "uploaded":
+				fmt.Printf("%s %s %s\n", infoPrefix, terminal.Green("uploaded"), terminal.Gray(event.Path))
+			case "skipped":
+				fmt.Printf("%s %s %s\n", warnPrefix, terminal.Yellow("skipped"), terminal.Gray(event.Path))
+			case "deleted":
+				fmt.Printf("%s %s %s\n", warnPrefix, terminal.Magenta("deleted"), terminal.Gray(event.Path))
+			case "error":
+				fmt.Printf("%s %s %s\n", errPrefix, terminal.Red("error"), terminal.Gray(event.Path))
+			}
+		}
+	}
+	syncResult, err := client.SyncUpload(ctx, localDir, remotePrefix, opts)
 	if err != nil {
 		logger.Get().Warn("cdnSyncUpload: sync failed", zap.String("localDir", localDir), zap.Error(err))
 		jsonBytes, _ := json.Marshal(result)
-		return vf.vm.ToValue(string(jsonBytes))
+		if jsonOnly {
+			return vf.vm.ToValue(string(jsonBytes))
+		}
+		return vf.vm.ToValue("uploaded=0 skipped=0 deleted=0 errors=0")
 	}
 
 	result["success"] = len(syncResult.Errors) == 0
@@ -165,9 +257,30 @@ func (vf *vmFunc) cdnSyncUpload(call goja.FunctionCall) goja.Value {
 	jsonBytes, err := json.Marshal(result)
 	if err != nil {
 		logger.Get().Warn("cdnSyncUpload: failed to marshal result", zap.Error(err))
-		return vf.vm.ToValue("{}")
+		if jsonOnly {
+			return vf.vm.ToValue("{}")
+		}
+		return vf.vm.ToValue("uploaded=0 skipped=0 deleted=0 errors=0")
 	}
-	return vf.vm.ToValue(string(jsonBytes))
+	if jsonOnly {
+		return vf.vm.ToValue(string(jsonBytes))
+	}
+	if !jsonOnly {
+		prefix := terminal.InfoSymbol() + " " + terminal.HiBlue("cdn_sync_upload")
+		fmt.Printf("%s %s %s\n",
+			prefix,
+			terminal.HiGreen("summary"),
+			terminal.Gray(fmt.Sprintf("uploaded=%d skipped=%d deleted=%d errors=%d",
+				len(syncResult.Uploaded),
+				len(syncResult.Skipped),
+				len(syncResult.Deleted),
+				len(syncResult.Errors))))
+	}
+	return vf.vm.ToValue(fmt.Sprintf("uploaded=%d skipped=%d deleted=%d errors=%d",
+		len(syncResult.Uploaded),
+		len(syncResult.Skipped),
+		len(syncResult.Deleted),
+		len(syncResult.Errors)))
 }
 
 // cdnSyncDownload synchronizes cloud storage to a local directory
@@ -175,6 +288,11 @@ func (vf *vmFunc) cdnSyncUpload(call goja.FunctionCall) goja.Value {
 func (vf *vmFunc) cdnSyncDownload(call goja.FunctionCall) goja.Value {
 	remotePrefix := call.Argument(0).String()
 	localDir := call.Argument(1).String()
+	mode := ""
+	if len(call.Arguments) > 2 && !goja.IsUndefined(call.Argument(2)) {
+		mode = strings.ToLower(call.Argument(2).String())
+	}
+	jsonOnly := mode == "json"
 	logger.Get().Debug("Calling cdnSyncDownload", zap.String("remotePrefix", remotePrefix), zap.String("localDir", localDir))
 
 	result := map[string]interface{}{
@@ -188,22 +306,55 @@ func (vf *vmFunc) cdnSyncDownload(call goja.FunctionCall) goja.Value {
 	if localDir == "undefined" || localDir == "" {
 		logger.Get().Warn("cdnSyncDownload: empty local directory provided")
 		jsonBytes, _ := json.Marshal(result)
-		return vf.vm.ToValue(string(jsonBytes))
+		if jsonOnly {
+			return vf.vm.ToValue(string(jsonBytes))
+		}
+		return vf.vm.ToValue("downloaded=0 skipped=0 deleted=0 errors=0")
 	}
 
 	client, err := storage.GetClient()
 	if err != nil {
 		logger.Get().Warn("cdnSyncDownload: failed to get storage client", zap.Error(err))
 		jsonBytes, _ := json.Marshal(result)
-		return vf.vm.ToValue(string(jsonBytes))
+		if jsonOnly {
+			return vf.vm.ToValue(string(jsonBytes))
+		}
+		return vf.vm.ToValue("downloaded=0 skipped=0 deleted=0 errors=0")
 	}
 
 	ctx := context.Background()
-	syncResult, err := client.SyncDownload(ctx, remotePrefix, localDir, nil)
+	if !jsonOnly {
+		prefix := terminal.InfoSymbol() + " " + terminal.HiBlue("cdn_sync_download")
+		fmt.Printf("%s %s %s\n", prefix, terminal.Cyan("started"), terminal.Gray(fmt.Sprintf("%s -> %s", remotePrefix, localDir)))
+	}
+	opts := &storage.SyncOptions{}
+	if !jsonOnly {
+		infoPrefix := terminal.InfoSymbol() + " " + terminal.HiBlue("cdn_sync_download")
+		warnPrefix := terminal.WarningSymbol() + " " + terminal.HiBlue("cdn_sync_download")
+		errPrefix := terminal.ErrorSymbol() + " " + terminal.HiBlue("cdn_sync_download")
+		opts.Event = func(event storage.SyncEvent) {
+			switch event.Action {
+			case "downloading":
+				fmt.Printf("%s %s %s\n", infoPrefix, terminal.Blue("downloading"), terminal.Gray(event.Path))
+			case "downloaded":
+				fmt.Printf("%s %s %s\n", infoPrefix, terminal.Green("downloaded"), terminal.Gray(event.Path))
+			case "skipped":
+				fmt.Printf("%s %s %s\n", warnPrefix, terminal.Yellow("skipped"), terminal.Gray(event.Path))
+			case "deleted":
+				fmt.Printf("%s %s %s\n", warnPrefix, terminal.Magenta("deleted"), terminal.Gray(event.Path))
+			case "error":
+				fmt.Printf("%s %s %s\n", errPrefix, terminal.Red("error"), terminal.Gray(event.Path))
+			}
+		}
+	}
+	syncResult, err := client.SyncDownload(ctx, remotePrefix, localDir, opts)
 	if err != nil {
 		logger.Get().Warn("cdnSyncDownload: sync failed", zap.String("remotePrefix", remotePrefix), zap.Error(err))
 		jsonBytes, _ := json.Marshal(result)
-		return vf.vm.ToValue(string(jsonBytes))
+		if jsonOnly {
+			return vf.vm.ToValue(string(jsonBytes))
+		}
+		return vf.vm.ToValue("downloaded=0 skipped=0 deleted=0 errors=0")
 	}
 
 	result["success"] = len(syncResult.Errors) == 0
@@ -222,9 +373,30 @@ func (vf *vmFunc) cdnSyncDownload(call goja.FunctionCall) goja.Value {
 	jsonBytes, err := json.Marshal(result)
 	if err != nil {
 		logger.Get().Warn("cdnSyncDownload: failed to marshal result", zap.Error(err))
-		return vf.vm.ToValue("{}")
+		if jsonOnly {
+			return vf.vm.ToValue("{}")
+		}
+		return vf.vm.ToValue("downloaded=0 skipped=0 deleted=0 errors=0")
 	}
-	return vf.vm.ToValue(string(jsonBytes))
+	if jsonOnly {
+		return vf.vm.ToValue(string(jsonBytes))
+	}
+	if !jsonOnly {
+		prefix := terminal.InfoSymbol() + " " + terminal.HiBlue("cdn_sync_download")
+		fmt.Printf("%s %s %s\n",
+			prefix,
+			terminal.HiGreen("summary"),
+			terminal.Gray(fmt.Sprintf("downloaded=%d skipped=%d deleted=%d errors=%d",
+				len(syncResult.Downloaded),
+				len(syncResult.Skipped),
+				len(syncResult.Deleted),
+				len(syncResult.Errors))))
+	}
+	return vf.vm.ToValue(fmt.Sprintf("downloaded=%d skipped=%d deleted=%d errors=%d",
+		len(syncResult.Downloaded),
+		len(syncResult.Skipped),
+		len(syncResult.Deleted),
+		len(syncResult.Errors)))
 }
 
 // cdnGetPresignedURL generates a presigned URL for file access

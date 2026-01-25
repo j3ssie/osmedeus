@@ -66,13 +66,14 @@ const (
 
 // Utility Functions - General utility operations
 const (
-	FnLen           = "len"            // len(val) -> int
-	FnIsEmpty       = "is_empty"       // is_empty(val) -> bool
-	FnIsNotEmpty    = "is_not_empty"   // is_not_empty(val) -> bool
-	FnPrintf        = "printf"         // printf(message) -> void (print message to stdout)
-	FnCatFile       = "cat_file"       // cat_file(path) -> void (print file content to stdout)
-	FnExit          = "exit"           // exit(code) -> void (exit scan with code)
-	FnExecCmd       = "exec_cmd"       // exec_cmd(command) -> string (execute bash command, return stdout)
+	FnLen           = "len"          // len(val) -> int
+	FnIsEmpty       = "is_empty"     // is_empty(val) -> bool
+	FnIsNotEmpty    = "is_not_empty" // is_not_empty(val) -> bool
+	FnPrintf        = "printf"       // printf(message) -> void (print message to stdout)
+	FnCatFile       = "cat_file"     // cat_file(path) -> void (print file content to stdout)
+	FnExit          = "exit"         // exit(code) -> void (exit scan with code)
+	FnExecCmd       = "exec_cmd"     // exec_cmd(command) -> string (alias for bash)
+	FnBash          = "bash"
 	FnSleep         = "sleep"          // sleep(seconds) -> void (pause for n seconds)
 	FnCommandExists = "command_exists" // command_exists(command) -> bool (check if command exists in PATH)
 	FnPickValid     = "pick_valid"     // pick_valid(v1, v2, ..., v10) -> any (first valid value)
@@ -350,6 +351,7 @@ func AllFunctions() []string {
 		FnCatFile,
 		FnExit,
 		FnExecCmd,
+		FnBash,
 		FnSleep,
 		FnCommandExists,
 		FnPickValid,
@@ -656,7 +658,8 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnPrintf, "printf(message)", "Print message to stdout", "void", "printf('Scan started')"},
 			{FnCatFile, "cat_file(path)", "Print file content to stdout", "void", "cat_file('{{Output}}/results.txt')"},
 			{FnExit, "exit(code)", "Exit scan with code", "void", "exit(1)"},
-			{FnExecCmd, "exec_cmd(command)", "Execute bash command and return output", "string", "exec_cmd('whoami')"},
+			{FnBash, "bash(command)", "Execute bash command and return output", "string", "bash('whoami')"},
+			{FnExecCmd, "exec_cmd(command)", "Alias for bash(command)", "string", "exec_cmd('whoami')"},
 			{FnSleep, "sleep(seconds)", "Pause for n seconds", "void", "sleep(5)"},
 			{FnCommandExists, "command_exists(command)", "Check if command exists in PATH", "bool", "command_exists('nmap')"},
 			{FnPickValid, "pick_valid(v1, v2, ..., v10)", "Return first valid value from up to 10 arguments", "any", "pick_valid('', '', 'hello', 'world')"},

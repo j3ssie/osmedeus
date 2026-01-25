@@ -106,6 +106,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnCatFile, vf.catFile)
 	_ = vm.Set(FnExit, vf.exit)
 	_ = vm.Set(FnExecCmd, vf.execCmd)
+	_ = vm.Set(FnBash, vf.bash)
 	_ = vm.Set(FnSleep, vf.sleep)
 	_ = vm.Set(FnCommandExists, vf.commandExists)
 	_ = vm.Set(FnPickValid, vf.pickValid)

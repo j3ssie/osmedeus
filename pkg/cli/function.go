@@ -453,12 +453,12 @@ func runFunctionList(cmd *cobra.Command, args []string) error {
 // to work the same as "osmedeus eval cdn_ls_tree()"
 func normalizeScriptExpression(expr string) string {
 	expr = strings.TrimSpace(expr)
-	
+
 	// If it already has parentheses, return as-is
 	if strings.Contains(expr, "(") {
 		return expr
 	}
-	
+
 	// Check if it's a known function name
 	allFuncs := functions.AllFunctions()
 	for _, fn := range allFuncs {
@@ -469,7 +469,7 @@ func normalizeScriptExpression(expr string) string {
 			return expr + "()"
 		}
 	}
-	
+
 	// Not a known function, return as-is (could be a variable or expression)
 	return expr
 }
