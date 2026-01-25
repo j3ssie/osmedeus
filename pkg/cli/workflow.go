@@ -1106,7 +1106,7 @@ var workflowShowCmd = &cobra.Command{
 				{terminal.Cyan("{{Today}}"), "Current date (YYYY-MM-DD)", terminal.Yellow("<current date>")},
 				{terminal.Cyan("{{TimeStamp}}"), "Unix timestamp", terminal.Yellow("<unix timestamp>")},
 				{terminal.Cyan("{{CurrentTime}}"), "Current time (ISO 8601)", terminal.Yellow("<ISO 8601 time>")},
-				{terminal.Cyan("{{RandomString}}"), "Random 8-char alphanumeric", terminal.Yellow("<generated>")},
+				{terminal.Cyan("{{RandomString}}"), "Random 6-char lowercase letters", terminal.Yellow("<generated>")},
 			}
 			printMarkdownTable([]string{"Variable", "Description", "Default Value"}, builtinVars)
 		} else {

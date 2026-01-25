@@ -84,6 +84,19 @@ func NewExecutor() *Executor {
 	}
 }
 
+func BuildBuiltinVariables(cfg *config.Config, params map[string]string) map[string]interface{} {
+	if cfg == nil {
+		cfg = config.DefaultConfig()
+		cfg.ResolvePaths()
+	}
+
+	exec := NewExecutor()
+	runUUID := uuid.New().String()
+	execCtx := core.NewExecutionContext("func-eval", core.KindModule, runUUID, params["target"])
+	exec.injectBuiltinVariables(cfg, params, execCtx)
+	return execCtx.GetVariables()
+}
+
 // SetSpinner enables or disables spinner display
 func (e *Executor) SetSpinner(show bool) {
 	e.showSpinner = show
@@ -293,7 +306,7 @@ func (e *Executor) injectBuiltinVariables(cfg *config.Config, params map[string]
 	execCtx.SetVariable("TimeStamp", fmt.Sprintf("%d", now.Unix()))
 	execCtx.SetVariable("CurrentTime", now.Format("2006-01-02T15:04:05"))
 	execCtx.SetVariable("Today", now.Format("2006-01-02"))
-	execCtx.SetVariable("RandomString", generateRandomString(8))
+	execCtx.SetVariable("RandomString", generateRandomString(6))
 
 	// Chunk-related variables (when running in chunk mode)
 	if v, ok := params["chunk_index"]; ok && v != "" {
@@ -462,7 +475,7 @@ func sanitizeTargetSpace(target string) string {
 
 // generateRandomString generates a random alphanumeric string
 func generateRandomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const charset = "abcdefghijklmnopqrstuvwxyz"
 	b := make([]byte, length)
 	for i := range b {
 		b[i] = charset[rand.Intn(len(charset))]

@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -294,16 +293,16 @@ func runBulkFunctionEval(printer *terminal.Printer, script string) error {
 
 // executeFunctionForTarget executes the script for a single target
 func executeFunctionForTarget(printer *terminal.Printer, script, target string) error {
-	// Build context with target and params
-	ctx := make(map[string]interface{})
+	params := map[string]string{}
+	if target != "" {
+		params["target"] = target
+	}
+	if funcTargetsFile != "" {
+		params["target_file"] = funcTargetsFile
+	}
 
-	// Inject platform detection variables (always available, even without target)
-	ctx["PlatformOS"] = runtime.GOOS
-	ctx["PlatformArch"] = runtime.GOARCH
-	ctx["PlatformInDocker"] = executor.DetectDocker()
-	ctx["PlatformInKubernetes"] = executor.DetectKubernetes()
-	ctx["PlatformCloudProvider"] = executor.DetectCloudProvider()
-
+	cfg := config.Get()
+	ctx := executor.BuildBuiltinVariables(cfg, params)
 	if target != "" {
 		ctx["target"] = target
 	}

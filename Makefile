@@ -1,4 +1,4 @@
-.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-docker test-ssh test-distributed test-all test-summary test-ci clean install install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
+.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-docker test-ssh test-distributed test-all test-summary test-ci clean install install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release github-action docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
 
 # Go parameters
 GOCMD=go
@@ -317,6 +317,9 @@ github-release:
 	@echo "$(PREFIX) Building and publishing GitHub release..."
 	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --clean
 
+github-action:
+	gh workflow run manual-release.yaml && gh workflow run nightly-release.yaml
+
 # Database commands
 db-seed: build
 	@echo "$(PREFIX) Seeding database..."
@@ -390,6 +393,7 @@ help:
 	@echo "    make snapshot-release Build local snapshot release (no publish)"
 	@echo "    make local-release    Build local snapshot for mac/linux arm (testing)"
 	@echo "    make github-release   Build and publish GitHub release"
+	@echo "    make github-action    Trigger manual and nightly GitHub workflows"
 	@echo ""
 	@echo "\033[33m  DATABASE\033[0m"
 	@echo "    make db-seed          Seed database with sample data"
