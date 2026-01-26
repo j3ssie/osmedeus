@@ -1,0 +1,147 @@
+---
+title: "Event Receiver"
+description: "Event-triggered workflow management"
+---
+
+# Event Receiver
+
+These endpoints are only available when the event receiver is enabled (default when scheduler is enabled).
+
+## Get Event Receiver Status
+
+Get the current status of the event receiver including registered triggers.
+
+```bash
+curl http://localhost:8002/osm/api/event-receiver/status \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "enabled": true,
+  "running": true,
+  "triggers": {
+    "cron": 5,
+    "event": 3,
+    "watch": 2
+  },
+  "workflows_loaded": 10,
+  "last_event_at": "2025-01-15T10:30:00Z"
+}
+```
+
+---
+
+## List Event Receiver Workflows
+
+Get a list of all workflows registered with the event receiver, including their triggers.
+
+```bash
+curl http://localhost:8002/osm/api/event-receiver/workflows \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "name": "subdomain-enum",
+      "kind": "flow",
+      "triggers": [
+        {
+          "name": "daily-scan",
+          "type": "cron",
+          "schedule": "0 2 * * *",
+          "enabled": true,
+          "next_run": "2025-01-16T02:00:00Z"
+        },
+        {
+          "name": "on-new-asset",
+          "type": "event",
+          "topic": "assets.new",
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "vuln-scan",
+      "kind": "module",
+      "triggers": [
+        {
+          "name": "watch-targets",
+          "type": "watch",
+          "path": "/data/targets/*.txt",
+          "enabled": true
+        }
+      ]
+    }
+  ],
+  "count": 2
+}
+```
+
+---
+
+## Emit Event
+
+Emit a custom event to trigger event-based workflows.
+
+```bash
+curl -X POST http://localhost:8002/osm/api/events/emit \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "topic": "assets.new",
+    "data": {
+      "url": "https://new-subdomain.example.com",
+      "source": "external-scanner"
+    }
+  }'
+```
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `topic` | string | Yes | Event topic to emit (e.g., `assets.new`, `custom.event`) |
+| `data` | object | No | Event data payload passed to triggered workflows |
+
+**Response:**
+```json
+{
+  "message": "Event emitted",
+  "topic": "assets.new",
+  "event_id": "evt_550e8400-e29b-41d4-a716-446655440000",
+  "triggered_workflows": ["subdomain-enum", "asset-tracker"]
+}
+```
+
+**Error Response (no matching triggers):**
+```json
+{
+  "message": "Event emitted",
+  "topic": "assets.new",
+  "event_id": "evt_550e8400-e29b-41d4-a716-446655440000",
+  "triggered_workflows": [],
+  "note": "No workflows matched this event topic"
+}
+```
+
+---
+
+## Event Topics
+
+Common event topics used by workflows:
+
+| Topic | Description |
+|-------|-------------|
+| `assets.new` | New asset discovered |
+| `assets.updated` | Asset information updated |
+| `vuln.found` | New vulnerability found |
+| `run.completed` | Workflow run completed |
+| `run.failed` | Workflow run failed |
+| `schedule.triggered` | Scheduled trigger fired |
+
+Custom topics can be used by prefixing with `custom.` (e.g., `custom.my-event`).

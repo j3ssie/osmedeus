@@ -15,7 +15,9 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
 	"github.com/j3ssie/osmedeus/v5/internal/executor"
+	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
+	"go.uber.org/zap"
 )
 
 // killProcessAndChildren kills a process and all its children using SIGKILL
@@ -49,12 +51,41 @@ func generateEmptyTarget() string {
 }
 
 // calculateTotalSteps returns the appropriate step count based on workflow kind.
-// For module workflows, it returns len(Steps). For flow workflows, it returns len(Modules).
-func calculateTotalSteps(workflow *core.Workflow) int {
-	if workflow.Kind == core.KindFlow {
+// For module workflows, it returns len(Steps). For flow workflows, it sums steps from all modules.
+func calculateTotalSteps(workflow *core.Workflow, loader *parser.Loader) int {
+	if workflow.Kind != core.KindFlow {
+		return len(workflow.Steps)
+	}
+
+	// Flow workflow: sum steps from all modules
+	if loader == nil {
 		return len(workflow.Modules)
 	}
-	return len(workflow.Steps)
+
+	log := logger.Get()
+	totalSteps := 0
+
+	for _, modRef := range workflow.Modules {
+		if modRef.Path == "" {
+			totalSteps++
+			continue
+		}
+
+		module, err := loader.LoadWorkflowByPath(modRef.Path)
+		if err != nil {
+			log.Warn("Failed to load module for step counting",
+				zap.String("module", modRef.Name),
+				zap.String("path", modRef.Path),
+				zap.Error(err),
+			)
+			totalSteps++
+			continue
+		}
+
+		totalSteps += len(module.Steps)
+	}
+
+	return totalSteps
 }
 
 // computeWorkspace computes the workspace name from target and params
@@ -88,7 +119,7 @@ func sanitizeTargetForWorkspace(target string) string {
 }
 
 // createRunRecord creates a database record for a run
-func createRunRecord(ctx context.Context, _ *config.Config, workflow *core.Workflow, target string, params map[string]string, triggerType, jobID, priority, runMode string) (*database.Run, error) {
+func createRunRecord(ctx context.Context, _ *config.Config, workflow *core.Workflow, loader *parser.Loader, target string, params map[string]string, triggerType, jobID, priority, runMode string) (*database.Run, error) {
 	now := time.Now()
 	runID := uuid.New().String()
 
@@ -110,7 +141,7 @@ func createRunRecord(ctx context.Context, _ *config.Config, workflow *core.Workf
 		TriggerType:  triggerType,
 		RunGroupID:   jobID,
 		StartedAt:    &now,
-		TotalSteps:   calculateTotalSteps(workflow),
+		TotalSteps:   calculateTotalSteps(workflow, loader),
 		Workspace:    workspace,
 		RunPriority:  priority,
 		RunMode:      runMode,
@@ -188,7 +219,7 @@ func executeRunsConcurrently(
 			ctx := context.Background()
 
 			// Create run record in database
-			run, err := createRunRecord(ctx, cfg, workflow, t, targetParams, "api", jobID, priority, runMode)
+			run, err := createRunRecord(ctx, cfg, workflow, loader, t, targetParams, "api", jobID, priority, runMode)
 			var runUUID string
 			var runID int64
 			if err == nil && run != nil {
@@ -320,7 +351,7 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 		// Set default priority if not specified
 		priority := req.Priority
 		if priority == "" {
-			priority = "high"
+			priority = "normal"
 		}
 		// Validate priority
 		validPriorities := map[string]bool{"low": true, "normal": true, "high": true, "critical": true}
@@ -392,7 +423,7 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 
 			// Create run record in database
 			ctx := context.Background()
-			run, _ := createRunRecord(ctx, cfgCopy, workflow, targets[0], params, "api", jobID, priority, runMode)
+			run, _ := createRunRecord(ctx, cfgCopy, workflow, loader, targets[0], params, "api", jobID, priority, runMode)
 			if run != nil {
 				runIDs = append(runIDs, run.RunUUID)
 			}

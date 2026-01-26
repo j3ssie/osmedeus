@@ -1,3 +1,8 @@
+---
+title: "Settings"
+description: "Server configuration management"
+---
+
 # Settings
 
 Manage server configuration settings.
@@ -68,5 +73,53 @@ curl -X PUT http://localhost:8002/osm/api/settings/yaml \
 {
   "error": true,
   "message": "Invalid YAML configuration: yaml: unmarshal errors: ..."
+}
+```
+
+---
+
+## Reload Configuration
+
+Trigger a hot-reload of the configuration file without restarting the server.
+
+```bash
+curl -X POST http://localhost:8002/osm/api/settings/reload \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "message": "Configuration reloaded successfully",
+  "path": "/home/user/osmedeus-base/osm-settings.yaml"
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": true,
+  "message": "Failed to reload configuration: ..."
+}
+```
+
+---
+
+## Get Configuration Status
+
+Get the current status of the hot-reloadable configuration, including last reload time and any errors.
+
+```bash
+curl http://localhost:8002/osm/api/settings/status \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "path": "/home/user/osmedeus-base/osm-settings.yaml",
+  "last_reload": "2025-01-15T10:30:00Z",
+  "is_watching": true,
+  "error": ""
 }
 ```

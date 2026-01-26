@@ -1,0 +1,61 @@
+# Test Loop Module
+# Module that demonstrates foreach loop with items
+
+name: test-loop
+kind: module
+description: Test foreach loop module for repeat flow testing
+tags: test, foreach, loop
+
+params:
+  - name: target
+    required: true
+  - name: loop_message
+    default: "Processing item"
+  - name: item_count
+    default: "5"
+
+steps:
+  - name: loop-separator
+    type: bash
+    command: echo "=========================================="
+
+  - name: loop-module-start
+    type: bash
+    command: echo "[MODULE START] test-loop"
+
+  - name: loop-info
+    type: bash
+    command: 'echo "Loop message: {{loop_message}}"'
+
+  - name: create-input-file
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/loop-data
+      - printf 'item-1\nitem-2\nitem-3\nitem-4\nitem-5\n' > {{Output}}/loop-data/items.txt
+      - echo "Created input file with items"
+
+  - name: process-items
+    type: foreach
+    input: "{{Output}}/loop-data/items.txt"
+    variable: item
+    threads: 2
+    step:
+      name: process-single-item
+      type: bash
+      commands:
+        - 'echo "{{loop_message}} - Processing [[item]] for target {{target}}"'
+        - sleep 0.1
+
+  - name: loop-summary
+    type: bash
+    commands:
+      - 'echo "Loop completed for target: {{target}}"'
+      - 'echo "Total items processed: $(wc -l < {{Output}}/loop-data/items.txt)"'
+
+  - name: loop-module-end
+    type: bash
+    command: echo "[MODULE END] test-loop"
+
+  - name: loop-separator-end
+    type: bash
+    command: echo "=========================================="

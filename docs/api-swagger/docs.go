@@ -3415,6 +3415,10 @@ const docTemplate = `{
                     "description": "Wait time between repeats (e.g., 30s, 20m, 10h, 1d)",
                     "type": "string"
                 },
+                "run_mode": {
+                    "description": "local, distributed, cloud (default: local)",
+                    "type": "string"
+                },
                 "runner_type": {
                     "description": "Runner configuration",
                     "type": "string"

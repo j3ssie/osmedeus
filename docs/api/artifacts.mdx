@@ -1,0 +1,116 @@
+---
+title: "Artifacts"
+description: "List and download output artifacts from workflow runs"
+---
+
+# Artifacts
+
+## List Artifacts
+
+Get a paginated list of all artifacts across workspaces.
+
+```bash
+curl http://localhost:8002/osm/api/artifacts \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**With pagination:**
+```bash
+curl "http://localhost:8002/osm/api/artifacts?offset=0&limit=50" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Filter by workspace:**
+```bash
+curl "http://localhost:8002/osm/api/artifacts?workspace=example.com" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `workspace` | string | - | Filter by workspace name |
+| `offset` | int | 0 | Pagination offset |
+| `limit` | int | 20 | Maximum records to return |
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "run_id": 1,
+      "workspace": "example.com",
+      "name": "subdomains.txt",
+      "artifact_path": "/workspaces/example.com/subdomains.txt",
+      "artifact_type": "output",
+      "content_type": "txt",
+      "size_bytes": 4523,
+      "line_count": 150,
+      "description": "Discovered subdomains",
+      "created_at": "2025-01-15T10:01:45Z"
+    },
+    {
+      "id": "d4e5f6a7-b8c9-0123-def0-234567890123",
+      "run_id": 1,
+      "workspace": "example.com",
+      "name": "nuclei-results.json",
+      "artifact_path": "/workspaces/example.com/nuclei-results.json",
+      "artifact_type": "output",
+      "content_type": "json",
+      "size_bytes": 15234,
+      "line_count": 45,
+      "description": "Nuclei vulnerability scan results",
+      "created_at": "2025-01-15T10:15:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 100,
+    "offset": 0,
+    "limit": 20
+  }
+}
+```
+
+---
+
+## Download Workspace Artifact
+
+Download all artifacts from a workspace as a zip file.
+
+```bash
+curl http://localhost:8002/osm/api/artifacts/example.com \
+  -H "Authorization: Bearer $TOKEN" \
+  --output example.com_artifacts.zip
+```
+
+**Response:**
+- On success: Returns a zip file containing all artifacts
+- Response headers include:
+  - `Content-Disposition: attachment; filename=<workspace>_artifacts.zip`
+  - `Content-Type: application/zip`
+
+**Error Response (404):**
+```json
+{
+  "error": true,
+  "message": "Workspace not found: example.com"
+}
+```
+
+---
+
+## Artifact Types
+
+| Type | Description |
+|------|-------------|
+| `report` | Generated reports from the workflow's reports section |
+| `state_file` | State files like run-state.json, run-execution.log |
+| `output` | General output files from steps |
+| `screenshot` | Screenshots captured during the scan |
+
+## Content Types
+
+Detected content types based on file extension:
+- `json`, `jsonl`, `yaml`, `html`, `md`, `log`, `pdf`, `png`, `txt`, `zip`, `folder`, `unknown`

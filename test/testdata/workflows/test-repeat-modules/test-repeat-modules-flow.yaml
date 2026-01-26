@@ -1,0 +1,85 @@
+# Test Flow: Running Same Modules Multiple Times
+# This flow demonstrates running the same module multiple times with different configurations
+
+name: test-repeat-modules-flow
+kind: flow
+description: Test flow that runs the same modules multiple times
+tags: test, flow, repeat, modules
+
+params:
+  - name: target
+    required: true
+  - name: iterations
+    default: "3"
+
+modules:
+  # First run of echo module
+  - name: echo-run-1
+    path: modules/test-echo.yaml
+    params:
+      message: "First iteration - starting the flow"
+
+  # Second run of echo module (depends on first)
+  - name: echo-run-2
+    path: modules/test-echo.yaml
+    depends_on:
+      - echo-run-1
+    params:
+      message: "Second iteration - continuing"
+
+  # Third run of echo module (depends on second)
+  - name: echo-run-3
+    path: modules/test-echo.yaml
+    depends_on:
+      - echo-run-2
+    params:
+      message: "Third iteration - almost done"
+
+  # Fourth run with different condition
+  - name: echo-run-4
+    path: modules/test-echo.yaml
+    depends_on:
+      - echo-run-3
+    params:
+      message: "Fourth iteration - final run"
+    condition: "true"
+
+  # Run loop module multiple times as well
+  - name: loop-run-1
+    path: modules/test-loop.yaml
+    depends_on:
+      - echo-run-2
+    params:
+      loop_message: "Loop iteration 1"
+
+  - name: loop-run-2
+    path: modules/test-loop.yaml
+    depends_on:
+      - loop-run-1
+    params:
+      loop_message: "Loop iteration 2"
+
+  # Parallel execution of the same module
+  - name: echo-parallel-a
+    path: modules/test-echo.yaml
+    depends_on:
+      - echo-run-4
+    params:
+      message: "Parallel A - running concurrently"
+
+  - name: echo-parallel-b
+    path: modules/test-echo.yaml
+    depends_on:
+      - echo-run-4
+    params:
+      message: "Parallel B - running concurrently"
+
+  # Final aggregation step
+  - name: echo-final
+    path: modules/test-echo.yaml
+    depends_on:
+      - echo-parallel-a
+      - echo-parallel-b
+      - loop-run-2
+    params:
+      message: "Final step - all iterations complete"

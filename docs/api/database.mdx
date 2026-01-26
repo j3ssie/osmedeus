@@ -1,0 +1,73 @@
+---
+title: "Database Management"
+description: "Administrative endpoints for database management"
+---
+
+# Database Management
+
+Administrative endpoints for managing the database.
+
+## List Database Tables
+
+Get a list of all database tables with their row counts.
+
+```bash
+curl http://localhost:8002/osm/api/database/tables \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {"name": "runs", "rows": 150},
+    {"name": "step_results", "rows": 2500},
+    {"name": "assets", "rows": 5000},
+    {"name": "vulnerabilities", "rows": 120},
+    {"name": "workspaces", "rows": 50},
+    {"name": "artifacts", "rows": 800},
+    {"name": "event_logs", "rows": 1200},
+    {"name": "schedules", "rows": 8}
+  ]
+}
+```
+
+---
+
+## Clear Database Table
+
+Clear all records from a specific database table. Use with caution.
+
+```bash
+curl -X POST http://localhost:8002/osm/api/database/tables/runs/clear \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "message": "Table cleared successfully",
+  "table": "runs",
+  "rows_deleted": 150
+}
+```
+
+**Error Response (Invalid table):**
+```json
+{
+  "error": true,
+  "message": "Invalid table name: unknown_table"
+}
+```
+
+**Valid Table Names:**
+- `runs` - Workflow run records
+- `step_results` - Step execution results
+- `assets` - Discovered assets
+- `vulnerabilities` - Vulnerability records
+- `workspaces` - Workspace metadata
+- `artifacts` - Output artifacts
+- `event_logs` - Event log records
+- `schedules` - Scheduled workflows
+- `asset_diff_snapshots` - Asset diff snapshots
+- `vuln_diff_snapshots` - Vulnerability diff snapshots

@@ -1,0 +1,46 @@
+# Test Echo Module
+# Simple module that echoes messages and target information
+
+name: test-echo
+kind: module
+description: Simple echo test module for repeat flow testing
+tags: test, bash, echo
+
+params:
+  - name: target
+    required: true
+  - name: message
+    default: "Hello from Osmedeus"
+
+steps:
+  - name: echo-separator
+    type: bash
+    command: echo "=========================================="
+
+  - name: echo-module-start
+    type: bash
+    command: echo "[MODULE START] test-echo"
+
+  - name: echo-target
+    type: bash
+    command: 'echo "Target: {{target}}"'
+
+  - name: echo-message
+    type: bash
+    command: 'echo "Message: {{message}}"'
+
+  - name: echo-output-dir
+    type: bash
+    command: 'echo "Output directory: {{Output}}"'
+
+  - name: echo-timestamp
+    type: bash
+    command: 'echo "Timestamp: $(date +%Y-%m-%d\ %H:%M:%S)"'
+
+  - name: echo-module-end
+    type: bash
+    command: echo "[MODULE END] test-echo"
+
+  - name: echo-separator-end
+    type: bash
+    command: echo "=========================================="

@@ -1,8 +1,13 @@
+---
+title: "Workspaces"
+description: "List and manage scan workspaces"
+---
+
 # Workspaces
 
 ## List Workspaces
 
-Get a list of all run workspaces.
+Get a list of all run workspaces with full metadata.
 
 **List workspaces from database (default):**
 ```bash
@@ -107,6 +112,29 @@ curl "http://localhost:8002/osm/api/workspaces?filesystem=true&offset=20&limit=1
 | `state_workflow_folder` | string | Path to workflow folder |
 | `created_at` | timestamp | Workspace creation timestamp |
 | `updated_at` | timestamp | Last update timestamp |
+
+---
+
+## List Workspace Names
+
+Get a lightweight list of workspace names only (without full metadata).
+
+```bash
+curl http://localhost:8002/osm/api/workspace-names \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "data": [
+    "example.com",
+    "test.com",
+    "demo.org"
+  ],
+  "count": 3
+}
+```
 
 ---
 

@@ -1,0 +1,73 @@
+---
+title: "Osmedeus API Documentation"
+description: "RESTful API reference for managing security automation workflows"
+---
+
+# Osmedeus API Documentation
+
+## Overview
+
+The Osmedeus API provides a RESTful interface for managing security automation workflows, runs, and distributed task execution.
+
+**Base URL:** `http://localhost:8002`
+
+**Default Port:** `8002`
+
+## Authentication
+
+Most API endpoints require authentication. Two methods are supported:
+
+1. **JWT Token**: Obtain a token via the login endpoint, then include it in requests using the `Authorization: Bearer <token>` header.
+
+2. **API Key**: Use a static API key via the `x-osm-api-key` header. Configure in `~/osmedeus-base/osm-settings.yaml` under `server.auth_api_key`.
+
+See [Authentication](authentication.mdx) for details.
+
+## API Reference
+
+| Category | Description |
+|----------|-------------|
+| [Public Endpoints](public.mdx) | Server info, health checks, Swagger docs |
+| [Authentication](authentication.mdx) | Login, logout, and JWT token management |
+| [Workflows](workflows.mdx) | List, view, and refresh workflows |
+| [Runs](runs.mdx) | Create and manage workflow executions |
+| [File Uploads](uploads.mdx) | Upload target files and workflows |
+| [Snapshots](snapshots.mdx) | Export and import workspace snapshots |
+| [Workspaces](workspaces.mdx) | List and manage workspaces |
+| [Artifacts](artifacts.mdx) | List and download output artifacts |
+| [Assets](assets.mdx) | View discovered assets |
+| [Vulnerabilities](vulnerabilities.mdx) | View and manage vulnerabilities |
+| [Event Logs](event-logs.mdx) | View execution event logs |
+| [Step Results](steps.mdx) | Query step execution results |
+| [Functions](functions.mdx) | Execute and list utility functions |
+| [System Statistics](system.mdx) | Get aggregated system stats |
+| [Settings](settings.mdx) | Manage server configuration |
+| [Database](database.mdx) | Database management and cleanup |
+| [Installation](install.mdx) | Install binaries and workflows |
+| [Schedules](schedules.mdx) | Manage scheduled workflows |
+| [Event Receiver](event-receiver.mdx) | Event-triggered workflows |
+| [Distributed Mode](distributed.mdx) | Worker and task management |
+| [LLM API](llm.mdx) | Large Language Model API |
+| [Reference](reference.mdx) | Error codes, pagination, cron expressions, step types |
+
+## Quick Start
+
+```bash
+# Get server info (no auth required)
+curl http://localhost:8002/server-info
+
+# Login and get token
+export TOKEN=$(curl -s -X POST http://localhost:8002/osm/api/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "osmedeus", "password": "admin"}' | jq -r '.token')
+
+# List workflows
+curl http://localhost:8002/osm/api/workflows \
+  -H "Authorization: Bearer $TOKEN"
+
+# Start a scan
+curl -X POST http://localhost:8002/osm/api/runs \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"flow": "subdomain-enum", "target": "example.com"}'
+```

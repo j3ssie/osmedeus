@@ -1,3 +1,8 @@
+---
+title: "Runs"
+description: "Create and manage workflow executions"
+---
+
 # Runs (Scans)
 
 ## Create a New Scan
@@ -80,6 +85,27 @@ curl -X POST http://localhost:8002/osm/api/runs \
   }'
 ```
 
+**Request Body Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `flow` | string | No* | - | Flow workflow name to execute |
+| `module` | string | No* | - | Module workflow name to execute |
+| `target` | string | No** | - | Single target to scan |
+| `targets` | array | No** | - | Multiple targets to scan |
+| `target_file` | string | No** | - | Path to file containing targets |
+| `params` | object | No | `{}` | Custom workflow parameters |
+| `priority` | string | No | `normal` | Priority level: `low`, `normal`, `high`, `critical` |
+| `timeout` | int | No | - | Timeout in minutes for the run |
+| `concurrency` | int | No | 1 | Number of concurrent targets |
+| `runner_type` | string | No | `host` | Execution environment: `host`, `docker`, `ssh` |
+| `docker_image` | string | No | - | Docker image for docker runner |
+| `ssh_host` | string | No | - | SSH host for ssh runner |
+| `workspace` | string | No | auto | Custom workspace name |
+
+\* One of `flow` or `module` is required.
+\** One of `target`, `targets`, or `target_file` is required.
+
 **Response:**
 ```json
 {
@@ -88,7 +114,7 @@ curl -X POST http://localhost:8002/osm/api/runs \
   "kind": "flow",
   "target": "example.com",
   "target_count": 1,
-  "priority": "high",
+  "priority": "normal",
   "job_id": "a1b2c3d4",
   "run_uuid": "550e8400-e29b-41d4-a716-446655440000",
   "status": "queued",
@@ -124,7 +150,7 @@ curl -X POST http://localhost:8002/osm/api/runs \
   "target_count": 3,
   "targets": ["example.com", "test.com", "demo.com"],
   "concurrency": 3,
-  "priority": "medium",
+  "priority": "normal",
   "job_id": "b2c3d4e5",
   "status": "queued",
   "poll_url": "/osm/api/jobs/b2c3d4e5"
@@ -426,3 +452,99 @@ curl http://localhost:8002/osm/api/runs/1/artifacts \
 
 **Content Types:**
 - `json`, `jsonl`, `yaml`, `html`, `md`, `log`, `pdf`, `png`, `txt`, `zip`, `folder`, `unknown`
+
+---
+
+## Duplicate Run
+
+Create a copy of an existing run with the same configuration.
+
+```bash
+curl -X POST http://localhost:8002/osm/api/runs/550e8400-e29b-41d4-a716-446655440000/duplicate \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "message": "Run duplicated",
+  "original_run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "new_run_uuid": "660e8400-e29b-41d4-a716-446655440001",
+  "status": "pending"
+}
+```
+
+---
+
+## Start Run
+
+Start a pending run that was created but not yet started.
+
+```bash
+curl -X POST http://localhost:8002/osm/api/runs/550e8400-e29b-41d4-a716-446655440000/start \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "message": "Run started",
+  "run_uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "running"
+}
+```
+
+---
+
+## Get Job Status
+
+Get the status of a job (a group of runs from the same request). This is useful for tracking multi-target scans.
+
+```bash
+curl http://localhost:8002/osm/api/jobs/a1b2c3d4 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "job_id": "a1b2c3d4",
+  "total_runs": 3,
+  "completed": 2,
+  "running": 1,
+  "failed": 0,
+  "pending": 0,
+  "runs": [
+    {
+      "run_uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "target": "example.com",
+      "status": "completed"
+    },
+    {
+      "run_uuid": "550e8400-e29b-41d4-a716-446655440001",
+      "target": "test.com",
+      "status": "completed"
+    },
+    {
+      "run_uuid": "550e8400-e29b-41d4-a716-446655440002",
+      "target": "demo.com",
+      "status": "running"
+    }
+  ]
+}
+```
+
+---
+
+## Priority Levels
+
+Runs can be assigned a priority level to control execution order when multiple runs are queued.
+
+| Priority | Description |
+|----------|-------------|
+| `low` | Lowest priority, processed last |
+| `normal` | Default priority (used when not specified) |
+| `high` | Higher priority, processed before normal/low |
+| `critical` | Highest priority, processed first |
+
+**Note:** Priority defaults to `normal` when not specified in the request

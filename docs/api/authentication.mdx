@@ -1,3 +1,8 @@
+---
+title: "Authentication"
+description: "JWT and API key authentication for API access"
+---
+
 # Authentication
 
 Most API endpoints require JWT authentication. First, obtain a token via the login endpoint, then include it in subsequent requests.
@@ -51,6 +56,28 @@ curl -X POST http://localhost:8002/osm/api/login \
   "message": "Invalid credentials"
 }
 ```
+
+## Logout
+
+**POST** `/osm/api/logout`
+
+Clear the session cookie to log out.
+
+### Request
+
+```bash
+curl -X POST http://localhost:8002/osm/api/logout
+```
+
+### Response (200 OK)
+
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+---
 
 ## Token Details
 
