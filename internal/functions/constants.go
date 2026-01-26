@@ -215,9 +215,13 @@ const (
 	FnJSONLFilter = "jsonl_filter"
 )
 
-// URL Processing Functions - URL deduplication and filtering
+// URL Processing Functions - URL deduplication, filtering, and parsing
 const (
 	FnInterestingUrls = "interesting_urls" // interesting_urls(src, dest, json_field?) -> bool
+	FnGetParentURL    = "get_parent_url"   // get_parent_url(url) -> string (strips last path component)
+	FnParseURL        = "parse_url"        // parse_url(url, format) -> string (format directives like unfurl)
+	FnQueryReplace    = "query_replace"    // query_replace(url, value, mode?) -> string (replace all query param values)
+	FnPathReplace     = "path_replace"     // path_replace(url, value, position?) -> string (replace path segment at position)
 )
 
 // Markdown Functions - Markdown rendering and conversion
@@ -450,6 +454,10 @@ func AllFunctions() []string {
 
 		// URL Processing Functions
 		FnInterestingUrls,
+		FnGetParentURL,
+		FnParseURL,
+		FnQueryReplace,
+		FnPathReplace,
 
 		// Markdown Functions
 		FnRenderMarkdownFromFile,
@@ -758,6 +766,10 @@ func FunctionRegistry() map[string][]FunctionInfo {
 		},
 		CategoryURLProcessing: {
 			{FnInterestingUrls, "interesting_urls(src, dest, json_field?)", "Deduplicate URLs by hostname+path+params, filter static files and noise patterns", "bool", "interesting_urls('{{Output}}/all-urls.txt', '{{Output}}/interesting-urls.txt', 'url')"},
+			{FnGetParentURL, "get_parent_url(url)", "Strip last path component and return parent directory URL", "string", "get_parent_url('https://example.com/path/file.php')"},
+			{FnParseURL, "parse_url(url, format)", "Format URL using directives: %s(scheme) %d(domain) %S(subdomain) %r(root) %t(tld) %P(port) %p(path) %e(ext) %q(query) %f(fragment) %a(authority)", "string", "parse_url('https://sub.example.com/path', '%S.%r')"},
+			{FnQueryReplace, "query_replace(url, value, mode?)", "Replace all query param values; mode: 'replace' (default) or 'append'", "string", "query_replace('https://example.com?a=1&b=2', 'test')"},
+			{FnPathReplace, "path_replace(url, value, position?)", "Replace path segment at position (1-indexed); 0 replaces all", "string", "path_replace('https://example.com/a/b/c', 'new', 2)"},
 		},
 		CategoryMarkdown: {
 			{FnRenderMarkdownFromFile, "render_markdown_from_file(path)", "Render markdown with terminal styling", "string", "render_markdown_from_file('{{Output}}/report.md')"},

@@ -106,7 +106,7 @@ func NewStepDispatcherWithConfig(cfg StepDispatcherConfig) *StepDispatcher {
 	d.registry.Register(d.bashExecutor)
 	d.registry.Register(NewFunctionExecutor(engine, d.functionRegistry))
 	d.registry.Register(NewParallelExecutor(d))
-	d.registry.Register(NewForeachExecutor(d, engine))
+	d.registry.Register(NewForeachExecutor(d, engine, d.functionRegistry))
 	d.registry.Register(NewRemoteBashExecutor(engine))
 	d.registry.Register(NewHTTPExecutor(engine))
 	d.registry.Register(d.llmExecutor)
@@ -247,6 +247,7 @@ func collectRenderRequests(step *core.Step) []template.RenderRequest {
 	add("StdFile", step.StdFile)
 	add("Function", step.Function)
 	add("Input", step.Input)
+	add("VariablePreProcess", step.VariablePreProcess)
 	add("Log", step.Log)
 	add("Timeout", string(step.Timeout))
 	add("Threads", string(step.Threads))
@@ -359,6 +360,9 @@ func (d *StepDispatcher) renderStepBatch(step *core.Step, vars map[string]any) (
 	}
 	if v := get("Input"); v != "" {
 		rendered.Input = v
+	}
+	if v := get("VariablePreProcess"); v != "" {
+		rendered.VariablePreProcess = v
 	}
 	if v := get("Log"); v != "" {
 		rendered.Log = v
@@ -640,6 +644,13 @@ func (d *StepDispatcher) renderStepSequential(step *core.Step, vars map[string]a
 			return nil, err
 		}
 		rendered.Input = input
+	}
+	if step.VariablePreProcess != "" {
+		vpp, err := d.templateEngine.Render(step.VariablePreProcess, vars)
+		if err != nil {
+			return nil, fmt.Errorf("error rendering variable_pre_process: %w", err)
+		}
+		rendered.VariablePreProcess = vpp
 	}
 
 	// Render log message

@@ -2639,9 +2639,9 @@ func ListTables(ctx context.Context) ([]TableInfo, error) {
 
 // tableSearchColumns defines which columns to search for each table
 var tableSearchColumns = map[string][]string{
-	"runs":            {"id", "run_uuid", "run_group_id", "workflow_name", "target", "status", "error_message"},
+	"runs":            {"id", "run_uuid", "run_group_id", "workflow_name", "target", "workspace", "status", "error_message"},
 	"step_results":    {"id", "run_id", "step_name", "step_type", "status", "command", "output", "error_message"},
-	"artifacts":       {"id", "run_id", "name", "path", "type", "description"},
+	"artifacts":       {"id", "run_id", "workspace", "name", "artifact_path", "artifact_type", "description"},
 	"assets":          {"workspace", "asset_value", "url", "title", "host_ip", "source", "labels"},
 	"event_logs":      {"event_id", "topic", "name", "source", "workspace", "run_id", "workflow_name", "data"},
 	"schedules":       {"id", "name", "workflow_name", "workflow_kind", "target", "trigger_name", "schedule"},
@@ -2653,9 +2653,9 @@ var tableSearchColumns = map[string][]string{
 
 // tableDisplayColumns defines which columns to display by default for each table (ordered)
 var tableDisplayColumns = map[string][]string{
-	"runs":            {"run_uuid", "workflow_name", "target", "trigger_type", "status", "completed_steps", "total_steps", "started_at"},
+	"runs":            {"run_uuid", "workflow_name", "target", "workspace", "trigger_type", "status", "completed_steps", "total_steps", "started_at"},
 	"step_results":    {"step_name", "step_type", "status", "duration_ms", "command"},
-	"artifacts":       {"name", "path", "type", "size_bytes", "line_count"},
+	"artifacts":       {"name", "artifact_path", "artifact_type", "content_type", "size_bytes", "line_count"},
 	"assets":          {"asset_value", "host_ip", "title", "status_code", "last_seen_at", "url"},
 	"event_logs":      {"topic", "name", "source", "workspace", "created_at"},
 	"schedules":       {"name", "workflow_name", "workflow_kind", "target", "trigger_type", "schedule", "is_enabled"},
@@ -2668,19 +2668,20 @@ var tableDisplayColumns = map[string][]string{
 // tableAllColumns defines ALL columns for each table (ordered, matching model structs)
 var tableAllColumns = map[string][]string{
 	"runs": {"id", "run_uuid", "run_group_id", "workflow_name", "workflow_kind", "target", "params",
-		"status", "workspace_path", "started_at", "completed_at", "error_message",
+		"status", "workspace", "started_at", "completed_at", "error_message",
 		"schedule_id", "trigger_type", "trigger_name", "total_steps",
-		"completed_steps", "created_at", "updated_at"},
+		"completed_steps", "current_pid", "run_priority", "run_mode", "created_at", "updated_at"},
 	"step_results": {"id", "run_id", "step_name", "step_type", "status", "command",
 		"output", "error_message", "exports", "duration_ms", "log_file",
 		"started_at", "completed_at", "created_at"},
-	"artifacts": {"id", "run_id", "name", "path", "type", "size_bytes",
-		"line_count", "description", "created_at"},
+	"artifacts": {"id", "run_id", "workspace", "name", "artifact_path", "artifact_type",
+		"content_type", "size_bytes", "line_count", "description", "created_at"},
 	"assets": {"id", "workspace", "asset_value", "url", "input", "scheme", "method", "path",
 		"status_code", "content_type", "content_length", "title", "words",
 		"lines", "host_ip", "dns_records", "tls", "asset_type", "technologies",
-		"response_time", "labels", "source", "last_seen_at", "created_at", "updated_at"},
-	"event_logs": {"id", "topic", "event_id", "name", "source", "data_type", "data",
+		"response_time", "labels", "source", "raw_json_data", "raw_response",
+		"screenshot_base64_data", "last_seen_at", "created_at", "updated_at"},
+	"event_logs": {"id", "topic", "event_id", "name", "source_type", "source", "data_type", "data",
 		"workspace", "run_id", "workflow_name", "processed", "processed_at",
 		"error", "created_at"},
 	"schedules": {"id", "name", "workflow_name", "workflow_kind", "target", "workspace",
@@ -2690,7 +2691,8 @@ var tableAllColumns = map[string][]string{
 		"total_urls", "total_ips", "total_links", "total_content", "total_archive",
 		"total_vulns", "vuln_critical", "vuln_high", "vuln_medium", "vuln_low",
 		"vuln_potential", "risk_score", "tags", "last_run", "run_workflow",
-		"created_at", "updated_at"},
+		"state_execution_log", "state_completed_file", "state_workflow_file",
+		"state_workflow_folder", "created_at", "updated_at"},
 	"vulnerabilities": {"id", "workspace", "vuln_info", "vuln_title", "vuln_desc",
 		"vuln_poc", "severity", "confidence", "asset_type", "asset_value", "tags",
 		"detail_http_request", "detail_http_response", "raw_vuln_json",

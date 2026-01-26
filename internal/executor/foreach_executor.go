@@ -10,20 +10,25 @@ import (
 	"time"
 
 	"github.com/j3ssie/osmedeus/v5/internal/core"
+	"github.com/j3ssie/osmedeus/v5/internal/functions"
+	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/template"
+	"go.uber.org/zap"
 )
 
 // ForeachExecutor executes foreach steps
 type ForeachExecutor struct {
-	dispatcher     *StepDispatcher
-	templateEngine template.TemplateEngine
+	dispatcher       *StepDispatcher
+	templateEngine   template.TemplateEngine
+	functionRegistry *functions.Registry
 }
 
 // NewForeachExecutor creates a new foreach executor
-func NewForeachExecutor(dispatcher *StepDispatcher, engine template.TemplateEngine) *ForeachExecutor {
+func NewForeachExecutor(dispatcher *StepDispatcher, engine template.TemplateEngine, registry *functions.Registry) *ForeachExecutor {
 	return &ForeachExecutor{
-		dispatcher:     dispatcher,
-		templateEngine: engine,
+		dispatcher:       dispatcher,
+		templateEngine:   engine,
+		functionRegistry: registry,
 	}
 }
 
@@ -240,8 +245,23 @@ func (e *ForeachExecutor) executeWithWorkerPool(ctx context.Context, step *core.
 					continue
 				}
 
+				// Apply variable pre-processing if configured
+				loopValue := work.value
+				if step.VariablePreProcess != "" {
+					processedValue, err := e.preProcessVariable(step.VariablePreProcess, step.Variable, work.value, execCtx)
+					if err != nil {
+						// Log warning but continue with original value (fail-safe)
+						logger.Get().Warn("variable pre-process failed, using original value",
+							zap.String("expression", step.VariablePreProcess),
+							zap.String("original_value", work.value),
+							zap.Error(err))
+					} else {
+						loopValue = processedValue
+					}
+				}
+
 				// Create optimized child context with loop variables pre-set
-				childCtx := execCtx.CloneForLoop(step.Variable, work.value, work.index+1)
+				childCtx := execCtx.CloneForLoop(step.Variable, loopValue, work.index+1)
 
 				// Clone inner step and render secondary templates [[ ]]
 				innerStep := e.renderSecondaryTemplates(step.Step, childCtx)
@@ -316,4 +336,40 @@ func (e *ForeachExecutor) executeWithWorkerPool(ctx context.Context, step *core.
 // CanHandle returns true if this executor can handle the given step type
 func (e *ForeachExecutor) CanHandle(stepType core.StepType) bool {
 	return stepType == core.StepTypeForeach
+}
+
+// autoQuoteForJS wraps string values in single quotes for JS function calls,
+// escaping any internal single quotes.
+func autoQuoteForJS(value string) string {
+	// Escape single quotes: ' -> \'
+	escaped := strings.ReplaceAll(value, "'", "\\'")
+	return "'" + escaped + "'"
+}
+
+// preProcessVariable evaluates the pre-process expression with the loop variable set.
+// The expression can use [[variable]] syntax to reference the current value.
+// For example: "get_parent_url([[url]])" with url="http://example.com/path"
+// becomes: "get_parent_url('http://example.com/path')"
+func (e *ForeachExecutor) preProcessVariable(expr, varName, varValue string, execCtx *core.ExecutionContext) (string, error) {
+	// Build context with parent variables
+	ctx := execCtx.GetVariables()
+
+	// For pre-process expressions, auto-quote the loop variable value
+	// This allows clean syntax: get_parent_url([[url]]) instead of get_parent_url('[[url]]')
+	ctx[varName] = autoQuoteForJS(varValue)
+
+	// Render secondary templates [[var]] -> 'quoted_value'
+	renderedExpr, err := e.templateEngine.RenderSecondary(expr, ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to render pre-process expression: %w", err)
+	}
+
+	// Execute the function expression
+	result, err := e.functionRegistry.Execute(renderedExpr, ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute pre-process function: %w", err)
+	}
+
+	// Convert result to string
+	return fmt.Sprintf("%v", result), nil
 }

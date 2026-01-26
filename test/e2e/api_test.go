@@ -565,64 +565,238 @@ func testVulnerabilityEndpoints(t *testing.T, log *TestLogger) {
 	log.Success("Vulnerability endpoints OK")
 }
 
-// testRunEndpoints tests run management endpoints
+// testRunEndpoints tests run management endpoints comprehensively
 func testRunEndpoints(t *testing.T, log *TestLogger) {
 	log.Info("Testing run endpoints")
 
-	// GET /osm/api/runs
-	// Note: Current implementation is a stub that returns empty data
+	// ===== LIST RUNS =====
+	log.Info("Testing GET /osm/api/runs")
 	resp := apiGet(t, "/osm/api/runs")
 	assert.Equal(t, 200, resp.StatusCode, "GET /osm/api/runs should return 200")
 	body := parseJSONResponse(t, resp)
 	assert.Contains(t, body, "data", "Should contain data array")
+	assert.Contains(t, body, "pagination", "Should contain pagination")
 	data, ok := body["data"].([]interface{})
 	assert.True(t, ok, "Data should be an array")
 
-	// Use a test run ID for endpoint testing (handlers are stubs)
-	testRunID := "test-run-123"
+	// Test with pagination parameters
+	resp = apiGet(t, "/osm/api/runs?offset=0&limit=5")
+	assert.Equal(t, 200, resp.StatusCode, "GET /osm/api/runs with pagination should return 200")
 
-	// If we have seeded runs, use the first one
-	if len(data) > 0 {
+	// Test with status filter
+	resp = apiGet(t, "/osm/api/runs?status=completed")
+	assert.Equal(t, 200, resp.StatusCode, "GET /osm/api/runs?status=completed should return 200")
+	body = parseJSONResponse(t, resp)
+	assert.Contains(t, body, "data", "Should contain data array")
+
+	// Test with workflow filter
+	resp = apiGet(t, "/osm/api/runs?workflow=test-bash")
+	assert.Equal(t, 200, resp.StatusCode, "GET /osm/api/runs?workflow=test-bash should return 200")
+	body = parseJSONResponse(t, resp)
+	assert.Contains(t, body, "data", "Should contain data array")
+
+	// Test with target filter
+	resp = apiGet(t, "/osm/api/runs?target=example")
+	assert.Equal(t, 200, resp.StatusCode, "GET /osm/api/runs?target=example should return 200")
+	body = parseJSONResponse(t, resp)
+	assert.Contains(t, body, "data", "Should contain data array")
+
+	// Test with workspace filter
+	resp = apiGet(t, "/osm/api/runs?workspace=example.com")
+	assert.Equal(t, 200, resp.StatusCode, "GET /osm/api/runs?workspace=example.com should return 200")
+
+	// ===== CREATE RUN - VALIDATION =====
+	log.Info("Testing POST /osm/api/runs validation")
+
+	// Test missing workflow
+	invalidRun := map[string]interface{}{
+		"target": "test.example.com",
+	}
+	resp = apiPost(t, "/osm/api/runs", invalidRun)
+	assert.Equal(t, 400, resp.StatusCode, "POST /osm/api/runs without workflow should return 400")
+	body = parseJSONResponse(t, resp)
+	assert.Contains(t, body, "error", "Should contain error field")
+
+	// Test missing target
+	invalidRun = map[string]interface{}{
+		"module": "test-bash",
+	}
+	resp = apiPost(t, "/osm/api/runs", invalidRun)
+	assert.Equal(t, 400, resp.StatusCode, "POST /osm/api/runs without target should return 400")
+
+	// Test invalid priority
+	invalidRun = map[string]interface{}{
+		"module":   "test-bash",
+		"target":   "test.example.com",
+		"priority": "invalid-priority",
+	}
+	resp = apiPost(t, "/osm/api/runs", invalidRun)
+	assert.Equal(t, 400, resp.StatusCode, "POST /osm/api/runs with invalid priority should return 400")
+	body = parseJSONResponse(t, resp)
+	assert.Contains(t, body["message"], "priority", "Error message should mention priority")
+
+	// Test invalid run_mode
+	invalidRun = map[string]interface{}{
+		"module":   "test-bash",
+		"target":   "test.example.com",
+		"run_mode": "invalid-mode",
+	}
+	resp = apiPost(t, "/osm/api/runs", invalidRun)
+	assert.Equal(t, 400, resp.StatusCode, "POST /osm/api/runs with invalid run_mode should return 400")
+	body = parseJSONResponse(t, resp)
+	assert.Contains(t, body["message"], "run_mode", "Error message should mention run_mode")
+
+	// ===== CREATE RUN - ALL PRIORITIES =====
+	log.Info("Testing POST /osm/api/runs with all priority levels")
+	priorities := []string{"low", "normal", "high", "critical"}
+	for _, priority := range priorities {
+		runReq := map[string]interface{}{
+			"module":   "test-bash",
+			"target":   fmt.Sprintf("priority-%s.example.com", priority),
+			"priority": priority,
+		}
+		resp = apiPost(t, "/osm/api/runs", runReq)
+		// 202 (accepted) or 404 (workflow not found) are valid
+		assert.True(t, resp.StatusCode == 202 || resp.StatusCode == 404,
+			"POST /osm/api/runs with priority=%s should return 202 or 404, got %d", priority, resp.StatusCode)
+		if resp.StatusCode == 202 {
+			body = parseJSONResponse(t, resp)
+			assert.Equal(t, priority, body["priority"], "Response priority should match request")
+		}
+	}
+
+	// ===== CREATE RUN - VALID REQUEST =====
+	log.Info("Testing POST /osm/api/runs with valid request")
+	validRun := map[string]interface{}{
+		"module":   "test-bash",
+		"target":   "run-test.example.com",
+		"priority": "high",
+		"params": map[string]string{
+			"custom_param": "test_value",
+		},
+	}
+	resp = apiPost(t, "/osm/api/runs", validRun)
+	// Accept 202 (accepted) or 404 (workflow not found)
+	assert.True(t, resp.StatusCode == 202 || resp.StatusCode == 404,
+		"POST /osm/api/runs should return 202 or 404")
+
+	var createdRunUUID string
+	if resp.StatusCode == 202 {
+		body = parseJSONResponse(t, resp)
+		assert.Contains(t, body, "job_id", "Response should contain job_id")
+		assert.Contains(t, body, "workflow", "Response should contain workflow")
+		assert.Contains(t, body, "priority", "Response should contain priority")
+		assert.Contains(t, body, "status", "Response should contain status")
+		assert.Contains(t, body, "poll_url", "Response should contain poll_url")
+		if runUUID, ok := body["run_uuid"].(string); ok {
+			createdRunUUID = runUUID
+		}
+	}
+
+	// ===== CREATE RUN - MULTIPLE TARGETS =====
+	log.Info("Testing POST /osm/api/runs with multiple targets")
+	multiTargetRun := map[string]interface{}{
+		"module":      "test-bash",
+		"targets":     []string{"target1.example.com", "target2.example.com", "target3.example.com"},
+		"concurrency": 2,
+		"priority":    "normal",
+	}
+	resp = apiPost(t, "/osm/api/runs", multiTargetRun)
+	assert.True(t, resp.StatusCode == 202 || resp.StatusCode == 404,
+		"POST /osm/api/runs with multiple targets should return 202 or 404")
+	if resp.StatusCode == 202 {
+		body = parseJSONResponse(t, resp)
+		targetCount, _ := body["target_count"].(float64)
+		assert.Equal(t, float64(3), targetCount, "Target count should be 3")
+		assert.Contains(t, body, "concurrency", "Response should contain concurrency")
+	}
+
+	// ===== CREATE RUN - EMPTY TARGET =====
+	log.Info("Testing POST /osm/api/runs with empty_target")
+	emptyTargetRun := map[string]interface{}{
+		"module":       "test-bash",
+		"empty_target": true,
+		"priority":     "low",
+	}
+	resp = apiPost(t, "/osm/api/runs", emptyTargetRun)
+	assert.True(t, resp.StatusCode == 202 || resp.StatusCode == 404,
+		"POST /osm/api/runs with empty_target should return 202 or 404")
+
+	// ===== GET RUN DETAILS =====
+	log.Info("Testing GET /osm/api/runs/:id")
+
+	// Use a run UUID from earlier if we created one, otherwise use test ID
+	testRunID := "test-run-123"
+	if createdRunUUID != "" {
+		testRunID = createdRunUUID
+	} else if len(data) > 0 {
+		// Try to get a seeded run UUID
 		if firstRun, ok := data[0].(map[string]interface{}); ok {
-			if id, ok := firstRun["id"].(string); ok {
-				testRunID = id
+			if uuid, ok := firstRun["run_uuid"].(string); ok {
+				testRunID = uuid
 			}
 		}
 	}
 
-	// GET /osm/api/runs/:id
+	// GET run by ID - may be 200 (found) or 404 (not found)
 	resp = apiGet(t, "/osm/api/runs/"+testRunID)
-	assert.Equal(t, 200, resp.StatusCode, "GET /osm/api/runs/:id should return 200")
+	assert.True(t, resp.StatusCode == 200 || resp.StatusCode == 404,
+		"GET /osm/api/runs/:id should return 200 or 404")
 
-	// GET /osm/api/runs/:id/steps
+	// Test with include_steps query param
+	resp = apiGet(t, "/osm/api/runs/"+testRunID+"?include_steps=true")
+	assert.True(t, resp.StatusCode == 200 || resp.StatusCode == 404,
+		"GET /osm/api/runs/:id?include_steps=true should return 200 or 404")
+
+	// Test with include_artifacts query param
+	resp = apiGet(t, "/osm/api/runs/"+testRunID+"?include_artifacts=true")
+	assert.True(t, resp.StatusCode == 200 || resp.StatusCode == 404,
+		"GET /osm/api/runs/:id?include_artifacts=true should return 200 or 404")
+
+	// ===== GET RUN STEPS =====
+	log.Info("Testing GET /osm/api/runs/:id/steps")
 	resp = apiGet(t, "/osm/api/runs/"+testRunID+"/steps")
 	assert.Equal(t, 200, resp.StatusCode, "GET /osm/api/runs/:id/steps should return 200")
 	body = parseJSONResponse(t, resp)
 	assert.Contains(t, body, "data", "Should contain steps data")
 
-	// GET /osm/api/runs/:id/artifacts
+	// ===== GET RUN ARTIFACTS =====
+	log.Info("Testing GET /osm/api/runs/:id/artifacts")
 	resp = apiGet(t, "/osm/api/runs/"+testRunID+"/artifacts")
 	assert.Equal(t, 200, resp.StatusCode, "GET /osm/api/runs/:id/artifacts should return 200")
 	body = parseJSONResponse(t, resp)
 	assert.Contains(t, body, "data", "Should contain artifacts data")
 
-	// POST /osm/api/runs - Create new run (dry-run mode)
-	newRun := map[string]interface{}{
-		"workflow_name": "test-bash",
-		"target":        "test-run.example.com",
-		"dry_run":       true,
+	// ===== DUPLICATE RUN =====
+	log.Info("Testing POST /osm/api/runs/:id/duplicate")
+	resp = apiPost(t, "/osm/api/runs/"+testRunID+"/duplicate", nil)
+	// May return 201 (created) or 404 (run not found)
+	assert.True(t, resp.StatusCode == 201 || resp.StatusCode == 404,
+		"POST /osm/api/runs/:id/duplicate should return 201 or 404")
+	if resp.StatusCode == 201 {
+		body = parseJSONResponse(t, resp)
+		assert.Contains(t, body, "run_uuid", "Should contain new run_uuid")
+		assert.Contains(t, body, "original_run_uuid", "Should contain original_run_uuid")
+		assert.Equal(t, "pending", body["status"], "Duplicated run should be pending")
 	}
-	resp = apiPost(t, "/osm/api/runs", newRun)
-	// May return 201 (created) or 202 (accepted) or 400 (if workflow not found)
-	// Accept 201, 202, or 400 as valid responses
-	assert.True(t, resp.StatusCode == 201 || resp.StatusCode == 202 || resp.StatusCode == 400,
-		"POST /osm/api/runs should return 201, 202, or 400 (workflow may not exist)")
 
-	// DELETE /osm/api/runs/:id (cancel) - test with a test run ID
+	// ===== START RUN =====
+	log.Info("Testing POST /osm/api/runs/:id/start")
+	resp = apiPost(t, "/osm/api/runs/"+testRunID+"/start", nil)
+	// May return 202 (started), 400 (not pending), or 404 (not found)
+	assert.True(t, resp.StatusCode == 202 || resp.StatusCode == 400 || resp.StatusCode == 404,
+		"POST /osm/api/runs/:id/start should return 202, 400, or 404")
+
+	// ===== CANCEL RUN =====
+	log.Info("Testing DELETE /osm/api/runs/:id (cancel)")
 	resp = apiDelete(t, "/osm/api/runs/"+testRunID)
-	// May return 200 (cancelled) or 400 (already completed/failed)
-	assert.True(t, resp.StatusCode == 200 || resp.StatusCode == 400,
-		"DELETE /osm/api/runs/:id should return 200 or 400")
+	// May return 200 (cancelled), 400 (cannot cancel), or 404 (not found)
+	assert.True(t, resp.StatusCode == 200 || resp.StatusCode == 400 || resp.StatusCode == 404,
+		"DELETE /osm/api/runs/:id should return 200, 400, or 404")
+	if resp.StatusCode == 200 {
+		body = parseJSONResponse(t, resp)
+		assert.Contains(t, body, "message", "Should contain message")
+	}
 
 	log.Success("Run endpoints OK")
 }

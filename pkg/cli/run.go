@@ -75,6 +75,9 @@ var (
 	// Server registration flag
 	serverURL string
 
+	// Run priority flag (for server submission mode)
+	runPriority string
+
 	// activeChunkInfo holds chunk info during execution (nil when not chunking)
 	activeChunkInfo *ChunkInfo
 
@@ -129,6 +132,9 @@ func init() {
 
 	// Server registration flag
 	runCmd.Flags().StringVar(&serverURL, "server-url", "", "Server URL for cron trigger registration (e.g., http://localhost:8002)")
+
+	// Run priority flag (for server submission mode)
+	runCmd.Flags().StringVar(&runPriority, "run-priority", "", "Run priority: low, normal, high, critical (requires --server-url to submit to server)")
 }
 
 // captureExplicitFlags records which CLI flags were explicitly set by the user
@@ -292,6 +298,17 @@ func runRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--module-url cannot be combined with --flow, --module, or --std-module")
 	}
 
+	// Validate --run-priority flag
+	if runPriority != "" {
+		validPriorities := map[string]bool{"low": true, "normal": true, "high": true, "critical": true}
+		if !validPriorities[runPriority] {
+			return fmt.Errorf("invalid --run-priority value '%s'. Must be one of: low, normal, high, critical", runPriority)
+		}
+		if serverURL == "" {
+			return fmt.Errorf("--run-priority requires --server-url to be specified")
+		}
+	}
+
 	// Parse timeout duration
 	var timeoutDuration time.Duration
 	if runTimeout != "" {
@@ -394,6 +411,11 @@ func runRun(cmd *cobra.Command, args []string) error {
 	// Handle distributed run mode
 	if distributedRun {
 		return runDistributedRun(cfg, allTargets, printer)
+	}
+
+	// Handle server submission mode (--run-priority with --server-url)
+	if runPriority != "" && serverURL != "" {
+		return runServerSubmission(cfg, allTargets, printer)
 	}
 
 	loader := parser.NewLoader(cfg.WorkflowsPath)
@@ -1010,6 +1032,8 @@ func createCLIRunRecord(ctx context.Context, cfg *config.Config, workflow *core.
 		StartedAt:    &now,
 		TotalSteps:   calculateTotalSteps(workflow, loader),
 		Workspace:    workspace,
+		RunPriority:  "critical", // CLI runs execute immediately
+		RunMode:      "local",
 	}
 
 	if err := database.CreateRun(ctx, run); err != nil {
@@ -1679,6 +1703,108 @@ func runDistributedRun(cfg *config.Config, allTargets []string, printer *termina
 	printer.Info("Submitted %d tasks to the distributed queue", len(taskIDs))
 	printer.Info("Use 'osmedeus worker status' to check worker availability")
 	printer.Info("Tasks will be processed by available workers")
+
+	return nil
+}
+
+// runServerSubmission submits run tasks to the server API with the specified priority
+func runServerSubmission(cfg *config.Config, allTargets []string, printer *terminal.Printer) error {
+	// Determine workflow name and kind
+	workflowName := flowName
+	workflowKind := "flow"
+	if workflowName == "" && len(moduleNames) > 0 {
+		workflowName = moduleNames[0]
+		workflowKind = "module"
+	}
+
+	if workflowName == "" {
+		return fmt.Errorf("workflow name required (use -f or -m)")
+	}
+
+	// Create run client and set server URL
+	client := NewRunClient(cfg)
+	client.SetBaseURL(serverURL)
+
+	// Check server availability
+	printer.Info("Connecting to server at %s...", serverURL)
+	if !client.IsServerAvailable() {
+		return fmt.Errorf("server not available at %s", serverURL)
+	}
+	printer.Success("Server is available")
+
+	// Parse additional params
+	params := make(map[string]string)
+
+	// Load params from file if specified
+	if paramsFile != "" {
+		fileParams, err := loadParamsFromFile(paramsFile)
+		if err != nil {
+			return fmt.Errorf("failed to load params file: %w", err)
+		}
+		for k, v := range fileParams {
+			params[k] = v
+		}
+	}
+
+	// CLI params (-p) override file params
+	for k, v := range parseParams(paramFlags) {
+		params[k] = v
+	}
+
+	// Build the request
+	req := &CreateRunRequest{
+		Params:      params,
+		Priority:    runPriority,
+		Concurrency: concurrency,
+	}
+
+	// Set workflow type
+	if workflowKind == "flow" {
+		req.Flow = workflowName
+	} else {
+		req.Module = workflowName
+	}
+
+	// Set target(s)
+	if len(allTargets) == 1 {
+		req.Target = allTargets[0]
+	} else {
+		req.Targets = allTargets
+	}
+
+	// Add optional parameters
+	if threadsHold > 0 {
+		req.ThreadsHold = threadsHold
+	}
+	if heuristicsCheck != "" {
+		req.HeuristicsCheck = heuristicsCheck
+	}
+	if emptyTarget {
+		req.EmptyTarget = true
+	}
+
+	// Submit the run
+	printer.Section("Submitting Run to Server")
+	ctx := context.Background()
+	resp, err := client.CreateRun(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to submit run: %w", err)
+	}
+
+	// Display response
+	fmt.Println()
+	printer.Success("Run submitted successfully!")
+	printer.KeyValue("Job ID", resp.JobID)
+	if resp.RunUUID != "" {
+		printer.KeyValue("Run UUID", resp.RunUUID)
+	}
+	printer.KeyValue("Workflow", resp.Workflow)
+	printer.KeyValue("Kind", resp.Kind)
+	printer.KeyValue("Priority", resp.Priority)
+	printer.KeyValue("Status", resp.Status)
+	printer.KeyValue("Target Count", fmt.Sprintf("%d", resp.TargetCount))
+	printer.KeyValue("Poll URL", serverURL+resp.PollURL)
+	fmt.Println()
 
 	return nil
 }

@@ -55,6 +55,8 @@ type Run struct {
 	TotalSteps     int                    `json:"total_steps"`
 	CompletedSteps int                    `json:"completed_steps"`
 	Workspace      string                 `json:"workspace"`
+	RunPriority    string                 `json:"run_priority,omitempty"`
+	RunMode        string                 `json:"run_mode,omitempty"`
 	StartedAt      *time.Time             `json:"started_at,omitempty"`
 	CompletedAt    *time.Time             `json:"completed_at,omitempty"`
 	ErrorMessage   string                 `json:"error_message,omitempty"`
@@ -71,6 +73,7 @@ type CreateRunRequest struct {
 	Params          map[string]string `json:"params,omitempty"`
 	Concurrency     int               `json:"concurrency,omitempty"`
 	Priority        string            `json:"priority,omitempty"`
+	RunMode         string            `json:"run_mode,omitempty"`
 	Timeout         int               `json:"timeout,omitempty"`
 	RunnerType      string            `json:"runner_type,omitempty"`
 	ThreadsHold     int               `json:"threads_hold,omitempty"`

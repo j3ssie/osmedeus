@@ -206,10 +206,11 @@ type Step struct {
 	ParallelSteps []Step `yaml:"parallel_steps"`
 
 	// Foreach step fields
-	Input    string      `yaml:"input"`
-	Variable string      `yaml:"variable"`
-	Threads  StepThreads `yaml:"threads,omitempty"`
-	Step     *Step       `yaml:"step"`
+	Input              string      `yaml:"input"`
+	Variable           string      `yaml:"variable"`
+	VariablePreProcess string      `yaml:"variable_pre_process,omitempty"` // Transform each input line before storing in variable
+	Threads            StepThreads `yaml:"threads,omitempty"`
+	Step               *Step       `yaml:"step"`
 
 	// Remote-bash step fields
 	StepRunnerConfig *StepRunnerConfig `yaml:"step_runner_config"`

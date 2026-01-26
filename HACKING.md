@@ -357,14 +357,14 @@ Built-in executors registered at startup:
 - `HTTPExecutor` - handles `http` steps
 - `LLMExecutor` - handles `llm` steps
 
-## Run Registry
+## Run Control Plane
 
-The run registry tracks active workflow executions for cancellation support:
+The run control plane tracks active workflow executions for cancellation support:
 
 ```go
-// internal/executor/run_registry.go
+// internal/executor/run_control_plane.go
 
-type RunRegistry struct {
+type RunControlPlane struct {
     mu   sync.RWMutex
     runs map[string]*ActiveRun
 }
@@ -377,13 +377,13 @@ type ActiveRun struct {
 }
 
 // Key operations
-func (r *RunRegistry) Register(runUUID string, cancel context.CancelFunc) *ActiveRun
-func (r *RunRegistry) Cancel(runUUID string) ([]int, error)  // Returns killed PIDs
-func (r *RunRegistry) AddPID(runUUID string, pid int)
-func (r *RunRegistry) RemovePID(runUUID string, pid int)
+func (r *RunControlPlane) Register(runUUID string, cancel context.CancelFunc) *ActiveRun
+func (r *RunControlPlane) Cancel(runUUID string) ([]int, error)  // Returns killed PIDs
+func (r *RunControlPlane) AddPID(runUUID string, pid int)
+func (r *RunControlPlane) RemovePID(runUUID string, pid int)
 ```
 
-The registry is accessed via `GetRunRegistry()` singleton. When a run is cancelled:
+The control plane is accessed via `GetRunControlPlane()` singleton. When a run is cancelled:
 1. Context is cancelled to stop new operations
 2. All tracked PIDs are killed via SIGKILL (including process groups)
 
@@ -991,6 +991,8 @@ type Run struct {
     TriggerName    string
     TotalSteps     int
     CompletedSteps int
+    RunPriority    string    // "low", "normal", "high", "critical"
+    RunMode        string    // "local", "distributed", "cloud"
     CreatedAt      time.Time
     UpdatedAt      time.Time
 }

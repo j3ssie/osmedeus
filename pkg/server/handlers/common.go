@@ -28,7 +28,8 @@ type CreateRunRequest struct {
 	Concurrency int `json:"concurrency,omitempty"` // Number of concurrent runs (default: 1)
 
 	// Priority and timeout
-	Priority string `json:"priority,omitempty"` // low, medium, high (default: medium)
+	Priority string `json:"priority,omitempty"` // low, normal, high, critical (default: high)
+	RunMode  string `json:"run_mode,omitempty"` // local, distributed, cloud (default: local)
 	Timeout  int    `json:"timeout,omitempty"`  // Timeout in minutes (0 = no timeout)
 
 	// Runner configuration

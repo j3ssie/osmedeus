@@ -717,16 +717,16 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 		return nil, fmt.Errorf("workflow is not a module")
 	}
 
-	// Create cancellable context for run registry support
+	// Create cancellable context for run control plane support
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// Register with run registry if we have a database run UUID
+	// Register with run control plane if we have a database run UUID
 	// This enables API-based cancellation of the run
 	if e.dbRunUUID != "" {
-		activeRun := GetRunRegistry().Register(e.dbRunUUID, cancel)
-		defer GetRunRegistry().Unregister(e.dbRunUUID)
-		e.logger.Debug("Registered run with registry",
+		activeRun := GetRunControlPlane().Register(e.dbRunUUID, cancel)
+		defer GetRunControlPlane().Unregister(e.dbRunUUID)
+		e.logger.Debug("Registered run with control plane",
 			zap.String("run_uuid", e.dbRunUUID),
 			zap.Time("started_at", activeRun.StartedAt),
 		)
@@ -787,12 +787,12 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 		runUUID := e.dbRunUUID
 		r.SetPIDCallbacks(
 			func(pid int) {
-				GetRunRegistry().AddPID(runUUID, pid)
+				GetRunControlPlane().AddPID(runUUID, pid)
 				// Update database with current PID for API visibility
 				_ = database.UpdateRunPID(ctx, runUUID, pid)
 			},
 			func(pid int) {
-				GetRunRegistry().RemovePID(runUUID, pid)
+				GetRunControlPlane().RemovePID(runUUID, pid)
 				// Clear PID from database when process ends
 				_ = database.ClearRunPID(ctx, runUUID)
 			},
@@ -1385,12 +1385,12 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// Register with run registry if we have a database run UUID
+	// Register with run control plane if we have a database run UUID
 	// This enables API-based cancellation of the run
 	if e.dbRunUUID != "" {
-		activeRun := GetRunRegistry().Register(e.dbRunUUID, cancel)
-		defer GetRunRegistry().Unregister(e.dbRunUUID)
-		e.logger.Debug("Registered flow with registry",
+		activeRun := GetRunControlPlane().Register(e.dbRunUUID, cancel)
+		defer GetRunControlPlane().Unregister(e.dbRunUUID)
+		e.logger.Debug("Registered flow with control plane",
 			zap.String("run_uuid", e.dbRunUUID),
 			zap.Time("started_at", activeRun.StartedAt),
 		)

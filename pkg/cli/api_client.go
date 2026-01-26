@@ -121,3 +121,129 @@ func (c *ScheduleClient) RegisterCronTrigger(ctx context.Context, workflow *core
 	body, _ := io.ReadAll(resp.Body)
 	return fmt.Errorf("server returned %d: %s", resp.StatusCode, string(body))
 }
+
+// CreateRunRequest represents a request to create a new run via the API
+type CreateRunRequest struct {
+	Flow            string            `json:"flow,omitempty"`
+	Module          string            `json:"module,omitempty"`
+	Target          string            `json:"target,omitempty"`
+	Targets         []string          `json:"targets,omitempty"`
+	Params          map[string]string `json:"params,omitempty"`
+	Concurrency     int               `json:"concurrency,omitempty"`
+	Priority        string            `json:"priority,omitempty"`
+	RunMode         string            `json:"run_mode,omitempty"`
+	ThreadsHold     int               `json:"threads_hold,omitempty"`
+	HeuristicsCheck string            `json:"heuristics_check,omitempty"`
+	EmptyTarget     bool              `json:"empty_target,omitempty"`
+}
+
+// CreateRunResponse represents the response from creating a run
+type CreateRunResponse struct {
+	Message     string `json:"message"`
+	Workflow    string `json:"workflow"`
+	Kind        string `json:"kind"`
+	TargetCount int    `json:"target_count"`
+	Priority    string `json:"priority"`
+	JobID       string `json:"job_id"`
+	Status      string `json:"status"`
+	PollURL     string `json:"poll_url"`
+	RunUUID     string `json:"run_uuid,omitempty"`
+}
+
+// RunClient handles run submission to the osmedeus server
+type RunClient struct {
+	baseURL string
+	apiKey  string
+	client  *http.Client
+}
+
+// NewRunClient creates a new RunClient from config
+func NewRunClient(cfg *config.Config) *RunClient {
+	return &RunClient{
+		baseURL: cfg.Server.GetServerURL(),
+		apiKey:  cfg.Server.AuthAPIKey,
+		client: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+	}
+}
+
+// SetBaseURL overrides the base URL (for --server-url flag)
+func (c *RunClient) SetBaseURL(url string) {
+	c.baseURL = url
+}
+
+// IsServerAvailable checks if the server is reachable via GET /server-info
+func (c *RunClient) IsServerAvailable() bool {
+	if c.baseURL == "" {
+		return false
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/server-info", nil)
+	if err != nil {
+		return false
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	return resp.StatusCode == http.StatusOK
+}
+
+// CreateRun POSTs to /osm/api/runs to create a new run
+func (c *RunClient) CreateRun(ctx context.Context, req *CreateRunRequest) (*CreateRunResponse, error) {
+	if c.baseURL == "" {
+		return nil, fmt.Errorf("server URL not configured")
+	}
+
+	jsonBody, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/osm/api/runs", bytes.NewReader(jsonBody))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	if c.apiKey != "" {
+		httpReq.Header.Set("x-osm-api-key", c.apiKey)
+	}
+
+	resp, err := c.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	// Check for error responses
+	if resp.StatusCode >= 400 {
+		var errResp struct {
+			Error   bool   `json:"error"`
+			Message string `json:"message"`
+		}
+		if json.Unmarshal(body, &errResp) == nil && errResp.Message != "" {
+			return nil, fmt.Errorf("server error: %s", errResp.Message)
+		}
+		return nil, fmt.Errorf("server returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result CreateRunResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &result, nil
+}

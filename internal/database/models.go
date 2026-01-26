@@ -39,6 +39,10 @@ type Run struct {
 	// Process tracking - current running process ID for cancellation support
 	CurrentPID int `bun:"current_pid" json:"current_pid,omitempty"`
 
+	// Priority and mode
+	RunPriority string `bun:"run_priority,notnull,default:'high'" json:"run_priority"` // low, normal, high, critical
+	RunMode     string `bun:"run_mode,notnull,default:'local'" json:"run_mode"`        // local, distributed, cloud
+
 	// Relations
 	Steps     []*StepResult `bun:"rel:has-many,join:id=run_id" json:"steps,omitempty"`
 	Artifacts []*Artifact   `bun:"rel:has-many,join:id=run_id" json:"artifacts,omitempty"`

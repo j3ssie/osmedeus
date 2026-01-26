@@ -88,7 +88,7 @@ func sanitizeTargetForWorkspace(target string) string {
 }
 
 // createRunRecord creates a database record for a run
-func createRunRecord(ctx context.Context, _ *config.Config, workflow *core.Workflow, target string, params map[string]string, triggerType, jobID string) (*database.Run, error) {
+func createRunRecord(ctx context.Context, _ *config.Config, workflow *core.Workflow, target string, params map[string]string, triggerType, jobID, priority, runMode string) (*database.Run, error) {
 	now := time.Now()
 	runID := uuid.New().String()
 
@@ -112,6 +112,8 @@ func createRunRecord(ctx context.Context, _ *config.Config, workflow *core.Workf
 		StartedAt:    &now,
 		TotalSteps:   calculateTotalSteps(workflow),
 		Workspace:    workspace,
+		RunPriority:  priority,
+		RunMode:      runMode,
 	}
 
 	if err := database.CreateRun(ctx, run); err != nil {
@@ -155,6 +157,8 @@ func executeRunsConcurrently(
 	maxConcurrency int,
 	isFlow bool,
 	jobID string,
+	priority string,
+	runMode string,
 ) {
 	if maxConcurrency <= 0 {
 		maxConcurrency = 1
@@ -184,7 +188,7 @@ func executeRunsConcurrently(
 			ctx := context.Background()
 
 			// Create run record in database
-			run, err := createRunRecord(ctx, cfg, workflow, t, targetParams, "api", jobID)
+			run, err := createRunRecord(ctx, cfg, workflow, t, targetParams, "api", jobID, priority, runMode)
 			var runUUID string
 			var runID int64
 			if err == nil && run != nil {
@@ -316,7 +320,29 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 		// Set default priority if not specified
 		priority := req.Priority
 		if priority == "" {
-			priority = "medium"
+			priority = "high"
+		}
+		// Validate priority
+		validPriorities := map[string]bool{"low": true, "normal": true, "high": true, "critical": true}
+		if !validPriorities[priority] {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":   true,
+				"message": "Invalid priority. Must be one of: low, normal, high, critical",
+			})
+		}
+
+		// Set default run_mode if not specified
+		runMode := req.RunMode
+		if runMode == "" {
+			runMode = "local"
+		}
+		// Validate run_mode
+		validModes := map[string]bool{"local": true, "distributed": true, "cloud": true}
+		if !validModes[runMode] {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":   true,
+				"message": "Invalid run_mode. Must be one of: local, distributed, cloud",
+			})
 		}
 
 		// Add runner configuration to params if specified
@@ -366,7 +392,7 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 
 			// Create run record in database
 			ctx := context.Background()
-			run, _ := createRunRecord(ctx, cfgCopy, workflow, targets[0], params, "api", jobID)
+			run, _ := createRunRecord(ctx, cfgCopy, workflow, targets[0], params, "api", jobID, priority, runMode)
 			if run != nil {
 				runIDs = append(runIDs, run.RunUUID)
 			}
@@ -408,7 +434,7 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 			}())
 		} else {
 			// Multiple targets - concurrent execution
-			go executeRunsConcurrently(workflow, targets, params, cfgCopy, concurrency, isFlow, jobID)
+			go executeRunsConcurrently(workflow, targets, params, cfgCopy, concurrency, isFlow, jobID, priority, runMode)
 		}
 
 		// Build response
@@ -418,6 +444,7 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 			"kind":         workflow.Kind,
 			"target_count": len(targets),
 			"priority":     priority,
+			"run_mode":     runMode,
 			"job_id":       jobID,
 			"status":       "queued",
 			"poll_url":     fmt.Sprintf("/osm/api/jobs/%s", jobID),
@@ -583,16 +610,16 @@ func CancelRun(cfg *config.Config) fiber.Handler {
 		var killedPIDs []int
 		var killMethod string
 
-		// Try to cancel via registry first (kills running processes tracked in memory)
-		registry := executor.GetRunRegistry()
-		registryPIDs, registryErr := registry.Cancel(run.RunUUID)
+		// Try to cancel via control plane first (kills running processes tracked in memory)
+		controlPlane := executor.GetRunControlPlane()
+		controlPlanePIDs, controlPlaneErr := controlPlane.Cancel(run.RunUUID)
 
-		if registryErr == nil && len(registryPIDs) > 0 {
-			// Registry had the run and killed processes
-			killedPIDs = registryPIDs
-			killMethod = "registry"
+		if controlPlaneErr == nil && len(controlPlanePIDs) > 0 {
+			// Control plane had the run and killed processes
+			killedPIDs = controlPlanePIDs
+			killMethod = "control_plane"
 		} else if run.CurrentPID > 0 {
-			// Run not in registry, but we have a PID from database - kill it directly
+			// Run not in control plane, but we have a PID from database - kill it directly
 			killed := killProcessAndChildren(run.CurrentPID)
 			if killed {
 				killedPIDs = []int{run.CurrentPID}

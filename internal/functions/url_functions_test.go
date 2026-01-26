@@ -349,3 +349,515 @@ func TestResolveToIP(t *testing.T) {
 	// We just check it returns something
 	assert.NotEmpty(t, result, "localhost should resolve")
 }
+
+func TestGetParentURLImpl(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "URL with file and query",
+			input:    "https://example.com/j3ssie/sample.php?query=123",
+			expected: "https://example.com/j3ssie/",
+		},
+		{
+			name:     "URL with trailing slash",
+			input:    "https://example.com/a/b/c/",
+			expected: "https://example.com/a/b/",
+		},
+		{
+			name:     "URL with single path",
+			input:    "https://example.com/file.txt",
+			expected: "https://example.com/",
+		},
+		{
+			name:     "URL with root path",
+			input:    "https://example.com/",
+			expected: "https://example.com/",
+		},
+		{
+			name:     "URL without path",
+			input:    "https://example.com",
+			expected: "https://example.com/",
+		},
+		{
+			name:     "URL with port and path",
+			input:    "http://example.com:8080/path/to/file",
+			expected: "http://example.com:8080/path/to/",
+		},
+		{
+			name:     "URL with fragment",
+			input:    "https://example.com/path/file.html#section",
+			expected: "https://example.com/path/",
+		},
+		{
+			name:     "URL with query and fragment",
+			input:    "https://example.com/api/data?id=1#results",
+			expected: "https://example.com/api/",
+		},
+		{
+			name:     "deep nested path",
+			input:    "https://example.com/a/b/c/d/e/f.js",
+			expected: "https://example.com/a/b/c/d/e/",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getParentURLImpl(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestGetParentURL_WithRegistry(t *testing.T) {
+	registry := NewRegistry()
+
+	// Test basic URL
+	result, err := registry.Execute(`get_parent_url("https://example.com/path/file.txt")`, map[string]interface{}{})
+	require.NoError(t, err)
+	assert.Equal(t, "https://example.com/path/", result)
+
+	// Test with query parameters
+	result, err = registry.Execute(`get_parent_url("https://example.com/api/endpoint?foo=bar")`, map[string]interface{}{})
+	require.NoError(t, err)
+	assert.Equal(t, "https://example.com/api/", result)
+
+	// Test with empty input
+	result, err = registry.Execute(`get_parent_url("")`, map[string]interface{}{})
+	require.NoError(t, err)
+	assert.Equal(t, "", result)
+}
+
+func TestParseURLImpl(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		format   string
+		expected string
+	}{
+		// Basic directives
+		{
+			name:     "scheme",
+			url:      "https://example.com",
+			format:   "%s",
+			expected: "https",
+		},
+		{
+			name:     "full domain",
+			url:      "https://sub.example.com",
+			format:   "%d",
+			expected: "sub.example.com",
+		},
+		{
+			name:     "subdomain",
+			url:      "https://sub.example.com",
+			format:   "%S",
+			expected: "sub",
+		},
+		{
+			name:     "root domain",
+			url:      "https://sub.example.com",
+			format:   "%r",
+			expected: "example",
+		},
+		{
+			name:     "tld",
+			url:      "https://sub.example.com",
+			format:   "%t",
+			expected: "com",
+		},
+		{
+			name:     "port",
+			url:      "https://example.com:8080/path",
+			format:   "%P",
+			expected: "8080",
+		},
+		{
+			name:     "path",
+			url:      "https://example.com/path/file.jpg",
+			format:   "%p",
+			expected: "/path/file.jpg",
+		},
+		{
+			name:     "extension",
+			url:      "https://example.com/path/file.jpg",
+			format:   "%e",
+			expected: "jpg",
+		},
+		{
+			name:     "query string",
+			url:      "https://example.com?a=1&b=2",
+			format:   "%q",
+			expected: "a=1&b=2",
+		},
+		{
+			name:     "fragment",
+			url:      "https://example.com#section",
+			format:   "%f",
+			expected: "section",
+		},
+		{
+			name:     "user info",
+			url:      "https://user:pass@example.com",
+			format:   "%u",
+			expected: "user:pass",
+		},
+
+		// Conditional directives
+		{
+			name:     "at sign with user info",
+			url:      "https://user:pass@example.com",
+			format:   "%u%@%d",
+			expected: "user:pass@example.com",
+		},
+		{
+			name:     "at sign without user info",
+			url:      "https://example.com",
+			format:   "%u%@%d",
+			expected: "example.com",
+		},
+		{
+			name:     "colon with port",
+			url:      "https://example.com:8080",
+			format:   "%d%:%P",
+			expected: "example.com:8080",
+		},
+		{
+			name:     "colon without port",
+			url:      "https://example.com",
+			format:   "%d%:%P",
+			expected: "example.com",
+		},
+		{
+			name:     "question mark with query",
+			url:      "https://example.com?q=1",
+			format:   "%d%?%q",
+			expected: "example.com?q=1",
+		},
+		{
+			name:     "question mark without query",
+			url:      "https://example.com",
+			format:   "%d%?%q",
+			expected: "example.com",
+		},
+		{
+			name:     "hash with fragment",
+			url:      "https://example.com#section",
+			format:   "%d%#%f",
+			expected: "example.com#section",
+		},
+		{
+			name:     "hash without fragment",
+			url:      "https://example.com",
+			format:   "%d%#%f",
+			expected: "example.com",
+		},
+
+		// Authority directive
+		{
+			name:     "authority full",
+			url:      "https://user:pass@example.com:8080",
+			format:   "%a",
+			expected: "user:pass@example.com:8080",
+		},
+		{
+			name:     "authority no port",
+			url:      "https://user:pass@example.com",
+			format:   "%a",
+			expected: "user:pass@example.com",
+		},
+		{
+			name:     "authority no user",
+			url:      "https://example.com:8080",
+			format:   "%a",
+			expected: "example.com:8080",
+		},
+		{
+			name:     "authority simple",
+			url:      "https://example.com",
+			format:   "%a",
+			expected: "example.com",
+		},
+
+		// Literal percent
+		{
+			name:     "literal percent",
+			url:      "https://example.com",
+			format:   "100%%",
+			expected: "100%",
+		},
+
+		// Combined formats
+		{
+			name:     "subdomain and root",
+			url:      "https://api.sub.example.com",
+			format:   "%S.%r.%t",
+			expected: "api.sub.example.com",
+		},
+		{
+			name:     "scheme and domain",
+			url:      "https://example.com",
+			format:   "%s://%d",
+			expected: "https://example.com",
+		},
+		{
+			name:     "full URL reconstruction",
+			url:      "https://example.com:8080/path?q=1#sec",
+			format:   "%s://%d%:%P%p%?%q%#%f",
+			expected: "https://example.com:8080/path?q=1#sec",
+		},
+
+		// Multi-part TLDs
+		{
+			name:     "co.uk domain",
+			url:      "https://api.example.co.uk",
+			format:   "%S|%r|%t",
+			expected: "api|example|co.uk",
+		},
+		{
+			name:     "com.au domain",
+			url:      "https://sub.site.com.au",
+			format:   "%S|%r|%t",
+			expected: "sub|site|com.au",
+		},
+
+		// Edge cases
+		{
+			name:     "no extension",
+			url:      "https://example.com/path/file",
+			format:   "%e",
+			expected: "",
+		},
+		{
+			name:     "no subdomain",
+			url:      "https://example.com",
+			format:   "%S",
+			expected: "",
+		},
+		{
+			name:     "empty path",
+			url:      "https://example.com",
+			format:   "%p",
+			expected: "",
+		},
+		{
+			name:     "unknown directive",
+			url:      "https://example.com",
+			format:   "%z",
+			expected: "%z",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseURLImpl(tt.url, tt.format)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestParseURL_WithRegistry(t *testing.T) {
+	registry := NewRegistry()
+
+	// Test scheme extraction
+	result, err := registry.Execute(`parse_url("https://example.com", "%s")`, map[string]interface{}{})
+	require.NoError(t, err)
+	assert.Equal(t, "https", result)
+
+	// Test domain extraction
+	result, err = registry.Execute(`parse_url("https://sub.example.com", "%d")`, map[string]interface{}{})
+	require.NoError(t, err)
+	assert.Equal(t, "sub.example.com", result)
+
+	// Test extension extraction
+	result, err = registry.Execute(`parse_url("https://example.com/path/image.jpg", "%e")`, map[string]interface{}{})
+	require.NoError(t, err)
+	assert.Equal(t, "jpg", result)
+
+	// Test with empty URL
+	result, err = registry.Execute(`parse_url("", "%s")`, map[string]interface{}{})
+	require.NoError(t, err)
+	assert.Equal(t, "", result)
+
+	// Test with empty format
+	result, err = registry.Execute(`parse_url("https://example.com", "")`, map[string]interface{}{})
+	require.NoError(t, err)
+	assert.Equal(t, "", result)
+}
+
+func TestExtractDomainParts(t *testing.T) {
+	tests := []struct {
+		name                 string
+		domain               string
+		expectedSubdomain    string
+		expectedRoot         string
+		expectedTLD          string
+	}{
+		{
+			name:              "simple domain",
+			domain:            "example.com",
+			expectedSubdomain: "",
+			expectedRoot:      "example",
+			expectedTLD:       "com",
+		},
+		{
+			name:              "subdomain",
+			domain:            "sub.example.com",
+			expectedSubdomain: "sub",
+			expectedRoot:      "example",
+			expectedTLD:       "com",
+		},
+		{
+			name:              "multiple subdomains",
+			domain:            "api.sub.example.com",
+			expectedSubdomain: "api.sub",
+			expectedRoot:      "example",
+			expectedTLD:       "com",
+		},
+		{
+			name:              "co.uk domain",
+			domain:            "example.co.uk",
+			expectedSubdomain: "",
+			expectedRoot:      "example",
+			expectedTLD:       "co.uk",
+		},
+		{
+			name:              "co.uk with subdomain",
+			domain:            "api.example.co.uk",
+			expectedSubdomain: "api",
+			expectedRoot:      "example",
+			expectedTLD:       "co.uk",
+		},
+		{
+			name:              "com.au domain",
+			domain:            "site.com.au",
+			expectedSubdomain: "",
+			expectedRoot:      "site",
+			expectedTLD:       "com.au",
+		},
+		{
+			name:              "single part",
+			domain:            "localhost",
+			expectedSubdomain: "",
+			expectedRoot:      "localhost",
+			expectedTLD:       "",
+		},
+		{
+			name:              "empty domain",
+			domain:            "",
+			expectedSubdomain: "",
+			expectedRoot:      "",
+			expectedTLD:       "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			subdomain, root, tld := extractDomainParts(tt.domain)
+			assert.Equal(t, tt.expectedSubdomain, subdomain, "subdomain mismatch")
+			assert.Equal(t, tt.expectedRoot, root, "root mismatch")
+			assert.Equal(t, tt.expectedTLD, tld, "tld mismatch")
+		})
+	}
+}
+
+func TestQueryReplaceImpl(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		value    string
+		mode     string
+		expected string
+	}{
+		{"single param replace", "https://example.com?id=123", "new", "replace", "https://example.com?id=new"},
+		{"multiple params replace", "https://example.com/path?one=1&two=2", "newval", "replace", "https://example.com/path?one=newval&two=newval"},
+		{"append mode", "https://example.com?a=1&b=2", "FUZZ", "append", "https://example.com?a=1FUZZ&b=2FUZZ"},
+		{"no query params", "https://example.com/path", "new", "replace", "https://example.com/path"},
+		{"empty value", "https://example.com?a=1", "", "replace", "https://example.com?a="},
+		{"with fragment", "https://example.com?a=1#section", "new", "replace", "https://example.com?a=new#section"},
+		{"default mode", "https://example.com?x=old", "test", "", "https://example.com?x=test"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := queryReplaceImpl(tt.url, tt.value, tt.mode)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestPathReplaceImpl(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		value    string
+		position int
+		expected string
+	}{
+		{"replace first", "https://example.com/first/second/third", "new", 1, "https://example.com/new/second/third"},
+		{"replace second", "https://example.com/first/second/third", "new", 2, "https://example.com/first/new/third"},
+		{"replace third", "https://example.com/first/second/third", "new", 3, "https://example.com/first/second/new"},
+		{"replace all", "https://example.com/a/b/c", "x", 0, "https://example.com/x/x/x"},
+		{"replace all negative", "https://example.com/a/b/c", "x", -1, "https://example.com/x/x/x"},
+		{"position out of range", "https://example.com/a/b", "new", 5, "https://example.com/a/b"},
+		{"with query", "https://example.com/a/b?q=1", "new", 1, "https://example.com/new/b?q=1"},
+		{"single segment", "https://example.com/only", "new", 1, "https://example.com/new"},
+		{"no path", "https://example.com", "new", 1, "https://example.com"},
+		{"root path only", "https://example.com/", "new", 1, "https://example.com/"},
+		{"with fragment", "https://example.com/a/b#sec", "new", 2, "https://example.com/a/new#sec"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := pathReplaceImpl(tt.url, tt.value, tt.position)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestQueryReplace_WithRegistry(t *testing.T) {
+	registry := NewRegistry()
+
+	// Test replace mode (default)
+	result, err := registry.Execute(`query_replace("https://example.com?a=1&b=2", "test")`, nil)
+	require.NoError(t, err)
+	resultStr := result.(string)
+	assert.Contains(t, resultStr, "a=test")
+	assert.Contains(t, resultStr, "b=test")
+
+	// Test append mode
+	result, err = registry.Execute(`query_replace("https://example.com?x=old", "FUZZ", "append")`, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "https://example.com?x=oldFUZZ", result)
+
+	// Test with empty URL
+	result, err = registry.Execute(`query_replace("", "test")`, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "", result)
+}
+
+func TestPathReplace_WithRegistry(t *testing.T) {
+	registry := NewRegistry()
+
+	// Test default position (1)
+	result, err := registry.Execute(`path_replace("https://example.com/a/b/c", "new")`, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "https://example.com/new/b/c", result)
+
+	// Test specific position
+	result, err = registry.Execute(`path_replace("https://example.com/a/b/c", "new", 2)`, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "https://example.com/a/new/c", result)
+
+	// Test replace all (position 0)
+	result, err = registry.Execute(`path_replace("https://example.com/a/b/c", "x", 0)`, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "https://example.com/x/x/x", result)
+
+	// Test with empty URL
+	result, err = registry.Execute(`path_replace("", "test")`, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "", result)
+}

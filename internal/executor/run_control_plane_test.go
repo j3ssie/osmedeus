@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-func TestRunRegistryRegisterAndGet(t *testing.T) {
-	registry := &RunRegistry{
+func TestRunControlPlaneRegisterAndGet(t *testing.T) {
+	controlPlane := &RunControlPlane{
 		runs: make(map[string]*ActiveRun),
 	}
 
@@ -16,7 +16,7 @@ func TestRunRegistryRegisterAndGet(t *testing.T) {
 	defer cancel()
 
 	runUUID := "test-run-123"
-	activeRun := registry.Register(runUUID, cancel)
+	activeRun := controlPlane.Register(runUUID, cancel)
 
 	if activeRun == nil {
 		t.Fatal("Register returned nil")
@@ -27,20 +27,20 @@ func TestRunRegistryRegisterAndGet(t *testing.T) {
 	}
 
 	// Test Get
-	retrieved := registry.Get(runUUID)
+	retrieved := controlPlane.Get(runUUID)
 	if retrieved != activeRun {
 		t.Error("Get returned different instance")
 	}
 
 	// Test Get for non-existent run
-	nonExistent := registry.Get("non-existent")
+	nonExistent := controlPlane.Get("non-existent")
 	if nonExistent != nil {
 		t.Error("Get should return nil for non-existent run")
 	}
 }
 
-func TestRunRegistryUnregister(t *testing.T) {
-	registry := &RunRegistry{
+func TestRunControlPlaneUnregister(t *testing.T) {
+	controlPlane := &RunControlPlane{
 		runs: make(map[string]*ActiveRun),
 	}
 
@@ -48,33 +48,33 @@ func TestRunRegistryUnregister(t *testing.T) {
 	defer cancel()
 
 	runUUID := "test-run-456"
-	registry.Register(runUUID, cancel)
+	controlPlane.Register(runUUID, cancel)
 
 	// Verify registered
-	if registry.Get(runUUID) == nil {
+	if controlPlane.Get(runUUID) == nil {
 		t.Fatal("Run should be registered")
 	}
 
 	// Unregister
-	registry.Unregister(runUUID)
+	controlPlane.Unregister(runUUID)
 
 	// Verify unregistered
-	if registry.Get(runUUID) != nil {
+	if controlPlane.Get(runUUID) != nil {
 		t.Error("Run should be unregistered")
 	}
 }
 
-func TestRunRegistryCancel(t *testing.T) {
-	registry := &RunRegistry{
+func TestRunControlPlaneCancel(t *testing.T) {
+	controlPlane := &RunControlPlane{
 		runs: make(map[string]*ActiveRun),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	runUUID := "test-run-789"
-	registry.Register(runUUID, cancel)
+	controlPlane.Register(runUUID, cancel)
 
 	// Cancel should call the cancel function
-	_, err := registry.Cancel(runUUID)
+	_, err := controlPlane.Cancel(runUUID)
 	if err != nil {
 		t.Errorf("Cancel returned error: %v", err)
 	}
@@ -88,14 +88,14 @@ func TestRunRegistryCancel(t *testing.T) {
 	}
 
 	// Cancel non-existent run
-	_, err = registry.Cancel("non-existent")
+	_, err = controlPlane.Cancel("non-existent")
 	if err == nil {
 		t.Error("Cancel should return error for non-existent run")
 	}
 }
 
-func TestRunRegistryPIDTracking(t *testing.T) {
-	registry := &RunRegistry{
+func TestRunControlPlanePIDTracking(t *testing.T) {
+	controlPlane := &RunControlPlane{
 		runs: make(map[string]*ActiveRun),
 	}
 
@@ -103,14 +103,14 @@ func TestRunRegistryPIDTracking(t *testing.T) {
 	defer cancel()
 
 	runUUID := "test-run-pid"
-	registry.Register(runUUID, cancel)
+	controlPlane.Register(runUUID, cancel)
 
 	// Add PIDs
-	registry.AddPID(runUUID, 1234)
-	registry.AddPID(runUUID, 5678)
+	controlPlane.AddPID(runUUID, 1234)
+	controlPlane.AddPID(runUUID, 5678)
 
 	// Verify PIDs are tracked
-	activeRun := registry.Get(runUUID)
+	activeRun := controlPlane.Get(runUUID)
 	count := 0
 	activeRun.PIDs.Range(func(_, _ any) bool {
 		count++
@@ -121,7 +121,7 @@ func TestRunRegistryPIDTracking(t *testing.T) {
 	}
 
 	// Remove a PID
-	registry.RemovePID(runUUID, 1234)
+	controlPlane.RemovePID(runUUID, 1234)
 
 	// Verify PID removed
 	count = 0
@@ -134,8 +134,8 @@ func TestRunRegistryPIDTracking(t *testing.T) {
 	}
 }
 
-func TestRunRegistryKillAllPIDs(t *testing.T) {
-	// Create a fresh ActiveRun (not using the registry to avoid syscall issues)
+func TestRunControlPlaneKillAllPIDs(t *testing.T) {
+	// Create a fresh ActiveRun (not using the control plane to avoid syscall issues)
 	activeRun := &ActiveRun{
 		RunUUID:   "test-kill",
 		PIDs:      &sync.Map{},
@@ -165,8 +165,8 @@ func TestRunRegistryKillAllPIDs(t *testing.T) {
 	}
 }
 
-func TestRunRegistryConcurrency(t *testing.T) {
-	registry := &RunRegistry{
+func TestRunControlPlaneConcurrency(t *testing.T) {
+	controlPlane := &RunControlPlane{
 		runs: make(map[string]*ActiveRun),
 	}
 
@@ -181,51 +181,51 @@ func TestRunRegistryConcurrency(t *testing.T) {
 			defer cancel()
 
 			runUUID := "concurrent-run-" + string(rune('a'+i%26))
-			registry.Register(runUUID, cancel)
-			registry.AddPID(runUUID, i+1000)
-			registry.RemovePID(runUUID, i+1000)
-			registry.Get(runUUID)
-			registry.Unregister(runUUID)
+			controlPlane.Register(runUUID, cancel)
+			controlPlane.AddPID(runUUID, i+1000)
+			controlPlane.RemovePID(runUUID, i+1000)
+			controlPlane.Get(runUUID)
+			controlPlane.Unregister(runUUID)
 		}(i)
 	}
 
 	wg.Wait()
 
 	// Should have no leftover runs
-	if registry.Count() != 0 {
-		t.Errorf("Expected 0 runs, got %d", registry.Count())
+	if controlPlane.Count() != 0 {
+		t.Errorf("Expected 0 runs, got %d", controlPlane.Count())
 	}
 }
 
-func TestRunRegistryListActive(t *testing.T) {
-	registry := &RunRegistry{
+func TestRunControlPlaneListActive(t *testing.T) {
+	controlPlane := &RunControlPlane{
 		runs: make(map[string]*ActiveRun),
 	}
 
 	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	registry.Register("run-1", cancel)
-	registry.Register("run-2", cancel)
-	registry.Register("run-3", cancel)
+	controlPlane.Register("run-1", cancel)
+	controlPlane.Register("run-2", cancel)
+	controlPlane.Register("run-3", cancel)
 
-	active := registry.ListActive()
+	active := controlPlane.ListActive()
 	if len(active) != 3 {
 		t.Errorf("Expected 3 active runs, got %d", len(active))
 	}
 
-	if registry.Count() != 3 {
-		t.Errorf("Expected count 3, got %d", registry.Count())
+	if controlPlane.Count() != 3 {
+		t.Errorf("Expected count 3, got %d", controlPlane.Count())
 	}
 }
 
-func TestGetRunRegistrySingleton(t *testing.T) {
+func TestGetRunControlPlaneSingleton(t *testing.T) {
 	// Get the singleton twice
-	reg1 := GetRunRegistry()
-	reg2 := GetRunRegistry()
+	cp1 := GetRunControlPlane()
+	cp2 := GetRunControlPlane()
 
 	// Should be the same instance
-	if reg1 != reg2 {
-		t.Error("GetRunRegistry should return the same singleton instance")
+	if cp1 != cp2 {
+		t.Error("GetRunControlPlane should return the same singleton instance")
 	}
 }

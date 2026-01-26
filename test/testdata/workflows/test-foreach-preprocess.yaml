@@ -1,0 +1,126 @@
+name: test-foreach-preprocess
+kind: module
+description: Test foreach loop with variable_pre_process
+tags: test,foreach,loop,preprocess
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: create-input-urls
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/osm-test
+      - |
+        cat > {{Output}}/osm-test/urls.txt << 'EOF'
+        https://example.com/path/file.php?id=1
+        https://example.com/api/v1/users
+        https://example.com/deep/nested/path/resource
+        EOF
+
+  - name: test-get-parent-url
+    log: "Testing get_parent_url pre-processing"
+    type: foreach
+    input: "{{Output}}/osm-test/urls.txt"
+    variable: url
+    variable_pre_process: "get_parent_url([[url]])"
+    threads: 1
+    step:
+      name: output-parent-url
+      type: bash
+      command: echo "PARENT:[[url]]" >> {{Output}}/osm-test/parent-urls.txt
+
+  - name: verify-parent-urls
+    type: bash
+    command: |
+      echo "=== Parent URL Results ==="
+      cat {{Output}}/osm-test/parent-urls.txt
+      # Verify the parent URLs were extracted correctly
+      grep -q "PARENT:https://example.com/path/" {{Output}}/osm-test/parent-urls.txt && echo "VERIFY:path_parent_ok"
+      grep -q "PARENT:https://example.com/api/v1/" {{Output}}/osm-test/parent-urls.txt && echo "VERIFY:api_parent_ok"
+      grep -q "PARENT:https://example.com/deep/nested/path/" {{Output}}/osm-test/parent-urls.txt && echo "VERIFY:nested_parent_ok"
+
+  - name: create-domain-input
+    type: bash
+    command: |
+      cat > {{Output}}/osm-test/mixed-urls.txt << 'EOF'
+      https://SUB.EXAMPLE.COM/path
+      https://API.TEST.ORG/endpoint
+      https://WWW.SAMPLE.NET/page
+      EOF
+
+  - name: test-parse-url-domain
+    log: "Testing parse_url pre-processing to extract domain"
+    type: foreach
+    input: "{{Output}}/osm-test/mixed-urls.txt"
+    variable: url
+    variable_pre_process: "parse_url([[url]], '%d')"
+    threads: 1
+    step:
+      name: output-domain
+      type: bash
+      command: echo "DOMAIN:[[url]]" >> {{Output}}/osm-test/domains.txt
+
+  - name: verify-domains
+    type: bash
+    command: |
+      echo "=== Domain Extraction Results ==="
+      cat {{Output}}/osm-test/domains.txt
+      # Verify domains were extracted (parse_url returns lowercase)
+      grep -qi "DOMAIN:sub.example.com" {{Output}}/osm-test/domains.txt && echo "VERIFY:domain1_ok"
+      grep -qi "DOMAIN:api.test.org" {{Output}}/osm-test/domains.txt && echo "VERIFY:domain2_ok"
+      grep -qi "DOMAIN:www.sample.net" {{Output}}/osm-test/domains.txt && echo "VERIFY:domain3_ok"
+
+  - name: test-chained-functions
+    log: "Testing chained functions in pre-processing"
+    type: foreach
+    input: "{{Output}}/osm-test/mixed-urls.txt"
+    variable: url
+    variable_pre_process: "to_lower_case(parse_url([[url]], '%d'))"
+    threads: 1
+    step:
+      name: output-lowercase-domain
+      type: bash
+      command: echo "LOWER:[[url]]" >> {{Output}}/osm-test/lowercase-domains.txt
+
+  - name: verify-chained
+    type: bash
+    command: |
+      echo "=== Chained Functions Results ==="
+      cat {{Output}}/osm-test/lowercase-domains.txt
+      # Verify chained functions work (lowercase domains)
+      grep -q "LOWER:sub.example.com" {{Output}}/osm-test/lowercase-domains.txt && echo "VERIFY:chained1_ok"
+      grep -q "LOWER:api.test.org" {{Output}}/osm-test/lowercase-domains.txt && echo "VERIFY:chained2_ok"
+      grep -q "LOWER:www.sample.net" {{Output}}/osm-test/lowercase-domains.txt && echo "VERIFY:chained3_ok"
+
+  - name: test-no-preprocess
+    log: "Testing foreach without pre-processing (original behavior)"
+    type: foreach
+    input: "{{Output}}/osm-test/urls.txt"
+    variable: url
+    threads: 1
+    step:
+      name: output-original
+      type: bash
+      command: echo "ORIGINAL:[[url]]" >> {{Output}}/osm-test/original-urls.txt
+
+  - name: verify-no-preprocess
+    type: bash
+    command: |
+      echo "=== No Pre-process Results ==="
+      cat {{Output}}/osm-test/original-urls.txt
+      # Verify original URLs are unchanged
+      grep -q "ORIGINAL:https://example.com/path/file.php?id=1" {{Output}}/osm-test/original-urls.txt && echo "VERIFY:original1_ok"
+      grep -q "ORIGINAL:https://example.com/api/v1/users" {{Output}}/osm-test/original-urls.txt && echo "VERIFY:original2_ok"
+
+  - name: final-summary
+    type: bash
+    command: |
+      echo "=== Foreach Pre-process Test Summary ==="
+      echo "All pre-process tests completed"
+      echo "=== Test Complete ==="
+
+  - name: cleanup
+    type: bash
+    command: rm -rf {{Output}}/osm-test

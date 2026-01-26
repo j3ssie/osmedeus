@@ -57,27 +57,27 @@ func (a *ActiveRun) KillAllPIDs() []int {
 	return killed
 }
 
-// RunRegistry tracks active workflow runs for cancellation support
-type RunRegistry struct {
+// RunControlPlane tracks active workflow runs for cancellation support
+type RunControlPlane struct {
 	mu   sync.RWMutex
 	runs map[string]*ActiveRun
 }
 
-var globalRegistry *RunRegistry
-var registryOnce sync.Once
+var globalControlPlane *RunControlPlane
+var controlPlaneOnce sync.Once
 
-// GetRunRegistry returns the singleton run registry
-func GetRunRegistry() *RunRegistry {
-	registryOnce.Do(func() {
-		globalRegistry = &RunRegistry{
+// GetRunControlPlane returns the singleton run control plane
+func GetRunControlPlane() *RunControlPlane {
+	controlPlaneOnce.Do(func() {
+		globalControlPlane = &RunControlPlane{
 			runs: make(map[string]*ActiveRun),
 		}
 	})
-	return globalRegistry
+	return globalControlPlane
 }
 
-// Register adds a new run to the registry
-func (r *RunRegistry) Register(runUUID string, cancel context.CancelFunc) *ActiveRun {
+// Register adds a new run to the control plane
+func (r *RunControlPlane) Register(runUUID string, cancel context.CancelFunc) *ActiveRun {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -91,15 +91,15 @@ func (r *RunRegistry) Register(runUUID string, cancel context.CancelFunc) *Activ
 	return activeRun
 }
 
-// Unregister removes a run from the registry
-func (r *RunRegistry) Unregister(runUUID string) {
+// Unregister removes a run from the control plane
+func (r *RunControlPlane) Unregister(runUUID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.runs, runUUID)
 }
 
 // Get retrieves an active run by its UUID
-func (r *RunRegistry) Get(runUUID string) *ActiveRun {
+func (r *RunControlPlane) Get(runUUID string) *ActiveRun {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.runs[runUUID]
@@ -107,13 +107,13 @@ func (r *RunRegistry) Get(runUUID string) *ActiveRun {
 
 // Cancel cancels a run by calling its cancel function and killing all tracked PIDs.
 // Returns the list of killed PIDs and any error.
-func (r *RunRegistry) Cancel(runUUID string) ([]int, error) {
+func (r *RunControlPlane) Cancel(runUUID string) ([]int, error) {
 	r.mu.Lock()
 	activeRun, exists := r.runs[runUUID]
 	r.mu.Unlock()
 
 	if !exists {
-		return nil, fmt.Errorf("run %s not found in registry", runUUID)
+		return nil, fmt.Errorf("run %s not found in control plane", runUUID)
 	}
 
 	// First, cancel the context to stop any new operations
@@ -128,7 +128,7 @@ func (r *RunRegistry) Cancel(runUUID string) ([]int, error) {
 }
 
 // AddPID adds a PID to a run's tracked processes
-func (r *RunRegistry) AddPID(runUUID string, pid int) {
+func (r *RunControlPlane) AddPID(runUUID string, pid int) {
 	r.mu.RLock()
 	activeRun := r.runs[runUUID]
 	r.mu.RUnlock()
@@ -139,7 +139,7 @@ func (r *RunRegistry) AddPID(runUUID string, pid int) {
 }
 
 // RemovePID removes a PID from a run's tracked processes
-func (r *RunRegistry) RemovePID(runUUID string, pid int) {
+func (r *RunControlPlane) RemovePID(runUUID string, pid int) {
 	r.mu.RLock()
 	activeRun := r.runs[runUUID]
 	r.mu.RUnlock()
@@ -150,7 +150,7 @@ func (r *RunRegistry) RemovePID(runUUID string, pid int) {
 }
 
 // ListActive returns a list of all active run UUIDs
-func (r *RunRegistry) ListActive() []string {
+func (r *RunControlPlane) ListActive() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -162,7 +162,7 @@ func (r *RunRegistry) ListActive() []string {
 }
 
 // Count returns the number of active runs
-func (r *RunRegistry) Count() int {
+func (r *RunControlPlane) Count() int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return len(r.runs)

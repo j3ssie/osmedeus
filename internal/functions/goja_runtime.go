@@ -205,6 +205,10 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 
 	// URL processing functions
 	_ = vm.Set(FnInterestingUrls, vf.interestingUrls)
+	_ = vm.Set(FnGetParentURL, vf.getParentURL)
+	_ = vm.Set(FnParseURL, vf.parseURL)
+	_ = vm.Set(FnQueryReplace, vf.queryReplace)
+	_ = vm.Set(FnPathReplace, vf.pathReplace)
 
 	// Markdown functions
 	_ = vm.Set(FnRenderMarkdownFromFile, vf.renderMarkdownFromFile)
