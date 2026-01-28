@@ -107,9 +107,15 @@ type deleteWorkResult struct {
 }
 
 // cdnDelete deletes a file from cloud storage
-// Usage: cdnDelete(remotePath) -> bool
+// Usage: cdnDelete(remotePath, mode?) -> bool
+// mode: "json" to suppress console output
 func (vf *vmFunc) cdnDelete(call goja.FunctionCall) goja.Value {
 	remotePath := call.Argument(0).String()
+	mode := ""
+	if len(call.Arguments) > 1 && !goja.IsUndefined(call.Argument(1)) {
+		mode = strings.ToLower(call.Argument(1).String())
+	}
+	jsonOnly := mode == "json"
 	logger.Get().Debug("Calling cdnDelete", zap.String("remotePath", remotePath))
 
 	if remotePath == "undefined" || remotePath == "" {
@@ -123,10 +129,22 @@ func (vf *vmFunc) cdnDelete(call goja.FunctionCall) goja.Value {
 		return vf.vm.ToValue(false)
 	}
 
+	// Define console output prefixes
+	var infoPrefix, errPrefix string
+	if !jsonOnly {
+		infoPrefix = terminal.InfoSymbol() + " " + terminal.HiBlue("cdn_delete")
+		errPrefix = terminal.ErrorSymbol() + " " + terminal.HiBlue("cdn_delete")
+	}
+
 	ctx := context.Background()
 	deletedCount := 0
 	errorCount := 0
 	folderMode := strings.HasSuffix(remotePath, "/")
+
+	// Print started message
+	if !jsonOnly {
+		fmt.Printf("%s %s %s\n", infoPrefix, terminal.Cyan("started"), terminal.Gray(remotePath))
+	}
 
 	if !folderMode {
 		exists, existsErr := client.Exists(ctx, remotePath)
@@ -134,10 +152,19 @@ func (vf *vmFunc) cdnDelete(call goja.FunctionCall) goja.Value {
 			logger.Get().Warn("cdnDelete: failed to check existence", zap.String("remotePath", remotePath), zap.Error(existsErr))
 		}
 		if exists {
+			if !jsonOnly {
+				fmt.Printf("%s %s %s\n", infoPrefix, terminal.Blue("deleting"), terminal.Gray(remotePath))
+			}
 			if err := client.Delete(ctx, remotePath); err != nil {
 				logger.Get().Warn("cdnDelete: delete failed", zap.String("remotePath", remotePath), zap.Error(err))
+				if !jsonOnly {
+					fmt.Printf("%s %s %s\n", errPrefix, terminal.Red("error"), terminal.Gray(remotePath))
+				}
 				errorCount++
 			} else {
+				if !jsonOnly {
+					fmt.Printf("%s %s %s\n", infoPrefix, terminal.Green("deleted"), terminal.Gray(remotePath))
+				}
 				deletedCount++
 			}
 		} else {
@@ -161,6 +188,7 @@ func (vf *vmFunc) cdnDelete(call goja.FunctionCall) goja.Value {
 			results := make(chan deleteWorkResult, concurrency*2)
 
 			var workerWg sync.WaitGroup
+			var outputMu sync.Mutex
 
 			// Start fixed worker pool
 			for i := 0; i < concurrency; i++ {
@@ -172,6 +200,13 @@ func (vf *vmFunc) cdnDelete(call goja.FunctionCall) goja.Value {
 						if ctx.Err() != nil {
 							results <- deleteWorkResult{index: work.index, key: work.key, err: ctx.Err()}
 							continue
+						}
+
+						// Print deleting status
+						if !jsonOnly {
+							outputMu.Lock()
+							fmt.Printf("%s %s %s\n", infoPrefix, terminal.Blue("deleting"), terminal.Gray(work.key))
+							outputMu.Unlock()
 						}
 
 						// Delete file
@@ -203,12 +238,30 @@ func (vf *vmFunc) cdnDelete(call goja.FunctionCall) goja.Value {
 			for r := range results {
 				if r.err != nil {
 					logger.Get().Warn("cdnDelete: delete failed", zap.String("remotePath", r.key), zap.Error(r.err))
+					if !jsonOnly {
+						outputMu.Lock()
+						fmt.Printf("%s %s %s\n", errPrefix, terminal.Red("error"), terminal.Gray(r.key))
+						outputMu.Unlock()
+					}
 					errorCount++
 				} else {
+					if !jsonOnly {
+						outputMu.Lock()
+						fmt.Printf("%s %s %s\n", infoPrefix, terminal.Green("deleted"), terminal.Gray(r.key))
+						outputMu.Unlock()
+					}
 					deletedCount++
 				}
 			}
 		}
+	}
+
+	// Print summary
+	if !jsonOnly {
+		fmt.Printf("%s %s %s\n",
+			infoPrefix,
+			terminal.HiGreen("summary"),
+			terminal.Gray(fmt.Sprintf("deleted=%d errors=%d", deletedCount, errorCount)))
 	}
 
 	if errorCount > 0 {
