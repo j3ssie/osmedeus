@@ -105,16 +105,19 @@
     "desc": "Community curated list of templates for the nuclei engine to find security vulnerabilities.",
     "repo_link": "https://github.com/projectdiscovery/nuclei-templates",
     "version": "10.3.6",
-    "package-manager": "go-getter",
+    "package-manager": "source",
     "tags": [
       "vulnerability-scanner",
       "templates",
       "security"
     ],
     "valide-command": "",
-    "command-dual": {
-      "dual": "https://github.com/projectdiscovery/nuclei-templates.git?ref=main&depth=1 $HOME/nuclei-templates"
-    }
+    "multi-commands-linux": [
+      "rm -rf $HOME/nuclei-templates && git clone --depth=1 https://github.com/projectdiscovery/nuclei-templates $HOME/nuclei-templates"
+    ],
+    "multi-commands-darwin": [
+      "rm -rf $HOME/nuclei-templates && git clone --depth=1 https://github.com/projectdiscovery/nuclei-templates $HOME/nuclei-templates"
+    ]
   },
   "httpx": {
     "desc": "httpx is a fast and multi-purpose HTTP toolkit that allows running multiple probes using the retryablehttp library.",
