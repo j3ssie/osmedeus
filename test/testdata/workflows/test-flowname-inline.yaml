@@ -1,6 +1,6 @@
-name: test-inline-modules
+name: test-flowname-inline
 kind: flow
-description: Simple test flow with inline modules (no path references)
+description: Test flow demonstrating FlowName variable with inline modules
 
 params:
   - name: target
@@ -8,24 +8,24 @@ params:
 
 modules:
   - name: greet-module
-    description: Simple greeting module
+    description: Simple greeting module that outputs flow name
     inline_path: true
     steps:
       - name: greet
         type: bash
-        command: echo "Hello, {{target}}!"
+        command: echo "Hello from {{FlowName}}, target={{target}}"
         exports:
           greeting: "{{StepOutput}}"
 
   - name: info-module
-    description: Displays system info
+    description: Displays system info with flow name
     inline_path: true
     depends_on:
       - greet-module
     steps:
       - name: show-info
         type: bash
-        command: echo "Target is {{target}}, greeting was {{greeting}}"
+        command: echo "Target is {{target}}, greeting was {{greeting}}, FlowName={{FlowName}}"
       - name: date-step
         type: bash
         command: date +%Y-%m-%d
@@ -33,11 +33,13 @@ modules:
           current_date: "{{StepOutput}}"
 
   - name: final-module
-    description: Final summary module
+    description: Final summary module verifying FlowName
     inline_path: true
     depends_on:
       - info-module
     steps:
       - name: summary
         type: bash
-        command: echo "Flow completed on {{current_date}} for {{target}}"
+        command: echo "Flow {{FlowName}} completed on {{current_date}} for {{target}}"
+        exports:
+          final_output: "{{StepOutput}}"

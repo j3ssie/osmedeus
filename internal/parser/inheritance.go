@@ -622,6 +622,9 @@ func (r *InheritanceResolver) mergePreferences(merged *core.Workflow, override *
 	if override.RepeatWaitTime != nil {
 		merged.Preferences.RepeatWaitTime = override.RepeatWaitTime
 	}
+	if override.EmptyTarget != nil {
+		merged.Preferences.EmptyTarget = override.EmptyTarget
+	}
 }
 
 // mergeRunnerConfig merges runner config overrides (child overrides parent)

@@ -144,7 +144,7 @@ func captureExplicitFlags(cmd *cobra.Command) {
 
 	// Run command flags
 	runFlagNames := []string{
-		"heuristics-check", "repeat", "repeat-wait-time",
+		"heuristics-check", "repeat", "repeat-wait-time", "empty-target",
 	}
 	for _, name := range runFlagNames {
 		if f := cmd.Flags().Lookup(name); f != nil {
@@ -164,6 +164,31 @@ func captureExplicitFlags(cmd *cobra.Command) {
 			explicitFlags[name] = f.Changed
 		}
 	}
+}
+
+// getWorkflowEmptyTargetPreference loads the workflow early to check empty_target preference
+// Returns true if empty_target preference is set to true, false otherwise
+// Note: This cannot work for stdin modules (--std-module) since stdin would be consumed
+func getWorkflowEmptyTargetPreference(cfg *config.Config) bool {
+	if flowName == "" && len(moduleNames) == 0 {
+		return false
+	}
+
+	loader := parser.NewLoader(cfg.WorkflowsPath)
+	var workflow *core.Workflow
+	var err error
+
+	if flowName != "" {
+		workflow, err = loader.LoadWorkflow(flowName)
+	} else if len(moduleNames) > 0 {
+		workflow, err = loader.LoadWorkflow(moduleNames[0])
+	}
+
+	if err != nil || workflow == nil || workflow.Preferences == nil {
+		return false
+	}
+
+	return workflow.Preferences.GetEmptyTarget(false)
 }
 
 // applyWorkflowPreferences applies workflow preferences to CLI variables
@@ -227,6 +252,13 @@ func applyWorkflowPreferences(prefs *core.Preferences, printer *terminal.Printer
 	if prefs.RepeatWaitTime != nil && !explicitFlags["repeat-wait-time"] {
 		repeatWaitTime = *prefs.RepeatWaitTime
 		applied = append(applied, "repeat_wait_time="+*prefs.RepeatWaitTime)
+	}
+
+	// empty_target -> emptyTarget (already applied in early check, but log for consistency)
+	if prefs.EmptyTarget != nil && !explicitFlags["empty-target"] {
+		if *prefs.EmptyTarget {
+			applied = append(applied, "empty_target")
+		}
 	}
 
 	// Log applied preferences if verbose
@@ -356,7 +388,14 @@ func runRun(cmd *cobra.Command, args []string) error {
 	)
 
 	if len(allTargets) == 0 {
-		if emptyTarget {
+		// Check CLI flag first, then workflow preference
+		shouldUseEmptyTarget := emptyTarget
+		if !shouldUseEmptyTarget && !explicitFlags["empty-target"] {
+			// Only check workflow preference if --empty-target was not explicitly set to false
+			shouldUseEmptyTarget = getWorkflowEmptyTargetPreference(cfg)
+		}
+
+		if shouldUseEmptyTarget {
 			// Generate placeholder target
 			allTargets = []string{generateEmptyTarget()}
 			printer.Info("Using generated target: %s", allTargets[0])

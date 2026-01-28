@@ -1,0 +1,25 @@
+name: test-empty-target
+kind: module
+description: Test workflow with empty_target preference enabled - should run without -t flag
+
+# This workflow demonstrates empty_target preference
+# Running: osmedeus run -m test-empty-target (no -t flag needed)
+preferences:
+  empty_target: true    # Equivalent to --empty-target
+
+params:
+  - name: message
+    default: "Running without explicit target"
+
+steps:
+  - name: show-generated-target
+    type: bash
+    command: 'echo "Generated target: {{Target}}"'
+
+  - name: echo-message
+    type: bash
+    command: 'echo "{{message}}"'
+
+  - name: complete
+    type: function
+    function: 'log_info("Empty target workflow completed")'

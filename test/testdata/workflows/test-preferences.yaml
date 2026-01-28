@@ -12,6 +12,7 @@ preferences:
   silent: false                  # Equivalent to --silent
   repeat: false                  # Equivalent to --repeat
   repeat_wait_time: '30s'        # Equivalent to --repeat-wait-time 30s
+  empty_target: false            # Equivalent to --empty-target
 
 params:
   - name: message

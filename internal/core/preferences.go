@@ -25,6 +25,9 @@ type Preferences struct {
 
 	// RepeatWaitTime sets wait time between repeats, e.g., "60s", "1h" (--repeat-wait-time)
 	RepeatWaitTime *string `yaml:"repeat_wait_time,omitempty"`
+
+	// EmptyTarget allows running without a target (--empty-target)
+	EmptyTarget *bool `yaml:"empty_target,omitempty"`
 }
 
 // Helper functions to safely get values with defaults
@@ -83,4 +86,12 @@ func (p *Preferences) GetRepeatWaitTime(defaultVal string) string {
 		return defaultVal
 	}
 	return *p.RepeatWaitTime
+}
+
+// GetEmptyTarget returns the empty_target preference or the default value
+func (p *Preferences) GetEmptyTarget(defaultVal bool) bool {
+	if p == nil || p.EmptyTarget == nil {
+		return defaultVal
+	}
+	return *p.EmptyTarget
 }

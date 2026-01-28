@@ -299,6 +299,13 @@ func (e *Executor) injectBuiltinVariables(cfg *config.Config, params map[string]
 	// Module/Workflow name variable
 	execCtx.SetVariable("ModuleName", execCtx.WorkflowName)
 
+	// Flow name variable (set when running under a flow, empty for standalone module)
+	flowName := ""
+	if fn, ok := params["flow_name"]; ok && fn != "" {
+		flowName = fn
+	}
+	execCtx.SetVariable("FlowName", flowName)
+
 	// Auto-generated variables
 	execCtx.SetVariable("TaskDate", now.Format("2006-01-02"))
 	execCtx.SetVariable("RunUUID", execCtx.RunUUID)
@@ -1706,9 +1713,17 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 			mergedParams[k] = v
 		}
 
+		// Add flow name so modules know which flow they're running under
+		mergedParams["flow_name"] = flow.Name
+
 		// Add flow's initialized params and exports (converts interface{} to string)
 		for k, v := range execCtx.GetVariables() {
 			if _, exists := mergedParams[k]; !exists {
+				// Skip FlowName - it will be set by injectBuiltinVariables from flow_name
+				// The flow's FlowName is empty (no parent flow), but modules need it set to flow.Name
+				if k == "FlowName" {
+					continue
+				}
 				// Only add if not already set by CLI params (CLI has priority)
 				if strVal, ok := v.(string); ok {
 					mergedParams[k] = strVal

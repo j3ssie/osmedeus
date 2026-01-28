@@ -90,6 +90,7 @@ type ModuleRef struct {
 	Decision  *DecisionConfig   `yaml:"decision"`
 
 	// Inline module fields (used when Path is empty)
+	InlinePath   bool          `yaml:"inline_path,omitempty"`   // Marker to clarify this is an inline module (documentation only)
 	Steps        []Step        `yaml:"steps,omitempty"`         // Inline steps (makes this an inline module)
 	Runner       RunnerType    `yaml:"runner,omitempty"`        // Runner type for inline module
 	RunnerConfig *RunnerConfig `yaml:"runner_config,omitempty"` // Runner configuration for inline module

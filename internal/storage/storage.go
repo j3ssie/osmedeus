@@ -78,6 +78,22 @@ type SyncOptions struct {
 	Event       func(SyncEvent)
 }
 
+// syncWorkItem represents a single file operation for concurrent processing
+type syncWorkItem struct {
+	index      int
+	localPath  string
+	remotePath string
+	action     string // "upload" or "download"
+}
+
+// syncWorkResult represents the result of a single file operation
+type syncWorkResult struct {
+	index  int
+	path   string
+	action string // "uploaded", "downloaded", "error"
+	err    error
+}
+
 // Singleton client pattern
 var (
 	globalClient   *Client
@@ -571,7 +587,9 @@ func (c *Client) SyncUpload(ctx context.Context, localDir, remotePrefix string, 
 		return nil, fmt.Errorf("failed to walk local directory: %w", err)
 	}
 
-	// Determine files to upload
+	// Phase 1: Collect files to upload (with delta detection)
+	var workItems []syncWorkItem
+	idx := 0
 	for relPath, absPath := range localFiles {
 		remotePath := filepath.Join(remotePrefix, relPath)
 		remotePath = filepath.ToSlash(remotePath) // Convert to forward slashes for S3
@@ -594,27 +612,96 @@ func (c *Client) SyncUpload(ctx context.Context, localDir, remotePrefix string, 
 			}
 		}
 
-		// Upload file
-		if !opts.DryRun {
-			if opts.Event != nil {
-				opts.Event(SyncEvent{Action: "uploading", Path: remotePath})
-			}
-			if opts.Progress != nil {
-				err = c.UploadWithProgress(ctx, absPath, remotePath, opts.Progress)
-			} else {
-				err = c.Upload(ctx, absPath, remotePath)
-			}
-			if err != nil {
-				result.Errors = append(result.Errors, fmt.Errorf("upload %s: %w", absPath, err))
-				if opts.Event != nil {
-					opts.Event(SyncEvent{Action: "error", Path: remotePath})
+		// Add to work items for upload
+		workItems = append(workItems, syncWorkItem{
+			index:      idx,
+			localPath:  absPath,
+			remotePath: remotePath,
+			action:     "upload",
+		})
+		idx++
+	}
+
+	// Phase 2: Process uploads concurrently using worker pool
+	if len(workItems) > 0 && !opts.DryRun {
+		workQueue := make(chan syncWorkItem, opts.Concurrency*2)
+		results := make(chan syncWorkResult, opts.Concurrency*2)
+
+		var workerWg sync.WaitGroup
+
+		// Start fixed worker pool
+		for i := 0; i < opts.Concurrency; i++ {
+			workerWg.Add(1)
+			go func() {
+				defer workerWg.Done()
+				for work := range workQueue {
+					// Check context cancellation
+					if ctx.Err() != nil {
+						results <- syncWorkResult{index: work.index, path: work.remotePath, action: "error", err: ctx.Err()}
+						continue
+					}
+
+					// Fire uploading event
+					if opts.Event != nil {
+						opts.Event(SyncEvent{Action: "uploading", Path: work.remotePath})
+					}
+
+					// Upload file
+					var uploadErr error
+					if opts.Progress != nil {
+						uploadErr = c.UploadWithProgress(ctx, work.localPath, work.remotePath, opts.Progress)
+					} else {
+						uploadErr = c.Upload(ctx, work.localPath, work.remotePath)
+					}
+
+					if uploadErr != nil {
+						results <- syncWorkResult{index: work.index, path: work.remotePath, action: "error", err: fmt.Errorf("upload %s: %w", work.localPath, uploadErr)}
+					} else {
+						results <- syncWorkResult{index: work.index, path: work.remotePath, action: "uploaded", err: nil}
+					}
 				}
-				continue
+			}()
+		}
+
+		// Producer: feed work items into queue
+		go func() {
+			defer close(workQueue)
+			for _, item := range workItems {
+				select {
+				case workQueue <- item:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+
+		// Collector: close results when all workers done
+		go func() {
+			workerWg.Wait()
+			close(results)
+		}()
+
+		// Collect results and fire events
+		for r := range results {
+			if r.err != nil {
+				result.Errors = append(result.Errors, r.err)
+				if opts.Event != nil {
+					opts.Event(SyncEvent{Action: "error", Path: r.path})
+				}
+			} else {
+				result.Uploaded = append(result.Uploaded, r.path)
+				if opts.Event != nil {
+					opts.Event(SyncEvent{Action: "uploaded", Path: r.path})
+				}
 			}
 		}
-		result.Uploaded = append(result.Uploaded, remotePath)
-		if opts.Event != nil {
-			opts.Event(SyncEvent{Action: "uploaded", Path: remotePath})
+	} else if opts.DryRun {
+		// In dry-run mode, just add all work items to uploaded list
+		for _, item := range workItems {
+			result.Uploaded = append(result.Uploaded, item.remotePath)
+			if opts.Event != nil {
+				opts.Event(SyncEvent{Action: "uploaded", Path: item.remotePath})
+			}
 		}
 	}
 
@@ -695,8 +782,10 @@ func (c *Client) SyncDownload(ctx context.Context, remotePrefix, localDir string
 		}
 	}
 
-	// Download remote files
+	// Phase 1: Collect files to download (with delta detection)
+	var workItems []syncWorkItem
 	downloadedPaths := make(map[string]bool)
+	idx := 0
 	for _, remoteInfo := range remoteFiles {
 		relPath := remoteInfo.Key
 		if len(remotePrefix) > 0 {
@@ -722,27 +811,96 @@ func (c *Client) SyncDownload(ctx context.Context, remotePrefix, localDir string
 			}
 		}
 
-		// Download file
-		if !opts.DryRun {
-			if opts.Event != nil {
-				opts.Event(SyncEvent{Action: "downloading", Path: remoteInfo.Key})
-			}
-			if opts.Progress != nil {
-				err = c.DownloadWithProgress(ctx, remoteInfo.Key, localPath, opts.Progress)
-			} else {
-				err = c.Download(ctx, remoteInfo.Key, localPath)
-			}
-			if err != nil {
-				result.Errors = append(result.Errors, fmt.Errorf("download %s: %w", remoteInfo.Key, err))
-				if opts.Event != nil {
-					opts.Event(SyncEvent{Action: "error", Path: remoteInfo.Key})
+		// Add to work items for download
+		workItems = append(workItems, syncWorkItem{
+			index:      idx,
+			localPath:  localPath,
+			remotePath: remoteInfo.Key,
+			action:     "download",
+		})
+		idx++
+	}
+
+	// Phase 2: Process downloads concurrently using worker pool
+	if len(workItems) > 0 && !opts.DryRun {
+		workQueue := make(chan syncWorkItem, opts.Concurrency*2)
+		results := make(chan syncWorkResult, opts.Concurrency*2)
+
+		var workerWg sync.WaitGroup
+
+		// Start fixed worker pool
+		for i := 0; i < opts.Concurrency; i++ {
+			workerWg.Add(1)
+			go func() {
+				defer workerWg.Done()
+				for work := range workQueue {
+					// Check context cancellation
+					if ctx.Err() != nil {
+						results <- syncWorkResult{index: work.index, path: work.remotePath, action: "error", err: ctx.Err()}
+						continue
+					}
+
+					// Fire downloading event
+					if opts.Event != nil {
+						opts.Event(SyncEvent{Action: "downloading", Path: work.remotePath})
+					}
+
+					// Download file
+					var downloadErr error
+					if opts.Progress != nil {
+						downloadErr = c.DownloadWithProgress(ctx, work.remotePath, work.localPath, opts.Progress)
+					} else {
+						downloadErr = c.Download(ctx, work.remotePath, work.localPath)
+					}
+
+					if downloadErr != nil {
+						results <- syncWorkResult{index: work.index, path: work.remotePath, action: "error", err: fmt.Errorf("download %s: %w", work.remotePath, downloadErr)}
+					} else {
+						results <- syncWorkResult{index: work.index, path: work.remotePath, action: "downloaded", err: nil}
+					}
 				}
-				continue
+			}()
+		}
+
+		// Producer: feed work items into queue
+		go func() {
+			defer close(workQueue)
+			for _, item := range workItems {
+				select {
+				case workQueue <- item:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+
+		// Collector: close results when all workers done
+		go func() {
+			workerWg.Wait()
+			close(results)
+		}()
+
+		// Collect results and fire events
+		for r := range results {
+			if r.err != nil {
+				result.Errors = append(result.Errors, r.err)
+				if opts.Event != nil {
+					opts.Event(SyncEvent{Action: "error", Path: r.path})
+				}
+			} else {
+				result.Downloaded = append(result.Downloaded, r.path)
+				if opts.Event != nil {
+					opts.Event(SyncEvent{Action: "downloaded", Path: r.path})
+				}
 			}
 		}
-		result.Downloaded = append(result.Downloaded, remoteInfo.Key)
-		if opts.Event != nil {
-			opts.Event(SyncEvent{Action: "downloaded", Path: remoteInfo.Key})
+	} else if opts.DryRun {
+		// In dry-run mode, just add all work items to downloaded list
+		for _, item := range workItems {
+			result.Downloaded = append(result.Downloaded, item.remotePath)
+			if opts.Event != nil {
+				opts.Event(SyncEvent{Action: "downloaded", Path: item.remotePath})
+			}
 		}
 	}
 

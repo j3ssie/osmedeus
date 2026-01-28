@@ -53,6 +53,8 @@ var builtInVariables = map[string]bool{
 	"CurrentTime":  true,
 	"Today":        true,
 	"RandomString": true,
+	"ModuleName":   true,
+	"FlowName":     true,
 
 	// State File Variables
 	"StateExecutionLog":   true,

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dop251/goja"
@@ -92,6 +93,19 @@ func (vf *vmFunc) cdnExists(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(exists)
 }
 
+// deleteWorkItem represents a single file to delete
+type deleteWorkItem struct {
+	index int
+	key   string
+}
+
+// deleteWorkResult represents the result of a delete operation
+type deleteWorkResult struct {
+	index int
+	key   string
+	err   error
+}
+
 // cdnDelete deletes a file from cloud storage
 // Usage: cdnDelete(remotePath) -> bool
 func (vf *vmFunc) cdnDelete(call goja.FunctionCall) goja.Value {
@@ -140,10 +154,55 @@ func (vf *vmFunc) cdnDelete(call goja.FunctionCall) goja.Value {
 		if listErr != nil {
 			logger.Get().Warn("cdnDelete: list failed", zap.String("prefix", prefix), zap.Error(listErr))
 			errorCount++
-		} else {
-			for _, key := range files {
-				if err := client.Delete(ctx, key); err != nil {
-					logger.Get().Warn("cdnDelete: delete failed", zap.String("remotePath", key), zap.Error(err))
+		} else if len(files) > 0 {
+			// Use concurrent deletion with 4 workers
+			const concurrency = 4
+			workQueue := make(chan deleteWorkItem, concurrency*2)
+			results := make(chan deleteWorkResult, concurrency*2)
+
+			var workerWg sync.WaitGroup
+
+			// Start fixed worker pool
+			for i := 0; i < concurrency; i++ {
+				workerWg.Add(1)
+				go func() {
+					defer workerWg.Done()
+					for work := range workQueue {
+						// Check context cancellation
+						if ctx.Err() != nil {
+							results <- deleteWorkResult{index: work.index, key: work.key, err: ctx.Err()}
+							continue
+						}
+
+						// Delete file
+						deleteErr := client.Delete(ctx, work.key)
+						results <- deleteWorkResult{index: work.index, key: work.key, err: deleteErr}
+					}
+				}()
+			}
+
+			// Producer: feed work items into queue
+			go func() {
+				defer close(workQueue)
+				for idx, key := range files {
+					select {
+					case workQueue <- deleteWorkItem{index: idx, key: key}:
+					case <-ctx.Done():
+						return
+					}
+				}
+			}()
+
+			// Collector: close results when all workers done
+			go func() {
+				workerWg.Wait()
+				close(results)
+			}()
+
+			// Collect results
+			for r := range results {
+				if r.err != nil {
+					logger.Get().Warn("cdnDelete: delete failed", zap.String("remotePath", r.key), zap.Error(r.err))
 					errorCount++
 				} else {
 					deletedCount++
