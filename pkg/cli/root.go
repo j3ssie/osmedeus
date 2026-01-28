@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -452,12 +453,41 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s - %s\n", core.BINARY, core.DESC)
-		fmt.Printf("Version: %s\n", core.VERSION)
-		fmt.Printf("Build: %s\n", buildTime)
-		fmt.Printf("Commit: %s\n", commitHash)
-		fmt.Printf("Author: %s\n", core.AUTHOR)
-		fmt.Printf("Docs: %s\n", core.DOCS)
+		if globalJSON {
+			// JSON output
+			versionInfo := map[string]string{
+				"name":        core.BINARY,
+				"description": core.DESC,
+				"version":     core.VERSION,
+				"build":       buildTime,
+				"commit":      commitHash,
+				"author":      core.AUTHOR,
+				"docs":        core.DOCS,
+			}
+			jsonOut, _ := json.MarshalIndent(versionInfo, "", "  ")
+			fmt.Println(string(jsonOut))
+			return
+		}
+
+		// Colored output
+		fmt.Printf("%s - %s\n",
+			terminal.BoldCyan(core.BINARY),
+			terminal.HiBlue(core.DESC))
+		fmt.Printf("%s %s\n",
+			terminal.Bold("Version:"),
+			terminal.Green(core.VERSION))
+		fmt.Printf("%s %s\n",
+			terminal.Bold("Build:"),
+			terminal.Yellow(buildTime))
+		fmt.Printf("%s %s\n",
+			terminal.Bold("Commit:"),
+			terminal.Cyan(commitHash))
+		fmt.Printf("%s %s\n",
+			terminal.Bold("Author:"),
+			terminal.Magenta(core.AUTHOR))
+		fmt.Printf("%s %s\n",
+			terminal.Bold("Docs:"),
+			terminal.Blue(core.DOCS))
 	},
 }
 

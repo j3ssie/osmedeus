@@ -1338,6 +1338,15 @@ func (e *Executor) preloadModules(ctx context.Context, modules []core.ModuleRef)
 
 	for i := range modules {
 		modRef := &modules[i]
+
+		// Skip inline modules - they don't need loading from disk
+		if modRef.IsInline() {
+			mu.Lock()
+			result[modRef.Name] = modRef.ToWorkflow()
+			mu.Unlock()
+			continue
+		}
+
 		wg.Add(1)
 		go func(ref *core.ModuleRef) {
 			defer wg.Done()
@@ -1652,17 +1661,27 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 		}
 
 		// Execute module
-		execCtx.Logger.Info("Executing module",
-			zap.String("module", modRef.Name),
-			zap.String("path", modRef.Path),
-		)
+		if modRef.IsInline() {
+			execCtx.Logger.Info("Executing inline module",
+				zap.String("module", modRef.Name),
+			)
+		} else {
+			execCtx.Logger.Info("Executing module",
+				zap.String("module", modRef.Name),
+				zap.String("path", modRef.Path),
+			)
+		}
 
-		// Use preloaded module if available, else load on-demand
+		// Use preloaded module if available, else load on-demand or use inline
 		var module *core.Workflow
 		var err error
 		if preloadedMod, ok := preloaded[modRef.Name]; ok {
 			module = preloadedMod
 			execCtx.Logger.Debug("Using preloaded module", zap.String("module", modRef.Name))
+		} else if modRef.IsInline() {
+			// Use inline module definition
+			module = modRef.ToWorkflow()
+			execCtx.Logger.Debug("Using inline module", zap.String("module", modRef.Name))
 		} else {
 			// Load the module workflow on-demand (fallback for failed preloads)
 			module, err = e.loader.LoadWorkflowByPath(modRef.Path)

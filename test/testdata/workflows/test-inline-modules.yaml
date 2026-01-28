@@ -1,0 +1,40 @@
+name: test-inline-modules
+kind: flow
+description: Simple test flow with inline modules (no path references)
+
+params:
+  - name: target
+    required: true
+
+modules:
+  - name: greet-module
+    description: Simple greeting module
+    steps:
+      - name: greet
+        type: bash
+        command: echo "Hello, {{target}}!"
+        exports:
+          greeting: "{{StepOutput}}"
+
+  - name: info-module
+    description: Displays system info
+    depends_on:
+      - greet-module
+    steps:
+      - name: show-info
+        type: bash
+        command: echo "Target is {{target}}, greeting was {{greeting}}"
+      - name: date-step
+        type: bash
+        command: date +%Y-%m-%d
+        exports:
+          current_date: "{{StepOutput}}"
+
+  - name: final-module
+    description: Final summary module
+    depends_on:
+      - info-module
+    steps:
+      - name: summary
+        type: bash
+        command: echo "Flow completed on {{current_date}} for {{target}}"

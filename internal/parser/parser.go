@@ -125,10 +125,18 @@ func (p *Parser) validateFlow(w *core.Workflow) error {
 				Message: "module reference name is required",
 			}
 		}
-		if mod.Path == "" {
+		// Path is required only for external modules (not inline modules)
+		if mod.Path == "" && !mod.IsInline() {
 			return &ValidationError{
 				Field:   fmt.Sprintf("modules[%d].path", i),
-				Message: "module reference path is required",
+				Message: "module reference path is required (or define inline steps)",
+			}
+		}
+		// Inline modules must have at least one step
+		if mod.IsInline() && len(mod.Steps) == 0 {
+			return &ValidationError{
+				Field:   fmt.Sprintf("modules[%d].steps", i),
+				Message: "inline module must have at least one step",
 			}
 		}
 	}

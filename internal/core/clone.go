@@ -219,9 +219,11 @@ func (m *ModuleRef) Clone() *ModuleRef {
 	}
 
 	cloned := &ModuleRef{
-		Name:      m.Name,
-		Path:      m.Path,
-		Condition: m.Condition,
+		Name:        m.Name,
+		Path:        m.Path,
+		Condition:   m.Condition,
+		Runner:      m.Runner,
+		Description: m.Description,
 	}
 
 	if len(m.Params) > 0 {
@@ -251,6 +253,16 @@ func (m *ModuleRef) Clone() *ModuleRef {
 	}
 
 	cloned.Decision = m.Decision.Clone()
+
+	// Clone inline module fields
+	if len(m.Steps) > 0 {
+		cloned.Steps = make([]Step, len(m.Steps))
+		for i, s := range m.Steps {
+			cloned.Steps[i] = *s.Clone()
+		}
+	}
+
+	cloned.RunnerConfig = m.RunnerConfig.Clone()
 
 	return cloned
 }

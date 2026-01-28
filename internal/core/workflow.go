@@ -78,16 +78,42 @@ type RunnerConfig struct {
 	WorkDir string `yaml:"workdir,omitempty"` // Working directory on remote/container
 }
 
-// ModuleRef references a module in a flow
+// ModuleRef references a module in a flow or defines an inline module
 type ModuleRef struct {
 	Name      string            `yaml:"name"`
-	Path      string            `yaml:"path"`
+	Path      string            `yaml:"path,omitempty"` // Path to external module file (omit for inline)
 	Params    map[string]string `yaml:"params"`
 	DependsOn []string          `yaml:"depends_on"`
 	Condition string            `yaml:"condition"`
 	OnSuccess []Action          `yaml:"on_success"`
 	OnError   []Action          `yaml:"on_error"`
 	Decision  *DecisionConfig   `yaml:"decision"`
+
+	// Inline module fields (used when Path is empty)
+	Steps        []Step        `yaml:"steps,omitempty"`         // Inline steps (makes this an inline module)
+	Runner       RunnerType    `yaml:"runner,omitempty"`        // Runner type for inline module
+	RunnerConfig *RunnerConfig `yaml:"runner_config,omitempty"` // Runner configuration for inline module
+	Description  string        `yaml:"description,omitempty"`   // Description for inline module
+}
+
+// IsInline returns true if this is an inline module (has steps defined directly)
+func (m *ModuleRef) IsInline() bool {
+	return len(m.Steps) > 0
+}
+
+// ToWorkflow converts an inline ModuleRef to a Workflow for execution
+func (m *ModuleRef) ToWorkflow() *Workflow {
+	if !m.IsInline() {
+		return nil
+	}
+	return &Workflow{
+		Kind:         KindModule,
+		Name:         m.Name,
+		Description:  m.Description,
+		Steps:        m.Steps,
+		Runner:       m.Runner,
+		RunnerConfig: m.RunnerConfig,
+	}
 }
 
 // IsModule returns true if the workflow is a module
