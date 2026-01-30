@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 // CacheEntry holds a cached workflow with metadata for invalidation
@@ -237,6 +239,82 @@ func (l *Loader) LoadAllWorkflows() ([]*core.Workflow, error) {
 	}
 
 	return workflows, nil
+}
+
+// LoadFlowWithModules loads a flow workflow and pre-loads all its referenced modules in parallel.
+// This improves startup time for complex flows with many module references.
+func (l *Loader) LoadFlowWithModules(name string) (*core.Workflow, map[string]*core.Workflow, error) {
+	log := logger.Get()
+
+	// First load the flow itself
+	flow, err := l.LoadWorkflow(name)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to load flow: %w", err)
+	}
+
+	// If not a flow or no modules, return early
+	if flow.Kind != core.KindFlow || len(flow.Modules) == 0 {
+		return flow, nil, nil
+	}
+
+	log.Debug("Loading flow modules in parallel",
+		zap.String("flow", name),
+		zap.Int("module_count", len(flow.Modules)),
+	)
+
+	// Collect unique module names (skip inline modules)
+	moduleNames := make(map[string]struct{})
+	for _, ref := range flow.Modules {
+		if !ref.IsInline() && ref.Name != "" {
+			moduleNames[ref.Name] = struct{}{}
+		}
+	}
+
+	if len(moduleNames) == 0 {
+		return flow, nil, nil
+	}
+
+	// Load modules in parallel using errgroup
+	g, ctx := errgroup.WithContext(context.Background())
+	modules := make(map[string]*core.Workflow)
+	var mu sync.Mutex
+
+	for modName := range moduleNames {
+		modName := modName // capture for goroutine
+		g.Go(func() error {
+			// Check context cancellation
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+
+			mod, err := l.LoadWorkflow(modName)
+			if err != nil {
+				log.Warn("Failed to load module",
+					zap.String("module", modName),
+					zap.Error(err),
+				)
+				return fmt.Errorf("failed to load module %s: %w", modName, err)
+			}
+
+			mu.Lock()
+			modules[modName] = mod
+			mu.Unlock()
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return flow, modules, err
+	}
+
+	log.Debug("Loaded all flow modules",
+		zap.String("flow", name),
+		zap.Int("loaded", len(modules)),
+	)
+
+	return flow, modules, nil
 }
 
 // shouldSkipPath returns true for paths that are obviously not workflow files

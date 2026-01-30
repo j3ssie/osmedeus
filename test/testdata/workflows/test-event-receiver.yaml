@@ -34,7 +34,7 @@ steps:
 
   - name: process-target
     type: bash
-    command: echo "Processing event target: {{target}}" > {{Output}}/processed.txt
+    command: 'echo "Processing event target: {{target}}" > {{Output}}/processed.txt'
 
   - name: mark-complete
     type: function

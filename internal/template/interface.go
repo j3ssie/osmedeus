@@ -28,6 +28,14 @@ type TemplateEngine interface {
 
 	// RegisterGenerator registers a custom generator function.
 	RegisterGenerator(name string, fn GeneratorFunc)
+
+	// ExtractVariablesSet extracts all variable names referenced in a template string.
+	// Returns a set of variable names (map for O(1) lookup).
+	ExtractVariablesSet(template string) map[string]struct{}
+
+	// RenderLazy renders a template with lazy context loading.
+	// Only variables actually referenced in the template are looked up from the full context.
+	RenderLazy(template string, fullCtx map[string]any) (string, error)
 }
 
 // BatchRenderer extends TemplateEngine with batch rendering capability

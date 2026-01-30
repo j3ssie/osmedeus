@@ -1185,6 +1185,9 @@ func (e *Executor) executeStepsDAG(ctx context.Context, steps []core.Step, execC
 	sem := make(chan struct{}, maxConcurrency)
 	var wg sync.WaitGroup
 
+	// Lock-free result collection
+	collector := NewResultCollector(len(steps))
+
 	for {
 		mu.Lock()
 
@@ -1271,7 +1274,7 @@ func (e *Executor) executeStepsDAG(ctx context.Context, steps []core.Step, execC
 			mu.Lock()
 			defer mu.Unlock()
 
-			result.Steps = append(result.Steps, stepResult)
+			collector.Add(stepResult)
 			executed[sName] = true
 			atomic.AddInt32(&completedCount, 1)
 
@@ -1319,6 +1322,9 @@ func (e *Executor) executeStepsDAG(ctx context.Context, steps []core.Step, execC
 	}
 
 	wg.Wait()
+
+	// Collect all results from lock-free collector
+	result.Steps = collector.Results()
 
 	if firstError != nil {
 		result.Status = core.RunStatusFailed

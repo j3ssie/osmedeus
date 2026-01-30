@@ -3,7 +3,7 @@ package functions
 import (
 	"bufio"
 	"context"
-	"encoding/json"
+	"github.com/j3ssie/osmedeus/v5/internal/json"
 	"fmt"
 	"os"
 	"path/filepath"

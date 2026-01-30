@@ -447,7 +447,7 @@ func TestEventTriggeredWorkflowFile(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify YAML is valid (basic check)
-	assert.Contains(t, string(data), "trigger:")
+	assert.Contains(t, string(data), "triggers:")
 	assert.Contains(t, string(data), "on: event")
 	assert.Contains(t, string(data), "topic:")
 	assert.Contains(t, string(data), "filters:")

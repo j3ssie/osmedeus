@@ -53,13 +53,13 @@ steps:
     type: bash
     command: echo "Checking existence"
     exports:
-      file_exists: "file_exists('{{outputFile}}')"
+      file_exists_result: "file_exists('{{outputFile}}')"
 
   - name: test-fileexists-false
     type: bash
     command: echo "Checking nonexistent"
     exports:
-      missing_file: "file_exists('{{Output}}/nonexistent.txt')"
+      missing_file_result: "file_exists('{{Output}}/nonexistent.txt')"
 
   - name: test-replace
     type: bash
@@ -75,7 +75,7 @@ steps:
       echo "Line count: {{line_count}}"
       echo "Has success: {{has_success}}"
       echo "Has failure: {{has_failure}}"
-      echo "File exists: {{file_exists}}"
-      echo "Missing file: {{missing_file}}"
+      echo "File exists: {{file_exists_result}}"
+      echo "Missing file: {{missing_file_result}}"
       echo "Replaced: {{replaced_output}}"
       echo "=== All Exports Verified ==="

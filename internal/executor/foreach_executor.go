@@ -70,10 +70,27 @@ func (e *ForeachExecutor) Execute(ctx context.Context, step *core.Step, execCtx 
 		threads = 1
 	}
 
-	// Execute with streaming worker pool
-	outputs, err := e.executeWithWorkerPool(ctx, step, step.Input, threads, execCtx)
+	// Check for streaming output configuration via exports
+	var streamingOutput string
+	if step.Exports != nil {
+		if so, ok := step.Exports["streaming_output"]; ok {
+			// Render the template
+			rendered, err := e.templateEngine.Render(so, execCtx.GetVariables())
+			if err == nil {
+				streamingOutput = rendered
+			}
+		}
+	}
 
-	result.Output = strings.Join(outputs, "\n")
+	// Execute with streaming worker pool
+	outputs, err := e.executeWithWorkerPoolStreaming(ctx, step, step.Input, threads, execCtx, streamingOutput)
+
+	if streamingOutput != "" {
+		// In streaming mode, output is written to file
+		result.Output = fmt.Sprintf("Results streamed to: %s", streamingOutput)
+	} else {
+		result.Output = strings.Join(outputs, "\n")
+	}
 	result.EndTime = time.Now()
 	result.Duration = result.EndTime.Sub(result.StartTime)
 
@@ -211,6 +228,34 @@ type workResult struct {
 	err    error
 }
 
+// streamWriter handles concurrent writes to an output file
+type streamWriter struct {
+	file *os.File
+	mu   sync.Mutex
+}
+
+func newStreamWriter(path string) (*streamWriter, error) {
+	f, err := os.Create(path)
+	if err != nil {
+		return nil, err
+	}
+	return &streamWriter{file: f}, nil
+}
+
+func (w *streamWriter) Write(line string) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	_, err := w.file.WriteString(line + "\n")
+	return err
+}
+
+func (w *streamWriter) Close() error {
+	if w.file != nil {
+		return w.file.Close()
+	}
+	return nil
+}
+
 // executeWithWorkerPool executes the inner step using a streaming worker pool pattern
 // This is memory-efficient: creates only 'threads' goroutines instead of N goroutines
 // and streams input lines on-demand instead of loading all into memory
@@ -331,6 +376,134 @@ func (e *ForeachExecutor) executeWithWorkerPool(ctx context.Context, step *core.
 	}
 
 	return outputs, firstError
+}
+
+// executeWithWorkerPoolStreaming is like executeWithWorkerPool but supports streaming output to file.
+// When streamingOutput is set, results are written directly to the file instead of being collected in memory.
+// This enables O(1) memory usage for million-line inputs.
+func (e *ForeachExecutor) executeWithWorkerPoolStreaming(ctx context.Context, step *core.Step, inputPath string, threads int, execCtx *core.ExecutionContext, streamingOutput string) ([]string, error) {
+	// If no streaming, delegate to original implementation
+	if streamingOutput == "" {
+		return e.executeWithWorkerPool(ctx, step, inputPath, threads, execCtx)
+	}
+
+	log := logger.Get()
+	log.Debug("Foreach streaming mode enabled",
+		zap.String("input", inputPath),
+		zap.String("output", streamingOutput),
+		zap.Int("threads", threads),
+	)
+
+	// Create streaming writer
+	writer, err := newStreamWriter(streamingOutput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create streaming output file: %w", err)
+	}
+	defer func() { _ = writer.Close() }()
+
+	// Create bounded work queue
+	workQueue := make(chan workItem, threads*2)
+	done := make(chan struct{})
+
+	// Track completion
+	var workerWg sync.WaitGroup
+	var producerErr error
+	var writeErr error
+	var writeErrMu sync.Mutex
+
+	// Start fixed worker pool
+	for i := 0; i < threads; i++ {
+		workerWg.Add(1)
+		go func() {
+			defer workerWg.Done()
+			for work := range workQueue {
+				// Check context cancellation
+				if ctx.Err() != nil {
+					continue
+				}
+
+				// Apply variable pre-processing if configured
+				loopValue := work.value
+				if step.VariablePreProcess != "" {
+					processedValue, err := e.preProcessVariable(step.VariablePreProcess, step.Variable, work.value, execCtx)
+					if err != nil {
+						logger.Get().Warn("variable pre-process failed, using original value",
+							zap.String("expression", step.VariablePreProcess),
+							zap.String("original_value", work.value),
+							zap.Error(err))
+					} else {
+						loopValue = processedValue
+					}
+				}
+
+				// Create optimized child context with loop variables pre-set
+				childCtx := execCtx.CloneForLoop(step.Variable, loopValue, work.index+1)
+
+				// Clone inner step and render secondary templates [[ ]]
+				innerStep := e.renderSecondaryTemplates(step.Step, childCtx)
+
+				// Execute inner step
+				stepResult, _ := e.dispatcher.Dispatch(ctx, innerStep, childCtx)
+
+				// Stream output directly to file (no memory collection)
+				if stepResult != nil && stepResult.Output != "" {
+					if err := writer.Write(stepResult.Output); err != nil {
+						writeErrMu.Lock()
+						if writeErr == nil {
+							writeErr = err
+						}
+						writeErrMu.Unlock()
+					}
+				}
+			}
+		}()
+	}
+
+	// Producer: stream lines into work queue
+	go func() {
+		defer close(workQueue)
+
+		iter, err := NewLineIterator(inputPath)
+		if err != nil {
+			producerErr = err
+			return
+		}
+		defer func() { _ = iter.Close() }()
+
+		idx := 0
+		for iter.Next() {
+			select {
+			case workQueue <- workItem{index: idx, value: iter.Value()}:
+				idx++
+			case <-ctx.Done():
+				producerErr = ctx.Err()
+				return
+			}
+		}
+
+		if iter.Err() != nil {
+			producerErr = iter.Err()
+		}
+	}()
+
+	// Wait for all workers to complete
+	go func() {
+		workerWg.Wait()
+		close(done)
+	}()
+
+	<-done
+
+	// Check for errors
+	if producerErr != nil {
+		return nil, producerErr
+	}
+	if writeErr != nil {
+		return nil, fmt.Errorf("streaming write error: %w", writeErr)
+	}
+
+	// Return empty slice since results were streamed
+	return nil, nil
 }
 
 // CanHandle returns true if this executor can handle the given step type

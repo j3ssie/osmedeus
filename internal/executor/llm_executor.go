@@ -3,7 +3,7 @@ package executor
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"github.com/j3ssie/osmedeus/v5/internal/json"
 	"fmt"
 	"io"
 	"net/http"

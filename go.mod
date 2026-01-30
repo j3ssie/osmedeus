@@ -25,6 +25,7 @@ require (
 	github.com/hashicorp/go-getter/v2 v2.2.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/itchyny/gojq v0.12.18
+	github.com/json-iterator/go v1.1.12
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/minio/minio-go/v7 v7.0.97
 	github.com/olekukonko/tablewriter v0.0.5
@@ -44,6 +45,7 @@ require (
 	go.uber.org/zap v1.27.1
 	golang.org/x/crypto v0.46.0
 	golang.org/x/net v0.48.0
+	golang.org/x/sync v0.19.0
 	golang.org/x/term v0.38.0
 )
 
@@ -110,6 +112,8 @@ require (
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/mitchellh/go-homedir v1.0.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
@@ -147,7 +151,6 @@ require (
 	golang.org/x/exp v0.0.0-20251113190631-e25ba8c21ef6 // indirect
 	golang.org/x/mod v0.30.0 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/time v0.14.0 // indirect

@@ -37,8 +37,8 @@ triggers:
 steps:
   - name: log-event
     type: function
-    call: log_info("Trigger fired: {{_step_name}}")
+    function: 'log_info("Trigger fired: {{_step_name}}")'
 
   - name: process-target
     type: bash
-    run: echo "Processing target: {{target}}"
+    command: echo "Processing target {{target}}"
