@@ -1,5 +1,5 @@
 {
-  "_last_update_at": "2026-01-21T10:08:20.876322+00:00",
+  "_last_update_at": "2026-02-01T03:52:26.051205+00:00",
   "amass": {
     "desc": "In-depth attack surface mapping and asset discovery",
     "repo_link": "https://github.com/owasp-amass/amass",
@@ -42,9 +42,9 @@
     }
   },
   "dnsx": {
-    "desc": "fast and multi-purpose DNS toolkit allow to run multiple DNS queries of your choice with a list of user-supplied resolvers",
+    "desc": "dnsx is a fast and multi-purpose DNS toolkit allow to run multiple DNS queries of your choice with a list of user-supplied resolvers.",
     "repo_link": "https://github.com/projectdiscovery/dnsx",
-    "version": "1.2.2",
+    "version": "1.2.3",
     "package-manager": "github-release",
     "tags": [
       "recon",
@@ -54,12 +54,12 @@
     ],
     "valide-command": "",
     "linux": {
-      "amd64": "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.2/dnsx_1.2.2_linux_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.2/dnsx_1.2.2_linux_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.3/dnsx_1.2.3_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.3/dnsx_1.2.3_linux_arm64.zip"
     },
     "darwin": {
-      "amd64": "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.2/dnsx_1.2.2_macOS_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.2/dnsx_1.2.2_macOS_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.3/dnsx_1.2.3_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.3/dnsx_1.2.3_macOS_arm64.zip"
     }
   },
   "assetfinder": {
@@ -84,7 +84,7 @@
   "nuclei": {
     "desc": "Nuclei is a fast, customizable vulnerability scanner powered by the global security community and built on a simple YAML-based DSL, enabling collaboration to tackle trending vulnerabilities on the internet. It helps you find vulnerabilities in your applications, APIs, networks, DNS, and cloud configurations.",
     "repo_link": "https://github.com/projectdiscovery/nuclei",
-    "version": "3.6.2",
+    "version": "3.7.0",
     "package-manager": "github-release",
     "tags": [
       "vulnerability-scanner",
@@ -93,12 +93,12 @@
     ],
     "valide-command": "",
     "linux": {
-      "amd64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.6.2/nuclei_3.6.2_linux_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.6.2/nuclei_3.6.2_linux_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.7.0/nuclei_3.7.0_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.7.0/nuclei_3.7.0_linux_arm64.zip"
     },
     "darwin": {
-      "amd64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.6.2/nuclei_3.6.2_macOS_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.6.2/nuclei_3.6.2_macOS_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.7.0/nuclei_3.7.0_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.7.0/nuclei_3.7.0_macOS_arm64.zip"
     }
   },
   "nuclei-templates": {
@@ -122,7 +122,7 @@
   "httpx": {
     "desc": "httpx is a fast and multi-purpose HTTP toolkit that allows running multiple probes using the retryablehttp library.",
     "repo_link": "https://github.com/projectdiscovery/httpx",
-    "version": "1.7.4",
+    "version": "1.8.1",
     "package-manager": "github-release",
     "tags": [
       "recon",
@@ -132,12 +132,12 @@
     ],
     "valide-command": "",
     "linux": {
-      "amd64": "https://github.com/projectdiscovery/httpx/releases/download/v1.7.4/httpx_1.7.4_linux_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/httpx/releases/download/v1.7.4/httpx_1.7.4_linux_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/httpx/releases/download/v1.8.1/httpx_1.8.1_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/httpx/releases/download/v1.8.1/httpx_1.8.1_linux_arm64.zip"
     },
     "darwin": {
-      "amd64": "https://github.com/projectdiscovery/httpx/releases/download/v1.7.4/httpx_1.7.4_macOS_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/httpx/releases/download/v1.7.4/httpx_1.7.4_macOS_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/httpx/releases/download/v1.8.1/httpx_1.8.1_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/httpx/releases/download/v1.8.1/httpx_1.8.1_macOS_arm64.zip"
     }
   },
   "katana": {
@@ -164,7 +164,7 @@
   "naabu": {
     "desc": "A fast port scanner written in go with a focus on reliability and simplicity. Designed to be used in combination with other tools for attack surface discovery in bug bounties and pentests",
     "repo_link": "https://github.com/projectdiscovery/naabu",
-    "version": "2.3.7",
+    "version": "2.4.0",
     "package-manager": "github-release",
     "tags": [
       "port-scanner",
@@ -173,12 +173,12 @@
     ],
     "valide-command": "",
     "linux": {
-      "amd64": "https://github.com/projectdiscovery/naabu/releases/download/v2.3.7/naabu_2.3.7_linux_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/naabu/releases/download/v2.3.7/naabu_2.3.7_linux_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/naabu/releases/download/v2.4.0/naabu_2.4.0_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/naabu/releases/download/v2.4.0/naabu_2.4.0_linux_arm64.zip"
     },
     "darwin": {
-      "amd64": "https://github.com/projectdiscovery/naabu/releases/download/v2.3.7/naabu_2.3.7_macOS_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/naabu/releases/download/v2.3.7/naabu_2.3.7_macOS_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/naabu/releases/download/v2.4.0/naabu_2.4.0_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/naabu/releases/download/v2.4.0/naabu_2.4.0_macOS_arm64.zip"
     }
   },
   "ffuf": {
@@ -221,6 +221,27 @@
     "darwin": {
       "amd64": "https://github.com/trufflesecurity/trufflehog/releases/download/v3.90.3/trufflehog_3.90.3_darwin_amd64.tar.gz",
       "arm64": "https://github.com/trufflesecurity/trufflehog/releases/download/v3.90.3/trufflehog_3.90.3_darwin_arm64.tar.gz"
+    }
+  },
+  "kingfisher": {
+    "desc": "Kingfisher is a blazingly fast and highly accurate tool for secret detection and live validation across files, Git repos, GitHub, GitLab, Azure Repos, BitBucket, Gitea, AWS S3, Docker images, Jira, Slack, and Confluence",
+    "repo_link": "https://github.com/mongodb/kingfisher",
+    "version": "1.76.0",
+    "package-manager": "github-release",
+    "tags": [
+      "secret-detection",
+      "security",
+      "scanning",
+      "credentials"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/mongodb/kingfisher/releases/download/v1.76.0/kingfisher-linux-x64.tgz",
+      "arm64": "https://github.com/mongodb/kingfisher/releases/download/v1.76.0/kingfisher-linux-arm64.tgz"
+    },
+    "darwin": {
+      "amd64": "https://github.com/mongodb/kingfisher/releases/download/v1.76.0/kingfisher-darwin-x64.tgz",
+      "arm64": "https://github.com/mongodb/kingfisher/releases/download/v1.76.0/kingfisher-darwin-arm64.tgz"
     }
   },
   "semgrep": {
@@ -271,7 +292,8 @@
     "tags": [
       "utility",
       "file-transfer",
-      "sync"
+      "sync",
+      "optional"
     ],
     "valide-command": "",
     "multi-commands-linux": [
@@ -519,7 +541,7 @@
     }
   },
   "puredns": {
-    "desc": "Fast domain resolver and subdomain bruteforcing tool with accurate wildcard filtering",
+    "desc": "Puredns is a fast domain resolver and subdomain bruteforcing tool that can accurately filter out wildcard subdomains and DNS poisoned entries.",
     "repo_link": "https://github.com/d3mondev/puredns",
     "version": "2.1.1",
     "package-manager": "github-release",
@@ -703,7 +725,7 @@
   "trivy": {
     "desc": "Find vulnerabilities, misconfigurations, secrets, SBOM in containers, Kubernetes, code repositories, clouds and more",
     "repo_link": "https://github.com/aquasecurity/trivy",
-    "version": "0.68.2",
+    "version": "0.69.0",
     "package-manager": "github-release",
     "tags": [
       "vulnerability-scanner",
@@ -793,7 +815,7 @@
   "interactsh": {
     "desc": "An OOB interaction gathering server and client library",
     "repo_link": "https://github.com/projectdiscovery/interactsh",
-    "version": "1.2.4",
+    "version": "1.3.0",
     "package-manager": "go-getter",
     "tags": [
       "oob-testing",

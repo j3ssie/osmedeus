@@ -170,25 +170,51 @@ func captureExplicitFlags(cmd *cobra.Command) {
 // Returns true if empty_target preference is set to true, false otherwise
 // Note: This cannot work for stdin modules (--std-module) since stdin would be consumed
 func getWorkflowEmptyTargetPreference(cfg *config.Config) bool {
+	log := logger.Get()
+
 	if flowName == "" && len(moduleNames) == 0 {
+		log.Debug("getWorkflowEmptyTargetPreference: no flow or module specified")
 		return false
 	}
 
 	loader := parser.NewLoader(cfg.WorkflowsPath)
 	var workflow *core.Workflow
 	var err error
+	var workflowName string
 
 	if flowName != "" {
+		workflowName = flowName
 		workflow, err = loader.LoadWorkflow(flowName)
 	} else if len(moduleNames) > 0 {
+		workflowName = moduleNames[0]
 		workflow, err = loader.LoadWorkflow(moduleNames[0])
 	}
 
-	if err != nil || workflow == nil || workflow.Preferences == nil {
+	if err != nil {
+		log.Debug("getWorkflowEmptyTargetPreference: failed to load workflow",
+			zap.String("workflow", workflowName),
+			zap.Error(err))
 		return false
 	}
 
-	return workflow.Preferences.GetEmptyTarget(false)
+	if workflow == nil {
+		log.Debug("getWorkflowEmptyTargetPreference: workflow is nil",
+			zap.String("workflow", workflowName))
+		return false
+	}
+
+	if workflow.Preferences == nil {
+		log.Debug("getWorkflowEmptyTargetPreference: workflow has no preferences",
+			zap.String("workflow", workflowName))
+		return false
+	}
+
+	result := workflow.Preferences.GetEmptyTarget(false)
+	log.Debug("getWorkflowEmptyTargetPreference: checked preference",
+		zap.String("workflow", workflowName),
+		zap.Bool("empty_target", result))
+
+	return result
 }
 
 // applyWorkflowPreferences applies workflow preferences to CLI variables

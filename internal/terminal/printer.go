@@ -130,7 +130,12 @@ func (p *Printer) StepStartWithCommand(stepName, typeSymbol, command, cmdPrefix 
 	}
 	_, _ = fmt.Fprintf(os.Stdout, "%s %s %s %s\n", StepStartSymbol(), typeSymbol, Gray("(starting)"), HiBlue(stepName))
 	if command != "" {
-		_, _ = fmt.Fprintf(os.Stdout, "  %s\n", HiGreen(formatMultilineCommand(command, cmdPrefix)))
+		// Check if command already contains ANSI color codes (pre-colored)
+		if strings.Contains(command, "\033[") {
+			_, _ = fmt.Fprintf(os.Stdout, "  %s %s\n", cmdPrefix, command)
+		} else {
+			_, _ = fmt.Fprintf(os.Stdout, "  %s\n", HiGreen(formatMultilineCommand(command, cmdPrefix)))
+		}
 	}
 }
 
@@ -383,9 +388,18 @@ func (p *Printer) VerboseOutput(output string) {
 	if output == "" {
 		return
 	}
+	// Trim whitespace from output
+	output = strings.TrimSpace(output)
+	if output == "" {
+		return // Don't print [output] if nothing to show
+	}
 	_, _ = fmt.Fprintf(os.Stdout, "  %s\n", Gray("[output]"))
-	lines := strings.Split(strings.TrimSuffix(output, "\n"), "\n")
+	lines := strings.Split(output, "\n")
 	for _, line := range lines {
+		// Skip blank lines
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
 		_, _ = fmt.Fprintf(os.Stdout, "  %s\n", line)
 	}
 }

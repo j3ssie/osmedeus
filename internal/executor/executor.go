@@ -94,6 +94,14 @@ func BuildBuiltinVariables(cfg *config.Config, params map[string]string) map[str
 	runUUID := uuid.New().String()
 	execCtx := core.NewExecutionContext("func-eval", core.KindModule, runUUID, params["target"])
 	exec.injectBuiltinVariables(cfg, params, execCtx)
+
+	// Add temp directory for eval (cleanup is handled by the caller)
+	tempDir, err := os.MkdirTemp("", "osm-tmp-")
+	if err == nil {
+		execCtx.SetVariable("TempDir", tempDir)
+		execCtx.SetVariable("TempFile", filepath.Join(tempDir, "osm-tmp-file"))
+	}
+
 	return execCtx.GetVariables()
 }
 
@@ -170,13 +178,22 @@ func (e *Executor) writeVerboseOutputToLog(output string) {
 	if e.consoleCapture == nil || output == "" {
 		return
 	}
+	// Trim whitespace from output
+	output = strings.TrimSpace(output)
+	if output == "" {
+		return // Don't print [output] if nothing to show
+	}
 	// Format similar to printer.VerboseOutput but write directly to file
 	var sb strings.Builder
 	sb.WriteString("  ")
 	sb.WriteString(terminal.Gray("[output]"))
 	sb.WriteString("\n")
-	lines := strings.Split(strings.TrimSuffix(output, "\n"), "\n")
+	lines := strings.Split(output, "\n")
 	for _, line := range lines {
+		// Skip blank lines
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
 		sb.WriteString("  ")
 		sb.WriteString(line)
 		sb.WriteString("\n")
@@ -368,6 +385,30 @@ func (e *Executor) injectBuiltinVariables(cfg *config.Config, params map[string]
 					execCtx.SetVariable("EventData", string(dataJSON))
 				}
 			}
+		}
+	}
+}
+
+// setupTempDirectory creates a temporary directory and file for workflow execution
+// Returns a cleanup function that removes the directory when called
+func (e *Executor) setupTempDirectory(execCtx *core.ExecutionContext) (cleanup func()) {
+	tempDir, err := os.MkdirTemp("", "osm-tmp-")
+	if err != nil {
+		e.logger.Warn("Failed to create temp directory", zap.Error(err))
+		return func() {} // no-op cleanup
+	}
+
+	execCtx.SetVariable("TempDir", tempDir)
+
+	// Create temp file path within temp dir
+	tempFile := filepath.Join(tempDir, "osm-tmp-file")
+	execCtx.SetVariable("TempFile", tempFile)
+
+	return func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			e.logger.Warn("Failed to cleanup temp directory",
+				zap.String("path", tempDir),
+				zap.Error(err))
 		}
 	}
 }
@@ -578,6 +619,122 @@ func printDryRunHeader(workflowName, workflowKind, target, tactic string, stepCo
 
 // getStepCommand extracts the command/script from a step for display
 func getStepCommand(step *core.Step) string {
+	// Handle foreach steps specially
+	if step.Type == core.StepTypeForeach && step.Input != "" {
+		parts := []string{fmt.Sprintf("foreach [[%s]] in %s", step.Variable, step.Input)}
+		if step.VariablePreProcess != "" {
+			parts = append(parts, fmt.Sprintf("pre_process: %s", step.VariablePreProcess))
+		}
+		// Add inner step name, type, and command
+		if step.Step != nil && step.Step.Name != "" {
+			innerCmd := getInnerStepCommand(step.Step)
+			if innerCmd != "" {
+				parts = append(parts, fmt.Sprintf("step: %s (%s) cmd: %s", step.Step.Name, step.Step.Type, innerCmd))
+			} else {
+				parts = append(parts, fmt.Sprintf("step: %s (%s)", step.Step.Name, step.Step.Type))
+			}
+		}
+		threads, _ := step.Threads.Int()
+		if threads <= 0 {
+			threads = 1
+		}
+		parts = append(parts, fmt.Sprintf("threads: %d", threads))
+		return strings.Join(parts, " | ")
+	}
+
+	if step.Command != "" {
+		return step.Command
+	}
+	if len(step.Commands) > 0 {
+		return step.Commands[0]
+	}
+	if step.Function != "" {
+		return step.Function
+	}
+	if len(step.Functions) > 0 {
+		return step.Functions[0]
+	}
+	return ""
+}
+
+// getStepCommandColored returns a colored command string for foreach steps (for console display)
+func getStepCommandColored(step *core.Step) string {
+	// Handle foreach steps specially with colors
+	if step.Type == core.StepTypeForeach && step.Input != "" {
+		var lines []string
+
+		// First line: foreach [[variable]] in source | threads: N
+		var firstLineParts []string
+		firstLineParts = append(firstLineParts, fmt.Sprintf("foreach %s in %s",
+			terminal.Magenta("[["+step.Variable+"]]"),
+			terminal.Cyan(step.Input)))
+
+		if step.VariablePreProcess != "" {
+			firstLineParts = append(firstLineParts, fmt.Sprintf("pre_process: %s", terminal.Gray(step.VariablePreProcess)))
+		}
+
+		threads, _ := step.Threads.Int()
+		if threads <= 0 {
+			threads = 1
+		}
+		firstLineParts = append(firstLineParts, fmt.Sprintf("threads: %s", terminal.Yellow(fmt.Sprintf("%d", threads))))
+		lines = append(lines, strings.Join(firstLineParts, terminal.Gray(" | ")))
+
+		// Second line: step: name (type)
+		if step.Step != nil && step.Step.Name != "" {
+			lines = append(lines, fmt.Sprintf("  %s %s %s",
+				terminal.Gray("step:"),
+				terminal.HiBlue(step.Step.Name),
+				terminal.Gray("("+string(step.Step.Type)+")")))
+
+			// Add command/commands/function/functions on separate lines
+			innerLines := getInnerStepCommandLines(step.Step)
+			lines = append(lines, innerLines...)
+		}
+
+		return strings.Join(lines, "\n")
+	}
+
+	// For non-foreach steps, return uncolored (will be colored by printer)
+	return getStepCommand(step)
+}
+
+// getInnerStepCommandLines returns colored lines for inner step commands/functions
+func getInnerStepCommandLines(step *core.Step) []string {
+	var lines []string
+
+	if step.Command != "" {
+		lines = append(lines, fmt.Sprintf("  %s %s",
+			terminal.Gray("command:"),
+			terminal.HiGreen(step.Command)))
+	}
+	if len(step.Commands) > 0 {
+		lines = append(lines, fmt.Sprintf("  %s", terminal.Gray("commands:")))
+		for _, cmd := range step.Commands {
+			lines = append(lines, fmt.Sprintf("    %s %s",
+				terminal.Gray("-"),
+				terminal.HiGreen(cmd)))
+		}
+	}
+	if step.Function != "" {
+		lines = append(lines, fmt.Sprintf("  %s %s",
+			terminal.Gray("function:"),
+			terminal.HiCyan(step.Function)))
+	}
+	if len(step.Functions) > 0 {
+		lines = append(lines, fmt.Sprintf("  %s", terminal.Gray("functions:")))
+		for _, fn := range step.Functions {
+			lines = append(lines, fmt.Sprintf("    %s %s",
+				terminal.Gray("-"),
+				terminal.HiCyan(fn)))
+		}
+	}
+
+	return lines
+}
+
+// getInnerStepCommand extracts the command/function from an inner step (for logs)
+func getInnerStepCommand(step *core.Step) string {
 	if step.Command != "" {
 		return step.Command
 	}
@@ -823,6 +980,8 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 		zap.String("tactic", params["tactic"]),
 	)
 	e.injectBuiltinVariables(cfg, params, execCtx)
+	tempCleanup := e.setupTempDirectory(execCtx)
+	defer tempCleanup()
 	e.debugLogTargetVariables(execCtx)
 
 	if !e.dryRun && database.GetDB() != nil {
@@ -1438,6 +1597,8 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	// Inject builtin variables
 	e.logger.Debug("Injecting builtin variables for flow")
 	e.injectBuiltinVariables(cfg, params, execCtx)
+	tempCleanup := e.setupTempDirectory(execCtx)
+	defer tempCleanup()
 	e.debugLogTargetVariables(execCtx)
 
 	if !e.dryRun && database.GetDB() != nil {
@@ -2025,15 +2186,17 @@ func (e *Executor) executeStep(ctx context.Context, step *core.Step, execCtx *co
 	stepSymbol := terminal.StepTypeSymbol(string(step.Type), string(step.StepRunner))
 	cmdPrefix := terminal.StepCommandPrefix(string(step.Type))
 	stepCommand := getStepCommand(step)
+	stepCommandColored := getStepCommandColored(step)
 	if stepCommand != "" {
 		stepCommand, _ = e.templateEngine.Render(stepCommand, execCtx.GetVariables())
+		stepCommandColored, _ = e.templateEngine.Render(stepCommandColored, execCtx.GetVariables())
 	}
 
 	// Show step start (skip when progress bar is active)
 	if e.progressBar == nil {
-		e.printer.StepStartWithCommand(step.Name, stepSymbol, stepCommand, cmdPrefix)
+		e.printer.StepStartWithCommand(step.Name, stepSymbol, stepCommandColored, cmdPrefix)
 	} else {
-		// Update progress bar with current step command
+		// Update progress bar with current step command (uncolored for progress bar)
 		e.progressBar.SetCommand(stepCommand)
 	}
 

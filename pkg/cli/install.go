@@ -13,6 +13,7 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/installer"
+	"github.com/j3ssie/osmedeus/v5/internal/parser"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
 	"github.com/j3ssie/osmedeus/v5/public"
 	"github.com/spf13/cobra"
@@ -61,7 +62,7 @@ var installWorkflowCmd = &cobra.Command{
 		}
 		return cobra.ExactArgs(1)(cmd, args)
 	},
-	RunE: runInstallWorkflow,
+	RunE: RunInstallWorkflow,
 }
 
 // installBaseCmd installs the base folder from a source
@@ -141,7 +142,8 @@ This is the primary command for health checks. 'osmedeus health' is an alias for
 	RunE:    runInstallValidate,
 }
 
-func runInstallWorkflow(cmd *cobra.Command, args []string) error {
+// RunInstallWorkflow installs workflows from a source (exported for use by workflow install alias)
+func RunInstallWorkflow(cmd *cobra.Command, args []string) error {
 	cfg := config.Get()
 	if cfg == nil {
 		return fmt.Errorf("configuration not loaded")
@@ -183,11 +185,40 @@ func runInstallWorkflow(cmd *cobra.Command, args []string) error {
 			printer.Println("  %s %s", terminal.SymbolBullet, terminal.Gray(workflowURL))
 		}
 
-		return inst.InstallWorkflow(workflowURL)
+		if err := inst.InstallWorkflow(workflowURL); err != nil {
+			return err
+		}
+		printWorkflowSummary(printer, cfg.WorkflowsPath)
+		return nil
 	}
 
 	source := args[0]
-	return inst.InstallWorkflow(source)
+	if err := inst.InstallWorkflow(source); err != nil {
+		return err
+	}
+	printWorkflowSummary(printer, cfg.WorkflowsPath)
+	return nil
+}
+
+// printWorkflowSummary counts and prints the number of workflows loaded
+func printWorkflowSummary(printer *terminal.Printer, workflowsPath string) {
+	loader := parser.NewLoader(workflowsPath)
+
+	flows, flowErr := loader.ListFlows()
+	modules, modErr := loader.ListModules()
+
+	if flowErr == nil && modErr == nil {
+		total := len(flows) + len(modules)
+		if total > 0 {
+			printer.Info("Loaded %s workflows (%s flows, %s modules)",
+				terminal.Green(fmt.Sprintf("%d", total)),
+				terminal.Cyan(fmt.Sprintf("%d", len(flows))),
+				terminal.Yellow(fmt.Sprintf("%d", len(modules))))
+			printer.Println("  %s Run %s to see workflow details",
+				terminal.Gray(terminal.SymbolLightning),
+				terminal.Cyan("osmedeus workflow ls"))
+		}
+	}
 }
 
 func runInstallBase(cmd *cobra.Command, args []string) error {
@@ -261,6 +292,7 @@ func runInstallBase(cmd *cobra.Command, args []string) error {
 			// Continue - workflow installation failure shouldn't block base setup
 		} else {
 			printer.Success("Workflows installed from: %s", terminal.Cyan(workflowURL))
+			printWorkflowSummary(printer, cfg.WorkflowsPath)
 		}
 		printer.Newline()
 
@@ -305,6 +337,19 @@ func runInstallBase(cmd *cobra.Command, args []string) error {
 	if err := inst.InstallBase(source); err != nil {
 		return err
 	}
+
+	// Reload config to get updated paths after base installation
+	reloaded, err := config.Load(cfg.BaseFolder)
+	if err == nil {
+		config.Set(reloaded)
+		cfg = reloaded
+		if reloaded.BinariesPath != "" {
+			binariesFolder = reloaded.BinariesPath
+		}
+	}
+
+	// Check if workflows folder exists under the base folder and print stats
+	printWorkflowSummary(printer, cfg.WorkflowsPath)
 
 	ensureBinariesPathInEnv(printer, binariesFolder, true)
 	return nil

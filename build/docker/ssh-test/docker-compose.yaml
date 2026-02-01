@@ -1,0 +1,14 @@
+services:
+  ssh-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: osmedeus-ssh-test
+    ports:
+      - "2222:22"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "sshd"]
+      interval: 10s
+      timeout: 5s
+      retries: 3

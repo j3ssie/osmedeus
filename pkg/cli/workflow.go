@@ -1134,6 +1134,23 @@ var workflowShowCmd = &cobra.Command{
 	},
 }
 
+// workflowInstallCmd installs workflows from a source (alias for install workflow)
+var workflowInstallCmd = &cobra.Command{
+	Use:   "install [source]",
+	Short: "Install workflows from git URL, zip URL, local zip file, or local folder",
+	Long:  `Install workflows from various sources. This is an alias for 'osmedeus install workflow'.`,
+	Args: func(cmd *cobra.Command, args []string) error {
+		if workflowPreset {
+			if len(args) != 0 {
+				return fmt.Errorf("no source argument is allowed with --preset")
+			}
+			return nil
+		}
+		return cobra.ExactArgs(1)(cmd, args)
+	},
+	RunE: RunInstallWorkflow,
+}
+
 // workflowValidateCmd validates a workflow
 var workflowValidateCmd = &cobra.Command{
 	Use:     "validate [name|path|folder]",
@@ -1211,9 +1228,11 @@ func init() {
 	workflowValidateCmd.Flags().StringVar(&lintFormat, "format", "pretty", "output format: pretty, json, github")
 	workflowValidateCmd.Flags().StringSliceVar(&lintDisable, "disable", []string{}, "disable specific rules (comma-separated)")
 	workflowValidateCmd.Flags().StringVar(&lintSeverity, "severity", "info", "minimum severity level: info, warning, error")
+	workflowInstallCmd.Flags().BoolVar(&workflowPreset, "preset", false, "install from OSM_WORKFLOW_URL environment variable (default: DEFAULT_WORKFLOW_REPO)")
 	workflowCmd.AddCommand(workflowListCmd)
 	workflowCmd.AddCommand(workflowShowCmd)
 	workflowCmd.AddCommand(workflowValidateCmd)
+	workflowCmd.AddCommand(workflowInstallCmd)
 }
 
 // hasMatchingTags checks if a workflow has any of the specified tags

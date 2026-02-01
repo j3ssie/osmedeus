@@ -18,6 +18,7 @@ const (
 	// Step type and runner symbols
 	SymbolFunction = "ƒ" // Function step
 	SymbolBash     = "$" // Bash/command step
+	SymbolForeach  = "∀" // Foreach step (universal quantifier)
 	SymbolDocker   = "🐋" // Docker runner
 	SymbolSSH      = "❄" // SSH runner
 
@@ -146,7 +147,9 @@ func StepTypeSymbol(stepType, runnerType string) string {
 		return Cyan(SymbolFunction)
 	case "remote-bash":
 		return Cyan(SymbolSSH)
-	case "bash", "parallel-steps", "foreach":
+	case "foreach":
+		return Cyan(SymbolForeach)
+	case "bash", "parallel-steps":
 		return Green(SymbolBash)
 	default:
 		return Green(SymbolBash)
@@ -160,6 +163,8 @@ func StepCommandPrefix(stepType string) string {
 		return SymbolBowtie // "⋈"
 	case "function":
 		return SymbolFunction // "ƒ"
+	case "foreach":
+		return SymbolForeach // "∀"
 	default:
 		return SymbolBash // "$"
 	}

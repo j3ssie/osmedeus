@@ -303,6 +303,14 @@ func executeFunctionForTarget(printer *terminal.Printer, script, target string) 
 
 	cfg := config.Get()
 	ctx := executor.BuildBuiltinVariables(cfg, params)
+
+	// Defer temp directory cleanup
+	if tempDir, ok := ctx["TempDir"].(string); ok && tempDir != "" {
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
+	}
+
 	if target != "" {
 		ctx["target"] = target
 	}
