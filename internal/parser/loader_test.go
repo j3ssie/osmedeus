@@ -268,6 +268,46 @@ func TestLoader_IsManualExecutionAllowed(t *testing.T) {
 	assert.True(t, workflow.IsManualExecutionAllowed())
 }
 
+func TestLoader_LoadWorkflowByPath_ExplicitLocalPath(t *testing.T) {
+	tmpDir := setupTestWorkflows(t)
+	loader := NewLoader(tmpDir)
+
+	// Create a workflow file in a separate location (not in workflows dir)
+	localDir := t.TempDir()
+	localWorkflow := filepath.Join(localDir, "local-module.yaml")
+	content := `kind: module
+name: local-module
+description: Local module
+steps:
+  - name: test
+    type: bash
+    command: echo "test"
+`
+	err := os.WriteFile(localWorkflow, []byte(content), 0644)
+	require.NoError(t, err)
+
+	// Change to localDir to test relative path
+	oldWd, _ := os.Getwd()
+	defer os.Chdir(oldWd)
+	os.Chdir(localDir)
+
+	// Test: ./local-module.yaml should load from CWD
+	workflow, err := loader.LoadWorkflowByPath("./local-module.yaml")
+	require.NoError(t, err)
+	assert.Equal(t, "local-module", workflow.Name)
+
+	// Test: ./nonexistent.yaml should error, not fall back
+	_, err = loader.LoadWorkflowByPath("./nonexistent.yaml")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+	assert.NotContains(t, err.Error(), "workflows") // Should not mention fallback
+
+	// Test: ../nonexistent.yaml should also error, not fall back
+	_, err = loader.LoadWorkflowByPath("../nonexistent.yaml")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
 func TestLoader_CacheMtimeInvalidation(t *testing.T) {
 	tmpDir := setupTestWorkflows(t)
 	loader := NewLoader(tmpDir)

@@ -318,7 +318,10 @@ github-release:
 	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --clean
 
 run-github-action:
-	unset GH_TOKEN &&gh workflow run manual-release.yaml && gh workflow run nightly-release.yaml
+	unset GH_TOKEN && gh workflow run manual-release.yaml && gh workflow run nightly-release.yaml
+
+run-homebrew-action:
+	unset GH_TOKEN && gh workflow run 226998251
 
 # Database commands
 db-seed: build

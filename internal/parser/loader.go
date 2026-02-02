@@ -125,6 +125,11 @@ func (l *Loader) LoadWorkflow(name string) (*core.Workflow, error) {
 
 // LoadWorkflowByPath loads a workflow from a specific path
 func (l *Loader) LoadWorkflowByPath(path string) (*core.Workflow, error) {
+	log := logger.Get()
+
+	// Detect if this is an explicit local path (starts with ./ or ../)
+	isExplicitLocalPath := strings.HasPrefix(path, "./") || strings.HasPrefix(path, "../")
+
 	// If path is absolute, use it directly
 	if !filepath.IsAbs(path) {
 		// Check if file exists relative to CWD first
@@ -134,8 +139,17 @@ func (l *Loader) LoadWorkflowByPath(path string) (*core.Workflow, error) {
 			if err == nil {
 				path = absPath
 			}
+		} else if isExplicitLocalPath {
+			// For explicit local paths (./foo.yaml or ../foo.yaml),
+			// don't fall back to workflowsDir - return a clear error
+			absPath, _ := filepath.Abs(path)
+			return nil, fmt.Errorf("workflow file not found: %s", absPath)
 		} else {
 			// File doesn't exist relative to CWD, try relative to workflowsDir
+			log.Debug("Workflow not found at relative path, trying workflows directory",
+				zap.String("original_path", path),
+				zap.String("workflows_dir", l.workflowsDir),
+			)
 			path = filepath.Join(l.workflowsDir, path)
 		}
 	}
