@@ -719,6 +719,8 @@ func (vf *vmFunc) execCmd(call goja.FunctionCall) goja.Value {
 		return vf.vm.ToValue("")
 	}
 
+	// @NOTE: This is intentional - exec_cmd() is a utility function exposed to workflow
+	// definitions for executing shell commands. Input comes from trusted workflow YAML files.
 	cmd := exec.Command("sh", "-c", command)
 	output, err := cmd.Output()
 	if err != nil {

@@ -152,6 +152,8 @@ func (r *DockerRunner) execInContainer(ctx context.Context, command string) (*Co
 		args = append(args, "-w", r.config.WorkDir)
 	}
 
+	// @NOTE: This is intentional - the workflow engine is designed to execute arbitrary
+	// commands from YAML workflow definitions inside Docker containers.
 	args = append(args, r.containerID, "sh", "-c", command)
 
 	cmd := exec.Command("docker", args...)
@@ -248,6 +250,8 @@ func (r *DockerRunner) runEphemeral(ctx context.Context, command string) (*Comma
 	}
 
 	// Add image and command
+	// @NOTE: This is intentional - the workflow engine is designed to execute arbitrary
+	// commands from YAML workflow definitions inside ephemeral Docker containers.
 	args = append(args, r.config.Image, "sh", "-c", command)
 
 	cmd := exec.Command("docker", args...)

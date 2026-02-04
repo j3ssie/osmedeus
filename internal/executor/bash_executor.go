@@ -186,7 +186,7 @@ func (e *BashExecutor) executeCommand(ctx context.Context, command string, timeo
 	}
 
 	// Fallback to local execution
-	// @NOTE: yes yes, I know this is a security risk. This is the intended behavior.
+	// @NOTE: yes yes, I know this is a security risk. This is the intended behavior as it suppose to be that flexible so you should think twice of what you will run or design your workflow better
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 
 	var stdout, stderr bytes.Buffer

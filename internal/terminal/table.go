@@ -18,9 +18,12 @@ func NewTable(w io.Writer, header []string) *tablewriter.Table {
 
 	// Clean styling without borders
 	table.SetBorder(false)
+	table.SetRowLine(false)
 	table.SetCenterSeparator("")
 	table.SetColumnSeparator("")
 	table.SetRowSeparator("")
+	table.SetHeaderLine(false)
+	table.SetAutoWrapText(false)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetTablePadding("  ")

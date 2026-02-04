@@ -26,6 +26,9 @@ func NewHostRunner(binariesPath string) *HostRunner {
 
 // Execute runs a command on the local machine
 func (r *HostRunner) Execute(ctx context.Context, command string) (*CommandResult, error) {
+	// @NOTE: This is intentional - the workflow engine is designed to execute arbitrary
+	// commands from YAML workflow definitions. The command input comes from trusted
+	// workflow files, not from untrusted user input.
 	cmd := exec.Command("sh", "-c", command)
 
 	// Create new process group so we can kill all children on interrupt

@@ -59,6 +59,13 @@ func StepSymbol(status string) string {
 	}
 }
 
+// PaddedStepSymbol returns a status symbol padded to match "Status" header width (6 chars).
+// The symbol is 1 display character, so we pad with 5 spaces to reach 6.
+// This ensures proper column alignment since ANSI color codes are invisible.
+func PaddedStepSymbol(status string) string {
+	return StepSymbol(status) + "     "
+}
+
 // StepStartSymbol returns a colored start symbol
 func StepStartSymbol() string {
 	return Cyan(SymbolStart)

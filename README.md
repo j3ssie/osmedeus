@@ -152,6 +152,17 @@ The high-level ambitious plan for the project, in order:
 | Extending Osmedeus   | [docs.osmedeus.org/development/extending-osmedeus](https://docs.osmedeus.org/development/extending-osmedeus)   |
 | Full Documentation   | [docs.osmedeus.org](https://docs.osmedeus.org) |
 
+## Disclaimer
+
+Osmedeus is designed to execute arbitrary code and commands from user supplied input via CLI, API, and workflow definitions. This flexibility is intentional and central to how the engine operates.
+
+**Think twice before you:**
+- Run workflows downloaded from untrusted sources
+- Execute commands or scans against targets you don't own or have permission to test
+- Use workflows without reviewing their contents first
+
+You are responsible for what you run. Always review workflow YAML files before execution, especially those obtained from third parties.
+
 ## License
 
 Osmedeus is made with ♥ by [@j3ssie](https://twitter.com/j3ssie) and it is released under the MIT license.

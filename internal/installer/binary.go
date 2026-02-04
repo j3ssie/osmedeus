@@ -293,6 +293,8 @@ func IsBinaryInPath(name string) bool {
 func IsBinaryInstalled(name string, entry *BinaryEntry) bool {
 	// If validate command is provided and not empty, use it
 	if entry != nil && entry.ValidateCommand != "" {
+		// @NOTE: This is intentional - ValidateCommand comes from the binary registry
+		// configuration which is a trusted source for installation validation commands.
 		cmd := exec.Command("sh", "-c", entry.ValidateCommand)
 		err := cmd.Run()
 		return err == nil // exit code 0 means installed
@@ -393,6 +395,8 @@ func InstallBinary(name string, registry BinaryRegistry, binariesFolder string, 
 // executeCommand runs a shell command for installing a binary
 func executeCommand(command string) error {
 	var cmd *exec.Cmd
+	// @NOTE: This is intentional - installation commands come from the binary registry
+	// configuration which is a trusted source for binary installation procedures.
 	if runtime.GOOS == "windows" {
 		cmd = exec.Command("cmd", "/C", command)
 	} else {

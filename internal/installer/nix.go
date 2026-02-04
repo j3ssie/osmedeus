@@ -60,6 +60,8 @@ func InstallNix() error {
 		installCmd = NixInstallCommand
 	}
 
+	// @NOTE: This is intentional - the Nix installation command is a hardcoded trusted
+	// command from Determinate Systems for installing the Nix package manager.
 	cmd := exec.Command("sh", "-c", installCmd)
 	if os.Getenv("OSMEDEUS_SILENT") == "1" {
 		cmd.Stdout = io.Discard

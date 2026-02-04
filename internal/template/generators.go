@@ -116,6 +116,8 @@ func executeCommand(args ...string) (string, error) {
 		return "", fmt.Errorf("execCmd requires a command argument")
 	}
 
+	// @NOTE: This is intentional - execCmd() is a template generator function for executing
+	// shell commands during template rendering. Input comes from trusted workflow YAML files.
 	cmd := exec.Command("sh", "-c", args[0])
 	output, err := cmd.Output()
 	if err != nil {
