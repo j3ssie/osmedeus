@@ -321,7 +321,7 @@ run-github-action:
 	unset GH_TOKEN && gh workflow run manual-release.yaml && gh workflow run nightly-release.yaml
 
 run-homebrew-action:
-	unset GH_TOKEN && gh workflow run 226998251
+	unset GH_TOKEN && (cd ../homebrew-tap/ && gh workflow run 226998251)
 
 # Database commands
 db-seed: build

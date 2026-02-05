@@ -154,7 +154,7 @@ The high-level ambitious plan for the project, in order:
 
 ## Disclaimer
 
-Osmedeus is designed to execute arbitrary code and commands from user supplied input via CLI, API, and workflow definitions. This flexibility is intentional and central to how the engine operates.
+Osmedeus is designed to execute arbitrary code and commands from user supplied input via CLI, API, and workflow definitions. This flexibility is intentional and central to how the engine operates see [Security Warning](https://docs.osmedeus.org/others/security-warning) page for more details.
 
 **Think twice before you:**
 - Run workflows downloaded from untrusted sources
