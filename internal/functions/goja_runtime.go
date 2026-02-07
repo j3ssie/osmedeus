@@ -91,6 +91,11 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 
 	// Type detection functions
 	_ = vm.Set(FnGetTypes, vf.getTypes)
+	_ = vm.Set(FnIsFile, vf.isFile)
+	_ = vm.Set(FnIsDir, vf.isDir)
+	_ = vm.Set(FnIsGit, vf.isGit)
+	_ = vm.Set(FnIsURL, vf.isURLFunc)
+	_ = vm.Set(FnIsCompress, vf.isCompress)
 
 	// Type conversion
 	_ = vm.Set(FnParseInt, vf.parseInt)
@@ -180,7 +185,9 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	// Unix command wrappers
 	_ = vm.Set(FnSortUnix, vf.sortUnix)
 	_ = vm.Set(FnWgetUnix, vf.wgetUnix)
+	_ = vm.Set(FnWget, vf.wget)
 	_ = vm.Set(FnGitClone, vf.gitClone)
+	_ = vm.Set(FnGitCloneSubfolder, vf.gitCloneSubfolder)
 	_ = vm.Set(FnZipUnix, vf.zipUnix)
 	_ = vm.Set(FnUnzipUnix, vf.unzipUnix)
 	_ = vm.Set(FnTarUnix, vf.tarUnix)
@@ -223,6 +230,8 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnDBImportAsset, vf.dbImportAsset)
 	_ = vm.Set(FnDBQuickImportAsset, vf.dbQuickImportAsset)
 	_ = vm.Set(FnDBRawInsertAsset, vf.dbRawInsertAsset)
+	_ = vm.Set(FnDBPartialImportAsset, vf.dbPartialImportAsset)
+	_ = vm.Set(FnDBPartialImportAssetFile, vf.dbPartialImportAssetFile)
 	_ = vm.Set(FnDBTotalURLs, vf.dbTotalURLs)
 	_ = vm.Set(FnDBTotalSubdomains, vf.dbTotalSubdomains)
 	_ = vm.Set(FnDBTotalAssets, vf.dbTotalAssets)

@@ -3,6 +3,7 @@ package functions
 import (
 	"net"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -120,4 +121,72 @@ func isURL(input string) bool {
 // isDomain checks if input matches a valid domain pattern
 func isDomain(input string) bool {
 	return domainPattern.MatchString(input)
+}
+
+// isFile checks if the path is an existing regular file (not a directory)
+func (vf *vmFunc) isFile(call goja.FunctionCall) goja.Value {
+	path := call.Argument(0).String()
+	if path == "" || path == "undefined" {
+		return vf.vm.ToValue(false)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return vf.vm.ToValue(false)
+	}
+	return vf.vm.ToValue(!info.IsDir())
+}
+
+// isDir checks if the path is an existing directory
+func (vf *vmFunc) isDir(call goja.FunctionCall) goja.Value {
+	path := call.Argument(0).String()
+	if path == "" || path == "undefined" {
+		return vf.vm.ToValue(false)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return vf.vm.ToValue(false)
+	}
+	return vf.vm.ToValue(info.IsDir())
+}
+
+// isGit checks if the path is a directory containing a .git subfolder
+func (vf *vmFunc) isGit(call goja.FunctionCall) goja.Value {
+	path := call.Argument(0).String()
+	if path == "" || path == "undefined" {
+		return vf.vm.ToValue(false)
+	}
+	gitDir := filepath.Join(path, ".git")
+	info, err := os.Stat(gitDir)
+	if err != nil {
+		return vf.vm.ToValue(false)
+	}
+	return vf.vm.ToValue(info.IsDir())
+}
+
+// isURLFunc checks if the input starts with http:// or https:// (case-insensitive)
+// Named isURLFunc to avoid shadowing the existing isURL helper function.
+func (vf *vmFunc) isURLFunc(call goja.FunctionCall) goja.Value {
+	input := call.Argument(0).String()
+	if input == "" || input == "undefined" {
+		return vf.vm.ToValue(false)
+	}
+	return vf.vm.ToValue(isURL(input))
+}
+
+// compressedExtensions lists recognized compressed file extensions
+var compressedExtensions = []string{".tar.gz", ".tar.bz2", ".tar.xz", ".tgz", ".zip", ".gz"}
+
+// isCompress checks if the path has a compressed file extension
+func (vf *vmFunc) isCompress(call goja.FunctionCall) goja.Value {
+	path := call.Argument(0).String()
+	if path == "" || path == "undefined" {
+		return vf.vm.ToValue(false)
+	}
+	lower := strings.ToLower(path)
+	for _, ext := range compressedExtensions {
+		if strings.HasSuffix(lower, ext) {
+			return vf.vm.ToValue(true)
+		}
+	}
+	return vf.vm.ToValue(false)
 }

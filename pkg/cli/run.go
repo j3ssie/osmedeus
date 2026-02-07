@@ -281,8 +281,9 @@ func applyWorkflowPreferences(prefs *core.Preferences, printer *terminal.Printer
 		applied = append(applied, "repeat_wait_time="+*prefs.RepeatWaitTime)
 	}
 
-	// empty_target -> emptyTarget (already applied in early check, but log for consistency)
+	// empty_target -> emptyTarget
 	if prefs.EmptyTarget != nil && !explicitFlags["empty-target"] {
+		emptyTarget = *prefs.EmptyTarget
 		if *prefs.EmptyTarget {
 			applied = append(applied, "empty_target")
 		}
@@ -414,6 +415,18 @@ func runRun(cmd *cobra.Command, args []string) error {
 		zap.Strings("targets", allTargets),
 	)
 
+	// Early workflow fetch for --module-url to apply preferences before target validation
+	var urlWorkflow *core.Workflow
+	if moduleURL != "" {
+		wf, err := fetchWorkflowFromURL(moduleURL)
+		if err != nil {
+			return fmt.Errorf("failed to fetch workflow from URL: %w", err)
+		}
+		printer.Success("Workflow fetched from URL: %s (%s)", wf.Name, terminal.TypeBadge(string(wf.Kind)))
+		applyWorkflowPreferences(wf.Preferences, printer)
+		urlWorkflow = wf
+	}
+
 	if len(allTargets) == 0 {
 		// Check CLI flag first, then workflow preference
 		shouldUseEmptyTarget := emptyTarget
@@ -544,23 +557,13 @@ func runRun(cmd *cobra.Command, args []string) error {
 			// Execute for all targets (nil loader since flows not supported for stdin)
 			lastErr = executeSingleWorkflowDirect(ctx, workflow, allTargets, cfg, printer, log, nil)
 		} else if moduleURL != "" {
-			// URL module mode - fetch workflow from URL
-			workflow, err := fetchWorkflowFromURL(moduleURL)
-			if err != nil {
-				return fmt.Errorf("failed to fetch workflow from URL: %w", err)
-			}
-
-			printer.Success("Workflow fetched from URL: %s (%s)", workflow.Name, terminal.TypeBadge(string(workflow.Kind)))
-
-			// Apply workflow preferences (if any) - CLI flags take precedence
-			applyWorkflowPreferences(workflow.Preferences, printer)
-
-			if workflow.IsFlow() {
+			// URL module mode - use pre-fetched workflow (fetched before target validation)
+			if urlWorkflow.IsFlow() {
 				return fmt.Errorf("--module-url only supports module workflows, got flow")
 			}
 
 			// Execute for all targets (nil loader since flows not supported for URL modules)
-			lastErr = executeSingleWorkflowDirect(ctx, workflow, allTargets, cfg, printer, log, nil)
+			lastErr = executeSingleWorkflowDirect(ctx, urlWorkflow, allTargets, cfg, printer, log, nil)
 		} else if flowName != "" {
 			// Flow mode - single workflow
 			lastErr = executeSingleWorkflow(ctx, loader, flowName, allTargets, cfg, printer, log)
@@ -828,6 +831,9 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 	exec := executor.NewExecutor()
 	exec.SetDryRun(dryRun)
 	exec.SetDisableWorkflowState(disableWorkflowState)
+	if emptyTarget {
+		exec.SetSkipWorkspace(true)
+	}
 	exec.SetSkipValidation(skipValidation)
 	exec.SetSpinner(showSpinner)
 	exec.SetVerbose(verbose) // Show actual step output in verbose mode

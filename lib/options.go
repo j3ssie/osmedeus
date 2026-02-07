@@ -38,6 +38,10 @@ type RunOptions struct {
 	// Useful for ephemeral/in-memory execution
 	DisableWorkflowState bool
 
+	// SkipWorkspace skips creating workspace/output directory
+	// Useful for empty-target mode where no real target exists
+	SkipWorkspace bool
+
 	// DisableDatabase skips all database operations
 	// Default: true for library mode
 	DisableDatabase bool

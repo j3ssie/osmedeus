@@ -373,6 +373,162 @@ func TestMapJSONToVuln_MatchedAtFallback(t *testing.T) {
 	assert.Equal(t, "http://example.com/path", vuln.AssetValue)
 }
 
+func TestDbPartialImportAsset(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	result, err := registry.Execute(
+		`db_partial_import_asset("test-workspace", "domain", "sub.example.com")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, true, result)
+
+	// Verify asset was imported with correct fields
+	ctx := context.Background()
+	db := database.GetDB()
+	require.NotNil(t, db)
+
+	var asset database.Asset
+	err = db.NewSelect().Model(&asset).
+		Where("workspace = ? AND asset_value = ?", "test-workspace", "sub.example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "domain", asset.AssetType)
+	assert.Equal(t, "test-workspace", asset.Workspace)
+	assert.Equal(t, "sub.example.com", asset.AssetValue)
+}
+
+func TestDbPartialImportAsset_Upsert(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	// Import first time
+	_, err := registry.Execute(
+		`db_partial_import_asset("test-workspace", "domain", "sub.example.com")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+
+	// Import same asset again with different type
+	result, err := registry.Execute(
+		`db_partial_import_asset("test-workspace", "subdomain", "sub.example.com")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, true, result)
+
+	// Verify only 1 row exists
+	ctx := context.Background()
+	db := database.GetDB()
+	require.NotNil(t, db)
+
+	count, err := db.NewSelect().Model((*database.Asset)(nil)).
+		Where("workspace = ? AND asset_value = ?", "test-workspace", "sub.example.com").
+		Count(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	// Verify type was updated
+	var asset database.Asset
+	err = db.NewSelect().Model(&asset).
+		Where("workspace = ? AND asset_value = ?", "test-workspace", "sub.example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "subdomain", asset.AssetType)
+}
+
+func TestDbPartialImportAsset_MissingArgs(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	result, err := registry.Execute(
+		`db_partial_import_asset("test-workspace", "domain")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Contains(t, result.(string), "error:")
+}
+
+func TestDbPartialImportAssetFile(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	// Create a temp file with 3 lines
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "domains.txt")
+	content := "sub1.example.com\nsub2.example.com\nsub3.example.com\n"
+	err := os.WriteFile(testFile, []byte(content), 0644)
+	require.NoError(t, err)
+
+	result, err := registry.Execute(
+		`db_partial_import_asset_file("test-workspace", "domain", "`+testFile+`")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), result)
+
+	// Verify all 3 assets are in the DB
+	ctx := context.Background()
+	db := database.GetDB()
+	require.NotNil(t, db)
+
+	var assets []database.Asset
+	err = db.NewSelect().Model(&assets).
+		Where("workspace = ?", "test-workspace").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Len(t, assets, 3)
+
+	// All should have the specified asset_type
+	for _, a := range assets {
+		assert.Equal(t, "domain", a.AssetType)
+	}
+}
+
+func TestDbPartialImportAssetFile_SkipsEmptyLines(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	// Create a temp file with blank lines
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "domains.txt")
+	content := "sub1.example.com\n\n  \nsub2.example.com\n\n"
+	err := os.WriteFile(testFile, []byte(content), 0644)
+	require.NoError(t, err)
+
+	result, err := registry.Execute(
+		`db_partial_import_asset_file("test-workspace", "domain", "`+testFile+`")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), result)
+}
+
+func TestDbPartialImportAssetFile_NonExistentFile(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	result, err := registry.Execute(
+		`db_partial_import_asset_file("test-workspace", "domain", "/nonexistent/file.txt")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Contains(t, result.(string), "error:")
+}
+
 func TestDbQuickImportAsset(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()

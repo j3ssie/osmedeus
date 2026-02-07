@@ -53,7 +53,12 @@ const (
 
 // Type Detection Functions - Detect input types
 const (
-	FnGetTypes = "get_types" // get_types(input) -> string (file, folder, cidr, ip, url, domain, string)
+	FnGetTypes   = "get_types"   // get_types(input) -> string (file, folder, cidr, ip, url, domain, string)
+	FnIsFile     = "is_file"     // is_file(path) -> bool
+	FnIsDir      = "is_dir"      // is_dir(path) -> bool
+	FnIsGit      = "is_git"      // is_git(path) -> bool
+	FnIsURL      = "is_url"      // is_url(input) -> bool
+	FnIsCompress = "is_compress" // is_compress(path) -> bool
 )
 
 // Type Conversion Functions - Convert between types
@@ -162,10 +167,12 @@ const (
 
 // Unix Command Wrappers - Wrappers around common Unix commands
 const (
-	FnSortUnix         = "sort_unix"          // sort_unix(inputFile, outputFile?) -> bool (LC_ALL=C sort -u)
-	FnWgetUnix         = "wget_unix"          // wget_unix(url, outputPath?) -> bool
-	FnGitClone         = "git_clone"          // git_clone(repo, dest?) -> bool
-	FnZipUnix          = "zip_unix"           // zip_unix(source, dest) -> bool (zip -r dest source)
+	FnSortUnix           = "sort_unix"            // sort_unix(inputFile, outputFile?) -> bool (LC_ALL=C sort -u)
+	FnWgetUnix           = "wget_unix"            // wget_unix(url, outputPath?) -> bool
+	FnWget               = "wget"                 // wget(url, outputPath) -> bool (pure Go, segmented download)
+	FnGitClone           = "git_clone"            // git_clone(repo, dest?) -> bool
+	FnGitCloneSubfolder  = "git_clone_subfolder"  // git_clone_subfolder(git_url, subfolder, dest) -> bool
+	FnZipUnix            = "zip_unix"             // zip_unix(source, dest) -> bool (zip -r dest source)
 	FnUnzipUnix        = "unzip_unix"         // unzip_unix(source, dest?) -> bool (unzip source -d dest)
 	FnTarUnix          = "tar_unix"           // tar_unix(source, dest) -> bool (tar -czf dest source)
 	FnUntarUnix        = "untar_unix"         // untar_unix(source, dest?) -> bool (tar -xzf source -C dest)
@@ -240,6 +247,8 @@ const (
 	FnDBImportAsset                   = "db_import_asset"                    // db_import_asset(workspace, json_data) -> bool
 	FnDBQuickImportAsset              = "db_quick_import_asset"              // db_quick_import_asset(workspace, asset_value, asset_type?) -> bool
 	FnDBRawInsertAsset                = "db_raw_insert_asset"                // db_raw_insert_asset(workspace, json_data) -> int (asset ID)
+	FnDBPartialImportAsset            = "db_partial_import_asset"            // db_partial_import_asset(workspace, asset_type, asset_value) -> bool
+	FnDBPartialImportAssetFile        = "db_partial_import_asset_file"       // db_partial_import_asset_file(workspace, asset_type, file_path) -> int (count)
 	FnDBTotalURLs                     = "db_total_urls"                      // db_total_urls(file_path) -> int (count lines, update workspace)
 	FnDBTotalSubdomains               = "db_total_subdomains"                // db_total_subdomains(file_path) -> int
 	FnDBTotalAssets                   = "db_total_assets"                    // db_total_assets(file_path) -> int
@@ -340,6 +349,11 @@ func AllFunctions() []string {
 
 		// Type Detection Functions
 		FnGetTypes,
+		FnIsFile,
+		FnIsDir,
+		FnIsGit,
+		FnIsURL,
+		FnIsCompress,
 
 		// Type Conversion Functions
 		FnParseInt,
@@ -429,7 +443,9 @@ func AllFunctions() []string {
 		// Unix Command Wrappers
 		FnSortUnix,
 		FnWgetUnix,
+		FnWget,
 		FnGitClone,
+		FnGitCloneSubfolder,
 		FnZipUnix,
 		FnUnzipUnix,
 		FnTarUnix,
@@ -472,6 +488,8 @@ func AllFunctions() []string {
 		FnDBImportAsset,
 		FnDBQuickImportAsset,
 		FnDBRawInsertAsset,
+		FnDBPartialImportAsset,
+		FnDBPartialImportAssetFile,
 		FnDBTotalURLs,
 		FnDBTotalSubdomains,
 		FnDBTotalAssets,
@@ -741,7 +759,9 @@ func FunctionRegistry() map[string][]FunctionInfo {
 		CategoryUnixCommands: {
 			{FnSortUnix, "sort_unix(input, output?)", "Sort file with LC_ALL=C sort -u", "bool", "sort_unix('{{Output}}/urls.txt')"},
 			{FnWgetUnix, "wget_unix(url, output?)", "Download file with wget", "bool", "wget_unix('https://example.com/file.txt', '/tmp/file.txt')"},
+			{FnWget, "wget(url, output)", "Download file with pure Go (segmented parallel download)", "bool", "wget('https://example.com/large-file.tar.gz', '/tmp/file.tar.gz')"},
 			{FnGitClone, "git_clone(repo, dest?)", "Clone git repository (shallow)", "bool", "git_clone('https://github.com/user/repo', '/tmp/repo')"},
+			{FnGitCloneSubfolder, "git_clone_subfolder(git_url, subfolder, dest)", "Clone repo and extract specific subfolder (falls back to ZIP for GitHub)", "bool", "git_clone_subfolder('https://github.com/projectdiscovery/nuclei-templates', 'http', '/tmp/nuclei-http')"},
 			{FnZipUnix, "zip_unix(source, dest)", "Create zip archive (zip -r)", "bool", "zip_unix('{{Output}}', '{{Output}}/archive.zip')"},
 			{FnUnzipUnix, "unzip_unix(source, dest?)", "Extract zip archive (unzip)", "bool", "unzip_unix('/tmp/archive.zip', '/tmp/extracted')"},
 			{FnTarUnix, "tar_unix(source, dest)", "Create tar.gz archive (tar -czf)", "bool", "tar_unix('{{Output}}', '{{Output}}/archive.tar.gz')"},
@@ -786,6 +806,8 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnDBImportAsset, "db_import_asset(workspace, json)", "Import asset from JSON (upsert)", "bool", "db_import_asset('{{Workspace}}', '{\"asset_value\":\"sub.example.com\"}')"},
 			{FnDBQuickImportAsset, "db_quick_import_asset(workspace, asset_value, asset_type?)", "Quick import asset without JSON, creates db.new.asset event for new assets", "bool", "db_quick_import_asset('{{Workspace}}', 'sub.example.com', 'domain')"},
 			{FnDBRawInsertAsset, "db_raw_insert_asset(workspace, json)", "Insert asset from JSON (pure insert)", "int", "db_raw_insert_asset('{{Workspace}}', '{\"asset_value\":\"api.example.com\"}')"},
+			{FnDBPartialImportAsset, "db_partial_import_asset(workspace, asset_type, asset_value)", "Import asset with only workspace/type/value (no JSON)", "bool", "db_partial_import_asset('{{Workspace}}', 'domain', 'sub.example.com')"},
+			{FnDBPartialImportAssetFile, "db_partial_import_asset_file(workspace, asset_type, file_path)", "Import assets from file line-by-line with type", "int", "db_partial_import_asset_file('{{Workspace}}', 'domain', '{{Output}}/subdomains.txt')"},
 			{FnDBTotalURLs, "db_total_urls(path)", "Count lines, update workspace URLs", "int", "db_total_urls('{{Output}}/urls.txt')"},
 			{FnDBTotalSubdomains, "db_total_subdomains(path)", "Count lines, update workspace subdomains", "int", "db_total_subdomains('{{Output}}/subdomains.txt')"},
 			{FnDBTotalAssets, "db_total_assets(path)", "Count lines, update workspace assets", "int", "db_total_assets('{{Output}}/assets.txt')"},
@@ -837,6 +859,11 @@ func FunctionRegistry() map[string][]FunctionInfo {
 		},
 		CategoryTypeDetection: {
 			{FnGetTypes, "get_types(input)", "Detect input type (file, folder, cidr, ip, url, domain, string)", "string", "get_types('192.168.1.0/24')"},
+			{FnIsFile, "is_file(path)", "Check if path is an existing regular file", "bool", "is_file('{{Output}}/results.txt')"},
+			{FnIsDir, "is_dir(path)", "Check if path is an existing directory", "bool", "is_dir('{{Output}}/screenshots')"},
+			{FnIsGit, "is_git(path)", "Check if path is a git repository (contains .git folder)", "bool", "is_git('{{Output}}/repo')"},
+			{FnIsURL, "is_url(input)", "Check if input is an HTTP/HTTPS URL", "bool", "is_url('https://example.com')"},
+			{FnIsCompress, "is_compress(path)", "Check if path has a compressed file extension (.zip, .tar.gz, .tgz, .gz, .tar.bz2, .tar.xz)", "bool", "is_compress('archive.tar.gz')"},
 		},
 	}
 }

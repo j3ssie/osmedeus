@@ -407,6 +407,187 @@ func TestIsURL(t *testing.T) {
 	}
 }
 
+func TestIsFile(t *testing.T) {
+	runtime := NewGojaRuntime()
+	tmpDir := t.TempDir()
+
+	// Create a test file
+	testFile := filepath.Join(tmpDir, "testfile.txt")
+	if err := os.WriteFile(testFile, []byte("hello"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"existing file", testFile, true},
+		{"directory", tmpDir, false},
+		{"non-existent", filepath.Join(tmpDir, "nope.txt"), false},
+		{"empty input", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expr := "is_file('" + tt.input + "')"
+			result, err := runtime.Execute(expr, nil)
+			if err != nil {
+				t.Fatalf("Execute failed: %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("is_file(%q) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsDir(t *testing.T) {
+	runtime := NewGojaRuntime()
+	tmpDir := t.TempDir()
+
+	testFile := filepath.Join(tmpDir, "testfile.txt")
+	if err := os.WriteFile(testFile, []byte("hello"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"existing directory", tmpDir, true},
+		{"file", testFile, false},
+		{"non-existent", filepath.Join(tmpDir, "nodir"), false},
+		{"empty input", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expr := "is_dir('" + tt.input + "')"
+			result, err := runtime.Execute(expr, nil)
+			if err != nil {
+				t.Fatalf("Execute failed: %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("is_dir(%q) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsGit(t *testing.T) {
+	runtime := NewGojaRuntime()
+	tmpDir := t.TempDir()
+
+	// Create a fake git repo (directory with .git subfolder)
+	gitRepo := filepath.Join(tmpDir, "repo")
+	if err := os.MkdirAll(filepath.Join(gitRepo, ".git"), 0755); err != nil {
+		t.Fatalf("Failed to create .git dir: %v", err)
+	}
+
+	// Create a non-git directory
+	plainDir := filepath.Join(tmpDir, "plain")
+	if err := os.MkdirAll(plainDir, 0755); err != nil {
+		t.Fatalf("Failed to create plain dir: %v", err)
+	}
+
+	// Create a file
+	testFile := filepath.Join(tmpDir, "file.txt")
+	if err := os.WriteFile(testFile, []byte("hi"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"git repo", gitRepo, true},
+		{"plain directory", plainDir, false},
+		{"file", testFile, false},
+		{"non-existent", filepath.Join(tmpDir, "nope"), false},
+		{"empty input", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expr := "is_git('" + tt.input + "')"
+			result, err := runtime.Execute(expr, nil)
+			if err != nil {
+				t.Fatalf("Execute failed: %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("is_git(%q) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsURLFunc(t *testing.T) {
+	runtime := NewGojaRuntime()
+
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"http url", "http://example.com", true},
+		{"https url", "https://example.com/path", true},
+		{"uppercase HTTPS", "HTTPS://EXAMPLE.COM", true},
+		{"ftp url", "ftp://example.com", false},
+		{"domain only", "example.com", false},
+		{"empty input", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expr := "is_url('" + tt.input + "')"
+			result, err := runtime.Execute(expr, nil)
+			if err != nil {
+				t.Fatalf("Execute failed: %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("is_url(%q) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsCompress(t *testing.T) {
+	runtime := NewGojaRuntime()
+
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"zip file", "archive.zip", true},
+		{"tar.gz file", "archive.tar.gz", true},
+		{"tgz file", "archive.tgz", true},
+		{"gz file", "file.gz", true},
+		{"tar.bz2 file", "archive.tar.bz2", true},
+		{"tar.xz file", "archive.tar.xz", true},
+		{"uppercase ZIP", "ARCHIVE.ZIP", true},
+		{"txt file", "file.txt", false},
+		{"no extension", "archive", false},
+		{"empty input", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expr := "is_compress('" + tt.input + "')"
+			result, err := runtime.Execute(expr, nil)
+			if err != nil {
+				t.Fatalf("Execute failed: %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("is_compress(%q) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestIsDomain(t *testing.T) {
 	tests := []struct {
 		input    string

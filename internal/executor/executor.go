@@ -63,6 +63,7 @@ type Executor struct {
 	serverMode            bool // true when invoked via server API, enables file logging
 	progressBar           *terminal.ProgressBar
 	disableWorkflowState  bool                       // disable writing workflow YAML to output directory
+	skipWorkspace         bool                       // skip creating workspace/output directory (for empty-target mode)
 	skipValidation        bool                       // skip target type validation from dependencies.variables
 	dbRunUUID             string                     // database run UUID for tracking progress
 	dbRunID               int64                      // database run ID for step result foreign keys
@@ -140,6 +141,11 @@ func (e *Executor) SetServerMode(enabled bool) {
 // SetDisableWorkflowState enables or disables workflow state file export
 func (e *Executor) SetDisableWorkflowState(disable bool) {
 	e.disableWorkflowState = disable
+}
+
+// SetSkipWorkspace enables or disables workspace folder creation
+func (e *Executor) SetSkipWorkspace(skip bool) {
+	e.skipWorkspace = skip
 }
 
 // SetSkipValidation enables or disables target type validation
@@ -646,13 +652,13 @@ func getStepCommand(step *core.Step) string {
 		return step.Command
 	}
 	if len(step.Commands) > 0 {
-		return step.Commands[0]
+		return strings.Join(step.Commands, "\n")
 	}
 	if step.Function != "" {
 		return step.Function
 	}
 	if len(step.Functions) > 0 {
-		return step.Functions[0]
+		return strings.Join(step.Functions, "\n")
 	}
 	return ""
 }
@@ -739,13 +745,13 @@ func getInnerStepCommand(step *core.Step) string {
 		return step.Command
 	}
 	if len(step.Commands) > 0 {
-		return step.Commands[0]
+		return strings.Join(step.Commands, "\n")
 	}
 	if step.Function != "" {
 		return step.Function
 	}
 	if len(step.Functions) > 0 {
-		return step.Functions[0]
+		return strings.Join(step.Functions, "\n")
 	}
 	return ""
 }
@@ -984,7 +990,7 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	defer tempCleanup()
 	e.debugLogTargetVariables(execCtx)
 
-	if !e.dryRun && database.GetDB() != nil {
+	if !e.skipWorkspace && !e.dryRun && database.GetDB() != nil {
 		output, _ := execCtx.GetVariable("Output")
 		stateExecutionLog, _ := execCtx.GetVariable("StateExecutionLog")
 		stateCompletedFile, _ := execCtx.GetVariable("StateCompletedFile")
@@ -1004,13 +1010,15 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 
 	// Add file logging in server mode
 	// Setup file logging to {{Output}}/run-execution.log
-	if logPath, ok := execCtx.GetVariable("StateExecutionLog"); ok {
-		if logStr, ok := logPath.(string); ok && logStr != "" {
-			combinedLogger, err := logger.WithFileOutput(execCtx.Logger, logStr)
-			if err != nil {
-				e.logger.Warn("Failed to setup file logging", zap.Error(err))
-			} else if combinedLogger != nil {
-				execCtx.Logger = combinedLogger
+	if !e.skipWorkspace {
+		if logPath, ok := execCtx.GetVariable("StateExecutionLog"); ok {
+			if logStr, ok := logPath.(string); ok && logStr != "" {
+				combinedLogger, err := logger.WithFileOutput(execCtx.Logger, logStr)
+				if err != nil {
+					e.logger.Warn("Failed to setup file logging", zap.Error(err))
+				} else if combinedLogger != nil {
+					execCtx.Logger = combinedLogger
+				}
 			}
 		}
 	}
@@ -1018,7 +1026,7 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	// Setup console capture to {{Output}}/run-console.log
 	// Only create if not already set up by parent (flow) to avoid truncating previous module output
 	createdCapture := false
-	if !e.dryRun && e.consoleCapture == nil {
+	if !e.skipWorkspace && !e.dryRun && e.consoleCapture == nil {
 		if logPath, ok := execCtx.GetVariable("StateConsoleLog"); ok {
 			if logStr, ok := logPath.(string); ok && logStr != "" {
 				var err error
@@ -1040,9 +1048,11 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	}
 
 	// Remove run-completed.json from previous run (fresh start)
-	if completedFile, ok := execCtx.GetVariable("StateCompletedFile"); ok {
-		if cfStr, ok := completedFile.(string); ok {
-			RemoveRunCompleted(cfStr)
+	if !e.skipWorkspace {
+		if completedFile, ok := execCtx.GetVariable("StateCompletedFile"); ok {
+			if cfStr, ok := completedFile.(string); ok {
+				RemoveRunCompleted(cfStr)
+			}
 		}
 	}
 
@@ -1098,7 +1108,7 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	)
 
 	// Export workflow state (write workflow YAML to output)
-	if !e.disableWorkflowState && !e.dryRun {
+	if !e.skipWorkspace && !e.disableWorkflowState && !e.dryRun {
 		if stateWorkflowFile, ok := execCtx.GetVariable("StateWorkflowFile"); ok {
 			if swfStr, ok := stateWorkflowFile.(string); ok && swfStr != "" {
 				if err := ExportWorkflowState(swfStr, module); err != nil {
@@ -1125,7 +1135,7 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	}
 
 	// Show target space folder location
-	if !e.dryRun && e.progressBar == nil {
+	if !e.skipWorkspace && !e.dryRun && e.progressBar == nil {
 		if targetSpace, ok := execCtx.GetVariable("TargetSpace"); ok {
 			if tsStr, ok := targetSpace.(string); ok && tsStr != "" {
 				e.printer.Info("Reserving target space folder at: %s", terminal.Cyan(tsStr))
@@ -1601,7 +1611,7 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	defer tempCleanup()
 	e.debugLogTargetVariables(execCtx)
 
-	if !e.dryRun && database.GetDB() != nil {
+	if !e.skipWorkspace && !e.dryRun && database.GetDB() != nil {
 		output, _ := execCtx.GetVariable("Output")
 		stateExecutionLog, _ := execCtx.GetVariable("StateExecutionLog")
 		stateCompletedFile, _ := execCtx.GetVariable("StateCompletedFile")
@@ -1621,19 +1631,21 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 
 	// Add file logging in server mode
 	// Setup file logging to {{Output}}/run-execution.log
-	if logPath, ok := execCtx.GetVariable("StateExecutionLog"); ok {
-		if logStr, ok := logPath.(string); ok && logStr != "" {
-			combinedLogger, err := logger.WithFileOutput(execCtx.Logger, logStr)
-			if err != nil {
-				e.logger.Warn("Failed to setup file logging", zap.Error(err))
-			} else if combinedLogger != nil {
-				execCtx.Logger = combinedLogger
+	if !e.skipWorkspace {
+		if logPath, ok := execCtx.GetVariable("StateExecutionLog"); ok {
+			if logStr, ok := logPath.(string); ok && logStr != "" {
+				combinedLogger, err := logger.WithFileOutput(execCtx.Logger, logStr)
+				if err != nil {
+					e.logger.Warn("Failed to setup file logging", zap.Error(err))
+				} else if combinedLogger != nil {
+					execCtx.Logger = combinedLogger
+				}
 			}
 		}
 	}
 
 	// Setup console capture to {{Output}}/run-console.log
-	if !e.dryRun {
+	if !e.skipWorkspace && !e.dryRun {
 		if logPath, ok := execCtx.GetVariable("StateConsoleLog"); ok {
 			if logStr, ok := logPath.(string); ok && logStr != "" {
 				var err error
@@ -1652,9 +1664,11 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	}
 
 	// Remove run-completed.json from previous run (fresh start)
-	if completedFile, ok := execCtx.GetVariable("StateCompletedFile"); ok {
-		if cfStr, ok := completedFile.(string); ok {
-			RemoveRunCompleted(cfStr)
+	if !e.skipWorkspace {
+		if completedFile, ok := execCtx.GetVariable("StateCompletedFile"); ok {
+			if cfStr, ok := completedFile.(string); ok {
+				RemoveRunCompleted(cfStr)
+			}
 		}
 	}
 
@@ -1721,7 +1735,7 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	}
 
 	// Show target space folder location
-	if !e.dryRun && e.progressBar == nil {
+	if !e.skipWorkspace && !e.dryRun && e.progressBar == nil {
 		if targetSpace, ok := execCtx.GetVariable("TargetSpace"); ok {
 			if tsStr, ok := targetSpace.(string); ok && tsStr != "" {
 				e.printer.Info("Reserving target space folder at: %s", terminal.Cyan(tsStr))
@@ -1730,7 +1744,7 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	}
 
 	// Export flow workflow state (write workflow YAML to output)
-	if !e.disableWorkflowState && !e.dryRun {
+	if !e.skipWorkspace && !e.disableWorkflowState && !e.dryRun {
 		if stateWorkflowFile, ok := execCtx.GetVariable("StateWorkflowFile"); ok {
 			if swfStr, ok := stateWorkflowFile.(string); ok && swfStr != "" {
 				if err := ExportWorkflowState(swfStr, flow); err != nil {

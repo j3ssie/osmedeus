@@ -1,17 +1,24 @@
 package functions
 
 import (
+	"archive/zip"
 	"bufio"
+	"crypto/tls"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/dop251/goja"
+	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 // sortUnix sorts a file using LC_ALL=C sort -u
@@ -102,6 +109,225 @@ func (vf *vmFunc) wgetUnix(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(err == nil)
 }
 
+// wget downloads a file using pure Go with segmented parallel download support.
+// For large files (>1MB) on servers that support Range requests, it splits the
+// download into 4 parallel segments for faster throughput.
+// Usage: wget(url, outputPath) -> bool
+func (vf *vmFunc) wget(call goja.FunctionCall) goja.Value {
+	rawURL := call.Argument(0).String()
+	outputPath := call.Argument(1).String()
+	logger.Get().Debug("Calling wget", zap.String("url", rawURL), zap.String("outputPath", outputPath))
+
+	if rawURL == "undefined" || rawURL == "" {
+		logger.Get().Warn("wget: empty URL provided")
+		return vf.vm.ToValue(false)
+	}
+	if outputPath == "undefined" || outputPath == "" {
+		logger.Get().Warn("wget: empty output path provided")
+		return vf.vm.ToValue(false)
+	}
+
+	// Remove existing file if present
+	_ = os.Remove(outputPath)
+
+	// Ensure parent directory exists
+	dir := filepath.Dir(outputPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		logger.Get().Warn("wget: failed to create output directory", zap.String("dir", dir), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	// HEAD request to check Content-Length and Accept-Ranges
+	headReq, err := http.NewRequest("HEAD", rawURL, nil)
+	if err != nil {
+		logger.Get().Warn("wget: failed to create HEAD request", zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+	headReq.Header.Set("User-Agent", core.DefaultUA)
+
+	headResp, err := client.Do(headReq)
+	if err != nil {
+		logger.Get().Debug("wget: HEAD request failed, falling back to simple download", zap.Error(err))
+		ok := wgetSimpleDownload(client, rawURL, outputPath)
+		return vf.vm.ToValue(ok)
+	}
+	_ = headResp.Body.Close()
+
+	contentLength, _ := strconv.ParseInt(headResp.Header.Get("Content-Length"), 10, 64)
+	acceptRanges := headResp.Header.Get("Accept-Ranges")
+
+	const minSegmentSize int64 = 1 << 20 // 1MB
+	const numSegments = 4
+
+	if acceptRanges == "bytes" && contentLength >= minSegmentSize {
+		logger.Get().Debug("wget: using segmented download",
+			zap.Int64("contentLength", contentLength),
+			zap.Int("segments", numSegments))
+		ok := wgetSegmentedDownload(client, rawURL, outputPath, contentLength, numSegments)
+		if ok {
+			return vf.vm.ToValue(true)
+		}
+		// If segmented download fails, fall back to simple
+		logger.Get().Debug("wget: segmented download failed, falling back to simple download")
+	}
+
+	ok := wgetSimpleDownload(client, rawURL, outputPath)
+	return vf.vm.ToValue(ok)
+}
+
+// wgetSimpleDownload downloads a file with a single GET request.
+func wgetSimpleDownload(client *http.Client, rawURL, outputPath string) bool {
+	req, err := http.NewRequest("GET", rawURL, nil)
+	if err != nil {
+		logger.Get().Warn("wget: failed to create GET request", zap.Error(err))
+		return false
+	}
+	req.Header.Set("User-Agent", core.DefaultUA)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Get().Warn("wget: GET request failed", zap.String("url", rawURL), zap.Error(err))
+		return false
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		logger.Get().Warn("wget: bad status code", zap.Int("status", resp.StatusCode))
+		return false
+	}
+
+	f, err := os.Create(outputPath)
+	if err != nil {
+		logger.Get().Warn("wget: failed to create output file", zap.Error(err))
+		return false
+	}
+	defer func() { _ = f.Close() }()
+
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		logger.Get().Warn("wget: failed to write file", zap.Error(err))
+		_ = os.Remove(outputPath)
+		return false
+	}
+
+	logger.Get().Debug("wget: simple download succeeded", zap.String("url", rawURL), zap.String("output", outputPath))
+	return true
+}
+
+// wgetSegmentedDownload downloads a file in parallel segments using Range requests.
+func wgetSegmentedDownload(client *http.Client, rawURL, outputPath string, contentLength int64, numSegments int) bool {
+	segmentSize := contentLength / int64(numSegments)
+	partFiles := make([]string, numSegments)
+
+	g := new(errgroup.Group)
+
+	for i := 0; i < numSegments; i++ {
+		partFile := fmt.Sprintf("%s.part%d", outputPath, i)
+		partFiles[i] = partFile
+
+		start := int64(i) * segmentSize
+		end := start + segmentSize - 1
+		if i == numSegments-1 {
+			end = contentLength - 1 // last segment gets remainder
+		}
+
+		g.Go(func() error {
+			return wgetDownloadSegment(client, rawURL, partFile, start, end)
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		logger.Get().Warn("wget: segment download failed", zap.Error(err))
+		// Cleanup part files
+		for _, pf := range partFiles {
+			_ = os.Remove(pf)
+		}
+		return false
+	}
+
+	// Assemble segments into final file
+	outFile, err := os.Create(outputPath)
+	if err != nil {
+		logger.Get().Warn("wget: failed to create output file for assembly", zap.Error(err))
+		for _, pf := range partFiles {
+			_ = os.Remove(pf)
+		}
+		return false
+	}
+
+	for _, pf := range partFiles {
+		partReader, err := os.Open(pf)
+		if err != nil {
+			_ = outFile.Close()
+			_ = os.Remove(outputPath)
+			for _, pf2 := range partFiles {
+				_ = os.Remove(pf2)
+			}
+			return false
+		}
+		_, err = io.Copy(outFile, partReader)
+		_ = partReader.Close()
+		if err != nil {
+			_ = outFile.Close()
+			_ = os.Remove(outputPath)
+			for _, pf2 := range partFiles {
+				_ = os.Remove(pf2)
+			}
+			return false
+		}
+	}
+
+	_ = outFile.Close()
+
+	// Cleanup part files
+	for _, pf := range partFiles {
+		_ = os.Remove(pf)
+	}
+
+	logger.Get().Debug("wget: segmented download succeeded",
+		zap.String("url", rawURL),
+		zap.String("output", outputPath),
+		zap.Int64("size", contentLength))
+	return true
+}
+
+// wgetDownloadSegment downloads a single byte range segment to a part file.
+func wgetDownloadSegment(client *http.Client, rawURL, partFile string, start, end int64) error {
+	req, err := http.NewRequest("GET", rawURL, nil)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("User-Agent", core.DefaultUA)
+	req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", start, end))
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("GET segment: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusPartialContent && resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status %d for range %d-%d", resp.StatusCode, start, end)
+	}
+
+	f, err := os.Create(partFile)
+	if err != nil {
+		return fmt.Errorf("create part file: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		return fmt.Errorf("write part file: %w", err)
+	}
+
+	return nil
+}
+
 // injectGitHubTokenForClone injects GitHub token into GitHub URLs for authentication
 // Priority: GITHUB_API_KEY (from settings) > GH_TOKEN (from OS env)
 func injectGitHubTokenForClone(repoURL string) string {
@@ -157,6 +383,323 @@ func (vf *vmFunc) gitClone(call goja.FunctionCall) goja.Value {
 		logger.Get().Debug("gitClone result", zap.String("repo", repo), zap.Bool("success", true))
 	}
 	return vf.vm.ToValue(err == nil)
+}
+
+// gitCloneSubfolder clones a git repository and extracts a specific subfolder
+// Usage: git_clone_subfolder(git_url, subfolder, dest) -> bool
+// Falls back to ZIP download if git command is not available (GitHub only)
+func (vf *vmFunc) gitCloneSubfolder(call goja.FunctionCall) goja.Value {
+	gitURL := call.Argument(0).String()
+	subfolder := call.Argument(1).String()
+	dest := call.Argument(2).String()
+
+	logger.Get().Debug("Calling gitCloneSubfolder",
+		zap.String("gitURL", gitURL),
+		zap.String("subfolder", subfolder),
+		zap.String("dest", dest))
+
+	// Validate required parameters
+	if gitURL == "undefined" || gitURL == "" {
+		logger.Get().Warn("gitCloneSubfolder: empty git URL provided")
+		return vf.vm.ToValue(false)
+	}
+	if subfolder == "undefined" || subfolder == "" {
+		logger.Get().Warn("gitCloneSubfolder: empty subfolder provided")
+		return vf.vm.ToValue(false)
+	}
+	if dest == "undefined" || dest == "" {
+		logger.Get().Warn("gitCloneSubfolder: empty destination provided")
+		return vf.vm.ToValue(false)
+	}
+
+	// Create temp directory for cloning
+	tempDir, err := os.MkdirTemp("", "git-clone-subfolder-*")
+	if err != nil {
+		logger.Get().Warn("gitCloneSubfolder: failed to create temp directory", zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+	defer func() { _ = os.RemoveAll(tempDir) }()
+
+	cloneSuccess := false
+
+	// Try git clone first
+	_, gitErr := exec.LookPath("git")
+	if gitErr == nil {
+		// Inject GitHub token for private repo access
+		repoURL := injectGitHubTokenForClone(gitURL)
+		cmd := exec.Command("git", "clone", "--depth", "1", repoURL, tempDir)
+		if err := cmd.Run(); err == nil {
+			cloneSuccess = true
+			logger.Get().Debug("gitCloneSubfolder: git clone succeeded", zap.String("gitURL", gitURL))
+		} else {
+			logger.Get().Debug("gitCloneSubfolder: git clone failed, trying ZIP fallback", zap.Error(err))
+		}
+	}
+
+	// Fallback to ZIP download for GitHub URLs
+	if !cloneSuccess && isGitHubURL(gitURL) {
+		zipURL := convertToGitHubZipURL(gitURL)
+		if zipURL != "" {
+			if err := downloadAndExtractZip(zipURL, tempDir); err == nil {
+				cloneSuccess = true
+				logger.Get().Debug("gitCloneSubfolder: ZIP download succeeded", zap.String("zipURL", zipURL))
+			} else {
+				logger.Get().Warn("gitCloneSubfolder: ZIP download failed", zap.String("zipURL", zipURL), zap.Error(err))
+			}
+		}
+	}
+
+	if !cloneSuccess {
+		logger.Get().Warn("gitCloneSubfolder: both git clone and ZIP fallback failed", zap.String("gitURL", gitURL))
+		return vf.vm.ToValue(false)
+	}
+
+	// Find the subfolder in the cloned/extracted content
+	// For ZIP extracts, there's usually a root folder like "repo-main/"
+	subfolderPath := findSubfolder(tempDir, subfolder)
+	if subfolderPath == "" {
+		logger.Get().Warn("gitCloneSubfolder: subfolder not found",
+			zap.String("subfolder", subfolder),
+			zap.String("tempDir", tempDir))
+		return vf.vm.ToValue(false)
+	}
+
+	// Remove destination if it exists
+	if err := os.RemoveAll(dest); err != nil {
+		logger.Get().Warn("gitCloneSubfolder: failed to remove existing destination", zap.String("dest", dest), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	// Ensure parent directory exists
+	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+		logger.Get().Warn("gitCloneSubfolder: failed to create parent directory", zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	// Copy subfolder to destination
+	if err := copyDir(subfolderPath, dest); err != nil {
+		logger.Get().Warn("gitCloneSubfolder: failed to copy subfolder",
+			zap.String("src", subfolderPath),
+			zap.String("dest", dest),
+			zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	logger.Get().Debug("gitCloneSubfolder completed successfully",
+		zap.String("gitURL", gitURL),
+		zap.String("subfolder", subfolder),
+		zap.String("dest", dest))
+
+	return vf.vm.ToValue(true)
+}
+
+// isGitHubURL checks if the URL is a GitHub repository URL
+func isGitHubURL(url string) bool {
+	return strings.Contains(url, "github.com")
+}
+
+// convertToGitHubZipURL converts a GitHub repo URL to a ZIP download URL
+// Supports: https://github.com/user/repo, git@github.com:user/repo.git
+func convertToGitHubZipURL(gitURL string) string {
+	// Handle SSH URLs: git@github.com:user/repo.git
+	if strings.HasPrefix(gitURL, "git@github.com:") {
+		path := strings.TrimPrefix(gitURL, "git@github.com:")
+		path = strings.TrimSuffix(path, ".git")
+		return fmt.Sprintf("https://github.com/%s/archive/refs/heads/main.zip", path)
+	}
+
+	// Handle HTTPS URLs: https://github.com/user/repo
+	if strings.HasPrefix(gitURL, "https://github.com/") {
+		path := strings.TrimPrefix(gitURL, "https://github.com/")
+		path = strings.TrimSuffix(path, ".git")
+		return fmt.Sprintf("https://github.com/%s/archive/refs/heads/main.zip", path)
+	}
+
+	// Handle http URLs
+	if strings.HasPrefix(gitURL, "http://github.com/") {
+		path := strings.TrimPrefix(gitURL, "http://github.com/")
+		path = strings.TrimSuffix(path, ".git")
+		return fmt.Sprintf("https://github.com/%s/archive/refs/heads/main.zip", path)
+	}
+
+	return ""
+}
+
+// downloadAndExtractZip downloads a ZIP file and extracts it to the destination
+func downloadAndExtractZip(zipURL, dest string) error {
+	// Download ZIP to temp file
+	resp, err := http.Get(zipURL)
+	if err != nil {
+		return fmt.Errorf("failed to download ZIP: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		// Try master branch if main fails
+		masterURL := strings.Replace(zipURL, "/main.zip", "/master.zip", 1)
+		resp, err = http.Get(masterURL)
+		if err != nil {
+			return fmt.Errorf("failed to download ZIP (master fallback): %w", err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("ZIP download failed with status: %d", resp.StatusCode)
+		}
+	}
+
+	// Create temp file for ZIP
+	tmpFile, err := os.CreateTemp("", "git-zip-*.zip")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	defer func() { _ = os.Remove(tmpPath) }()
+
+	// Write response to temp file
+	_, err = io.Copy(tmpFile, resp.Body)
+	_ = tmpFile.Close()
+	if err != nil {
+		return fmt.Errorf("failed to write ZIP file: %w", err)
+	}
+
+	// Extract ZIP
+	return extractZip(tmpPath, dest)
+}
+
+// extractZip extracts a ZIP file to the destination directory
+func extractZip(zipPath, dest string) error {
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return fmt.Errorf("failed to open ZIP: %w", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	for _, f := range r.File {
+		fpath := filepath.Join(dest, f.Name)
+
+		// Security check: prevent path traversal
+		if !strings.HasPrefix(filepath.Clean(fpath), filepath.Clean(dest)+string(os.PathSeparator)) {
+			continue
+		}
+
+		if f.FileInfo().IsDir() {
+			if err := os.MkdirAll(fpath, 0755); err != nil {
+				return err
+			}
+			continue
+		}
+
+		// Create parent directories
+		if err := os.MkdirAll(filepath.Dir(fpath), 0755); err != nil {
+			return err
+		}
+
+		// Extract file
+		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			return err
+		}
+
+		rc, err := f.Open()
+		if err != nil {
+			_ = outFile.Close()
+			return err
+		}
+
+		_, err = io.Copy(outFile, rc)
+		_ = rc.Close()
+		_ = outFile.Close()
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// findSubfolder finds the subfolder path, handling ZIP extraction root folders
+func findSubfolder(baseDir, subfolder string) string {
+	// Try direct path first
+	directPath := filepath.Join(baseDir, subfolder)
+	if info, err := os.Stat(directPath); err == nil && info.IsDir() {
+		return directPath
+	}
+
+	// For ZIP extracts, there's usually a root folder like "repo-main/"
+	// Check one level deep
+	entries, err := os.ReadDir(baseDir)
+	if err != nil {
+		return ""
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			nestedPath := filepath.Join(baseDir, entry.Name(), subfolder)
+			if info, err := os.Stat(nestedPath); err == nil && info.IsDir() {
+				return nestedPath
+			}
+		}
+	}
+
+	return ""
+}
+
+// copyDir recursively copies a directory from src to dst
+func copyDir(src, dst string) error {
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
+		return err
+	}
+
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+
+		if entry.IsDir() {
+			if err := copyDir(srcPath, dstPath); err != nil {
+				return err
+			}
+		} else {
+			if err := copyFile(srcPath, dstPath); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// copyFile copies a single file from src to dst
+func copyFile(src, dst string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = srcFile.Close() }()
+
+	srcInfo, err := srcFile.Stat()
+	if err != nil {
+		return err
+	}
+
+	dstFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, srcInfo.Mode())
+	if err != nil {
+		return err
+	}
+	defer func() { _ = dstFile.Close() }()
+
+	_, err = io.Copy(dstFile, srcFile)
+	return err
 }
 
 // zipUnix creates a zip archive using the zip command

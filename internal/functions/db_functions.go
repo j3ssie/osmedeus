@@ -278,6 +278,106 @@ func (vf *vmFunc) dbQuickImportAsset(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(true)
 }
 
+// dbPartialImportAsset imports an asset with only workspace, asset_type, and asset_value
+// Usage: db_partial_import_asset('example.com', 'domain', 'sub.example.com')
+func (vf *vmFunc) dbPartialImportAsset(call goja.FunctionCall) goja.Value {
+	if len(call.Arguments) < 3 {
+		return vf.errorValue("db_partial_import_asset requires 3 arguments: workspace, asset_type, asset_value")
+	}
+
+	workspace := call.Argument(0).String()
+	assetType := call.Argument(1).String()
+	assetValue := call.Argument(2).String()
+
+	db := database.GetDB()
+	if db == nil {
+		return vf.errorValue("database not connected")
+	}
+
+	ctx := context.Background()
+	now := time.Now()
+	asset := &database.Asset{
+		Workspace:  workspace,
+		AssetValue: assetValue,
+		AssetType:  assetType,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+
+	_, err := db.NewInsert().Model(asset).
+		On("CONFLICT (workspace, asset_value, url) DO UPDATE").
+		Set("updated_at = EXCLUDED.updated_at").
+		Set("asset_type = EXCLUDED.asset_type").
+		Exec(ctx)
+
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("import failed: %v", err))
+	}
+
+	return vf.vm.ToValue(true)
+}
+
+// dbPartialImportAssetFile reads a file line by line and imports each line as an asset
+// Usage: db_partial_import_asset_file('example.com', 'domain', '/path/to/subdomains.txt')
+func (vf *vmFunc) dbPartialImportAssetFile(call goja.FunctionCall) goja.Value {
+	if len(call.Arguments) < 3 {
+		return vf.errorValue("db_partial_import_asset_file requires 3 arguments: workspace, asset_type, file_path")
+	}
+
+	workspace := call.Argument(0).String()
+	assetType := call.Argument(1).String()
+	filePath := call.Argument(2).String()
+
+	db := database.GetDB()
+	if db == nil {
+		return vf.errorValue("database not connected")
+	}
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to open file: %v", err))
+	}
+	defer f.Close()
+
+	ctx := context.Background()
+	count := 0
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		now := time.Now()
+		asset := &database.Asset{
+			Workspace:  workspace,
+			AssetValue: line,
+			AssetType:  assetType,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		}
+
+		_, err := db.NewInsert().Model(asset).
+			On("CONFLICT (workspace, asset_value, url) DO UPDATE").
+			Set("updated_at = EXCLUDED.updated_at").
+			Set("asset_type = EXCLUDED.asset_type").
+			Exec(ctx)
+
+		if err != nil {
+			logger.Get().Warn("dbPartialImportAssetFile: failed to import line",
+				zap.String("line", line), zap.Error(err))
+			continue
+		}
+		count++
+	}
+
+	if err := scanner.Err(); err != nil {
+		return vf.errorValue(fmt.Sprintf("error reading file: %v", err))
+	}
+
+	return vf.vm.ToValue(count)
+}
+
 // dbRawInsertAsset inserts an asset from JSON data (pure insert, fails if duplicate exists)
 // Usage: db_raw_insert_asset('example.com', '{"asset_value":"sub.example.com","asset_type":"subdomain","url":"https://..."}')
 // Returns: asset ID (int) on success, error string on failure

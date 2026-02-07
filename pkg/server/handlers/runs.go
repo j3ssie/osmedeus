@@ -431,6 +431,9 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 			exec := executor.NewExecutor()
 			exec.SetServerMode(true) // Enable file logging for server mode
 			exec.SetLoader(loader)
+			if req.EmptyTarget {
+				exec.SetSkipWorkspace(true)
+			}
 
 			// Set up database progress tracking
 			if run != nil {

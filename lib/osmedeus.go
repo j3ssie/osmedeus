@@ -103,6 +103,7 @@ func RunWithContext(ctx context.Context, target string, workflowYAML string, opt
 	exec.SetVerbose(opts.Verbose)
 	exec.SetSilent(opts.Silent)
 	exec.SetDisableWorkflowState(opts.DisableWorkflowState)
+	exec.SetSkipWorkspace(opts.SkipWorkspace)
 
 	// Execute workflow
 	result, err := exec.ExecuteModule(ctx, workflow, params, cfg)
