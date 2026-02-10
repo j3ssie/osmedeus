@@ -1,0 +1,432 @@
+{
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "kind": "review",
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./frontend/src/app/app.guard.spec.ts"
+                },
+                "region": {
+                  "endColumn": 189,
+                  "endLine": 38,
+                  "snippet": {
+                    "text": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+                  },
+                  "startColumn": 35,
+                  "startLine": 38
+                }
+              },
+              "properties": {
+                "entropy": "5.44",
+                "validate_command": "kingfisher validate --rule kingfisher.jwt.1 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'",
+                "validation_status": "Inactive Credential"
+              }
+            }
+          ],
+          "message": {
+            "text": "Rule JSON Web Token (base64url-encoded) matched ./frontend/src/app/app.guard.spec.ts"
+          },
+          "partialFingerprints": {
+            "fingerprint": "13396682681579408125"
+          },
+          "ruleId": "JSON Web Token (base64url-encoded)"
+        },
+        {
+          "kind": "review",
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./frontend/src/app/last-login-ip/last-login-ip.component.spec.ts"
+                },
+                "region": {
+                  "endColumn": 161,
+                  "endLine": 61,
+                  "snippet": {
+                    "text": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7Imxhc3RMb2dpbklwIjoiMS4yLjMuNCJ9fQ.RAkmdqwNypuOxv3SDjPO4xMKvd1CddKvDFYDBfUt3bg"
+                  },
+                  "startColumn": 35,
+                  "startLine": 61
+                }
+              },
+              "properties": {
+                "entropy": "5.49",
+                "validate_command": "kingfisher validate --rule kingfisher.jwt.1 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7Imxhc3RMb2dpbklwIjoiMS4yLjMuNCJ9fQ.RAkmdqwNypuOxv3SDjPO4xMKvd1CddKvDFYDBfUt3bg'",
+                "validation_status": "Inactive Credential"
+              }
+            }
+          ],
+          "message": {
+            "text": "Rule JSON Web Token (base64url-encoded) matched ./frontend/src/app/last-login-ip/last-login-ip.component.spec.ts"
+          },
+          "partialFingerprints": {
+            "fingerprint": "17097908493333839467"
+          },
+          "ruleId": "JSON Web Token (base64url-encoded)"
+        },
+        {
+          "kind": "review",
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./frontend/src/app/last-login-ip/last-login-ip.component.spec.ts"
+                },
+                "region": {
+                  "endColumn": 130,
+                  "endLine": 67,
+                  "snippet": {
+                    "text": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7fX0.bVBhvll6IaeR3aUdoOeyR8YZe2S2DfhGAxTGfd9enLw"
+                  },
+                  "startColumn": 35,
+                  "startLine": 67
+                }
+              },
+              "properties": {
+                "entropy": "5.32",
+                "validate_command": "kingfisher validate --rule kingfisher.jwt.1 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7fX0.bVBhvll6IaeR3aUdoOeyR8YZe2S2DfhGAxTGfd9enLw'",
+                "validation_status": "Inactive Credential"
+              }
+            }
+          ],
+          "message": {
+            "text": "Rule JSON Web Token (base64url-encoded) matched ./frontend/src/app/last-login-ip/last-login-ip.component.spec.ts"
+          },
+          "partialFingerprints": {
+            "fingerprint": "10724893076777287828"
+          },
+          "ruleId": "JSON Web Token (base64url-encoded)"
+        },
+        {
+          "kind": "review",
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./lib/insecurity.ts"
+                },
+                "region": {
+                  "endColumn": 899,
+                  "endLine": 23,
+                  "snippet": {
+                    "text": "-----BEGIN RSA PRIVATE KEY-----\\r\\nMIICXAIBAAKBgQDNwqLEe9wgTXCbC7+RPdDbBbeqjdbs4kOPOIGzqLpXvJXlxxW8iMz0EaM4BKUqYsIa+ndv3NAn2RxCd5ubVdJJcX43zO6Ko0TFEZx/65gY3BE0O6syCEmUP4qbSd6exou/F+WTISzbQ5FBVPVmhnYhG/kpwt/cIxK5iUn5hm+4tQIDAQABAoGBAI+8xiPoOrA+KMnG/T4jJsG6TsHQcDHvJi7o1IKC/hnIXha0atTX5AUkRRce95qSfvKFweXdJXSQ0JMGJyfuXgU6dI0TcseFRfewXAa/ssxAC+iUVR6KUMh1PE2wXLitfeI6JLvVtrBYswm2I7CtY0q8n5AGimHWVXJPLfGV7m0BAkEA+fqFt2LXbLtyg6wZyxMA/cnmt5Nt3U2dAu77MzFJvibANUNHE4HPLZxjGNXN+a6m0K6TD4kDdh5HfUYLWWRBYQJBANK3carmulBwqzcDBjsJ0YrIONBpCAsXxk8idXb8jL9aNIg15Wumm2enqqObahDHB5jnGOLmbasizvSVqypfM9UCQCQl8xIqy+YgURXzXCN+kwUgHinrutZms87Jyi+D8Br8NY0+Nlf+zHvXAomD2W5CsEK7C+8SLBr3k/TsnRWHJuECQHFE9RA2OP8WoaLPuGCyFXaxzICThSRZYluVnWkZtxsBhW2W8z1b8PvWUE7kMy7TnkzeJS2LSnaNHoyxi7IaPQUCQCwWU4U+v4lD7uYBw00Ga/xt+7+UqFPlPVdz1yyr4q24Zxaw0LgmuEvgU5dycq8N7JxjTubX0MIRR+G9fmDBBl8=\\r\\n-----END RSA PRIVATE KEY-----"
+                  },
+                  "startColumn": 20,
+                  "startLine": 23
+                }
+              },
+              "properties": {
+                "entropy": "5.98",
+                "validation_status": "Not Attempted"
+              }
+            }
+          ],
+          "message": {
+            "text": "Rule Contains Private Key matched ./lib/insecurity.ts"
+          },
+          "partialFingerprints": {
+            "fingerprint": "6631192759767396339"
+          },
+          "ruleId": "Contains Private Key"
+        },
+        {
+          "kind": "review",
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./lib/insecurity.ts"
+                },
+                "region": {
+                  "endColumn": 870,
+                  "endLine": 23,
+                  "snippet": {
+                    "text": "\\r\\nMIICXAIBAAKBgQDNwqLEe9wgTXCbC7+RPdDbBbeqjdbs4kOPOIGzqLpXvJXlxxW8iMz0EaM4BKUqYsIa+ndv3NAn2RxCd5ubVdJJcX43zO6Ko0TFEZx/65gY3BE0O6syCEmUP4qbSd6exou/F+WTISzbQ5FBVPVmhnYhG/kpwt/cIxK5iUn5hm+4tQIDAQABAoGBAI+8xiPoOrA+KMnG/T4jJsG6TsHQcDHvJi7o1IKC/hnIXha0atTX5AUkRRce95qSfvKFweXdJXSQ0JMGJyfuXgU6dI0TcseFRfewXAa/ssxAC+iUVR6KUMh1PE2wXLitfeI6JLvVtrBYswm2I7CtY0q8n5AGimHWVXJPLfGV7m0BAkEA+fqFt2LXbLtyg6wZyxMA/cnmt5Nt3U2dAu77MzFJvibANUNHE4HPLZxjGNXN+a6m0K6TD4kDdh5HfUYLWWRBYQJBANK3carmulBwqzcDBjsJ0YrIONBpCAsXxk8idXb8jL9aNIg15Wumm2enqqObahDHB5jnGOLmbasizvSVqypfM9UCQCQl8xIqy+YgURXzXCN+kwUgHinrutZms87Jyi+D8Br8NY0+Nlf+zHvXAomD2W5CsEK7C+8SLBr3k/TsnRWHJuECQHFE9RA2OP8WoaLPuGCyFXaxzICThSRZYluVnWkZtxsBhW2W8z1b8PvWUE7kMy7TnkzeJS2LSnaNHoyxi7IaPQUCQCwWU4U+v4lD7uYBw00Ga/xt+7+UqFPlPVdz1yyr4q24Zxaw0LgmuEvgU5dycq8N7JxjTubX0MIRR+G9fmDBBl8=\\r\\n"
+                  },
+                  "startColumn": 51,
+                  "startLine": 23
+                }
+              },
+              "properties": {
+                "entropy": "5.95",
+                "validation_status": "Not Attempted"
+              }
+            }
+          ],
+          "message": {
+            "text": "Rule PEM-Encoded Private Key matched ./lib/insecurity.ts"
+          },
+          "partialFingerprints": {
+            "fingerprint": "2859737476664627933"
+          },
+          "ruleId": "PEM-Encoded Private Key"
+        },
+        {
+          "kind": "review",
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./routes/web3Wallet.ts"
+                },
+                "region": {
+                  "endColumn": 112,
+                  "endLine": 18,
+                  "snippet": {
+                    "text": "FZDapFZSs1l6yhHW4VnQqsi18qSd-3GJ"
+                  },
+                  "startColumn": 81,
+                  "startLine": 18
+                }
+              },
+              "properties": {
+                "entropy": "4.62",
+                "validate_command": "kingfisher validate --rule kingfisher.alchemy.1 'FZDapFZSs1l6yhHW4VnQqsi18qSd-3GJ'",
+                "validation_status": "Active Credential"
+              }
+            }
+          ],
+          "message": {
+            "text": "Rule Alchemy API Key matched ./routes/web3Wallet.ts"
+          },
+          "partialFingerprints": {
+            "fingerprint": "8430051877778296672"
+          },
+          "ruleId": "Alchemy API Key"
+        },
+        {
+          "kind": "review",
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./test/api/userApiSpec.ts"
+                },
+                "region": {
+                  "endColumn": 773,
+                  "endLine": 302,
+                  "snippet": {
+                    "text": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdGF0dXMiOiJzdWNjZXNzIiwiZGF0YSI6eyJpZCI6MSwidXNlcm5hbWUiOiIiLCJlbWFpbCI6ImFkbWluQGp1aWNlLXNoLm9wIiwicGFzc3dvcmQiOiIwMTkyMDIzYTdiYmQ3MzI1MDUxNmYwNjlkZjE4YjUwMCIsInJvbGUiOiJhZG1pbiIsImxhc3RMb2dpbklwIjoiMC4wLjAuMCIsInByb2ZpbGVJbWFnZSI6ImRlZmF1bHQuc3ZnIiwidG90cFNlY3JldCI6IiIsImlzQWN0aXZlIjp0cnVlLCJjcmVhdGVkQXQiOiIyMDE5LTA4LTE5IDE1OjU2OjE1LjYyOSArMDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDE5LTA4LTE5IDE1OjU2OjE1LjYyOSArMDA6MDAiLCJkZWxldGVkQXQiOm51bGx9LCJpYXQiOjE1NjYyMzAyMjQsImV4cCI6MTU2NjI0ODIyNH0.FL0kkcInY5sDMGKeLHfEOYDTQd3BjR6_mK7Tcm_RH6iCLotTSRRoRxHpLkbtIQKqBFIt14J4BpLapkzG7ppRWcEley5nego-4iFOmXQvCBz5ISS3HdtM0saJnOe0agyVUen3huFp4F2UCth_y2ScjMn_4AgW66cz8NSFPRVpC8g"
+                  },
+                  "startColumn": 78,
+                  "startLine": 302
+                }
+              },
+              "properties": {
+                "entropy": "5.71",
+                "validate_command": "kingfisher validate --rule kingfisher.jwt.1 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdGF0dXMiOiJzdWNjZXNzIiwiZGF0YSI6eyJpZCI6MSwidXNlcm5hbWUiOiIiLCJlbWFpbCI6ImFkbWluQGp1aWNlLXNoLm9wIiwicGFzc3dvcmQiOiIwMTkyMDIzYTdiYmQ3MzI1MDUxNmYwNjlkZjE4YjUwMCIsInJvbGUiOiJhZG1pbiIsImxhc3RMb2dpbklwIjoiMC4wLjAuMCIsInByb2ZpbGVJbWFnZSI6ImRlZmF1bHQuc3ZnIiwidG90cFNlY3JldCI6IiIsImlzQWN0aXZlIjp0cnVlLCJjcmVhdGVkQXQiOiIyMDE5LTA4LTE5IDE1OjU2OjE1LjYyOSArMDA6MDAiLCJ1cGRhdGVkQXQiOiIyMDE5LTA4LTE5IDE1OjU2OjE1LjYyOSArMDA6MDAiLCJkZWxldGVkQXQiOm51bGx9LCJpYXQiOjE1NjYyMzAyMjQsImV4cCI6MTU2NjI0ODIyNH0.FL0kkcInY5sDMGKeLHfEOYDTQd3BjR6_mK7Tcm_RH6iCLotTSRRoRxHpLkbtIQKqBFIt14J4BpLapkzG7ppRWcEley5nego-4iFOmXQvCBz5ISS3HdtM0saJnOe0agyVUen3huFp4F2UCth_y2ScjMn_4AgW66cz8NSFPRVpC8g'",
+                "validation_status": "Inactive Credential"
+              }
+            }
+          ],
+          "message": {
+            "text": "Rule JSON Web Token (base64url-encoded) matched ./test/api/userApiSpec.ts"
+          },
+          "partialFingerprints": {
+            "fingerprint": "5824498993719796593"
+          },
+          "ruleId": "JSON Web Token (base64url-encoded)"
+        },
+        {
+          "kind": "review",
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./test/cypress/e2e/forgedJwt.spec.ts"
+                },
+                "region": {
+                  "endColumn": 173,
+                  "endLine": 22,
+                  "snippet": {
+                    "text": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRhIjp7ImVtYWlsIjoicnNhX2xvcmRAanVpY2Utc2gub3AifSwiaWF0IjoxNTgzMDM3NzExfQ.gShXDT5TrE5736mpIbfVDEcQbLfteJaQUG7Z0PH8Xc8"
+                  },
+                  "startColumn": 15,
+                  "startLine": 22
+                }
+              },
+              "properties": {
+                "entropy": "5.65",
+                "validate_command": "kingfisher validate --rule kingfisher.jwt.1 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRhIjp7ImVtYWlsIjoicnNhX2xvcmRAanVpY2Utc2gub3AifSwiaWF0IjoxNTgzMDM3NzExfQ.gShXDT5TrE5736mpIbfVDEcQbLfteJaQUG7Z0PH8Xc8'",
+                "validation_status": "Inactive Credential"
+              }
+            }
+          ],
+          "message": {
+            "text": "Rule JSON Web Token (base64url-encoded) matched ./test/cypress/e2e/forgedJwt.spec.ts"
+          },
+          "partialFingerprints": {
+            "fingerprint": "13030692059774827715"
+          },
+          "ruleId": "JSON Web Token (base64url-encoded)"
+        },
+        {
+          "kind": "review",
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./test/server/currentUserSpec.ts"
+                },
+                "region": {
+                  "endColumn": 387,
+                  "endLine": 33,
+                  "snippet": {
+                    "text": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJkYXRhIjp7ImlkIjoxLCJlbWFpbCI6ImFkbWluQGp1aWNlLXNoLm9wIiwibGFzdExvZ2luSXAiOiIwLjAuMC4wIiwicHJvZmlsZUltYWdlIjoiZGVmYXVsdC5zdmcifSwiaWF0IjoxNTgyMjIyMzY0fQ.CHiFQieZudYlrd1o8Ih-Izv7XY_WZupt8Our-CP9HqsczyEKqrWC7wWguOgVuSGDN_S3mP4FyuEFN8l60aAhVsUbqzFetvJkFwe5nKVhc9dHuen6cujQLMcTlHLKassOSDP41Q-MkKWcUOQu0xUkTMfEq2hPMHpMosDb4benzH0"
+                  },
+                  "startColumn": 25,
+                  "startLine": 33
+                }
+              },
+              "properties": {
+                "entropy": "5.82",
+                "validate_command": "kingfisher validate --rule kingfisher.jwt.1 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJkYXRhIjp7ImlkIjoxLCJlbWFpbCI6ImFkbWluQGp1aWNlLXNoLm9wIiwibGFzdExvZ2luSXAiOiIwLjAuMC4wIiwicHJvZmlsZUltYWdlIjoiZGVmYXVsdC5zdmcifSwiaWF0IjoxNTgyMjIyMzY0fQ.CHiFQieZudYlrd1o8Ih-Izv7XY_WZupt8Our-CP9HqsczyEKqrWC7wWguOgVuSGDN_S3mP4FyuEFN8l60aAhVsUbqzFetvJkFwe5nKVhc9dHuen6cujQLMcTlHLKassOSDP41Q-MkKWcUOQu0xUkTMfEq2hPMHpMosDb4benzH0'",
+                "validation_status": "Inactive Credential"
+              }
+            }
+          ],
+          "message": {
+            "text": "Rule JSON Web Token (base64url-encoded) matched ./test/server/currentUserSpec.ts"
+          },
+          "partialFingerprints": {
+            "fingerprint": "2431023229605175231"
+          },
+          "ruleId": "JSON Web Token (base64url-encoded)"
+        },
+        {
+          "kind": "review",
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./test/server/verifySpec.ts"
+                },
+                "region": {
+                  "endColumn": 205,
+                  "endLine": 297,
+                  "snippet": {
+                    "text": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRhIjp7ImVtYWlsIjoicnNhX2xvcmRAanVpY2Utc2gub3AifSwiaWF0IjoxNTgyMjIxNTc1fQ.ycFwtqh4ht4Pq9K5rhiPPY256F9YCTIecd4FHFuSEAg"
+                  },
+                  "startColumn": 47,
+                  "startLine": 297
+                }
+              },
+              "properties": {
+                "entropy": "5.60",
+                "validate_command": "kingfisher validate --rule kingfisher.jwt.1 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRhIjp7ImVtYWlsIjoicnNhX2xvcmRAanVpY2Utc2gub3AifSwiaWF0IjoxNTgyMjIxNTc1fQ.ycFwtqh4ht4Pq9K5rhiPPY256F9YCTIecd4FHFuSEAg'",
+                "validation_status": "Inactive Credential"
+              }
+            }
+          ],
+          "message": {
+            "text": "Rule JSON Web Token (base64url-encoded) matched ./test/server/verifySpec.ts"
+          },
+          "partialFingerprints": {
+            "fingerprint": "14045478640280481189"
+          },
+          "ruleId": "JSON Web Token (base64url-encoded)"
+        },
+        {
+          "kind": "review",
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./test/server/verifySpec.ts"
+                },
+                "region": {
+                  "endColumn": 190,
+                  "endLine": 309,
+                  "snippet": {
+                    "text": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRhIjp7ImVtYWlsIjoicnNhX2xvcmRAIn0sImlhdCI6MTU4MjIyMTY3NX0.50f6VAIQk2Uzpf3sgH-1JVrrTuwudonm2DKn2ec7Tg8"
+                  },
+                  "startColumn": 47,
+                  "startLine": 309
+                }
+              },
+              "properties": {
+                "entropy": "5.55",
+                "validate_command": "kingfisher validate --rule kingfisher.jwt.1 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRhIjp7ImVtYWlsIjoicnNhX2xvcmRAIn0sImlhdCI6MTU4MjIyMTY3NX0.50f6VAIQk2Uzpf3sgH-1JVrrTuwudonm2DKn2ec7Tg8'",
+                "validation_status": "Inactive Credential"
+              }
+            }
+          ],
+          "message": {
+            "text": "Rule JSON Web Token (base64url-encoded) matched ./test/server/verifySpec.ts"
+          },
+          "partialFingerprints": {
+            "fingerprint": "15075545425693802562"
+          },
+          "ruleId": "JSON Web Token (base64url-encoded)"
+        }
+      ],
+      "tool": {
+        "driver": {
+          "downloadUri": "https://github.com/mongodb/kingfisher",
+          "fullName": "Kingfisher 1.80.0",
+          "informationUri": "https://github.com/mongodb/kingfisher",
+          "name": "kingfisher",
+          "rules": [
+            {
+              "help": {
+                "text": "https://www.alchemy.com/rpc/ethereum\nhttps://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-ownership-endpoints/get-nf-ts-for-owner-v-3"
+              },
+              "id": "Alchemy API Key",
+              "shortDescription": {
+                "text": "Alchemy API Key"
+              }
+            },
+            {
+              "help": {
+                "text": ""
+              },
+              "id": "Contains Private Key",
+              "shortDescription": {
+                "text": "Contains Private Key"
+              }
+            },
+            {
+              "help": {
+                "text": ""
+              },
+              "id": "PEM-Encoded Private Key",
+              "shortDescription": {
+                "text": "PEM-Encoded Private Key"
+              }
+            },
+            {
+              "help": {
+                "text": "https://en.wikipedia.org/wiki/JSON_Web_Token\nhttps://datatracker.ietf.org/doc/html/rfc7519\nhttps://en.wikipedia.org/wiki/Base64#URL_applications\nhttps://datatracker.ietf.org/doc/html/rfc4648\nhttps://developer.okta.com/blog/2018/06/20/what-happens-if-your-jwt-is-stolen"
+              },
+              "id": "JSON Web Token (base64url-encoded)",
+              "shortDescription": {
+                "text": "JSON Web Token (base64url-encoded)"
+              }
+            }
+          ],
+          "semanticVersion": "1.80.0",
+          "shortDescription": {
+            "text": "MongoDB's blazingly fast and accurate secret scanning and validation tool"
+          }
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}

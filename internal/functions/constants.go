@@ -293,6 +293,10 @@ const (
 	FnDBImportVuln          = "db_import_vuln"            // db_import_vuln(workspace, json_data) -> bool
 	FnDBImportVulnFromFile  = "db_import_vuln_from_file"  // db_import_vuln_from_file(workspace, file_path) -> int (count)
 
+	// SARIF import functions
+	FnDBImportSARIF          = "db_import_sarif"            // db_import_sarif(workspace, file_path) -> map (stats)
+	FnConvertSARIFToMarkdown = "convert_sarif_to_markdown"  // convert_sarif_to_markdown(input_path, output_path) -> bool
+
 	// Diff functions - asset and vulnerability change tracking
 	FnDBAssetDiff       = "db_asset_diff"         // db_asset_diff(workspace) -> string (JSONL)
 	FnDBVulnDiff        = "db_vuln_diff"          // db_vuln_diff(workspace) -> string (JSONL)
@@ -537,6 +541,10 @@ func AllFunctions() []string {
 		FnDBImportAssetFromFile,
 		FnDBImportVuln,
 		FnDBImportVulnFromFile,
+
+		// SARIF import functions
+		FnDBImportSARIF,
+		FnConvertSARIFToMarkdown,
 
 		// Diff functions
 		FnDBAssetDiff,
@@ -815,6 +823,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnConvertCSVToMarkdown, "convert_csv_to_markdown(path)", "Convert CSV to markdown table", "string", "convert_csv_to_markdown('{{Output}}/data.csv')"},
 			{FnRenderMarkdownReport, "render_markdown_report(template_path, output_path)", "Render markdown template with osm-func blocks", "bool", "render_markdown_report('{{Templates}}/report.md', '{{Output}}/report.md')"},
 			{FnGenerateSecurityReport, "generate_security_report(template_path)", "Generate security report from template to {{Output}}/security-report.md and register as artifact", "bool", "generate_security_report('{{MarkdownTemplates}}/security-report-template.md')"},
+			{FnConvertSARIFToMarkdown, "convert_sarif_to_markdown(input_path, output_path)", "Convert SARIF file to markdown table with severity, location, title, description", "bool", "convert_sarif_to_markdown('{{Output}}/semgrep.sarif', '{{Output}}/semgrep.md')"},
 		},
 		CategoryDatabase: {
 			{FnDBRegisterArtifact, "register_artifact(path, type?)", "Register file as scan artifact", "bool", "register_artifact('{{Output}}/nuclei.json', 'nuclei')"},
@@ -856,6 +865,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnDBImportAssetFromFile, "db_import_asset_from_file(workspace, file_path)", "Import assets from JSONL file (httpx format)", "int", "db_import_asset_from_file('{{Workspace}}', '{{Output}}/httpx.jsonl')"},
 			{FnDBImportVuln, "db_import_vuln(workspace, json_data)", "Import single vulnerability from JSON (nuclei format)", "bool", "db_import_vuln('{{Workspace}}', '{\"template-id\":\"...\",\"info\":{\"name\":\"...\",\"severity\":\"high\"}}')"},
 			{FnDBImportVulnFromFile, "db_import_vuln_from_file(workspace, file_path)", "Import vulnerabilities from JSONL file (nuclei format)", "int", "db_import_vuln_from_file('{{Workspace}}', '{{Output}}/nuclei.jsonl')"},
+			{FnDBImportSARIF, "db_import_sarif(workspace, file_path)", "Import vulnerabilities from SARIF file (Semgrep, Trivy, etc.)", "map", "db_import_sarif('{{Workspace}}', '{{Output}}/semgrep.sarif')"},
 			{FnDBAssetDiff, "db_asset_diff(workspace)", "Get asset diff as JSONL string", "string", "db_asset_diff('{{Workspace}}')"},
 			{FnDBVulnDiff, "db_vuln_diff(workspace)", "Get vulnerability diff as JSONL string", "string", "db_vuln_diff('{{Workspace}}')"},
 			{FnDBAssetDiffToFile, "db_asset_diff_to_file(workspace, dest)", "Write asset diff to JSONL file", "bool", "db_asset_diff_to_file('{{Workspace}}', '{{Output}}/asset-diff.jsonl')"},

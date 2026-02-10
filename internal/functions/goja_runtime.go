@@ -276,6 +276,10 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnDBImportVuln, vf.dbImportVuln)
 	_ = vm.Set(FnDBImportVulnFromFile, vf.dbImportVulnFromFile)
 
+	// SARIF import functions
+	_ = vm.Set(FnDBImportSARIF, vf.dbImportSARIF)
+	_ = vm.Set(FnConvertSARIFToMarkdown, vf.convertSARIFToMarkdown)
+
 	// Database diff functions
 	_ = vm.Set(FnDBAssetDiff, vf.dbAssetDiff)
 	_ = vm.Set(FnDBVulnDiff, vf.dbVulnDiff)

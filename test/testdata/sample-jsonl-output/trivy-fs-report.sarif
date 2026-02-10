@@ -1,0 +1,136 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "fullName": "Trivy Vulnerability Scanner",
+          "informationUri": "https://github.com/aquasecurity/trivy",
+          "name": "Trivy",
+          "rules": [
+            {
+              "id": "CVE-2023-30861",
+              "name": "LanguageSpecificPackageVulnerability",
+              "shortDescription": {
+                "text": "flask: Possible disclosure of permanent session cookie due to missing Vary: Cookie header"
+              },
+              "fullDescription": {
+                "text": "Flask is a lightweight WSGI web application framework. When all of the following conditions are met, a response containing data intended for one client may be cached and subsequently sent by the proxy to other clients. If the proxy also caches `Set-Cookie` headers, it may send one client's `session` cookie to other clients. The severity depends on the application's use of the session and the proxy's behavior regarding cookies. The risk depends on all these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not strip cookies or ignore responses with cookies.\n2. The application sets `session.permanent = True`\n3. The application does not access or modify the session at any point during a request.\n4. `SESSION_REFRESH_EACH_REQUEST` enabled (the default).\n5. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n\nThis happens because vulnerable versions of Flask only set the `Vary: Cookie` header when the session is accessed or modified, not when it is refreshed (re-sent to update the expiration) without being accessed or modified. This issue has been fixed in versions 2.3.2 and 2.2.5."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "helpUri": "https://avd.aquasec.com/nvd/cve-2023-30861",
+              "help": {
+                "text": "Vulnerability CVE-2023-30861\nSeverity: HIGH\nPackage: flask\nFixed Version: 2.3.2, 2.2.5\nLink: [CVE-2023-30861](https://avd.aquasec.com/nvd/cve-2023-30861)\nFlask is a lightweight WSGI web application framework. When all of the following conditions are met, a response containing data intended for one client may be cached and subsequently sent by the proxy to other clients. If the proxy also caches `Set-Cookie` headers, it may send one client's `session` cookie to other clients. The severity depends on the application's use of the session and the proxy's behavior regarding cookies. The risk depends on all these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not strip cookies or ignore responses with cookies.\n2. The application sets `session.permanent = True`\n3. The application does not access or modify the session at any point during a request.\n4. `SESSION_REFRESH_EACH_REQUEST` enabled (the default).\n5. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n\nThis happens because vulnerable versions of Flask only set the `Vary: Cookie` header when the session is accessed or modified, not when it is refreshed (re-sent to update the expiration) without being accessed or modified. This issue has been fixed in versions 2.3.2 and 2.2.5.",
+                "markdown": "**Vulnerability CVE-2023-30861**\n| Severity | Package | Fixed Version | Link |\n| --- | --- | --- | --- |\n|HIGH|flask|2.3.2, 2.2.5|[CVE-2023-30861](https://avd.aquasec.com/nvd/cve-2023-30861)|\n\nFlask is a lightweight WSGI web application framework. When all of the following conditions are met, a response containing data intended for one client may be cached and subsequently sent by the proxy to other clients. If the proxy also caches `Set-Cookie` headers, it may send one client's `session` cookie to other clients. The severity depends on the application's use of the session and the proxy's behavior regarding cookies. The risk depends on all these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not strip cookies or ignore responses with cookies.\n2. The application sets `session.permanent = True`\n3. The application does not access or modify the session at any point during a request.\n4. `SESSION_REFRESH_EACH_REQUEST` enabled (the default).\n5. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n\nThis happens because vulnerable versions of Flask only set the `Vary: Cookie` header when the session is accessed or modified, not when it is refreshed (re-sent to update the expiration) without being accessed or modified. This issue has been fixed in versions 2.3.2 and 2.2.5."
+              },
+              "properties": {
+                "cvssv3_baseScore": 7.5,
+                "cvssv3_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                "precision": "very-high",
+                "security-severity": "7.5",
+                "tags": [
+                  "vulnerability",
+                  "security",
+                  "HIGH"
+                ]
+              }
+            },
+            {
+              "id": "jwt-token",
+              "name": "Secret",
+              "shortDescription": {
+                "text": "JWT token"
+              },
+              "fullDescription": {
+                "text": "                    example: '*******************************************************************************************************************************************************'"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "helpUri": "https://github.com/aquasecurity/trivy/blob/main/pkg/fanal/secret/builtin-rules.go",
+              "help": {
+                "text": "Secret JWT token\nSeverity: MEDIUM\nMatch:                     example: '*******************************************************************************************************************************************************'",
+                "markdown": "**Secret JWT token**\n| Severity | Match |\n| --- | --- |\n|MEDIUM|                    example: '*******************************************************************************************************************************************************'|"
+              },
+              "properties": {
+                "precision": "very-high",
+                "security-severity": "5.5",
+                "tags": [
+                  "secret",
+                  "security",
+                  "MEDIUM"
+                ]
+              }
+            }
+          ],
+          "version": "0.69.1"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CVE-2023-30861",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Package: flask\nInstalled Version: 2.2.2\nVulnerability CVE-2023-30861\nSeverity: HIGH\nFixed Version: 2.3.2, 2.2.5\nLink: [CVE-2023-30861](https://avd.aquasec.com/nvd/cve-2023-30861)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "requirements.txt",
+                  "uriBaseId": "ROOTPATH"
+                },
+                "region": {
+                  "startLine": 2,
+                  "startColumn": 1,
+                  "endLine": 2,
+                  "endColumn": 1
+                }
+              },
+              "message": {
+                "text": "requirements.txt: flask@2.2.2"
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "jwt-token",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Artifact: openapi_specs/openapi3.yml\nType: \nSecret JWT token\nSeverity: MEDIUM\nMatch:                     example: '*******************************************************************************************************************************************************'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "openapi_specs/openapi3.yml",
+                  "uriBaseId": "ROOTPATH"
+                },
+                "region": {
+                  "startLine": 193,
+                  "startColumn": 1,
+                  "endLine": 193,
+                  "endColumn": 1
+                }
+              },
+              "message": {
+                "text": "openapi_specs/openapi3.yml"
+              }
+            }
+          ]
+        }
+      ],
+      "columnKind": "utf16CodeUnits",
+      "originalUriBaseIds": {
+        "ROOTPATH": {
+          "uri": "file:///"
+        }
+      }
+    }
+  ]
+}
