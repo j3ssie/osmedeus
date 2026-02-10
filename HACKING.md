@@ -17,7 +17,9 @@ This document describes the technical architecture and development practices for
 - [Scheduler System](#scheduler-system)
 - [Workflow Linter](#workflow-linter)
 - [Database Layer](#database-layer)
+- [SARIF Integration](#sarif-integration)
 - [Testing](#testing)
+- [Canary Testing](#canary-testing)
 - [Adding New Features](#adding-new-features)
 - [CLI Shortcuts and Tips](#cli-shortcuts-and-tips)
 
@@ -857,6 +859,77 @@ Event delivery uses a fallback chain:
 3. **Database Queue** - Store in `event_logs` table with `processed=false`
 4. **Webhooks** - Send to configured webhook endpoints
 
+### SARIF Functions
+
+Functions for parsing SARIF (Static Analysis Results Interchange Format) output from SAST tools:
+
+```go
+// internal/functions/sarif_functions.go
+
+// db_import_sarif imports vulnerabilities from a SARIF file into the database
+// Supports output from: Semgrep, Trivy, Kingfisher, Bearer
+// Usage: db_import_sarif(workspace, file_path) -> {new, updated, unchanged, errors, total}
+func (vf *vmFunc) dbImportSARIF(call goja.FunctionCall) goja.Value
+
+// convert_sarif_to_markdown converts a SARIF file to a markdown table
+// Usage: convert_sarif_to_markdown(input_path, output_path) -> bool
+func (vf *vmFunc) convertSARIFToMarkdown(call goja.FunctionCall) goja.Value
+```
+
+Usage in workflows:
+```yaml
+steps:
+  - name: import-sarif
+    type: function
+    function: |
+      db_import_sarif("{{Workspace}}", "{{Output}}/semgrep.sarif")
+
+  - name: sarif-report
+    type: function
+    function: |
+      convert_sarif_to_markdown("{{Output}}/trivy.sarif", "{{Output}}/trivy-report.md")
+```
+
+SARIF severity mapping: `error` → high, `warning` → medium, `note` → low, `none` → info.
+
+### Type Detection and Archive Functions
+
+```go
+// internal/functions/type_functions.go
+
+// detect_language detects the dominant programming language in a directory
+// Supports 26+ languages via file extension and shebang analysis
+// Skips non-source dirs: node_modules, vendor, .git, __pycache__, etc.
+// Usage: detect_language(path) -> string ("golang", "python", "javascript", etc.)
+func (vf *vmFunc) detectLanguage(call goja.FunctionCall) goja.Value
+```
+
+```go
+// internal/functions/file_functions.go
+
+// extract_to auto-detects archive format and extracts to destination
+// Supports: .zip, .tar.gz, .tgz, .tar.bz2, .tar.xz
+// Removes destination directory first (idempotent)
+// Usage: extract_to(source, dest) -> bool
+func (vf *vmFunc) extractTo(call goja.FunctionCall) goja.Value
+```
+
+Usage in workflows:
+```yaml
+steps:
+  - name: detect-lang
+    type: function
+    function: |
+      detect_language("{{Output}}/repo")
+    exports:
+      lang: "output"
+
+  - name: extract-repo
+    type: function
+    function: |
+      extract_to("/tmp/repo.tar.gz", "{{Output}}/repo")
+```
+
 ### Function Execution
 
 ```go
@@ -1332,6 +1405,41 @@ db_reset_event_logs("example.com", "assets.*") // Both filters
 
 Topic patterns use glob syntax (`*` matches any characters, `?` matches single character).
 
+## SARIF Integration
+
+Osmedeus supports importing and analyzing results from SAST (Static Application Security Testing) tools that produce SARIF output.
+
+### Supported Tools
+
+| Tool | Type | SARIF Output |
+|------|------|--------------|
+| Semgrep | Code analysis | `semgrep --sarif -o results.sarif` |
+| Trivy | Container/FS scanning | `trivy fs --format sarif -o results.sarif` |
+| Kingfisher | Dependency checks | Native SARIF output |
+| Bearer | API key detection | Native SARIF output |
+
+### Import Pipeline
+
+```
+SARIF File → Parse runs/results/rules → Map severity → Upsert into database
+                                                          ↓
+                                               {new, updated, unchanged, errors, total}
+```
+
+The import function:
+1. Parses the SARIF JSON structure (runs → results → rules/locations)
+2. Maps SARIF severity levels to osmedeus severity (error→high, warning→medium, note→low)
+3. Upserts findings into the database with deduplication
+4. Marks assets with `asset_type='repo'` for code-level analysis
+5. Returns stats: `{new, updated, unchanged, errors, total}`
+
+### Markdown Reporting
+
+`convert_sarif_to_markdown()` generates severity-sorted tables with:
+- Severity counts summary
+- Location (file:line)
+- Rule ID, title, and description
+
 ## Testing
 
 ### Test Structure
@@ -1356,7 +1464,8 @@ test/e2e/                                # E2E CLI tests
 ├── distributed_test.go                  # Distributed scan e2e tests
 ├── ssh_test.go                          # SSH runner e2e tests (module & step level)
 ├── api_test.go                          # API endpoint e2e tests (all routes)
-└── agent_test.go                        # Agent step e2e tests
+├── agent_test.go                        # Agent step e2e tests
+└── canary_test.go                       # Canary tests (real-world scans in Docker)
 ```
 
 ### Running Tests
@@ -1388,6 +1497,14 @@ make test-docker
 
 # SSH runner unit tests (using linuxserver/openssh-server)
 make test-ssh
+
+# Canary tests (real-world scans in Docker, 20-60 min each)
+make test-canary-all      # All canary scenarios (30-60min)
+make test-canary-repo     # SAST on juice-shop (~25min)
+make test-canary-domain   # Domain recon on hackerone.com (~20min)
+make test-canary-ip       # CIDR scanning (~25min)
+make canary-up            # Build & start canary container (shared setup)
+make canary-down          # Teardown canary container
 
 # All tests with coverage
 make test-coverage
@@ -1421,6 +1538,79 @@ func TestDockerRunner_Integration(t *testing.T) {
     // ...
 }
 ```
+
+## Canary Testing
+
+Canary tests are real-world integration tests that run actual security scans inside a Docker container. They verify the full pipeline from workflow execution through database persistence and API reporting.
+
+### Architecture
+
+```
+1. Build canary Docker image (multi-stage: Go 1.25 builder → Ubuntu 24.04 runtime)
+2. Compile osmedeus from current source (not released binaries)
+3. Layer onto toolbox image with pre-installed SAST tools (Trivy, Semgrep, Kingfisher)
+4. Start API server in background on :8002
+5. Run scan workflows against real targets
+6. Verify: filesystem artifacts + API responses + database records
+```
+
+### Test Scenarios
+
+| Test | Target | Duration | What It Tests |
+|------|--------|----------|---------------|
+| `TestCanary_Repo` | juice-shop | ~25min | SAST scanning, SARIF import, vulnerability DB |
+| `TestCanary_Domain` | hackerone.com | ~20min | DNS enumeration, subdomain discovery |
+| `TestCanary_CIDR` | Public IPs | ~25min | Network range scanning |
+| `TestCanary_FullSuite` | All above | ~60min | Complete lifecycle with container management |
+
+### Running Canary Tests
+
+```bash
+# Full suite (builds container → runs all 3 → cleans up)
+make test-canary-all
+
+# Individual scenarios (each handles container lifecycle)
+make test-canary-repo
+make test-canary-domain
+make test-canary-ip
+
+# Manual container management for development
+make canary-up            # Build & start container
+make canary-down          # Stop & cleanup
+```
+
+### Verification Layers
+
+Canary tests assert across three layers:
+1. **Filesystem**: SARIF files, markdown reports, text outputs exist
+2. **API**: Runs, assets, vulnerabilities accessible via REST endpoints
+3. **Database**: Workspace records, total counts, vulnerability severity breakdown
+
+## Preset Installation
+
+Osmedeus supports installing base folders and workflows from curated preset repositories for reproducible deployments.
+
+### CLI Commands
+
+```bash
+# Install base folder from preset repository
+osmedeus install base --preset
+
+# Install workflows from preset repository
+osmedeus install workflow --preset
+
+# Validate and install ready-to-use base
+osmedeus install validate --preset
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OSM_PRESET_URL` | Default base repo | Override base preset source |
+| `OSM_WORKFLOW_URL` | Default workflow repo | Override workflow preset source |
+
+Preset installation is useful for Docker images and CI/CD pipelines where reproducible, stable deployments from tested configurations are preferred over manual source specification.
 
 ## Adding New Features
 
@@ -1700,4 +1890,9 @@ make install
 make docker-toolbox          # Build toolbox image
 make docker-toolbox-run      # Start toolbox container
 make docker-toolbox-shell    # Enter container shell
+
+# Canary tests (real-world scans in Docker)
+make test-canary-all         # All scenarios (30-60min)
+make canary-up               # Start canary container
+make canary-down             # Cleanup canary container
 ```

@@ -33,6 +33,9 @@ Built for both beginners and experts, it delivers powerful, composable automatio
 - **Cloud Storage** - S3-compatible storage for artifact management
 - **LLM Integration** - AI-powered workflow steps with chat completions, embeddings, and agentic tool-calling loops
 - **Agent Step Type** - Agentic LLM execution with tool calling, sub-agents, and memory management
+- **SAST Integration** - SARIF parsing for Semgrep, Trivy, Kingfisher, Bearer with database import and markdown reporting
+- **Language Detection** - Auto-detect dominant programming language of source repositories (26+ languages)
+- **Preset Installation** - Reproducible deployments from curated preset repositories
 
 See [Documentation Page](https://docs.osmedeus.org/) for more details.
 
@@ -80,6 +83,10 @@ osmedeus func eval -e 'http_get("https://example.com")' -T targets.txt -c 10
 # Platform variables available in eval
 osmedeus func eval 'log_info("OS: " + PlatformOS + ", Arch: " + PlatformArch)'
 
+# Install from preset repositories
+osmedeus install base --preset
+osmedeus install workflow --preset
+
 # Show all usage examples
 osmedeus --usage-example
 ```
@@ -114,7 +121,7 @@ For more CLI usage and example commands, refer to the [CLI Reference](https://do
 │  │ CONFIG ──▶ PARSER ──▶ EXECUTOR ──▶ STEP DISPATCHER ──▶ RUNNER       │  │
 │  │                          │                                          │  │
 │  │  Step Executors: bash | function | parallel | foreach | remote-bash │  │
-│  │                  http | llm | agent                                 │  │
+│  │                  http | llm | agent | SARIF/SAST integration        │  │
 │  │                          │                                          │  │
 │  │  Runners: HostRunner | DockerRunner | SSHRunner                     │  │
 │  └─────────────────────────────────────────────────────────────────────┘  │
@@ -135,8 +142,9 @@ The high-level ambitious plan for the project, in order:
 |  4  | Beautiful UI for visualize results and workflow diagram                       |   ✅   |
 |  5  | Rewriting the workflow to adapt to new architecture and syntax                |   ✅   |
 |  6  | Testing more utility functions like notifications                             |   ✅   |
-|  7  | Generate diff reports showing new/removed/unchanged assets between runs.      |   ❌   |
-|  8  | Adding step type from cloud provider that can be run via serverless           |   ❌   |
+|  7  | SAST integration with SARIF parsing (Semgrep, Trivy, etc.)                    |   ✅   |
+|  8  | Generate diff reports showing new/removed/unchanged assets between runs.      |   ❌   |
+|  9  | Adding step type from cloud provider that can be run via serverless           |   ❌   |
 |  N  | Fancy features (to be discussed later)                                        |   ❌   |
 
 ## Documentation

@@ -18,6 +18,10 @@ make test-e2e-api       # API E2E tests (all endpoints with Redis + seeded DB)
 make test-distributed   # Distributed run e2e tests (requires Docker for Redis)
 make test-docker        # Docker runner tests
 make test-ssh           # SSH runner unit tests (starts test SSH container)
+make test-canary-all    # Canary tests: real scans in Docker (30-60min)
+make test-canary-repo   # Canary: SAST scan on juice-shop (~25min)
+make test-canary-domain # Canary: domain recon on hackerone.com (~20min)
+make test-canary-ip     # Canary: CIDR scan on IP list (~25min)
 go test -v ./internal/functions/...  # Run tests for specific package
 go test -v -run TestName ./...       # Run single test by name
 
@@ -35,6 +39,10 @@ make swagger            # Generate Swagger documentation
 make docker-toolbox       # Build toolbox image (all tools pre-installed)
 make docker-toolbox-run   # Start toolbox container
 make docker-toolbox-shell # Enter toolbox container shell
+
+# Docker Canary (real-world scan testing)
+make canary-up            # Build & start canary container
+make canary-down          # Stop & cleanup canary container
 
 # UI
 make update-ui          # Update embedded UI from dashboard build
@@ -110,7 +118,7 @@ Use `goto: _end` to terminate workflow.
 
 - `{{Variable}}` - standard template variables (Target, Output, threads, etc.)
 - `[[variable]]` - foreach loop variables (to avoid conflicts)
-- Functions evaluated via Goja JS runtime: `file_exists()`, `file_length()`, `trim()`, `exec_python()`, etc.
+- Functions evaluated via Goja JS runtime: `file_exists()`, `file_length()`, `trim()`, `exec_python()`, `detect_language()`, `extract_to()`, `db_import_sarif()`, etc.
 
 ### Platform Variables
 
@@ -188,6 +196,9 @@ osmedeus install binary --nix-build-install      # Install binaries via Nix
 osmedeus install binary --nix-installation       # Install Nix package manager
 osmedeus install binary --list-registry-nix-build      # List Nix binaries
 osmedeus install binary --list-registry-direct-fetch   # List direct-fetch binaries
+osmedeus install base --preset                   # Install base from preset repository
+osmedeus install workflow --preset               # Install workflows from preset repository
+osmedeus install validate --preset               # Validate/install ready-to-use base
 osmedeus install env                             # Add binaries to PATH (auto-detects shell)
 osmedeus install env --all                       # Add to all shell configs
 osmedeus update                                  # Self-update to latest version
@@ -246,7 +257,7 @@ REST API documentation with curl examples is in `docs/api/`. Key endpoint catego
 
 **New API Endpoint**: Add handler in `pkg/server/handlers/`, register route in `server.go`, document in `docs/api/`
 
-**New Utility Function**: Add Go implementation in `internal/functions/`, register in `goja_runtime.go`
+**New Utility Function**: Add Go implementation in `internal/functions/`, register in `goja_runtime.go`, add constant in `constants.go`
 
 **New Agent Preset Tool**: Add to `PresetToolRegistry` in `internal/core/agent_tool_presets.go`, add case in `buildPresetCallExpr()` in `internal/executor/agent_executor.go`
 
@@ -258,6 +269,14 @@ REST API documentation with curl examples is in `docs/api/`. Key endpoint catego
 - **Decision Routing**: Uses switch/case syntax for conditional workflow branching
 - **Run Registry**: Tracks active runs with PID management for cancellation support
 - **Write Coordinator**: Batches database writes (step results, progress, artifacts) reducing I/O by ~70%
+
+## SARIF Integration
+
+Utility functions for parsing SARIF (Static Analysis Results Interchange Format) output from SAST tools:
+- `db_import_sarif(workspace, file_path)` - Import vulnerabilities from SARIF into database (supports Semgrep, Trivy, Kingfisher, Bearer)
+- `convert_sarif_to_markdown(input_path, output_path)` - Convert SARIF to readable markdown tables
+- `detect_language(path)` - Detect dominant programming language of a source folder (26+ languages)
+- `extract_to(source, dest)` - Auto-detect archive format (.zip, .tar.gz, .tar.bz2, .tar.xz, .tgz) and extract
 
 ## Performance Optimizations
 
