@@ -1,5 +1,5 @@
 {
-  "_last_update_at": "2026-02-10T06:59:38.808177+00:00",
+  "_last_update_at": "2026-02-10T09:57:44.356560+00:00",
   "amass": {
     "desc": "In-depth attack surface mapping and asset discovery",
     "repo_link": "https://github.com/owasp-amass/amass",
@@ -747,7 +747,7 @@
   "trivy": {
     "desc": "Find vulnerabilities, misconfigurations, secrets, SBOM in containers, Kubernetes, code repositories, clouds and more",
     "repo_link": "https://github.com/aquasecurity/trivy",
-    "version": "0.69.0",
+    "version": "0.69.1",
     "package-manager": "github-release",
     "tags": [
       "vulnerability-scanner",
@@ -757,8 +757,13 @@
       "optional"
     ],
     "valide-command": "",
-    "command-dual": {
-      "dual": "curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin"
+    "linux": {
+      "amd64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.1/trivy_0.69.1_Linux-64bit.tar.gz",
+      "arm64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.1/trivy_0.69.1_Linux-ARM64.tar.gz"
+    },
+    "darwin": {
+      "amd64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.1/trivy_0.69.1_macOS-64bit.tar.gz",
+      "arm64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.1/trivy_0.69.1_macOS-ARM64.tar.gz"
     }
   },
   "legba": {

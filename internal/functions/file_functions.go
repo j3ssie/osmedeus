@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -748,6 +749,72 @@ func (vf *vmFunc) unzipDir(call goja.FunctionCall) goja.Value {
 	}
 
 	logger.Get().Debug(terminal.HiGreen("unzipDir")+" result", zap.String("source", source), zap.String("dest", dest), zap.Bool("success", true))
+	return vf.vm.ToValue(true)
+}
+
+// extractTo auto-detects archive format and extracts to destination.
+// Supports .zip, .tar.gz, .tgz, .tar.bz2, .tar.xz.
+// Removes the destination directory first if it already exists.
+// Usage: extract_to(source, dest) -> bool
+func (vf *vmFunc) extractTo(call goja.FunctionCall) goja.Value {
+	source := call.Argument(0).String()
+	dest := call.Argument(1).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("extractTo"), zap.String("source", source), zap.String("dest", dest))
+
+	if source == "undefined" || source == "" || dest == "undefined" || dest == "" {
+		logger.Get().Warn("extractTo: empty source or dest provided")
+		return vf.vm.ToValue(false)
+	}
+
+	// Verify source exists
+	if _, err := os.Stat(source); err != nil {
+		logger.Get().Warn("extractTo: source does not exist", zap.String("source", source), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	// Remove destination if it already exists
+	if _, err := os.Stat(dest); err == nil {
+		logger.Get().Debug("extractTo: removing existing destination", zap.String("dest", dest))
+		if err := os.RemoveAll(dest); err != nil {
+			logger.Get().Warn("extractTo: failed to remove existing destination", zap.String("dest", dest), zap.Error(err))
+			return vf.vm.ToValue(false)
+		}
+	}
+
+	// Create destination directory
+	if err := os.MkdirAll(dest, 0755); err != nil {
+		logger.Get().Warn("extractTo: failed to create destination directory", zap.String("dest", dest), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	lower := strings.ToLower(source)
+	var err error
+
+	switch {
+	case strings.HasSuffix(lower, ".zip"):
+		// Use Go's archive/zip for .zip files
+		err = extractZip(source, dest)
+
+	case strings.HasSuffix(lower, ".tar.gz") || strings.HasSuffix(lower, ".tgz"):
+		err = exec.Command("tar", "-xzf", source, "-C", dest).Run()
+
+	case strings.HasSuffix(lower, ".tar.bz2"):
+		err = exec.Command("tar", "-xjf", source, "-C", dest).Run()
+
+	case strings.HasSuffix(lower, ".tar.xz"):
+		err = exec.Command("tar", "-xJf", source, "-C", dest).Run()
+
+	default:
+		logger.Get().Warn("extractTo: unsupported archive format", zap.String("source", source))
+		return vf.vm.ToValue(false)
+	}
+
+	if err != nil {
+		logger.Get().Warn("extractTo: extraction failed", zap.String("source", source), zap.String("dest", dest), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	logger.Get().Debug(terminal.HiGreen("extractTo")+" result", zap.String("source", source), zap.String("dest", dest), zap.Bool("success", true))
 	return vf.vm.ToValue(true)
 }
 

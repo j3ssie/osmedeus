@@ -1,44 +1,27 @@
 # Osmedeus Production Dockerfile
 # Ubuntu/Debian-based image with essential tools for security scanning
 
-# Stage 1: Build osmedeus binary
-FROM golang:1.25-bookworm AS builder
+FROM debian:bookworm-slim
 
-WORKDIR /app
+# Install essential tools (retry on transient network failures for large packages like chromium)
+RUN apt-get update && \
+    for i in 1 2 3; do \
+        apt-get install -y --no-install-recommends \
+            build-essential \
+            git \
+            curl \
+            wget \
+            ca-certificates \
+            python3 \
+            python3-pip \
+            chromium \
+        && break || { echo "Attempt $i failed, retrying..."; apt-get update; }; \
+    done && \
+    rm -rf /var/lib/apt/lists/* && \
+    ln -sf /usr/bin/python3 /usr/bin/python
 
-# Copy go mod files first for better layer caching
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Copy source code
-COPY . .
-
-# Build the binary
-ARG VERSION=5.0.0
-ARG BUILD_TIME
-ARG COMMIT_HASH
-RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags "-s -w -X main.BuildTime=${BUILD_TIME} -X main.CommitHash=${COMMIT_HASH}" \
-    -o /app/bin/osmedeus ./cmd/osmedeus
-
-# Stage 2: Runtime with essential tools
-FROM golang:1.25-bookworm
-
-# Install essential tools
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    git \
-    curl \
-    wget \
-    ca-certificates \
-    python3 \
-    python3-pip \
-    chromium \
-    && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /usr/bin/python3 /usr/bin/python
-
-# Copy osmedeus binary from builder
-COPY --from=builder /app/bin/osmedeus /usr/local/bin/osmedeus
+# Install osmedeus via official install script
+RUN curl -fsSL https://www.osmedeus.org/install.sh | bash
 
 # Create base directories
 RUN mkdir -p /root/osmedeus-base /root/workspaces-osmedeus

@@ -210,8 +210,9 @@ const (
 
 // Archive Functions - Go implementations for zip/unzip
 const (
-	FnZipDir   = "zip_dir"   // zip_dir(source, dest) -> bool
-	FnUnzipDir = "unzip_dir" // unzip_dir(source, dest) -> bool
+	FnZipDir    = "zip_dir"    // zip_dir(source, dest) -> bool
+	FnUnzipDir  = "unzip_dir"  // unzip_dir(source, dest) -> bool
+	FnExtractTo = "extract_to" // extract_to(source, dest) -> bool (auto-detect .zip, .tar.gz, .tar.bz2, .tar.xz, .tgz; removes dest first)
 )
 
 // Diff Functions - Compare files
@@ -473,6 +474,7 @@ func AllFunctions() []string {
 		// Archive Functions (Go implementations)
 		FnZipDir,
 		FnUnzipDir,
+		FnExtractTo,
 
 		// Diff Functions
 		FnExtractDiff,
@@ -798,6 +800,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 		CategoryArchive: {
 			{FnZipDir, "zip_dir(source, dest)", "Zip directory using Go archive/zip", "bool", "zip_dir('{{Output}}', '{{Output}}/archive.zip')"},
 			{FnUnzipDir, "unzip_dir(source, dest)", "Unzip archive using Go archive/zip", "bool", "unzip_dir('/tmp/archive.zip', '/tmp/extracted')"},
+			{FnExtractTo, "extract_to(source, dest)", "Auto-detect archive format (.zip, .tar.gz, .tar.bz2, .tar.xz, .tgz) and extract to dest (removes dest first)", "bool", "extract_to('/tmp/repo.tar.gz', '/tmp/repo')"},
 		},
 		CategoryDiff: {
 			{FnExtractDiff, "extract_diff(file1, file2)", "Lines only in file2 (new content)", "string", "extract_diff('{{Output}}/old-subs.txt', '{{Output}}/new-subs.txt')"},

@@ -205,6 +205,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	// Archive functions (Go implementations)
 	_ = vm.Set(FnZipDir, vf.zipDir)
 	_ = vm.Set(FnUnzipDir, vf.unzipDir)
+	_ = vm.Set(FnExtractTo, vf.extractTo)
 
 	// Diff functions
 	_ = vm.Set(FnExtractDiff, vf.extractDiff)

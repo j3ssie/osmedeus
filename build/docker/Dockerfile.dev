@@ -1,18 +1,26 @@
-# Osmedeus Development Dockerfile
-# Full Go toolchain for development and debugging
+# Osmedeus Production Dockerfile
+# Ubuntu/Debian-based image with essential tools for security scanning
 
-FROM golang:1.21-alpine
-
-# Install development dependencies
-RUN apk add --no-cache \
-    git \
-    make \
-    bash \
-    curl \
-    vim \
-    && go install github.com/cosmtrek/air@latest
+FROM golang:1.25-bookworm
 
 WORKDIR /app
+
+# Install essential tools (retry on transient network failures for large packages like chromium)
+RUN apt-get update && \
+    for i in 1 2 3; do \
+        apt-get install -y --no-install-recommends \
+            build-essential \
+            git \
+            curl \
+            wget \
+            ca-certificates \
+            python3 \
+            python3-pip \
+            chromium \
+        && break || { echo "Attempt $i failed, retrying..."; apt-get update; }; \
+    done && \
+    rm -rf /var/lib/apt/lists/* && \
+    ln -sf /usr/bin/python3 /usr/bin/python
 
 # Copy go mod files first for better layer caching
 COPY go.mod go.sum ./
@@ -22,13 +30,29 @@ RUN go mod download
 COPY . .
 
 # Build the binary
-RUN go build -o build/bin/osmedeus ./cmd/osmedeus
+ARG VERSION=5.0.0
+ARG BUILD_TIME
+ARG COMMIT_HASH
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags "-s -w -X main.BuildTime=${BUILD_TIME} -X main.CommitHash=${COMMIT_HASH}" \
+    -o /usr/local/bin/osmedeus ./cmd/osmedeus
 
-# Create necessary directories
+# Create base directories
 RUN mkdir -p /root/osmedeus-base /root/workspaces-osmedeus
+
+WORKDIR /root
+
+# Initialize osmedeus base folder with preset workflows
+RUN osmedeus install base --preset
+
+# Set up PATH for external binaries
+ENV PATH="/root/osmedeus-base/external-binaries:${PATH}"
 
 # Expose default server port
 EXPOSE 8002
 
-# Default command: run server without auth (dev mode)
-CMD ["./build/bin/osmedeus", "serve", "-A"]
+# Default entrypoint - exposes osmedeus CLI only
+ENTRYPOINT ["osmedeus"]
+
+# Default command shows help (user can override with run/server/etc.)
+CMD ["--help"]
