@@ -37,6 +37,7 @@ type TargetInfo struct {
 	Path       string // /foo
 	File       string // bar.php
 	Scheme     string // https
+	RepoSlug   string // owner__repo for code hosting URLs (github.com/owner/repo)
 
 	// Domain fields
 	IsWildcard bool

@@ -63,6 +63,9 @@ func ParseURL(rawURL string) (*TargetInfo, error) {
 		info.SLD = extractSLD(info.RootDomain, info.TLD)
 	}
 
+	// Extract repo slug for code hosting URLs
+	info.RepoSlug = ExtractRepoSlug(host, u.Path)
+
 	// Extract path and file
 	urlPath := u.Path
 	if urlPath == "" {
@@ -87,6 +90,57 @@ func ParseURL(rawURL string) (*TargetInfo, error) {
 	info.BaseURL = rawURL
 
 	return info, nil
+}
+
+// codeHostingDomains lists known code hosting platforms
+var codeHostingDomains = map[string]bool{
+	"github.com":    true,
+	"gitlab.com":    true,
+	"bitbucket.org": true,
+	"codeberg.org":  true,
+	"gitea.com":     true,
+}
+
+// archivePathPrefixes are URL path segments that indicate we've left the owner/repo portion
+var archivePathPrefixes = []string{
+	"/archive/",
+	"/releases/",
+	"/raw/",
+	"/blob/",
+	"/tree/",
+	"/commit/",
+	"/pull/",
+	"/issues/",
+	"/-/",
+}
+
+// ExtractRepoSlug returns "owner__repo" (or "org__subgroup__repo") for code hosting URLs.
+// Returns "" if the host is not a known code hosting domain or the path has fewer than 2 segments.
+func ExtractRepoSlug(host, urlPath string) string {
+	if !codeHostingDomains[host] {
+		return ""
+	}
+
+	// Truncate path at first archive/non-repo prefix
+	lower := strings.ToLower(urlPath)
+	for _, prefix := range archivePathPrefixes {
+		if idx := strings.Index(lower, prefix); idx != -1 {
+			urlPath = urlPath[:idx]
+		}
+	}
+
+	// Clean and split path into segments
+	urlPath = strings.Trim(urlPath, "/")
+	if urlPath == "" {
+		return ""
+	}
+
+	segments := strings.Split(urlPath, "/")
+	if len(segments) < 2 {
+		return ""
+	}
+
+	return strings.Join(segments, "__")
 }
 
 // extractRootDomainFallback extracts root domain when publicsuffix fails

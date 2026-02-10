@@ -8,6 +8,7 @@ services:
     volumes:
       - canary-workspaces:/root/workspaces-osmedeus
       - canary-data:/root/osmedeus-base
+      - ../../../osmedeus-workflow:/root/osmedeus-base/workflows
     ports:
       - "8002:8002"
     healthcheck:

@@ -289,8 +289,11 @@ func (e *Executor) injectBuiltinVariables(cfg *config.Config, params map[string]
 		info, err := heuristics.Analyze(target, heuristicsLevel)
 		if err == nil && info != nil {
 			injectHeuristicVariables(info, execCtx)
-			// Update targetSpace if heuristics detected a root domain
-			if info.RootDomain != "" {
+			// Update targetSpace: prefer repo slug for code hosting URLs
+			if info.RepoSlug != "" {
+				targetSpace = info.RepoSlug
+				execCtx.SetVariable("TargetSpace", targetSpace)
+			} else if info.RootDomain != "" {
 				targetSpace = info.RootDomain
 				execCtx.SetVariable("TargetSpace", targetSpace)
 			}
@@ -481,6 +484,9 @@ func injectHeuristicVariables(info *heuristics.TargetInfo, execCtx *core.Executi
 		execCtx.SetVariable("TargetPath", info.Path)
 		execCtx.SetVariable("TargetFileExt", info.File)
 		execCtx.SetVariable("TargetScheme", info.Scheme)
+		if info.RepoSlug != "" {
+			execCtx.SetVariable("TargetRepoSlug", info.RepoSlug)
+		}
 
 		// Advanced: HTTP status and content length
 		if info.StatusCode > 0 {

@@ -54,13 +54,13 @@ const (
 
 // Type Detection Functions - Detect input types
 const (
-	FnGetTypes   = "get_types"   // get_types(input) -> string (file, folder, cidr, ip, url, domain, string)
-	FnIsFile     = "is_file"     // is_file(path) -> bool
-	FnIsDir      = "is_dir"      // is_dir(path) -> bool
-	FnIsGit      = "is_git"      // is_git(path) -> bool
-	FnIsURL      = "is_url"      // is_url(input) -> bool
-	FnIsCompress      = "is_compress"      // is_compress(path) -> bool
-	FnDetectLanguage  = "detect_language"  // detect_language(path) -> string (dominant programming language)
+	FnGetTypes       = "get_types"       // get_types(input) -> string (file, folder, cidr, ip, url, domain, string)
+	FnIsFile         = "is_file"         // is_file(path) -> bool
+	FnIsDir          = "is_dir"          // is_dir(path) -> bool
+	FnIsGit          = "is_git"          // is_git(path) -> bool
+	FnIsURL          = "is_url"          // is_url(input) -> bool
+	FnIsCompress     = "is_compress"     // is_compress(path) -> bool
+	FnDetectLanguage = "detect_language" // detect_language(path) -> string (dominant programming language)
 )
 
 // Type Conversion Functions - Convert between types
@@ -295,8 +295,8 @@ const (
 	FnDBImportVulnFromFile  = "db_import_vuln_from_file"  // db_import_vuln_from_file(workspace, file_path) -> int (count)
 
 	// SARIF import functions
-	FnDBImportSARIF          = "db_import_sarif"            // db_import_sarif(workspace, file_path) -> map (stats)
-	FnConvertSARIFToMarkdown = "convert_sarif_to_markdown"  // convert_sarif_to_markdown(input_path, output_path) -> bool
+	FnDBImportSARIF          = "db_import_sarif"           // db_import_sarif(workspace, file_path) -> map (stats)
+	FnConvertSARIFToMarkdown = "convert_sarif_to_markdown" // convert_sarif_to_markdown(input_path, output_path) -> bool
 
 	// Diff functions - asset and vulnerability change tracking
 	FnDBAssetDiff       = "db_asset_diff"         // db_asset_diff(workspace) -> string (JSONL)

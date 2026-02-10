@@ -291,7 +291,7 @@ func testCanaryRepoScan(t *testing.T) {
 	log.Step("Canary: Repo Scan (juice-shop)")
 
 	targetURL := "https://github.com/juice-shop/juice-shop/archive/refs/heads/master.zip"
-	expectedWS := "github.com"
+	expectedWS := "juice-shop__juice-shop"
 	wsDir := canaryWorkspaceRoot + "/" + expectedWS
 
 	// Run the scan

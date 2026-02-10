@@ -691,17 +691,49 @@ func CancelRun(cfg *config.Config) fiber.Handler {
 
 // GetRunSteps handles getting run steps
 func GetRunSteps(c *fiber.Ctx) error {
-	// TODO: Implement with database
+	runUUID := c.Params("id")
+	if runUUID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   true,
+			"message": "run ID is required",
+		})
+	}
+
+	ctx := context.Background()
+	steps, err := database.GetRunSteps(ctx, runUUID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error":   true,
+			"message": err.Error(),
+		})
+	}
+
 	return c.JSON(fiber.Map{
-		"data": []interface{}{},
+		"data": steps,
 	})
 }
 
 // GetRunArtifacts handles getting run artifacts
 func GetRunArtifacts(c *fiber.Ctx) error {
-	// TODO: Implement with database
+	runUUID := c.Params("id")
+	if runUUID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   true,
+			"message": "run ID is required",
+		})
+	}
+
+	ctx := context.Background()
+	artifacts, err := database.GetRunArtifacts(ctx, runUUID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error":   true,
+			"message": err.Error(),
+		})
+	}
+
 	return c.JSON(fiber.Map{
-		"data": []interface{}{},
+		"data": artifacts,
 	})
 }
 

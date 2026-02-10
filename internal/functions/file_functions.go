@@ -805,8 +805,23 @@ func (vf *vmFunc) extractTo(call goja.FunctionCall) goja.Value {
 		err = exec.Command("tar", "-xJf", source, "-C", dest).Run()
 
 	default:
-		logger.Get().Warn("extractTo: unsupported archive format", zap.String("source", source))
-		return vf.vm.ToValue(false)
+		// Try to detect format by file magic bytes when extension is missing
+		if detected := detectArchiveFormat(source); detected != "" {
+			logger.Get().Debug("extractTo: detected format by magic bytes", zap.String("source", source), zap.String("format", detected))
+			switch detected {
+			case "zip":
+				err = extractZip(source, dest)
+			case "gzip":
+				err = exec.Command("tar", "-xzf", source, "-C", dest).Run()
+			case "bzip2":
+				err = exec.Command("tar", "-xjf", source, "-C", dest).Run()
+			case "xz":
+				err = exec.Command("tar", "-xJf", source, "-C", dest).Run()
+			}
+		} else {
+			logger.Get().Warn("extractTo: unsupported archive format", zap.String("source", source))
+			return vf.vm.ToValue(false)
+		}
 	}
 
 	if err != nil {
@@ -816,6 +831,34 @@ func (vf *vmFunc) extractTo(call goja.FunctionCall) goja.Value {
 
 	logger.Get().Debug(terminal.HiGreen("extractTo")+" result", zap.String("source", source), zap.String("dest", dest), zap.Bool("success", true))
 	return vf.vm.ToValue(true)
+}
+
+// detectArchiveFormat reads the first few bytes of a file to identify the archive format.
+// Returns "zip", "gzip", "bzip2", "xz", or "" if unrecognized.
+func detectArchiveFormat(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = f.Close() }()
+
+	header := make([]byte, 6)
+	n, err := f.Read(header)
+	if err != nil || n < 4 {
+		return ""
+	}
+
+	switch {
+	case header[0] == 0x50 && header[1] == 0x4B && header[2] == 0x03 && header[3] == 0x04:
+		return "zip"
+	case header[0] == 0x1F && header[1] == 0x8B:
+		return "gzip"
+	case header[0] == 0x42 && header[1] == 0x5A && header[2] == 0x68:
+		return "bzip2"
+	case n >= 6 && header[0] == 0xFD && header[1] == 0x37 && header[2] == 0x7A && header[3] == 0x58 && header[4] == 0x5A && header[5] == 0x00:
+		return "xz"
+	}
+	return ""
 }
 
 // extractDiff compares two files and returns lines only in file2 (new content)

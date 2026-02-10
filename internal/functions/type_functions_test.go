@@ -594,9 +594,9 @@ func TestDetectLanguage(t *testing.T) {
 	t.Run("pure Go project", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFiles(t, dir, map[string]string{
-			"main.go":         "package main",
-			"lib/util.go":     "package lib",
-			"lib/handler.go":  "package lib",
+			"main.go":        "package main",
+			"lib/util.go":    "package lib",
+			"lib/handler.go": "package lib",
 		})
 		expr := "detect_language('" + dir + "')"
 		result, err := runtime.Execute(expr, nil)
@@ -611,9 +611,9 @@ func TestDetectLanguage(t *testing.T) {
 	t.Run("pure Python project", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFiles(t, dir, map[string]string{
-			"app.py":        "import os",
-			"utils.py":      "def helper(): pass",
-			"models/db.py":  "class DB: pass",
+			"app.py":       "import os",
+			"utils.py":     "def helper(): pass",
+			"models/db.py": "class DB: pass",
 		})
 		expr := "detect_language('" + dir + "')"
 		result, err := runtime.Execute(expr, nil)
@@ -628,10 +628,10 @@ func TestDetectLanguage(t *testing.T) {
 	t.Run("mixed project majority wins", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFiles(t, dir, map[string]string{
-			"main.go":     "package main",
-			"lib.go":      "package lib",
-			"extra.go":    "package extra",
-			"script.py":   "import sys",
+			"main.go":   "package main",
+			"lib.go":    "package lib",
+			"extra.go":  "package extra",
+			"script.py": "import sys",
 		})
 		expr := "detect_language('" + dir + "')"
 		result, err := runtime.Execute(expr, nil)
@@ -669,12 +669,12 @@ func TestDetectLanguage(t *testing.T) {
 	t.Run("ignored directories are skipped", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFiles(t, dir, map[string]string{
-			"main.go":                 "package main",
-			"node_modules/dep.js":     "module.exports = {}",
-			"node_modules/dep2.js":    "module.exports = {}",
-			"node_modules/dep3.js":    "module.exports = {}",
-			"vendor/lib.go":           "package vendor",
-			"test/main_test.go":       "package test",
+			"main.go":              "package main",
+			"node_modules/dep.js":  "module.exports = {}",
+			"node_modules/dep2.js": "module.exports = {}",
+			"node_modules/dep3.js": "module.exports = {}",
+			"vendor/lib.go":        "package vendor",
+			"test/main_test.go":    "package test",
 		})
 		expr := "detect_language('" + dir + "')"
 		result, err := runtime.Execute(expr, nil)
@@ -716,9 +716,9 @@ func TestDetectFolderLanguage(t *testing.T) {
 	t.Run("typescript project", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFiles(t, dir, map[string]string{
-			"src/index.ts":     "const x = 1",
-			"src/app.tsx":      "export default App",
-			"src/util.ts":      "export function f() {}",
+			"src/index.ts": "const x = 1",
+			"src/app.tsx":  "export default App",
+			"src/util.ts":  "export function f() {}",
 		})
 		result := detectFolderLanguage(dir)
 		if result != "typescript" {
@@ -729,8 +729,8 @@ func TestDetectFolderLanguage(t *testing.T) {
 	t.Run("rust project", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFiles(t, dir, map[string]string{
-			"src/main.rs":  "fn main() {}",
-			"src/lib.rs":   "pub mod utils;",
+			"src/main.rs": "fn main() {}",
+			"src/lib.rs":  "pub mod utils;",
 		})
 		result := detectFolderLanguage(dir)
 		if result != "rust" {
