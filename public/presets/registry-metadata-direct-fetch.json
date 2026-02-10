@@ -280,7 +280,7 @@
     ],
     "valide-command": "",
     "command-linux": {
-      "dual": "pip install semgrep"
+      "dual": "pip install semgrep --break-system-packages"
     },
     "command-darwin": {
       "dual": "<auto_detect_package_manager> install semgrep"

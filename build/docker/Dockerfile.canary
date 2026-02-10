@@ -44,20 +44,17 @@ RUN mkdir -p /root/osmedeus-base /root/workspaces-osmedeus /root/go/bin
 
 WORKDIR /root
 
-# # Install osmedeus via official install script
-# RUN curl -fsSL https://www.osmedeus.org/install.sh | bash
-
-# Install released osmedeus (pulls workflows, tools, etc.)
-RUN osmedeus install base --preset
-
-# This is for sast test
-RUN osmedeus install binary --name trivy --name semgrep --name kingfisher
+# Copy the source-built binary first so install commands can use it
+COPY --from=builder /osmedeus /root/.local/bin/osmedeus
+COPY --from=builder /osmedeus /root/go/bin/osmedeus
 
 ENV PATH="/root/.local/bin:/root/go/bin:/root/osmedeus-base/external-binaries:${PATH}"
 
-# Overwrite the released binary with the one built from source
-COPY --from=builder /osmedeus /root/.local/bin/osmedeus
-COPY --from=builder /osmedeus /root/go/bin/osmedeus
+# Install base workflows, tools, etc.
+RUN osmedeus install base --preset
+
+# This is for sast test
+RUN osmedeus install binary --name trivy --name semgrep --name kingfisher --name bearer
 
 # Copy the canary entrypoint
 COPY build/docker/canary-entrypoint.sh /usr/local/bin/canary-entrypoint.sh
