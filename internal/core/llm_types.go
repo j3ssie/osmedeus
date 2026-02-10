@@ -1,5 +1,28 @@
 package core
 
+import (
+	"fmt"
+
+	"github.com/j3ssie/osmedeus/v5/internal/json"
+)
+
+// ParseOutputSchema converts a JSON string into an LLMResponseFormat suitable
+// for the OpenAI response_format parameter. The schemaJSON should be a valid
+// JSON schema object, e.g. '{"type":"object","properties":{...}}'.
+func ParseOutputSchema(schemaJSON string) (*LLMResponseFormat, error) {
+	var schema map[string]interface{}
+	if err := json.Unmarshal([]byte(schemaJSON), &schema); err != nil {
+		return nil, fmt.Errorf("invalid output_schema JSON: %w", err)
+	}
+	return &LLMResponseFormat{
+		Type: "json_schema",
+		JSONSchema: map[string]interface{}{
+			"name":   "output_schema",
+			"schema": schema,
+		},
+	}, nil
+}
+
 // LLMMessageRole represents the role of a message sender
 type LLMMessageRole string
 

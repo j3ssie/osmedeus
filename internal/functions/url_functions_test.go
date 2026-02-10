@@ -689,11 +689,11 @@ func TestParseURL_WithRegistry(t *testing.T) {
 
 func TestExtractDomainParts(t *testing.T) {
 	tests := []struct {
-		name                 string
-		domain               string
-		expectedSubdomain    string
-		expectedRoot         string
-		expectedTLD          string
+		name              string
+		domain            string
+		expectedSubdomain string
+		expectedRoot      string
+		expectedTLD       string
 	}{
 		{
 			name:              "simple domain",

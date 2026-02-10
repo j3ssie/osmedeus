@@ -5,8 +5,8 @@ package broker
 
 import (
 	"context"
-	"github.com/j3ssie/osmedeus/v5/internal/json"
 	"fmt"
+	"github.com/j3ssie/osmedeus/v5/internal/json"
 	"sync"
 	"time"
 

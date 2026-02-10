@@ -26,6 +26,7 @@ const (
 	FnGrepString       = "grep_string"         // grep_string(source, str) -> string
 	FnGrepRegex        = "grep_regex"          // grep_regex(source, pattern) -> string
 	FnRemoveBlankLines = "remove_blank_lines"  // remove_blank_lines(path) -> bool (in-place)
+	FnChunkFile        = "chunk_file"          // chunk_file(input, lines_per_chunk, output) -> bool
 )
 
 // String Functions - String manipulation operations
@@ -71,17 +72,21 @@ const (
 
 // Utility Functions - General utility operations
 const (
-	FnLen           = "len"          // len(val) -> int
-	FnIsEmpty       = "is_empty"     // is_empty(val) -> bool
-	FnIsNotEmpty    = "is_not_empty" // is_not_empty(val) -> bool
-	FnPrintf        = "printf"       // printf(message) -> void (print message to stdout)
-	FnCatFile       = "cat_file"     // cat_file(path) -> void (print file content to stdout)
-	FnExit          = "exit"         // exit(code) -> void (exit scan with code)
-	FnExecCmd       = "exec_cmd"     // exec_cmd(command) -> string (alias for bash)
-	FnBash          = "bash"
-	FnSleep         = "sleep"          // sleep(seconds) -> void (pause for n seconds)
-	FnCommandExists = "command_exists" // command_exists(command) -> bool (check if command exists in PATH)
-	FnPickValid     = "pick_valid"     // pick_valid(v1, v2, ..., v10) -> any (first valid value)
+	FnLen            = "len"          // len(val) -> int
+	FnIsEmpty        = "is_empty"     // is_empty(val) -> bool
+	FnIsNotEmpty     = "is_not_empty" // is_not_empty(val) -> bool
+	FnPrintf         = "printf"       // printf(message) -> void (print message to stdout)
+	FnCatFile        = "cat_file"     // cat_file(path) -> void (print file content to stdout)
+	FnExit           = "exit"         // exit(code) -> void (exit scan with code)
+	FnExecCmd        = "exec_cmd"     // exec_cmd(command) -> string (alias for bash)
+	FnBash           = "bash"
+	FnSleep          = "sleep"            // sleep(seconds) -> void (pause for n seconds)
+	FnCommandExists  = "command_exists"   // command_exists(command) -> bool (check if command exists in PATH)
+	FnPickValid      = "pick_valid"       // pick_valid(v1, v2, ..., v10) -> any (first valid value)
+	FnRunModule      = "run_module"       // run_module(module, target, params?) -> string (run osmedeus module)
+	FnRunFlow        = "run_flow"         // run_flow(flow, target, params?) -> string (run osmedeus flow)
+	FnExecPython     = "exec_python"      // exec_python(code) -> string (run inline Python, prefer python3)
+	FnExecPythonFile = "exec_python_file" // exec_python_file(path) -> string (run Python file, prefer python3)
 )
 
 // Logging Functions - Log messages with level prefixes
@@ -167,18 +172,18 @@ const (
 
 // Unix Command Wrappers - Wrappers around common Unix commands
 const (
-	FnSortUnix           = "sort_unix"            // sort_unix(inputFile, outputFile?) -> bool (LC_ALL=C sort -u)
-	FnWgetUnix           = "wget_unix"            // wget_unix(url, outputPath?) -> bool
-	FnWget               = "wget"                 // wget(url, outputPath) -> bool (pure Go, segmented download)
-	FnGitClone           = "git_clone"            // git_clone(repo, dest?) -> bool
-	FnGitCloneSubfolder  = "git_clone_subfolder"  // git_clone_subfolder(git_url, subfolder, dest) -> bool
-	FnZipUnix            = "zip_unix"             // zip_unix(source, dest) -> bool (zip -r dest source)
-	FnUnzipUnix        = "unzip_unix"         // unzip_unix(source, dest?) -> bool (unzip source -d dest)
-	FnTarUnix          = "tar_unix"           // tar_unix(source, dest) -> bool (tar -czf dest source)
-	FnUntarUnix        = "untar_unix"         // untar_unix(source, dest?) -> bool (tar -xzf source -C dest)
-	FnDiffUnix         = "diff_unix"          // diff_unix(file1, file2, output?) -> string
-	FnSedStringReplace = "sed_string_replace" // sed_string_replace(sed_syntax, source, dest) -> bool
-	FnSedRegexReplace  = "sed_regex_replace"  // sed_regex_replace(sed_syntax, source, dest) -> bool
+	FnSortUnix          = "sort_unix"           // sort_unix(inputFile, outputFile?) -> bool (LC_ALL=C sort -u)
+	FnWgetUnix          = "wget_unix"           // wget_unix(url, outputPath?) -> bool
+	FnWget              = "wget"                // wget(url, outputPath) -> bool (pure Go, segmented download)
+	FnGitClone          = "git_clone"           // git_clone(repo, dest?) -> bool
+	FnGitCloneSubfolder = "git_clone_subfolder" // git_clone_subfolder(git_url, subfolder, dest) -> bool
+	FnZipUnix           = "zip_unix"            // zip_unix(source, dest) -> bool (zip -r dest source)
+	FnUnzipUnix         = "unzip_unix"          // unzip_unix(source, dest?) -> bool (unzip source -d dest)
+	FnTarUnix           = "tar_unix"            // tar_unix(source, dest) -> bool (tar -czf dest source)
+	FnUntarUnix         = "untar_unix"          // untar_unix(source, dest?) -> bool (tar -xzf source -C dest)
+	FnDiffUnix          = "diff_unix"           // diff_unix(file1, file2, output?) -> string
+	FnSedStringReplace  = "sed_string_replace"  // sed_string_replace(sed_syntax, source, dest) -> bool
+	FnSedRegexReplace   = "sed_regex_replace"   // sed_regex_replace(sed_syntax, source, dest) -> bool
 )
 
 // Installer Functions - Download and install packages
@@ -325,6 +330,7 @@ func AllFunctions() []string {
 		FnGrepString,
 		FnGrepRegex,
 		FnRemoveBlankLines,
+		FnChunkFile,
 
 		// String Functions
 		FnTrim,
@@ -373,6 +379,10 @@ func AllFunctions() []string {
 		FnSleep,
 		FnCommandExists,
 		FnPickValid,
+		FnRunModule,
+		FnRunFlow,
+		FnExecPython,
+		FnExecPythonFile,
 
 		// Logging Functions
 		FnLogDebug,
@@ -649,6 +659,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnGrepString, "grep_string(source, str)", "Return lines containing string", "string", "grep_string('{{Output}}/in.txt', 'admin')"},
 			{FnGrepRegex, "grep_regex(source, pattern)", "Return lines matching regex", "string", "grep_regex('{{Output}}/in.txt', '.*api.*')"},
 			{FnRemoveBlankLines, "remove_blank_lines(path)", "Remove blank lines from file in-place", "bool", "remove_blank_lines('{{Output}}/urls.txt')"},
+			{FnChunkFile, "chunk_file(input, lines_per_chunk, output)", "Split file into chunks and write manifest of chunk paths", "bool", "chunk_file('{{Output}}/urls.txt', 100, '{{Output}}/url_chunks.txt')"},
 		},
 		CategoryString: {
 			{FnTrim, "trim(str)", "Trim whitespace", "string", "trim('  hello  ')"},
@@ -689,6 +700,10 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnSleep, "sleep(seconds)", "Pause for n seconds", "void", "sleep(5)"},
 			{FnCommandExists, "command_exists(command)", "Check if command exists in PATH", "bool", "command_exists('nmap')"},
 			{FnPickValid, "pick_valid(v1, v2, ..., v10)", "Return first valid value from up to 10 arguments", "any", "pick_valid('', '', 'hello', 'world')"},
+			{FnRunModule, "run_module(module, target, params?)", "Run osmedeus module as subprocess, optional comma-separated key=value params", "string", "run_module('subdomain', 'example.com', 'threads=10,deep=true')"},
+			{FnRunFlow, "run_flow(flow, target, params?)", "Run osmedeus flow as subprocess, optional comma-separated key=value params", "string", "run_flow('general', 'example.com')"},
+			{FnExecPython, "exec_python(code)", "Run inline Python code via python3 -c (falls back to python)", "string", "exec_python('print(2+2)')"},
+			{FnExecPythonFile, "exec_python_file(path)", "Run a Python file via python3 (falls back to python)", "string", "exec_python_file('/tmp/script.py')"},
 		},
 		CategoryLogging: {
 			{FnLogDebug, "log_debug(message)", "Log debug message with [DEBUG] prefix", "void", "log_debug('Processing target')"},

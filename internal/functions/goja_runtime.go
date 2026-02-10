@@ -67,6 +67,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnGrepString, vf.grepString)
 	_ = vm.Set(FnGrepRegex, vf.grepRegex)
 	_ = vm.Set(FnRemoveBlankLines, vf.removeBlankLines)
+	_ = vm.Set(FnChunkFile, vf.chunkFile)
 
 	// String functions
 	_ = vm.Set(FnTrim, vf.trim)
@@ -115,6 +116,10 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnSleep, vf.sleep)
 	_ = vm.Set(FnCommandExists, vf.commandExists)
 	_ = vm.Set(FnPickValid, vf.pickValid)
+	_ = vm.Set(FnRunModule, vf.runModule)
+	_ = vm.Set(FnRunFlow, vf.runFlow)
+	_ = vm.Set(FnExecPython, vf.execPython)
+	_ = vm.Set(FnExecPythonFile, vf.execPythonFile)
 
 	// Logging functions
 	_ = vm.Set(FnLogDebug, vf.logDebug)

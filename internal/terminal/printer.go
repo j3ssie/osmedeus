@@ -150,7 +150,7 @@ func (p *Printer) StepSuccessWithCommand(stepName, typeSymbol, duration, command
 		})
 		return
 	}
-	_, _ = fmt.Fprintf(os.Stdout, "%s %s %s %s\n", StepSuccessSymbol(), typeSymbol, Gray("(finished in "+duration+")"), HiBlue(stepName))
+	_, _ = fmt.Fprintf(os.Stdout, "%s %s %s %s\n", StepSuccessSymbol(), typeSymbol, Gray("(finished in ")+Magenta(duration)+Gray(")"), HiBlue(stepName))
 	// Command already shown when step started, no need to repeat
 }
 
@@ -378,6 +378,8 @@ func TypeBadge(typ string) string {
 		return Blue(typ)
 	case "foreach":
 		return Blue(typ)
+	case "agent":
+		return HiMagenta(typ)
 	default:
 		return typ
 	}

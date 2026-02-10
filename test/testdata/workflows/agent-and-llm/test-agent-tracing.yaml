@@ -1,0 +1,22 @@
+kind: module
+name: test-agent-tracing
+description: Test agent with tool tracing hooks
+tags: test,agent,tracing
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: traced-agent
+    type: agent
+    log: "Running traced agent for {{Target}}"
+    query: "Run 'echo hello' and report what you see"
+    on_tool_start: 'log_info("Starting tool: " + tool_name)'
+    on_tool_end: 'log_info("Tool " + tool_name + " completed in " + duration + "ms")'
+    max_iterations: 5
+    agent_tools:
+      - preset: bash
+    exports:
+      result: "{{agent_content}}"

@@ -1,0 +1,33 @@
+kind: module
+name: test-agent-custom-tools
+description: Test agent step with custom tool handlers and template rendering
+tags: test,agent
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: agent-custom-handler
+    type: agent
+    query: "Use the classify tool to classify the target '{{Target}}' and report the result."
+    max_iterations: 3
+    agent_tools:
+      - name: classify
+        description: "Classify a string as domain, ip, or unknown"
+        parameters:
+          type: object
+          properties:
+            input:
+              type: string
+              description: "The string to classify"
+          required:
+            - input
+        handler: 'contains(args.input, ".") ? "domain" : "unknown"'
+    exports:
+      classification: "{{agent_content}}"
+
+  - name: verify-custom-tool
+    type: bash
+    command: echo "Classification result for {{Target}} is - {{classification}}"

@@ -1,0 +1,29 @@
+kind: module
+name: test-agent-python-tools
+description: Test agent with exec_python and exec_python_file preset tools
+tags: test,agent,python
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: agent-python
+    type: agent
+    log: "Running Python tools agent for {{Target}}"
+    query: "Use Python to parse and analyze data about {{Target}}. Write a small Python script to check if the target is a valid domain."
+    system_prompt: "You are a Python-powered analyst. Use exec_python for inline code and exec_python_file for scripts."
+    max_iterations: 5
+    agent_tools:
+      - preset: exec_python
+      - preset: exec_python_file
+      - preset: save_content
+      - preset: bash
+    exports:
+      python_result: "{{agent_content}}"
+
+  - name: verify-python-tools
+    type: bash
+    log: "Verifying Python tools agent output"
+    command: echo "Python tools result - {{python_result}}"

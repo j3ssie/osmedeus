@@ -24,6 +24,7 @@ const (
 	StepTypeRemoteBash StepType = "remote-bash"
 	StepTypeHTTP       StepType = "http"
 	StepTypeLLM        StepType = "llm"
+	StepTypeAgent      StepType = "agent"
 )
 
 // TriggerType represents trigger types

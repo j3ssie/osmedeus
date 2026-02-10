@@ -362,6 +362,84 @@ func (p *Parser) validateStep(step *core.Step, index int) error {
 				}
 			}
 		}
+	case core.StepTypeAgent:
+		// Validate agent step has query or queries (not both)
+		if step.Query == "" && len(step.Queries) == 0 {
+			return &ValidationError{
+				Field:   fmt.Sprintf("steps[%d].query", index),
+				Message: "agent step must have 'query' or 'queries'",
+			}
+		}
+		if step.Query != "" && len(step.Queries) > 0 {
+			return &ValidationError{
+				Field:   fmt.Sprintf("steps[%d]", index),
+				Message: "agent step cannot have both 'query' and 'queries'",
+			}
+		}
+		// Validate queries are not empty strings
+		for i, q := range step.Queries {
+			if q == "" {
+				return &ValidationError{
+					Field:   fmt.Sprintf("steps[%d].queries[%d]", index, i),
+					Message: "query in queries list must not be empty",
+				}
+			}
+		}
+		// Validate agent step has max_iterations
+		if step.MaxIterations <= 0 {
+			return &ValidationError{
+				Field:   fmt.Sprintf("steps[%d].max_iterations", index),
+				Message: "agent step must have max_iterations > 0",
+			}
+		}
+		// Validate agent step has agent_tools
+		if len(step.AgentTools) == 0 {
+			return &ValidationError{
+				Field:   fmt.Sprintf("steps[%d].agent_tools", index),
+				Message: "agent step must have at least one agent_tool",
+			}
+		}
+		// Validate individual agent tools
+		seen := make(map[string]bool)
+		for i, tool := range step.AgentTools {
+			if tool.IsPreset() {
+				// Validate preset tool exists
+				if _, ok := core.GetPresetTool(tool.Preset); !ok {
+					return &ValidationError{
+						Field:   fmt.Sprintf("steps[%d].agent_tools[%d].preset", index, i),
+						Message: fmt.Sprintf("unknown preset tool: %s", tool.Preset),
+					}
+				}
+				if seen[tool.Preset] {
+					return &ValidationError{
+						Field:   fmt.Sprintf("steps[%d].agent_tools[%d].preset", index, i),
+						Message: fmt.Sprintf("duplicate tool name: %s", tool.Preset),
+					}
+				}
+				seen[tool.Preset] = true
+			} else {
+				// Custom tool must have name and description
+				if tool.Name == "" {
+					return &ValidationError{
+						Field:   fmt.Sprintf("steps[%d].agent_tools[%d].name", index, i),
+						Message: "custom agent tool requires 'name' field",
+					}
+				}
+				if tool.Description == "" {
+					return &ValidationError{
+						Field:   fmt.Sprintf("steps[%d].agent_tools[%d].description", index, i),
+						Message: "custom agent tool requires 'description' field",
+					}
+				}
+				if seen[tool.Name] {
+					return &ValidationError{
+						Field:   fmt.Sprintf("steps[%d].agent_tools[%d].name", index, i),
+						Message: fmt.Sprintf("duplicate tool name: %s", tool.Name),
+					}
+				}
+				seen[tool.Name] = true
+			}
+		}
 	default:
 		return &ValidationError{
 			Field:   fmt.Sprintf("steps[%d].type", index),

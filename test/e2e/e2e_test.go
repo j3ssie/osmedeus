@@ -71,6 +71,12 @@ func getTestdataPath(t *testing.T) string {
 	return filepath.Join(filepath.Dir(filename), "..", "testdata", "workflows")
 }
 
+// getAgentTestdataPath returns the path to agent/LLM test workflow fixtures
+func getAgentTestdataPath(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(getTestdataPath(t), "agent-and-llm")
+}
+
 // TestLogger provides verbose logging for E2E tests matching project style
 type TestLogger struct {
 	t        *testing.T

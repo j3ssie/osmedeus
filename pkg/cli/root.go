@@ -456,13 +456,14 @@ var versionCmd = &cobra.Command{
 		if globalJSON {
 			// JSON output
 			versionInfo := map[string]string{
-				"name":        core.BINARY,
-				"description": core.DESC,
-				"version":     core.VERSION,
-				"build":       buildTime,
-				"commit":      commitHash,
-				"author":      core.AUTHOR,
-				"docs":        core.DOCS,
+				"name":         core.BINARY,
+				"description":  core.DESC,
+				"version":      core.VERSION,
+				"build":        buildTime,
+				"commit":       commitHash,
+				"author":       core.AUTHOR,
+				"docs":         core.DOCS,
+				"generated_at": time.Now().Format(time.RFC3339),
 			}
 			jsonOut, _ := json.MarshalIndent(versionInfo, "", "  ")
 			fmt.Println(string(jsonOut))

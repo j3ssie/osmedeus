@@ -1,0 +1,28 @@
+kind: module
+name: test-agent-multi-goal
+description: Test agent with multiple queries executed sequentially
+tags: test,agent,multi-goal
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: multi-goal-agent
+    type: agent
+    log: "Running multi-goal agent for {{Target}}"
+    queries:
+      - "List files in the current directory"
+      - "Summarize what you found"
+    max_iterations: 5
+    agent_tools:
+      - preset: bash
+    exports:
+      result: "{{agent_content}}"
+      goals: "{{agent_goal_results}}"
+
+  - name: verify-goals
+    type: bash
+    log: "Verifying multi-goal results"
+    command: echo "Results - {{result}}"

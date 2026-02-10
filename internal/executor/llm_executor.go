@@ -1,10 +1,11 @@
 package executor
 
 import (
+	"bufio"
 	"bytes"
 	"context"
-	"github.com/j3ssie/osmedeus/v5/internal/json"
 	"fmt"
+	"github.com/j3ssie/osmedeus/v5/internal/json"
 	"io"
 	"net/http"
 	"strings"
@@ -132,6 +133,45 @@ type ChatError struct {
 	Message string `json:"message"`
 	Type    string `json:"type"`
 	Code    string `json:"code"`
+}
+
+// ChatCompletionStreamChunk is a single SSE event in a streaming response
+type ChatCompletionStreamChunk struct {
+	ID      string              `json:"id"`
+	Object  string              `json:"object"`
+	Created int64               `json:"created"`
+	Model   string              `json:"model"`
+	Choices []StreamChunkChoice `json:"choices"`
+	Usage   *ChatUsage          `json:"usage,omitempty"`
+	Error   *ChatError          `json:"error,omitempty"`
+}
+
+// StreamChunkChoice is a single choice in a streaming chunk
+type StreamChunkChoice struct {
+	Index        int       `json:"index"`
+	Delta        ChatDelta `json:"delta"`
+	FinishReason string    `json:"finish_reason,omitempty"`
+}
+
+// ChatDelta contains incremental content from streaming
+type ChatDelta struct {
+	Role      string           `json:"role,omitempty"`
+	Content   string           `json:"content,omitempty"`
+	ToolCalls []StreamToolCall `json:"tool_calls,omitempty"`
+}
+
+// StreamToolCall is a partial tool call from streaming (index-based accumulation)
+type StreamToolCall struct {
+	Index    int                    `json:"index"`
+	ID       string                 `json:"id,omitempty"`
+	Type     string                 `json:"type,omitempty"`
+	Function StreamToolCallFunction `json:"function,omitempty"`
+}
+
+// StreamToolCallFunction contains partial function data from streaming
+type StreamToolCallFunction struct {
+	Name      string `json:"name,omitempty"`
+	Arguments string `json:"arguments,omitempty"`
 }
 
 // EmbeddingRequest represents a request for embeddings
@@ -316,8 +356,8 @@ func (e *LLMExecutor) executeChatCompletion(
 		return result, err
 	}
 
-	// Process response and exports
-	e.processChatResponse(result, step.Name, response)
+	// Process response and exports (skip print if streamed — output was already printed token-by-token)
+	e.processChatResponse(result, step.Name, response, llmConfig.Stream)
 
 	result.Status = core.StepStatusSuccess
 	result.EndTime = time.Now()
@@ -496,13 +536,22 @@ func (e *LLMExecutor) buildChatRequest(step *core.Step, llmConfig *MergedLLMConf
 	return request, nil
 }
 
-// sendChatRequest sends an HTTP request to the LLM provider
+// sendChatRequest sends an HTTP request to the LLM provider.
+// When request.Stream is true, it delegates to sendChatRequestStreaming for SSE handling.
 func (e *LLMExecutor) sendChatRequest(
 	ctx context.Context,
 	provider *config.LLMProvider,
 	request *ChatCompletionRequest,
 	llmConfig *MergedLLMConfig,
 ) (*ChatCompletionResponse, error) {
+	if request.Stream {
+		return e.sendChatRequestStreaming(ctx, provider, request, llmConfig, func(token string) {
+			if !e.silent {
+				fmt.Print(token)
+			}
+		})
+	}
+
 	// Marshal request to JSON
 	body, err := json.Marshal(request)
 	if err != nil {
@@ -562,6 +611,215 @@ func (e *LLMExecutor) sendChatRequest(
 	}
 
 	return &response, nil
+}
+
+// sendChatRequestStreaming handles SSE streaming responses from the LLM provider.
+// It reads the stream line-by-line, accumulates content and tool calls, and calls
+// onToken for each text chunk for real-time display.
+func (e *LLMExecutor) sendChatRequestStreaming(
+	ctx context.Context,
+	provider *config.LLMProvider,
+	request *ChatCompletionRequest,
+	llmConfig *MergedLLMConfig,
+	onToken func(token string),
+) (*ChatCompletionResponse, error) {
+	log := logger.Get()
+
+	// Marshal request to JSON
+	body, err := json.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// Create HTTP request
+	req, err := http.NewRequestWithContext(ctx, "POST", provider.BaseURL, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+
+	if provider.AuthToken != "" {
+		req.Header.Set("Authorization", "Bearer "+provider.AuthToken)
+	}
+
+	// Add custom headers
+	for key, value := range llmConfig.CustomHeaders {
+		req.Header.Set(key, value)
+	}
+
+	// Set timeout
+	timeout, err := time.ParseDuration(llmConfig.Timeout)
+	if err != nil {
+		timeout = 120 * time.Second
+	}
+	client := &http.Client{Timeout: timeout}
+
+	// Execute request
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	// Check for HTTP errors before reading the stream
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		var errResp ChatCompletionResponse
+		if json.Unmarshal(respBody, &errResp) == nil && errResp.Error != nil {
+			return &errResp, fmt.Errorf("HTTP %d: %s", resp.StatusCode, errResp.Error.Message)
+		}
+		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	// Parse SSE stream
+	var contentBuilder strings.Builder
+	var role string
+	var finishReason string
+	var responseID, responseModel string
+	var usage ChatUsage
+	// Accumulate tool calls by index
+	toolCallMap := make(map[int]*core.LLMToolCall)
+
+	scanner := bufio.NewScanner(resp.Body)
+	// Increase buffer size for potentially large SSE lines
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// SSE format: lines starting with "data: "
+		if !strings.HasPrefix(line, "data: ") {
+			continue
+		}
+
+		data := strings.TrimPrefix(line, "data: ")
+
+		// Stream terminator
+		if data == "[DONE]" {
+			break
+		}
+
+		var chunk ChatCompletionStreamChunk
+		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			log.Debug("Failed to parse streaming chunk, skipping",
+				zap.String("data", data),
+				zap.Error(err),
+			)
+			continue
+		}
+
+		// Check for error in chunk
+		if chunk.Error != nil {
+			return &ChatCompletionResponse{Error: chunk.Error},
+				fmt.Errorf("streaming error: %s", chunk.Error.Message)
+		}
+
+		// Capture metadata from first chunk
+		if responseID == "" && chunk.ID != "" {
+			responseID = chunk.ID
+		}
+		if responseModel == "" && chunk.Model != "" {
+			responseModel = chunk.Model
+		}
+
+		// Capture usage from final chunk
+		if chunk.Usage != nil {
+			usage = *chunk.Usage
+		}
+
+		// Process choices
+		for _, choice := range chunk.Choices {
+			// Capture role from first delta
+			if choice.Delta.Role != "" {
+				role = choice.Delta.Role
+			}
+
+			// Accumulate content
+			if choice.Delta.Content != "" {
+				contentBuilder.WriteString(choice.Delta.Content)
+				if onToken != nil {
+					onToken(choice.Delta.Content)
+				}
+			}
+
+			// Accumulate tool calls (index-based)
+			for _, tc := range choice.Delta.ToolCalls {
+				existing, ok := toolCallMap[tc.Index]
+				if !ok {
+					existing = &core.LLMToolCall{
+						Type: "function",
+					}
+					toolCallMap[tc.Index] = existing
+				}
+				if tc.ID != "" {
+					existing.ID = tc.ID
+				}
+				if tc.Type != "" {
+					existing.Type = tc.Type
+				}
+				if tc.Function.Name != "" {
+					existing.Function.Name = tc.Function.Name
+				}
+				if tc.Function.Arguments != "" {
+					existing.Function.Arguments += tc.Function.Arguments
+				}
+			}
+
+			// Capture finish reason
+			if choice.FinishReason != "" {
+				finishReason = choice.FinishReason
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading stream: %w", err)
+	}
+
+	// Print trailing newline after streaming output
+	if onToken != nil && contentBuilder.Len() > 0 {
+		onToken("\n")
+	}
+
+	// Build tool calls slice from map (ordered by index)
+	var toolCalls []core.LLMToolCall
+	if len(toolCallMap) > 0 {
+		toolCalls = make([]core.LLMToolCall, len(toolCallMap))
+		for idx, tc := range toolCallMap {
+			if idx < len(toolCalls) {
+				toolCalls[idx] = *tc
+			}
+		}
+	}
+
+	// Assemble final response
+	if role == "" {
+		role = "assistant"
+	}
+
+	var msgContent interface{} = contentBuilder.String()
+
+	response := &ChatCompletionResponse{
+		ID:    responseID,
+		Model: responseModel,
+		Choices: []ChatChoice{
+			{
+				Index: 0,
+				Message: ChatMessage{
+					Role:      role,
+					Content:   msgContent,
+					ToolCalls: toolCalls,
+				},
+				FinishReason: finishReason,
+			},
+		},
+		Usage: usage,
+	}
+
+	return response, nil
 }
 
 // sendEmbeddingRequest sends an embedding request to the LLM provider
@@ -661,7 +919,7 @@ func printLLMOutput(content string) {
 }
 
 // processChatResponse exports the LLM response to step result
-func (e *LLMExecutor) processChatResponse(result *core.StepResult, stepName string, response *ChatCompletionResponse) {
+func (e *LLMExecutor) processChatResponse(result *core.StepResult, stepName string, response *ChatCompletionResponse, streamed bool) {
 	exportKey := sanitizeStepName(stepName) + "_llm_resp"
 
 	// Build comprehensive export structure
@@ -691,8 +949,8 @@ func (e *LLMExecutor) processChatResponse(result *core.StepResult, stepName stri
 		// Set output to content for display
 		if content, ok := choice.Message.Content.(string); ok {
 			result.Output = content
-			// Print LLM output with symbol prefix and markdown formatting (skip in silent mode)
-			if !e.silent {
+			// Print LLM output with markdown formatting (skip if silent or already streamed)
+			if !e.silent && !streamed {
 				printLLMOutput(content)
 			}
 		}
@@ -835,6 +1093,11 @@ func (e *LLMExecutor) getMergedConfig(step *core.Step) *MergedLLMConfig {
 		if topP, ok := step.ExtraLLMParams["top_p"].(float64); ok {
 			merged.TopP = topP
 		}
+	}
+
+	// Top-level step.Stream overrides everything (highest precedence)
+	if step.Stream != nil {
+		merged.Stream = *step.Stream
 	}
 
 	return merged

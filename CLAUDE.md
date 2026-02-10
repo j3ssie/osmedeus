@@ -51,7 +51,7 @@ CLI/API (pkg/cli, pkg/server)
          ↓
 Executor (internal/executor) - coordinates workflow execution
          ↓
-StepDispatcher - routes to: BashExecutor, FunctionExecutor, ForeachExecutor, ParallelExecutor, RemoteBashExecutor, HTTPExecutor, LLMExecutor
+StepDispatcher - routes to: BashExecutor, FunctionExecutor, ForeachExecutor, ParallelExecutor, RemoteBashExecutor, HTTPExecutor, LLMExecutor, AgentExecutor
          ↓
 Runner (internal/runner) - executes commands via: HostRunner, DockerRunner, SSHRunner
 ```
@@ -79,7 +79,7 @@ Runner (internal/runner) - executes commands via: HostRunner, DockerRunner, SSHR
 
 ```go
 WorkflowKind: "module" | "flow"  // module = single unit, flow = orchestrates modules
-StepType: "bash" | "function" | "parallel-steps" | "foreach" | "remote-bash" | "http" | "llm"
+StepType: "bash" | "function" | "parallel-steps" | "foreach" | "remote-bash" | "http" | "llm" | "agent"
 RunnerType: "host" | "docker" | "ssh"
 TriggerType: "cron" | "event" | "watch" | "manual"
 ```
@@ -110,7 +110,7 @@ Use `goto: _end` to terminate workflow.
 
 - `{{Variable}}` - standard template variables (Target, Output, threads, etc.)
 - `[[variable]]` - foreach loop variables (to avoid conflicts)
-- Functions evaluated via Goja JS runtime: `file_exists()`, `file_length()`, `trim()`, etc.
+- Functions evaluated via Goja JS runtime: `file_exists()`, `file_length()`, `trim()`, `exec_python()`, etc.
 
 ### Platform Variables
 
@@ -120,6 +120,46 @@ Built-in variables for environment detection:
 - `{{PlatformInDocker}}` - "true" if running in Docker container
 - `{{PlatformInKubernetes}}` - "true" if running in Kubernetes pod
 - `{{PlatformCloudProvider}}` - Cloud provider (aws, gcp, azure, local)
+
+### Agent Step Type
+
+The `agent` step type provides an agentic LLM execution loop with tool calling, sub-agent orchestration, and memory management.
+
+Key YAML fields:
+- `query` / `queries` - Task prompt (single or multi-goal)
+- `agent_tools` - List of preset or custom tools available to the agent
+- `max_iterations` - Maximum tool-calling loop iterations (required, > 0)
+- `system_prompt` - System prompt for the agent
+- `sub_agents` - Inline sub-agents spawnable via `spawn_agent` tool call
+- `memory` - Sliding window config (`max_messages`, `summarize_on_truncate`, `persist_path`, `resume_path`)
+- `models` - Preferred models tried in order before falling back to default
+- `output_schema` - JSON schema enforced on final output
+- `plan_prompt` - Optional planning stage prompt run before the main loop
+- `stop_condition` - JS expression evaluated after each iteration
+- `on_tool_start` / `on_tool_end` - JS hook expressions for tool call tracing
+- `parallel_tool_calls` - Enable/disable parallel tool execution (default: true)
+
+Preset tools: `bash`, `read_file`, `read_lines`, `file_exists`, `file_length`, `append_file`, `save_content`, `glob`, `grep_string`, `grep_regex`, `http_get`, `http_request`, `jq`, `exec_python`, `exec_python_file`, `run_module`, `run_flow`
+
+Available exports: `agent_content`, `agent_history`, `agent_iterations`, `agent_total_tokens`, `agent_prompt_tokens`, `agent_completion_tokens`, `agent_tool_results`, `agent_plan`, `agent_goal_results`
+
+```yaml
+steps:
+  - name: analyze-target
+    type: agent
+    query: "Enumerate subdomains of {{Target}} and summarize findings."
+    system_prompt: "You are a security reconnaissance agent."
+    max_iterations: 10
+    agent_tools:
+      - preset: bash
+      - preset: read_file
+      - preset: save_content
+    memory:
+      max_messages: 30
+      persist_path: "{{Output}}/agent/conversation.json"
+    exports:
+      findings: "{{agent_content}}"
+```
 
 ## CLI Commands
 
@@ -207,6 +247,8 @@ REST API documentation with curl examples is in `docs/api/`. Key endpoint catego
 **New API Endpoint**: Add handler in `pkg/server/handlers/`, register route in `server.go`, document in `docs/api/`
 
 **New Utility Function**: Add Go implementation in `internal/functions/`, register in `goja_runtime.go`
+
+**New Agent Preset Tool**: Add to `PresetToolRegistry` in `internal/core/agent_tool_presets.go`, add case in `buildPresetCallExpr()` in `internal/executor/agent_executor.go`
 
 ## Architecture Notes
 

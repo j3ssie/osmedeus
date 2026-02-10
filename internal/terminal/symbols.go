@@ -19,6 +19,7 @@ const (
 	SymbolFunction = "ƒ" // Function step
 	SymbolBash     = "$" // Bash/command step
 	SymbolForeach  = "∀" // Foreach step (universal quantifier)
+	SymbolAgent    = "⚙" // Agent step (agentic loop)
 	SymbolDocker   = "🐋" // Docker runner
 	SymbolSSH      = "❄" // SSH runner
 
@@ -150,6 +151,8 @@ func StepTypeSymbol(stepType, runnerType string) string {
 	switch stepType {
 	case "llm":
 		return Magenta(SymbolBowtie)
+	case "agent":
+		return HiMagenta(SymbolAgent)
 	case "function":
 		return Cyan(SymbolFunction)
 	case "remote-bash":
@@ -168,6 +171,8 @@ func StepCommandPrefix(stepType string) string {
 	switch stepType {
 	case "llm":
 		return SymbolBowtie // "⋈"
+	case "agent":
+		return SymbolAgent // "⚙"
 	case "function":
 		return SymbolFunction // "ƒ"
 	case "foreach":

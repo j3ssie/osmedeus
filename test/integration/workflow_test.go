@@ -47,15 +47,20 @@ func TestLoadAllWorkflows(t *testing.T) {
 
 	// Skip files that use experimental features or have validation issues
 	skipFiles := map[string]string{
-		"test-remote-bash.yaml":         "uses remote-bash step type (requires Docker)",
-		"test-remote-bash-ssh.yaml":     "uses remote-bash step type (requires SSH)",
-		"test-remote-bash-docker.yaml":  "uses remote-bash step type (requires Docker)",
-		"test-docker-file-outputs.yaml": "uses remote-bash step type (requires Docker)",
+		"test-remote-bash.yaml":           "uses remote-bash step type (requires Docker)",
+		"test-remote-bash-ssh.yaml":       "uses remote-bash step type (requires SSH)",
+		"test-remote-bash-docker.yaml":    "uses remote-bash step type (requires Docker)",
+		"test-docker-file-outputs.yaml":   "uses remote-bash step type (requires Docker)",
+		"test-agent-validation-fail.yaml": "intentionally invalid (duplicate agent tools)",
+		"test-agent-unknown-preset.yaml":  "intentionally invalid (unknown preset tool)",
 	}
 
-	// Get all workflow files
+	// Get all workflow files (top-level + agent-and-llm subdirectory)
 	files, err := filepath.Glob(filepath.Join(workflowsPath, "*.yaml"))
 	require.NoError(t, err)
+	subFiles, err := filepath.Glob(filepath.Join(workflowsPath, "agent-and-llm", "*.yaml"))
+	require.NoError(t, err)
+	files = append(files, subFiles...)
 	require.Greater(t, len(files), 0, "No workflow files found")
 
 	t.Logf("Found %d workflow files to load", len(files))
@@ -81,17 +86,22 @@ func TestLoadAllWorkflows(t *testing.T) {
 func TestValidateAllWorkflows(t *testing.T) {
 	workflowsPath := getWorkflowsPath()
 
-	// Get all workflow files
+	// Get all workflow files (top-level + agent-and-llm subdirectory)
 	files, err := filepath.Glob(filepath.Join(workflowsPath, "*.yaml"))
 	require.NoError(t, err)
+	subFiles, err := filepath.Glob(filepath.Join(workflowsPath, "agent-and-llm", "*.yaml"))
+	require.NoError(t, err)
+	files = append(files, subFiles...)
 
 	// Skip validation test files that are meant to fail or use experimental features
 	skipFiles := map[string]string{
-		"test-requirements-fail.yaml":   "expected to fail validation",
-		"test-remote-bash.yaml":         "uses remote-bash step type",
-		"test-remote-bash-ssh.yaml":     "uses remote-bash step type",
-		"test-remote-bash-docker.yaml":  "uses remote-bash step type",
-		"test-docker-file-outputs.yaml": "uses remote-bash step type (requires Docker)",
+		"test-requirements-fail.yaml":     "expected to fail validation",
+		"test-remote-bash.yaml":           "uses remote-bash step type",
+		"test-remote-bash-ssh.yaml":       "uses remote-bash step type",
+		"test-remote-bash-docker.yaml":    "uses remote-bash step type",
+		"test-docker-file-outputs.yaml":   "uses remote-bash step type (requires Docker)",
+		"test-agent-validation-fail.yaml": "intentionally invalid (duplicate agent tools)",
+		"test-agent-unknown-preset.yaml":  "intentionally invalid (unknown preset tool)",
 	}
 
 	for _, file := range files {

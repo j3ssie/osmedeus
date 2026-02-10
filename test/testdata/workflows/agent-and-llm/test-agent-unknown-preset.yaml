@@ -1,0 +1,21 @@
+kind: module
+name: test-agent-unknown-preset
+description: Agent workflow with unknown preset tool for validation testing
+tags: test,agent,invalid
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: agent-bad-preset
+    type: agent
+    query: "This should fail validation due to unknown preset"
+    max_iterations: 3
+    agent_tools:
+      - preset: nonexistent_tool
+
+  - name: unreachable
+    type: bash
+    command: echo "should not reach here"

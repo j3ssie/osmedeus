@@ -1,0 +1,21 @@
+kind: module
+name: test-agent-structured
+description: Test agent with structured output schema enforcement
+tags: test,agent,structured
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: structured-agent
+    type: agent
+    log: "Running structured output agent for {{Target}}"
+    query: "Find subdomains of {{Target}} and classify them"
+    output_schema: '{"type":"object","properties":{"subdomains":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"status":{"type":"string"}}}}}}'
+    max_iterations: 5
+    agent_tools:
+      - preset: bash
+    exports:
+      results: "{{agent_content}}"

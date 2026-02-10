@@ -27,8 +27,9 @@ type StepDispatcher struct {
 	runner           runner.Runner
 	enableBatch      bool // Enable batch template rendering
 	// Keep direct references to executors that need special configuration
-	bashExecutor *BashExecutor
-	llmExecutor  *LLMExecutor
+	bashExecutor  *BashExecutor
+	llmExecutor   *LLMExecutor
+	agentExecutor *AgentExecutor
 }
 
 // SetDryRun enables or disables dry-run mode for the dispatcher
@@ -39,6 +40,7 @@ func (d *StepDispatcher) SetDryRun(dryRun bool) {
 // SetSilent enables or disables silent mode for executors that support it
 func (d *StepDispatcher) SetSilent(silent bool) {
 	d.llmExecutor.SetSilent(silent)
+	d.agentExecutor.SetSilent(silent)
 }
 
 // SetRunner sets the runner for command execution
@@ -101,6 +103,7 @@ func NewStepDispatcherWithConfig(cfg StepDispatcherConfig) *StepDispatcher {
 	// Create executors
 	d.bashExecutor = NewBashExecutor(engine)
 	d.llmExecutor = NewLLMExecutor(engine)
+	d.agentExecutor = NewAgentExecutor(engine, d.functionRegistry)
 
 	// Register all built-in plugins
 	d.registry.Register(d.bashExecutor)
@@ -110,6 +113,7 @@ func NewStepDispatcherWithConfig(cfg StepDispatcherConfig) *StepDispatcher {
 	d.registry.Register(NewRemoteBashExecutor(engine))
 	d.registry.Register(NewHTTPExecutor(engine))
 	d.registry.Register(d.llmExecutor)
+	d.registry.Register(d.agentExecutor)
 
 	return d
 }
@@ -122,6 +126,7 @@ func (d *StepDispatcher) RegisterPlugin(plugin StepExecutorPlugin) {
 // SetConfig passes config to executors that need it
 func (d *StepDispatcher) SetConfig(cfg *config.Config) {
 	d.llmExecutor.SetConfig(cfg)
+	d.agentExecutor.SetConfig(cfg)
 }
 
 // Dispatch dispatches a step to the appropriate executor
@@ -280,6 +285,39 @@ func collectRenderRequests(step *core.Step) []template.RenderRequest {
 		add(fmt.Sprintf("Headers[%s]", k), v)
 	}
 
+	// Agent step fields
+	add("Query", step.Query)
+	add("SystemPrompt", step.SystemPrompt)
+	add("StopCondition", step.StopCondition)
+	add("PlanPrompt", step.PlanPrompt)
+	add("OnToolStart", step.OnToolStart)
+	add("OnToolEnd", step.OnToolEnd)
+	for i, q := range step.Queries {
+		add(fmt.Sprintf("Queries[%d]", i), q)
+	}
+	if step.Memory != nil {
+		add("Memory.PersistPath", step.Memory.PersistPath)
+		add("Memory.ResumePath", step.Memory.ResumePath)
+	}
+	for i, tool := range step.AgentTools {
+		add(fmt.Sprintf("AgentTools[%d].Handler", i), tool.Handler)
+	}
+
+	// Sub-agent fields (only top-level; nested sub-agents rendered on spawn)
+	for i, sa := range step.SubAgents {
+		add(fmt.Sprintf("SubAgents[%d].SystemPrompt", i), sa.SystemPrompt)
+		add(fmt.Sprintf("SubAgents[%d].StopCondition", i), sa.StopCondition)
+		add(fmt.Sprintf("SubAgents[%d].OnToolStart", i), sa.OnToolStart)
+		add(fmt.Sprintf("SubAgents[%d].OnToolEnd", i), sa.OnToolEnd)
+		if sa.Memory != nil {
+			add(fmt.Sprintf("SubAgents[%d].Memory.PersistPath", i), sa.Memory.PersistPath)
+			add(fmt.Sprintf("SubAgents[%d].Memory.ResumePath", i), sa.Memory.ResumePath)
+		}
+		for j, tool := range sa.AgentTools {
+			add(fmt.Sprintf("SubAgents[%d].AgentTools[%d].Handler", i, j), tool.Handler)
+		}
+	}
+
 	// RunnerConfig fields
 	if step.StepRunnerConfig != nil && step.StepRunnerConfig.RunnerConfig != nil {
 		cfg := step.StepRunnerConfig.RunnerConfig
@@ -390,6 +428,90 @@ func (d *StepDispatcher) renderStepBatch(step *core.Step, vars map[string]any) (
 	}
 	if v := get("HostOutputFile"); v != "" {
 		rendered.HostOutputFile = v
+	}
+	// Agent step fields
+	if v := get("Query"); v != "" {
+		rendered.Query = v
+	}
+	if v := get("SystemPrompt"); v != "" {
+		rendered.SystemPrompt = v
+	}
+	if v := get("StopCondition"); v != "" {
+		rendered.StopCondition = v
+	}
+	if v := get("PlanPrompt"); v != "" {
+		rendered.PlanPrompt = v
+	}
+	if v := get("OnToolStart"); v != "" {
+		rendered.OnToolStart = v
+	}
+	if v := get("OnToolEnd"); v != "" {
+		rendered.OnToolEnd = v
+	}
+	// Render Queries slice
+	if len(step.Queries) > 0 {
+		rendered.Queries = make([]string, len(step.Queries))
+		for i := range step.Queries {
+			rendered.Queries[i] = get(fmt.Sprintf("Queries[%d]", i))
+		}
+	}
+	if step.Memory != nil {
+		mem := *step.Memory
+		if v := get("Memory.PersistPath"); v != "" {
+			mem.PersistPath = v
+		}
+		if v := get("Memory.ResumePath"); v != "" {
+			mem.ResumePath = v
+		}
+		rendered.Memory = &mem
+	}
+	// Apply results to agent tool handlers
+	if len(step.AgentTools) > 0 {
+		renderedTools := make([]core.AgentToolDef, len(step.AgentTools))
+		copy(renderedTools, step.AgentTools)
+		for i := range renderedTools {
+			if v := get(fmt.Sprintf("AgentTools[%d].Handler", i)); v != "" {
+				renderedTools[i].Handler = v
+			}
+		}
+		rendered.AgentTools = renderedTools
+	}
+	// Apply results to sub-agent fields
+	if len(step.SubAgents) > 0 {
+		renderedSAs := make([]core.SubAgentDef, len(step.SubAgents))
+		for i, sa := range step.SubAgents {
+			renderedSAs[i] = sa.DeepCopy()
+			if v := get(fmt.Sprintf("SubAgents[%d].SystemPrompt", i)); v != "" {
+				renderedSAs[i].SystemPrompt = v
+			}
+			if v := get(fmt.Sprintf("SubAgents[%d].StopCondition", i)); v != "" {
+				renderedSAs[i].StopCondition = v
+			}
+			if v := get(fmt.Sprintf("SubAgents[%d].OnToolStart", i)); v != "" {
+				renderedSAs[i].OnToolStart = v
+			}
+			if v := get(fmt.Sprintf("SubAgents[%d].OnToolEnd", i)); v != "" {
+				renderedSAs[i].OnToolEnd = v
+			}
+			if sa.Memory != nil {
+				if renderedSAs[i].Memory == nil {
+					mem := *sa.Memory
+					renderedSAs[i].Memory = &mem
+				}
+				if v := get(fmt.Sprintf("SubAgents[%d].Memory.PersistPath", i)); v != "" {
+					renderedSAs[i].Memory.PersistPath = v
+				}
+				if v := get(fmt.Sprintf("SubAgents[%d].Memory.ResumePath", i)); v != "" {
+					renderedSAs[i].Memory.ResumePath = v
+				}
+			}
+			for j := range sa.AgentTools {
+				if v := get(fmt.Sprintf("SubAgents[%d].AgentTools[%d].Handler", i, j)); v != "" {
+					renderedSAs[i].AgentTools[j].Handler = v
+				}
+			}
+		}
+		rendered.SubAgents = renderedSAs
 	}
 
 	// Apply results to slice fields
@@ -813,6 +935,157 @@ func (d *StepDispatcher) renderStepSequential(step *core.Step, vars map[string]a
 			return nil, fmt.Errorf("error rendering host_output_file: %w", err)
 		}
 		rendered.HostOutputFile = hostFile
+	}
+
+	// Render agent step fields
+	if step.Query != "" {
+		q, err := d.templateEngine.Render(step.Query, vars)
+		if err != nil {
+			return nil, fmt.Errorf("error rendering query: %w", err)
+		}
+		rendered.Query = q
+	}
+	if len(step.Queries) > 0 {
+		qs, err := d.templateEngine.RenderSlice(step.Queries, vars)
+		if err != nil {
+			return nil, fmt.Errorf("error rendering queries: %w", err)
+		}
+		rendered.Queries = qs
+	}
+	if step.SystemPrompt != "" {
+		sp, err := d.templateEngine.Render(step.SystemPrompt, vars)
+		if err != nil {
+			return nil, fmt.Errorf("error rendering system_prompt: %w", err)
+		}
+		rendered.SystemPrompt = sp
+	}
+	if step.StopCondition != "" {
+		sc, err := d.templateEngine.Render(step.StopCondition, vars)
+		if err != nil {
+			return nil, fmt.Errorf("error rendering stop_condition: %w", err)
+		}
+		rendered.StopCondition = sc
+	}
+	if step.PlanPrompt != "" {
+		pp, err := d.templateEngine.Render(step.PlanPrompt, vars)
+		if err != nil {
+			return nil, fmt.Errorf("error rendering plan_prompt: %w", err)
+		}
+		rendered.PlanPrompt = pp
+	}
+	if step.OnToolStart != "" {
+		ots, err := d.templateEngine.Render(step.OnToolStart, vars)
+		if err != nil {
+			return nil, fmt.Errorf("error rendering on_tool_start: %w", err)
+		}
+		rendered.OnToolStart = ots
+	}
+	if step.OnToolEnd != "" {
+		ote, err := d.templateEngine.Render(step.OnToolEnd, vars)
+		if err != nil {
+			return nil, fmt.Errorf("error rendering on_tool_end: %w", err)
+		}
+		rendered.OnToolEnd = ote
+	}
+	if step.Memory != nil {
+		mem := *step.Memory
+		if mem.PersistPath != "" {
+			pp, err := d.templateEngine.Render(mem.PersistPath, vars)
+			if err != nil {
+				return nil, fmt.Errorf("error rendering memory.persist_path: %w", err)
+			}
+			mem.PersistPath = pp
+		}
+		if mem.ResumePath != "" {
+			rp, err := d.templateEngine.Render(mem.ResumePath, vars)
+			if err != nil {
+				return nil, fmt.Errorf("error rendering memory.resume_path: %w", err)
+			}
+			mem.ResumePath = rp
+		}
+		rendered.Memory = &mem
+	}
+
+	// Render agent tool handlers
+	if len(step.AgentTools) > 0 {
+		renderedTools := make([]core.AgentToolDef, len(step.AgentTools))
+		copy(renderedTools, step.AgentTools)
+		for i, tool := range renderedTools {
+			if tool.Handler != "" {
+				h, err := d.templateEngine.Render(tool.Handler, vars)
+				if err != nil {
+					return nil, fmt.Errorf("error rendering agent_tools[%d].handler: %w", i, err)
+				}
+				renderedTools[i].Handler = h
+			}
+		}
+		rendered.AgentTools = renderedTools
+	}
+
+	// Render sub-agent fields (only top-level; nested sub-agents rendered on spawn)
+	if len(step.SubAgents) > 0 {
+		renderedSAs := make([]core.SubAgentDef, len(step.SubAgents))
+		for i, sa := range step.SubAgents {
+			renderedSAs[i] = sa.DeepCopy()
+			if sa.SystemPrompt != "" {
+				sp, err := d.templateEngine.Render(sa.SystemPrompt, vars)
+				if err != nil {
+					return nil, fmt.Errorf("error rendering sub_agents[%d].system_prompt: %w", i, err)
+				}
+				renderedSAs[i].SystemPrompt = sp
+			}
+			if sa.StopCondition != "" {
+				sc, err := d.templateEngine.Render(sa.StopCondition, vars)
+				if err != nil {
+					return nil, fmt.Errorf("error rendering sub_agents[%d].stop_condition: %w", i, err)
+				}
+				renderedSAs[i].StopCondition = sc
+			}
+			if sa.OnToolStart != "" {
+				ots, err := d.templateEngine.Render(sa.OnToolStart, vars)
+				if err != nil {
+					return nil, fmt.Errorf("error rendering sub_agents[%d].on_tool_start: %w", i, err)
+				}
+				renderedSAs[i].OnToolStart = ots
+			}
+			if sa.OnToolEnd != "" {
+				ote, err := d.templateEngine.Render(sa.OnToolEnd, vars)
+				if err != nil {
+					return nil, fmt.Errorf("error rendering sub_agents[%d].on_tool_end: %w", i, err)
+				}
+				renderedSAs[i].OnToolEnd = ote
+			}
+			if sa.Memory != nil {
+				if renderedSAs[i].Memory == nil {
+					mem := *sa.Memory
+					renderedSAs[i].Memory = &mem
+				}
+				if sa.Memory.PersistPath != "" {
+					pp, err := d.templateEngine.Render(sa.Memory.PersistPath, vars)
+					if err != nil {
+						return nil, fmt.Errorf("error rendering sub_agents[%d].memory.persist_path: %w", i, err)
+					}
+					renderedSAs[i].Memory.PersistPath = pp
+				}
+				if sa.Memory.ResumePath != "" {
+					rp, err := d.templateEngine.Render(sa.Memory.ResumePath, vars)
+					if err != nil {
+						return nil, fmt.Errorf("error rendering sub_agents[%d].memory.resume_path: %w", i, err)
+					}
+					renderedSAs[i].Memory.ResumePath = rp
+				}
+			}
+			for j, tool := range sa.AgentTools {
+				if tool.Handler != "" {
+					h, err := d.templateEngine.Render(tool.Handler, vars)
+					if err != nil {
+						return nil, fmt.Errorf("error rendering sub_agents[%d].agent_tools[%d].handler: %w", i, j, err)
+					}
+					renderedSAs[i].AgentTools[j].Handler = h
+				}
+			}
+		}
+		rendered.SubAgents = renderedSAs
 	}
 
 	// Render LLM step fields

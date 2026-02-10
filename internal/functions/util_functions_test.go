@@ -642,6 +642,154 @@ func TestPickValid(t *testing.T) {
 	})
 }
 
+func TestParseParamsToFlags(t *testing.T) {
+	t.Run("empty string returns nil", func(t *testing.T) {
+		result := parseParamsToFlags("")
+		assert.Nil(t, result)
+	})
+
+	t.Run("undefined returns nil", func(t *testing.T) {
+		result := parseParamsToFlags("undefined")
+		assert.Nil(t, result)
+	})
+
+	t.Run("single param", func(t *testing.T) {
+		result := parseParamsToFlags("threads=10")
+		assert.Equal(t, []string{"-p", "threads=10"}, result)
+	})
+
+	t.Run("multiple params", func(t *testing.T) {
+		result := parseParamsToFlags("threads=10,deep=true")
+		assert.Equal(t, []string{"-p", "threads=10", "-p", "deep=true"}, result)
+	})
+
+	t.Run("params with spaces", func(t *testing.T) {
+		result := parseParamsToFlags(" threads=10 , deep=true ")
+		assert.Equal(t, []string{"-p", "threads=10", "-p", "deep=true"}, result)
+	})
+
+	t.Run("skips entries without equals sign", func(t *testing.T) {
+		result := parseParamsToFlags("threads=10,invalid,deep=true")
+		assert.Equal(t, []string{"-p", "threads=10", "-p", "deep=true"}, result)
+	})
+
+	t.Run("skips empty entries from trailing comma", func(t *testing.T) {
+		result := parseParamsToFlags("threads=10,")
+		assert.Equal(t, []string{"-p", "threads=10"}, result)
+	})
+}
+
+func TestRunModule(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("empty module returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`run_module("", "example.com")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("empty target returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`run_module("subdomain", "")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("undefined module returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`run_module(undefined, "example.com")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("undefined target returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`run_module("subdomain", undefined)`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+}
+
+func TestRunFlow(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("empty flow returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`run_flow("", "example.com")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("empty target returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`run_flow("general", "")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("undefined flow returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`run_flow(undefined, "example.com")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("undefined target returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`run_flow("general", undefined)`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+}
+
+func TestExecPython(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("simple print", func(t *testing.T) {
+		result, err := runtime.Execute(`exec_python("print('hello')")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "hello", result)
+	})
+
+	t.Run("multiline code", func(t *testing.T) {
+		result, err := runtime.Execute(`exec_python("x = 2 + 3\nprint(x)")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "5", result)
+	})
+
+	t.Run("empty code returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`exec_python("")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("invalid code returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`exec_python("import sys; sys.exit(1)")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+}
+
+func TestExecPythonFile(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("run temp python file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		pyFile := filepath.Join(tmpDir, "test.py")
+		err := os.WriteFile(pyFile, []byte("print('from file')"), 0644)
+		require.NoError(t, err)
+
+		result, err := runtime.Execute(`exec_python_file("`+pyFile+`")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "from file", result)
+	})
+
+	t.Run("empty path returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`exec_python_file("")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("nonexistent file returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`exec_python_file("/tmp/nonexistent_py_file_12345.py")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+}
+
 func TestMoveFile(t *testing.T) {
 	runtime := NewOttoRuntime()
 

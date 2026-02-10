@@ -1,0 +1,30 @@
+kind: module
+name: test-agent-exports
+description: Test agent step exports propagation and token tracking
+tags: test,agent
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: agent-with-exports
+    type: agent
+    system_prompt: "You are a helpful assistant. Always respond concisely."
+    query: "Check if the file /tmp/nonexistent-{{Target}} exists using file_exists tool, then report the result."
+    max_iterations: 3
+    agent_tools:
+      - preset: file_exists
+      - preset: bash
+    exports:
+      agent_result: "{{agent_content}}"
+      iterations_used: "{{agent_iterations}}"
+      tokens_used: "{{agent_total_tokens}}"
+
+  - name: verify-exports
+    type: bash
+    commands:
+      - echo "Agent result is - {{agent_result}}"
+      - echo "Iterations used - {{iterations_used}}"
+      - echo "Tokens used - {{tokens_used}}"

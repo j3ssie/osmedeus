@@ -1,0 +1,31 @@
+kind: module
+name: test-agent-file-tools
+description: Test agent with file-related preset tools (glob, read_file, file_exists, save_content, grep_string)
+tags: test,agent,file-tools
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: agent-file-tools
+    type: agent
+    log: "Running agent with file tool presets for {{Target}}"
+    query: "List files matching *.txt in the output directory, check if any exist, read their contents, and save a summary."
+    system_prompt: "You are a file analysis assistant. Use the provided tools to inspect files."
+    max_iterations: 5
+    agent_tools:
+      - preset: glob
+      - preset: read_file
+      - preset: file_exists
+      - preset: save_content
+      - preset: grep_string
+      - preset: file_length
+    exports:
+      file_result: "{{agent_content}}"
+
+  - name: verify-file-tools
+    type: bash
+    log: "Verifying file tools agent output"
+    command: echo "File tools agent result - {{file_result}}"

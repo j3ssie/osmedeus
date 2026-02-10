@@ -1,0 +1,96 @@
+kind: module
+name: test-agent
+description: Test agent step execution with tool calling loop
+tags: test,agent,llm
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  # Basic agent with preset tools
+  - name: basic-agent
+    type: agent
+    log: "Running basic agent for {{Target}}"
+    query: "List the files in the current directory using exec_cmd, then summarize what you found."
+    max_iterations: 5
+    agent_tools:
+      - preset: bash
+      - preset: file_exists
+    exports:
+      agent_output: "{{agent_content}}"
+
+  # Agent with system prompt and custom tool
+  - name: agent-with-system-prompt
+    type: agent
+    log: "Running agent with system prompt"
+    system_prompt: "You are a security analyst. Be concise and precise."
+    query: "Check if the target {{Target}} is a valid domain."
+    max_iterations: 3
+    agent_tools:
+      - preset: bash
+      - name: check_domain
+        description: "Validate if a string is a valid domain name"
+        parameters:
+          type: object
+          properties:
+            domain:
+              type: string
+              description: "Domain to validate"
+          required:
+            - domain
+        handler: 'contains(args.domain, ".")'
+    exports:
+      analysis: "{{agent_content}}"
+
+  # Agent with stop condition
+  - name: agent-with-stop-condition
+    type: agent
+    log: "Running agent with stop condition"
+    query: "Say DONE when you are finished."
+    max_iterations: 10
+    stop_condition: 'contains(agent_content, "DONE")'
+    agent_tools:
+      - preset: bash
+
+  # Agent with memory configuration
+  - name: agent-with-memory
+    type: agent
+    log: "Running agent with memory config"
+    query: "Execute 'echo hello' and report the result."
+    max_iterations: 5
+    memory:
+      max_messages: 20
+      persist_path: "{{Output}}/agent/conversation.json"
+    agent_tools:
+      - preset: bash
+      - preset: save_content
+
+  # Agent with LLM config override
+  - name: agent-with-config
+    type: agent
+    log: "Running agent with LLM config override"
+    query: "What is 2+2?"
+    max_iterations: 3
+    llm_config:
+      max_tokens: 100
+      temperature: 0.1
+    agent_tools:
+      - preset: bash
+
+  # Agent with parallel tool calls disabled
+  - name: agent-sequential-tools
+    type: agent
+    log: "Running agent with sequential tool calls"
+    query: "Run 'echo hello' then 'echo world' sequentially."
+    max_iterations: 5
+    parallel_tool_calls: false
+    agent_tools:
+      - preset: bash
+
+  # Use previous agent export in next step
+  - name: use-agent-output
+    type: bash
+    log: "Using agent output from previous step"
+    command: echo "Agent said - {{agent_output}}"

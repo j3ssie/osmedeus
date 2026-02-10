@@ -31,7 +31,8 @@ Built for both beginners and experts, it delivers powerful, composable automatio
 - **Distributed Execution** - Scale with Redis-based master-worker pattern for parallel scanning
 - **Notifications** - Telegram bot and webhook integrations
 - **Cloud Storage** - S3-compatible storage for artifact management
-- **LLM Integration** - AI-powered workflow steps with chat completions and embeddings
+- **LLM Integration** - AI-powered workflow steps with chat completions, embeddings, and agentic tool-calling loops
+- **Agent Step Type** - Agentic LLM execution with tool calling, sub-agents, and memory management
 
 See [Documentation Page](https://docs.osmedeus.org/) for more details.
 
@@ -113,7 +114,7 @@ For more CLI usage and example commands, refer to the [CLI Reference](https://do
 │  │ CONFIG ──▶ PARSER ──▶ EXECUTOR ──▶ STEP DISPATCHER ──▶ RUNNER       │  │
 │  │                          │                                          │  │
 │  │  Step Executors: bash | function | parallel | foreach | remote-bash │  │
-│  │                  http | llm                                         │  │
+│  │                  http | llm | agent                                 │  │
 │  │                          │                                          │  │
 │  │  Runners: HostRunner | DockerRunner | SSHRunner                     │  │
 │  └─────────────────────────────────────────────────────────────────────┘  │

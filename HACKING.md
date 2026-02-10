@@ -8,6 +8,7 @@ This document describes the technical architecture and development practices for
 - [Architecture Overview](#architecture-overview)
 - [Core Components](#core-components)
 - [Workflow Engine](#workflow-engine)
+- [Agent Step Type](#agent-step-type)
 - [Execution Pipeline](#execution-pipeline)
 - [Runner System](#runner-system)
 - [Authentication Middleware](#authentication-middleware)
@@ -128,7 +129,7 @@ type Workflow struct {
 
 type Step struct {
     Name             string
-    Type             StepType      // bash, function, foreach, parallel-steps, remote-bash, http, llm
+    Type             StepType      // bash, function, foreach, parallel-steps, remote-bash, http, llm, agent
     PreCondition     string        // Skip condition
     Command          string        // For bash/remote-bash
     Commands         []string      // Multiple commands
@@ -140,6 +141,23 @@ type Step struct {
     ParallelSteps    []Step        // For parallel-steps type
     StepRunner       RunnerType    // For remote-bash: docker or ssh
     StepRunnerConfig *StepRunnerConfig // Runner config for remote-bash
+
+    // Agent step fields
+    Query             string             // Task prompt for the agent
+    Queries           []string           // Multiple queries (multi-goal mode)
+    SystemPrompt      string             // System prompt for the agent
+    AgentTools        []AgentToolDef     // Preset or custom tools
+    MaxIterations     int                // Max tool-calling loop iterations
+    Models            []string           // Preferred models (tried in order)
+    SubAgents         []SubAgentDef      // Inline sub-agents spawnable via spawn_agent
+    MaxAgentDepth     int                // Max nesting depth for sub-agents (default: 3)
+    Memory            *AgentMemoryConfig // Sliding window, summarization, persistence
+    OutputSchema      string             // JSON schema for structured output
+    StopCondition     string             // JS expression evaluated after each iteration
+    PlanPrompt        string             // Planning stage prompt
+    OnToolStart       string             // JS hook before each tool call
+    OnToolEnd         string             // JS hook after each tool call
+
     Exports          map[string]string
     OnSuccess        []Action
     OnError          []Action
@@ -208,7 +226,174 @@ steps:
 
 The `_end` special value terminates workflow execution from the current step.
 
+## Agent Step Type
+
+The `agent` step type implements an agentic LLM execution loop. It sends a query to the LLM with available tools, executes tool calls returned by the LLM, feeds results back, and repeats until the LLM responds without tool calls or `max_iterations` is reached.
+
+### Execution Flow
+
+```
+1. Planning stage (optional)     ──▶  LLM generates a plan from plan_prompt
+2. Initialize conversation       ──▶  system_prompt + query + plan (if any)
+3. Main agent loop:
+   a. Send conversation to LLM (with tools)
+   b. If no tool_calls → done
+   c. Execute tool calls (parallel or sequential)
+   d. Append tool results to conversation
+   e. Evaluate stop_condition (if defined)
+   f. Apply memory window (if configured)
+   g. Repeat until max_iterations
+4. Structured output (optional)  ──▶  Final LLM call with output_schema
+5. Persist conversation (if memory.persist_path set)
+```
+
+### YAML Structure
+
+```yaml
+steps:
+  - name: my-agent
+    type: agent
+    query: "Analyze {{Target}} and report findings."
+    system_prompt: "You are a security analyst."
+    max_iterations: 10
+    agent_tools:
+      - preset: bash
+      - preset: read_file
+      - preset: http_get
+      - name: custom_tool
+        description: "My custom tool"
+        parameters:
+          type: object
+          properties:
+            input:
+              type: string
+          required: [input]
+        handler: 'process(args.input)'
+    models:
+      - gpt-4o
+      - claude-sonnet-4-20250514
+    memory:
+      max_messages: 30
+      summarize_on_truncate: true
+      persist_path: "{{Output}}/agent/conversation.json"
+      resume_path: "{{Output}}/agent/conversation.json"
+    stop_condition: 'contains(agent_content, "DONE")'
+    output_schema: '{"type":"object","properties":{"summary":{"type":"string"}}}'
+    plan_prompt: "Create a plan for analyzing the target."
+    on_tool_start: 'log_info("Tool: " + tool_name)'
+    on_tool_end: 'log_info("Result: " + result)'
+    parallel_tool_calls: true
+    exports:
+      findings: "{{agent_content}}"
+```
+
+### Preset Tools
+
+All preset tools are defined in `PresetToolRegistry` (`internal/core/agent_tool_presets.go`):
+
+| Preset | Description | Parameters |
+|--------|-------------|------------|
+| `bash` | Execute a shell command | `command` |
+| `read_file` | Read file contents | `path` |
+| `read_lines` | Read file as array of lines | `path` |
+| `file_exists` | Check if a file exists | `path` |
+| `file_length` | Count non-empty lines in a file | `path` |
+| `append_file` | Append content from source to dest | `dest`, `content` |
+| `save_content` | Write string content to a file | `content`, `path` |
+| `glob` | Find files matching a glob pattern | `pattern` |
+| `grep_string` | Search file for lines containing a string | `source`, `str` |
+| `grep_regex` | Search file for lines matching a regex | `source`, `pattern` |
+| `http_get` | Make an HTTP GET request | `url` |
+| `http_request` | Make an HTTP request with method/headers/body | `url`, `method`, `body`?, `headers`? |
+| `jq` | Query JSON data using jq syntax | `json_data`, `expression` |
+| `exec_python` | Run inline Python code | `code` |
+| `exec_python_file` | Run a Python file | `path` |
+| `run_module` | Run an osmedeus module | `module`, `target`, `params`? |
+| `run_flow` | Run an osmedeus flow | `flow`, `target`, `params`? |
+
+### Custom Tool Definition
+
+Custom tools use a JS handler expression. The parsed arguments are available as the `args` object:
+
+```yaml
+agent_tools:
+  - name: check_domain
+    description: "Validate if a string is a valid domain"
+    parameters:
+      type: object
+      properties:
+        domain:
+          type: string
+      required: [domain]
+    handler: 'contains(args.domain, ".")'
+```
+
+### Sub-Agent Orchestration
+
+Agents can delegate to sub-agents via the `spawn_agent` tool (automatically added when `sub_agents` is defined):
+
+```yaml
+steps:
+  - name: orchestrator
+    type: agent
+    query: "Analyze {{Target}} by coordinating specialists"
+    system_prompt: "You are an orchestrator. Delegate tasks to sub-agents."
+    max_iterations: 10
+    max_agent_depth: 3
+    agent_tools:
+      - preset: bash
+    sub_agents:
+      - name: recon_agent
+        description: "Specialized agent for reconnaissance"
+        system_prompt: "You are a recon specialist"
+        max_iterations: 5
+        agent_tools:
+          - preset: bash
+          - preset: http_get
+      - name: vuln_scanner
+        description: "Specialized agent for vulnerability scanning"
+        max_iterations: 5
+        agent_tools:
+          - preset: bash
+          - preset: read_file
+```
+
+Sub-agents are implemented via `SubAgentToolExecutor` in `internal/executor/tool_executor.go`. Child token counts are merged into the parent via `agentState.MergeTokens()`.
+
+### Memory Management
+
+- **Sliding window**: `max_messages` limits conversation history (system message always kept)
+- **Summarization**: `summarize_on_truncate: true` uses LLM to summarize dropped messages
+- **Persistence**: `persist_path` saves conversation JSON after completion
+- **Resume**: `resume_path` loads a prior conversation on start
+
+### Available Exports
+
+| Export | Description |
+|--------|-------------|
+| `agent_content` | Final text output from the agent |
+| `agent_history` | Full conversation history as JSON |
+| `agent_iterations` | Number of iterations completed |
+| `agent_total_tokens` | Total tokens used (including sub-agents) |
+| `agent_prompt_tokens` | Prompt tokens used |
+| `agent_completion_tokens` | Completion tokens used |
+| `agent_tool_results` | All tool call results as JSON |
+| `agent_plan` | Plan generated by planning stage (if used) |
+| `agent_goal_results` | Results per query in multi-goal mode (JSON) |
+
+### Tool Hooks
+
+Hook expressions receive these variables:
+- `tool_name` - Name of the tool being called
+- `tool_args` - JSON string of tool arguments
+- `result` - Tool result (empty in `on_tool_start`)
+- `duration` - Execution time in ms (0 in `on_tool_start`)
+- `iteration` - Current agent iteration number
+- `error` - Error string (empty if no error)
+
 ### Execution Context
+
+
 
 ```go
 // internal/core/context.go
@@ -282,9 +467,9 @@ Lookup order:
              ┌──────────────┐            ┌──────────────┐            ┌──────────────┐
              │ BashExecutor │            │FunctionExec  │            │ForeachExec   │
              └──────────────┘            └──────────────┘            └──────────────┘
-             ┌──────────────┐            ┌──────────────┐
-             │ HTTPExecutor │            │ LLMExecutor  │
-             └──────────────┘            └──────────────┘
+             ┌──────────────┐            ┌──────────────┐            ┌──────────────┐
+             │ HTTPExecutor │            │ LLMExecutor  │            │AgentExecutor │
+             └──────────────┘            └──────────────┘            └──────────────┘
                     │                            │                            │
                     └────────────────────────────┼────────────────────────────┘
                                                  ▼
@@ -356,6 +541,7 @@ Built-in executors registered at startup:
 - `RemoteBashExecutor` - handles `remote-bash` steps
 - `HTTPExecutor` - handles `http` steps
 - `LLMExecutor` - handles `llm` steps
+- `AgentExecutor` - handles `agent` steps (agentic LLM loop with tool calling)
 
 ## Run Control Plane
 
@@ -603,6 +789,8 @@ _ = vm.Set("my_new_function", vf.myNewFunction)
 ```go
 const FnMyNewFunction = "my_new_function"
 ```
+
+Notable utility functions include `exec_python(code)` and `exec_python_file(path)` for running Python code, and `run_module(module, target, params)` / `run_flow(flow, target, params)` for launching osmedeus workflows as subprocesses.
 
 ### Output and Control Functions
 
@@ -1167,7 +1355,8 @@ test/e2e/                                # E2E CLI tests
 ├── worker_test.go                       # Worker command tests
 ├── distributed_test.go                  # Distributed scan e2e tests
 ├── ssh_test.go                          # SSH runner e2e tests (module & step level)
-└── api_test.go                          # API endpoint e2e tests (all routes)
+├── api_test.go                          # API endpoint e2e tests (all routes)
+└── agent_test.go                        # Agent step e2e tests
 ```
 
 ### Running Tests

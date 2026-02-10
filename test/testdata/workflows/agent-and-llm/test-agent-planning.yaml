@@ -1,0 +1,28 @@
+kind: module
+name: test-agent-planning
+description: Test agent with planning stage before execution
+tags: test,agent,planning
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: agent-with-plan
+    type: agent
+    log: "Running agent with planning stage for {{Target}}"
+    plan_prompt: "Create a reconnaissance plan for {{Target}}. List 3 steps."
+    plan_max_tokens: 500
+    query: "Execute the plan you created."
+    max_iterations: 5
+    agent_tools:
+      - preset: bash
+    exports:
+      plan: "{{agent_plan}}"
+      result: "{{agent_content}}"
+
+  - name: verify-plan
+    type: bash
+    log: "Verifying plan was created"
+    command: echo "Plan - {{plan}}"

@@ -1,0 +1,57 @@
+kind: module
+name: test-agent-sub-agents-nested
+description: Test 3-level nested sub-agent orchestration (parent -> child -> grandchild)
+tags: test,agent,sub-agents,nested
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: nested-orchestrator
+    type: agent
+    query: "Coordinate a 3-level analysis of {{Target}} by delegating to specialist agents"
+    system_prompt: "You are a top-level orchestrator. Delegate tasks to sub-agents for deeper analysis."
+    max_iterations: 10
+    max_agent_depth: 3
+    agent_tools:
+      - preset: bash
+    sub_agents:
+      - name: recon_coordinator
+        description: "Coordinates reconnaissance by delegating to leaf agents"
+        system_prompt: "You coordinate recon tasks. Delegate to specialists."
+        max_iterations: 5
+        agent_tools:
+          - preset: bash
+          - preset: http_get
+        sub_agents:
+          - name: port_scanner
+            description: "Scans ports on a target"
+            system_prompt: "You are a port scanning specialist"
+            max_iterations: 3
+            agent_tools:
+              - preset: bash
+          - name: dns_resolver
+            description: "Resolves DNS records for a target"
+            system_prompt: "You are a DNS resolution specialist"
+            max_iterations: 3
+            agent_tools:
+              - preset: bash
+      - name: vuln_coordinator
+        description: "Coordinates vulnerability analysis"
+        system_prompt: "You coordinate vulnerability scanning tasks."
+        max_iterations: 5
+        agent_tools:
+          - preset: bash
+          - preset: read_file
+        sub_agents:
+          - name: web_scanner
+            description: "Scans web applications for vulnerabilities"
+            system_prompt: "You are a web vulnerability specialist"
+            max_iterations: 3
+            agent_tools:
+              - preset: bash
+              - preset: http_get
+    exports:
+      nested_result: "{{agent_content}}"

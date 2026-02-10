@@ -1,0 +1,29 @@
+kind: module
+name: test-agent-orchestration
+description: Test agent with run_module and run_flow preset tools
+tags: test,agent,orchestration
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: agent-orchestrator
+    type: agent
+    log: "Running orchestration agent for {{Target}}"
+    query: "Analyze {{Target}} by running appropriate modules and flows."
+    system_prompt: "You are a workflow orchestrator. Use run_module and run_flow to delegate scanning tasks."
+    max_iterations: 5
+    agent_tools:
+      - preset: bash
+      - preset: run_module
+      - preset: run_flow
+      - preset: read_file
+    exports:
+      orchestration_result: "{{agent_content}}"
+
+  - name: verify-orchestration
+    type: bash
+    log: "Verifying orchestration agent output"
+    command: echo "Orchestration result - {{orchestration_result}}"

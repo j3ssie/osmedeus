@@ -232,11 +232,45 @@ type Step struct {
 	EmbeddingInput []string               `yaml:"embedding_input,omitempty"`
 	ExtraLLMParams map[string]interface{} `yaml:"extra_llm_parameters,omitempty"`
 
+	// Agent step fields
+	Query             string             `yaml:"query,omitempty"`
+	Queries           []string           `yaml:"queries,omitempty"` // Multiple queries executed sequentially (multi-goal)
+	SystemPrompt      string             `yaml:"system_prompt,omitempty"`
+	AgentTools        []AgentToolDef     `yaml:"agent_tools,omitempty"`
+	ParallelToolCalls *bool              `yaml:"parallel_tool_calls,omitempty"`
+	MaxIterations     int                `yaml:"max_iterations,omitempty"`
+	StopCondition     string             `yaml:"stop_condition,omitempty"`
+	Memory            *AgentMemoryConfig `yaml:"memory,omitempty"`
+
+	// Agent planning stage
+	PlanPrompt    string `yaml:"plan_prompt,omitempty"`
+	PlanMaxTokens *int   `yaml:"plan_max_tokens,omitempty"`
+
+	// Agent model preferences (tried in order before falling back to default)
+	Models []string `yaml:"models,omitempty"`
+
+	// Agent structured output (enforced on final iteration)
+	// JSON string, e.g. '{"type":"object","properties":{"key":{"type":"string"}}}'
+	OutputSchema string `yaml:"output_schema,omitempty"`
+
+	// Agent tool tracing hooks (JS expressions)
+	OnToolStart string `yaml:"on_tool_start,omitempty"` // Evaluated before each tool call
+	OnToolEnd   string `yaml:"on_tool_end,omitempty"`   // Evaluated after each tool call
+
+	// Sub-agents that can be spawned by this agent via tool calls
+	SubAgents []SubAgentDef `yaml:"sub_agents,omitempty"`
+	// Maximum nesting depth for sub-agent spawning (default: 3)
+	MaxAgentDepth int `yaml:"max_agent_depth,omitempty"`
+
+	// Streaming (applies to both llm and agent steps)
+	Stream *bool `yaml:"stream,omitempty"` // Enable streaming output (overrides llm_config.stream and global config)
+
 	// Common fields
-	Exports   map[string]string `yaml:"exports"`
-	OnSuccess []Action          `yaml:"on_success"`
-	OnError   []Action          `yaml:"on_error"`
-	Decision  *DecisionConfig   `yaml:"decision,omitempty"`
+	SuppressDetails bool              `yaml:"suppress_details"` // Hide command/function details from output
+	Exports         map[string]string `yaml:"exports"`
+	OnSuccess       []Action          `yaml:"on_success"`
+	OnError         []Action          `yaml:"on_error"`
+	Decision        *DecisionConfig   `yaml:"decision,omitempty"`
 }
 
 // DecisionCase represents a single case in switch-style decision
@@ -308,6 +342,11 @@ func (s *Step) IsHTTPStep() bool {
 // IsLLMStep returns true if this is an LLM step
 func (s *Step) IsLLMStep() bool {
 	return s.Type == StepTypeLLM
+}
+
+// IsAgentStep returns true if this is an agent step
+func (s *Step) IsAgentStep() bool {
+	return s.Type == StepTypeAgent
 }
 
 // GetStepRunner returns the step runner type, defaulting to host/local
@@ -438,6 +477,32 @@ func (s *Step) Clone() *Step {
 		cloned.ExtraLLMParams = make(map[string]interface{}, len(s.ExtraLLMParams))
 		for k, v := range s.ExtraLLMParams {
 			cloned.ExtraLLMParams[k] = v
+		}
+	}
+
+	// Deep copy Agent fields
+	if len(s.AgentTools) > 0 {
+		cloned.AgentTools = make([]AgentToolDef, len(s.AgentTools))
+		copy(cloned.AgentTools, s.AgentTools)
+	}
+	if s.Memory != nil {
+		mem := *s.Memory
+		cloned.Memory = &mem
+	}
+	if len(s.Queries) > 0 {
+		cloned.Queries = make([]string, len(s.Queries))
+		copy(cloned.Queries, s.Queries)
+	}
+	if len(s.Models) > 0 {
+		cloned.Models = make([]string, len(s.Models))
+		copy(cloned.Models, s.Models)
+	}
+
+	// Deep copy SubAgents
+	if len(s.SubAgents) > 0 {
+		cloned.SubAgents = make([]SubAgentDef, len(s.SubAgents))
+		for i, sa := range s.SubAgents {
+			cloned.SubAgents[i] = sa.DeepCopy()
 		}
 	}
 

@@ -1,0 +1,36 @@
+kind: module
+name: test-agent-sub-agents
+description: Test multi-agent orchestration with sub-agent spawning
+tags: test,agent,sub-agents
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: orchestrator
+    type: agent
+    query: "Analyze {{Target}} by coordinating specialists"
+    system_prompt: "You are an orchestrator. Delegate tasks to sub-agents."
+    max_iterations: 10
+    max_agent_depth: 3
+    agent_tools:
+      - preset: bash
+    sub_agents:
+      - name: recon_agent
+        description: "Specialized agent for reconnaissance"
+        system_prompt: "You are a recon specialist"
+        max_iterations: 5
+        agent_tools:
+          - preset: bash
+          - preset: http_get
+      - name: vuln_scanner
+        description: "Specialized agent for vulnerability scanning"
+        system_prompt: "You are a vulnerability analyst"
+        max_iterations: 5
+        agent_tools:
+          - preset: bash
+          - preset: read_file
+    exports:
+      result: "{{agent_content}}"

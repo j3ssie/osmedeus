@@ -3,6 +3,7 @@ package functions
 import (
 	"archive/zip"
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -457,6 +458,108 @@ func (vf *vmFunc) removeBlankLines(call goja.FunctionCall) goja.Value {
 	}
 
 	logger.Get().Debug(terminal.HiGreen("removeBlankLines")+" result", zap.String("path", path), zap.Int("lines", len(nonBlankLines)))
+	return vf.vm.ToValue(true)
+}
+
+// chunkFile splits an input file into chunks of N lines each, writing chunk paths to an output manifest.
+// Blank lines are skipped. Chunk files are named {base}_part_{N}{ext} in the same directory as input.
+// Usage: chunk_file(input, lines_per_chunk, output) -> bool
+func (vf *vmFunc) chunkFile(call goja.FunctionCall) goja.Value {
+	input := call.Argument(0).String()
+	chunkSize := int(call.Argument(1).ToInteger())
+	output := call.Argument(2).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("chunk_file"),
+		zap.String("input", input), zap.Int("chunkSize", chunkSize), zap.String("output", output))
+
+	if input == "undefined" || input == "" || output == "undefined" || output == "" {
+		logger.Get().Warn("chunk_file: input and output paths are required")
+		return vf.vm.ToValue(false)
+	}
+	if chunkSize <= 0 {
+		logger.Get().Warn("chunk_file: lines_per_chunk must be > 0", zap.Int("chunkSize", chunkSize))
+		return vf.vm.ToValue(false)
+	}
+
+	// Read input file, skipping blank lines
+	file, err := os.Open(input)
+	if err != nil {
+		logger.Get().Warn("chunk_file: failed to open input file", zap.String("input", input), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.TrimSpace(line) != "" {
+			lines = append(lines, line)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		_ = file.Close()
+		logger.Get().Warn("chunk_file: failed to read input file", zap.String("input", input), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+	_ = file.Close()
+
+	if len(lines) == 0 {
+		logger.Get().Debug(terminal.HiGreen("chunk_file") + ": input file has no non-blank lines")
+		// Write empty manifest
+		if err := os.MkdirAll(filepath.Dir(output), 0755); err != nil {
+			return vf.vm.ToValue(false)
+		}
+		if err := os.WriteFile(output, []byte(""), 0644); err != nil {
+			return vf.vm.ToValue(false)
+		}
+		return vf.vm.ToValue(true)
+	}
+
+	// Compute chunk file naming from input path
+	dir := filepath.Dir(input)
+	ext := filepath.Ext(input)
+	base := strings.TrimSuffix(filepath.Base(input), ext)
+
+	var chunkPaths []string
+	chunkIdx := 0
+
+	for i := 0; i < len(lines); i += chunkSize {
+		end := i + chunkSize
+		if end > len(lines) {
+			end = len(lines)
+		}
+		chunk := lines[i:end]
+
+		chunkName := fmt.Sprintf("%s_part_%d%s", base, chunkIdx, ext)
+		chunkPath := filepath.Join(dir, chunkName)
+
+		content := strings.Join(chunk, "\n") + "\n"
+		if err := os.WriteFile(chunkPath, []byte(content), 0644); err != nil {
+			logger.Get().Warn("chunk_file: failed to write chunk",
+				zap.String("chunkPath", chunkPath), zap.Error(err))
+			return vf.vm.ToValue(false)
+		}
+
+		chunkPaths = append(chunkPaths, chunkPath)
+		chunkIdx++
+	}
+
+	// Write manifest (one chunk path per line)
+	if err := os.MkdirAll(filepath.Dir(output), 0755); err != nil {
+		logger.Get().Warn("chunk_file: failed to create output directory", zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	manifest := strings.Join(chunkPaths, "\n") + "\n"
+	if err := os.WriteFile(output, []byte(manifest), 0644); err != nil {
+		logger.Get().Warn("chunk_file: failed to write manifest", zap.String("output", output), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	logger.Get().Debug(terminal.HiGreen("chunk_file")+" result",
+		zap.String("input", input),
+		zap.Int("totalLines", len(lines)),
+		zap.Int("chunks", len(chunkPaths)),
+		zap.String("output", output))
 	return vf.vm.ToValue(true)
 }
 

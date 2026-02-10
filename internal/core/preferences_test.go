@@ -63,11 +63,11 @@ func TestPreferences_GetEmptyTarget(t *testing.T) {
 
 func TestPreferences_UnmarshalYAML_EmptyTarget(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		wantNil  bool
-		wantVal  bool
-		wantErr  bool
+		name    string
+		input   string
+		wantNil bool
+		wantVal bool
+		wantErr bool
 	}{
 		{
 			name:    "empty_target true",

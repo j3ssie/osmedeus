@@ -2136,36 +2136,38 @@ func (e *Executor) executeStep(ctx context.Context, step *core.Step, execCtx *co
 			fmt.Printf("  Pre-condition: %s %s\n", terminal.Gray(renderedCond), terminal.Yellow("(skipped in dry-run)"))
 		}
 
-		if step.Command != "" {
-			// Render the command for display
-			rendered, _ := e.templateEngine.Render(step.Command, execCtx.GetVariables())
-			fmt.Printf("  Would execute: %s\n", terminal.Gray(rendered))
-		}
-		if len(step.Commands) > 0 {
-			fmt.Printf("  Would execute in %s:\n", step.Type)
-			for _, cmd := range step.Commands {
-				rendered, _ := e.templateEngine.Render(cmd, execCtx.GetVariables())
-				fmt.Printf("    %s %s\n", terminal.SymbolBullet, terminal.Gray(rendered))
+		if !step.SuppressDetails {
+			if step.Command != "" {
+				// Render the command for display
+				rendered, _ := e.templateEngine.Render(step.Command, execCtx.GetVariables())
+				fmt.Printf("  Would execute: %s\n", terminal.Gray(rendered))
 			}
-		}
+			if len(step.Commands) > 0 {
+				fmt.Printf("  Would execute in %s:\n", step.Type)
+				for _, cmd := range step.Commands {
+					rendered, _ := e.templateEngine.Render(cmd, execCtx.GetVariables())
+					fmt.Printf("    %s %s\n", terminal.SymbolBullet, terminal.Gray(rendered))
+				}
+			}
 
-		// Display function(s) for function steps
-		if step.Function != "" {
-			rendered, _ := e.templateEngine.Render(step.Function, execCtx.GetVariables())
-			fmt.Printf("  Would execute: %s\n", terminal.Gray(rendered))
-		}
-		if len(step.Functions) > 0 {
-			fmt.Printf("  Would execute functions:\n")
-			for _, fn := range step.Functions {
-				rendered, _ := e.templateEngine.Render(fn, execCtx.GetVariables())
-				fmt.Printf("    %s %s\n", terminal.SymbolBullet, terminal.Gray(rendered))
+			// Display function(s) for function steps
+			if step.Function != "" {
+				rendered, _ := e.templateEngine.Render(step.Function, execCtx.GetVariables())
+				fmt.Printf("  Would execute: %s\n", terminal.Gray(rendered))
 			}
-		}
-		if len(step.ParallelFunctions) > 0 {
-			fmt.Printf("  Would execute in parallel:\n")
-			for _, fn := range step.ParallelFunctions {
-				rendered, _ := e.templateEngine.Render(fn, execCtx.GetVariables())
-				fmt.Printf("    %s %s\n", terminal.SymbolBullet, terminal.Gray(rendered))
+			if len(step.Functions) > 0 {
+				fmt.Printf("  Would execute functions:\n")
+				for _, fn := range step.Functions {
+					rendered, _ := e.templateEngine.Render(fn, execCtx.GetVariables())
+					fmt.Printf("    %s %s\n", terminal.SymbolBullet, terminal.Gray(rendered))
+				}
+			}
+			if len(step.ParallelFunctions) > 0 {
+				fmt.Printf("  Would execute in parallel:\n")
+				for _, fn := range step.ParallelFunctions {
+					rendered, _ := e.templateEngine.Render(fn, execCtx.GetVariables())
+					fmt.Printf("    %s %s\n", terminal.SymbolBullet, terminal.Gray(rendered))
+				}
 			}
 		}
 
@@ -2204,6 +2206,12 @@ func (e *Executor) executeStep(ctx context.Context, step *core.Step, execCtx *co
 	if stepCommand != "" {
 		stepCommand, _ = e.templateEngine.Render(stepCommand, execCtx.GetVariables())
 		stepCommandColored, _ = e.templateEngine.Render(stepCommandColored, execCtx.GetVariables())
+	}
+
+	// Suppress command details if requested
+	if step.SuppressDetails {
+		stepCommand = ""
+		stepCommandColored = ""
 	}
 
 	// Show step start (skip when progress bar is active)

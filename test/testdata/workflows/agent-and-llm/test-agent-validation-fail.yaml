@@ -1,0 +1,22 @@
+kind: module
+name: test-agent-validation-fail
+description: Agent workflow with invalid configuration for validation testing
+tags: test,agent,invalid
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: agent-duplicate-tools
+    type: agent
+    query: "This should fail validation due to duplicate tool names"
+    max_iterations: 5
+    agent_tools:
+      - preset: bash
+      - preset: bash
+
+  - name: unreachable
+    type: bash
+    command: echo "should not reach here"

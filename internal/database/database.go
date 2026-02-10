@@ -159,6 +159,7 @@ func Migrate(ctx context.Context) error {
 		(*Vulnerability)(nil),
 		(*AssetDiffSnapshot)(nil),
 		(*VulnDiffSnapshot)(nil),
+		(*AgentSession)(nil),
 	}
 
 	for _, model := range models {

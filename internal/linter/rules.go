@@ -367,6 +367,76 @@ func (r *EmptyStepRule) Check(wast *WorkflowAST) []LintIssue {
 			if len(step.Messages) == 0 && len(step.EmbeddingInput) == 0 {
 				empty = true
 			}
+		case core.StepTypeAgent:
+			if (step.Query == "" && len(step.Queries) == 0) || len(step.AgentTools) == 0 {
+				empty = true
+			}
+			// Agent-specific warnings
+			if step.Query != "" && len(step.Queries) > 0 {
+				line, col := wast.FindStepFieldPosition(i, "queries")
+				issues = append(issues, LintIssue{
+					Rule:       r.Name(),
+					Severity:   SeverityWarning,
+					Message:    fmt.Sprintf("Step '%s' has both 'query' and 'queries' — only one should be used", step.Name),
+					Suggestion: "Remove either 'query' or 'queries'",
+					Line:       line,
+					Column:     col,
+					Field:      fmt.Sprintf("steps[%d].queries", i),
+				})
+			}
+			if step.PlanPrompt != "" && step.Query == "" && len(step.Queries) == 0 {
+				line, col := wast.FindStepFieldPosition(i, "plan_prompt")
+				issues = append(issues, LintIssue{
+					Rule:       r.Name(),
+					Severity:   SeverityWarning,
+					Message:    fmt.Sprintf("Step '%s' has plan_prompt but no query/queries", step.Name),
+					Suggestion: "Add a 'query' or 'queries' field for the agent to execute after planning",
+					Line:       line,
+					Column:     col,
+					Field:      fmt.Sprintf("steps[%d].plan_prompt", i),
+				})
+			}
+			if step.MaxIterations > 50 {
+				line, col := wast.FindStepFieldPosition(i, "max_iterations")
+				issues = append(issues, LintIssue{
+					Rule:       r.Name(),
+					Severity:   SeverityInfo,
+					Message:    fmt.Sprintf("Step '%s' has max_iterations=%d which is suspiciously high", step.Name, step.MaxIterations),
+					Suggestion: "Consider lowering max_iterations to avoid excessive LLM calls",
+					Line:       line,
+					Column:     col,
+					Field:      fmt.Sprintf("steps[%d].max_iterations", i),
+				})
+			}
+			for j, tool := range step.AgentTools {
+				if tool.IsPreset() {
+					if _, ok := core.GetPresetTool(tool.Preset); !ok {
+						line, col := wast.FindStepFieldPosition(i, "agent_tools")
+						issues = append(issues, LintIssue{
+							Rule:       r.Name(),
+							Severity:   SeverityWarning,
+							Message:    fmt.Sprintf("Step '%s' references unknown preset tool '%s'", step.Name, tool.Preset),
+							Suggestion: "Check the preset tool name against the preset tool registry",
+							Line:       line,
+							Column:     col,
+							Field:      fmt.Sprintf("steps[%d].agent_tools[%d].preset", i, j),
+						})
+					}
+				} else if tool.Handler != "" && tool.Description == "" {
+					line, col := wast.FindStepFieldPosition(i, "agent_tools")
+					issues = append(issues, LintIssue{
+						Rule:       r.Name(),
+						Severity:   SeverityWarning,
+						Message:    fmt.Sprintf("Step '%s' has custom tool '%s' with handler but no description", step.Name, tool.Name),
+						Suggestion: "Add a description so the LLM knows when to use this tool",
+						Line:       line,
+						Column:     col,
+						Field:      fmt.Sprintf("steps[%d].agent_tools[%d].description", i, j),
+					})
+				}
+			}
+			// Sub-agent validation
+			issues = append(issues, validateSubAgents(step, i, wast, r)...)
 		}
 
 		if empty {
@@ -725,6 +795,126 @@ func getStepNames(steps []core.Step) []string {
 		names[i] = s.Name
 	}
 	return names
+}
+
+// validateSubAgents checks sub-agent definitions for common issues
+func validateSubAgents(step core.Step, stepIdx int, wast *WorkflowAST, r *EmptyStepRule) []LintIssue {
+	var issues []LintIssue
+	if len(step.SubAgents) == 0 {
+		return issues
+	}
+
+	seenNames := make(map[string]bool)
+	for j, sa := range step.SubAgents {
+		// Error: sub-agent missing name
+		if sa.Name == "" {
+			line, col := wast.FindStepFieldPosition(stepIdx, "sub_agents")
+			issues = append(issues, LintIssue{
+				Rule:       r.Name(),
+				Severity:   SeverityWarning,
+				Message:    fmt.Sprintf("Step '%s' sub-agent at index %d is missing required 'name' field", step.Name, j),
+				Suggestion: "Add a 'name' field to the sub-agent definition",
+				Line:       line,
+				Column:     col,
+				Field:      fmt.Sprintf("steps[%d].sub_agents[%d].name", stepIdx, j),
+			})
+		}
+
+		// Warning: sub-agent missing description
+		if sa.Name != "" && sa.Description == "" {
+			line, col := wast.FindStepFieldPosition(stepIdx, "sub_agents")
+			issues = append(issues, LintIssue{
+				Rule:       r.Name(),
+				Severity:   SeverityInfo,
+				Message:    fmt.Sprintf("Step '%s' sub-agent '%s' has no description", step.Name, sa.Name),
+				Suggestion: "Add a description so the LLM knows when to delegate to this agent",
+				Line:       line,
+				Column:     col,
+				Field:      fmt.Sprintf("steps[%d].sub_agents[%d].description", stepIdx, j),
+			})
+		}
+
+		// Error: duplicate sub-agent names
+		if sa.Name != "" {
+			if seenNames[sa.Name] {
+				line, col := wast.FindStepFieldPosition(stepIdx, "sub_agents")
+				issues = append(issues, LintIssue{
+					Rule:       r.Name(),
+					Severity:   SeverityError,
+					Message:    fmt.Sprintf("Step '%s' has duplicate sub-agent name '%s'", step.Name, sa.Name),
+					Suggestion: "Use unique names for each sub-agent",
+					Line:       line,
+					Column:     col,
+					Field:      fmt.Sprintf("steps[%d].sub_agents[%d].name", stepIdx, j),
+				})
+			}
+			seenNames[sa.Name] = true
+		}
+
+		// Warning: sub-agent with no agent_tools
+		if len(sa.AgentTools) == 0 {
+			line, col := wast.FindStepFieldPosition(stepIdx, "sub_agents")
+			issues = append(issues, LintIssue{
+				Rule:       r.Name(),
+				Severity:   SeverityInfo,
+				Message:    fmt.Sprintf("Step '%s' sub-agent '%s' has no agent_tools", step.Name, sa.Name),
+				Suggestion: "Add agent_tools so the sub-agent can perform actions",
+				Line:       line,
+				Column:     col,
+				Field:      fmt.Sprintf("steps[%d].sub_agents[%d].agent_tools", stepIdx, j),
+			})
+		}
+
+		// Warning: unknown preset tool in sub-agent
+		for k, tool := range sa.AgentTools {
+			if tool.IsPreset() {
+				if _, ok := core.GetPresetTool(tool.Preset); !ok {
+					line, col := wast.FindStepFieldPosition(stepIdx, "sub_agents")
+					issues = append(issues, LintIssue{
+						Rule:       r.Name(),
+						Severity:   SeverityWarning,
+						Message:    fmt.Sprintf("Step '%s' sub-agent '%s' references unknown preset tool '%s'", step.Name, sa.Name, tool.Preset),
+						Suggestion: "Check the preset tool name against the preset tool registry",
+						Line:       line,
+						Column:     col,
+						Field:      fmt.Sprintf("steps[%d].sub_agents[%d].agent_tools[%d].preset", stepIdx, j, k),
+					})
+				}
+			}
+		}
+	}
+
+	// Info: deep nesting warning
+	maxDepth := countSubAgentDepth(step.SubAgents)
+	if maxDepth > core.DefaultMaxAgentDepth {
+		line, col := wast.FindStepFieldPosition(stepIdx, "sub_agents")
+		issues = append(issues, LintIssue{
+			Rule:       r.Name(),
+			Severity:   SeverityInfo,
+			Message:    fmt.Sprintf("Step '%s' has sub-agent nesting depth of %d (default limit is %d)", step.Name, maxDepth, core.DefaultMaxAgentDepth),
+			Suggestion: "Consider increasing max_agent_depth or reducing nesting",
+			Line:       line,
+			Column:     col,
+			Field:      fmt.Sprintf("steps[%d].sub_agents", stepIdx),
+		})
+	}
+
+	return issues
+}
+
+// countSubAgentDepth returns the maximum nesting depth of sub-agents
+func countSubAgentDepth(subAgents []core.SubAgentDef) int {
+	if len(subAgents) == 0 {
+		return 0
+	}
+	maxChild := 0
+	for _, sa := range subAgents {
+		childDepth := countSubAgentDepth(sa.SubAgents)
+		if childDepth > maxChild {
+			maxChild = childDepth
+		}
+	}
+	return 1 + maxChild
 }
 
 // GetDefaultRules returns all built-in linting rules

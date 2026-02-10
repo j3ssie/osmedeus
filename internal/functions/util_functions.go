@@ -736,6 +736,64 @@ func (vf *vmFunc) bash(call goja.FunctionCall) goja.Value {
 	return vf.execCmd(call)
 }
 
+// findPythonBin returns "python3" if available, otherwise "python".
+func findPythonBin() string {
+	if _, err := exec.LookPath("python3"); err == nil {
+		return "python3"
+	}
+	return "python"
+}
+
+// execPython runs inline Python code via `python3 -c '<code>'`.
+// Usage: exec_python(code) -> string
+func (vf *vmFunc) execPython(call goja.FunctionCall) goja.Value {
+	code := call.Argument(0).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("execPython"), zap.Int("codeLength", len(code)))
+
+	if code == "undefined" || code == "" {
+		logger.Get().Warn("execPython: empty code provided")
+		return vf.vm.ToValue("")
+	}
+
+	pythonBin := findPythonBin()
+	// @NOTE: This is intentional - exec_python() is a utility function exposed to workflow
+	// definitions for executing Python code. Input comes from trusted workflow YAML files.
+	cmd := exec.Command(pythonBin, "-c", code)
+	output, err := cmd.Output()
+	if err != nil {
+		logger.Get().Warn("execPython: command failed", zap.String("python", pythonBin), zap.Error(err))
+		return vf.vm.ToValue("")
+	}
+
+	logger.Get().Debug(terminal.HiGreen("execPython")+" result", zap.Int("outputLength", len(output)))
+	return vf.vm.ToValue(strings.TrimSpace(string(output)))
+}
+
+// execPythonFile runs a Python file via `python3 <path>`.
+// Usage: exec_python_file(path) -> string
+func (vf *vmFunc) execPythonFile(call goja.FunctionCall) goja.Value {
+	path := call.Argument(0).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("execPythonFile"), zap.String("path", path))
+
+	if path == "undefined" || path == "" {
+		logger.Get().Warn("execPythonFile: empty path provided")
+		return vf.vm.ToValue("")
+	}
+
+	pythonBin := findPythonBin()
+	// @NOTE: This is intentional - exec_python_file() is a utility function exposed to workflow
+	// definitions for executing Python files. Input comes from trusted workflow YAML files.
+	cmd := exec.Command(pythonBin, path)
+	output, err := cmd.Output()
+	if err != nil {
+		logger.Get().Warn("execPythonFile: command failed", zap.String("python", pythonBin), zap.String("path", path), zap.Error(err))
+		return vf.vm.ToValue("")
+	}
+
+	logger.Get().Debug(terminal.HiGreen("execPythonFile")+" result", zap.String("path", path), zap.Int("outputLength", len(output)))
+	return vf.vm.ToValue(strings.TrimSpace(string(output)))
+}
+
 // commandExists checks if a command is available in PATH
 // Usage: commandExists(command) -> bool
 func (vf *vmFunc) commandExists(call goja.FunctionCall) goja.Value {
@@ -1013,6 +1071,93 @@ func (vf *vmFunc) moveFile(call goja.FunctionCall) goja.Value {
 	logger.Get().Debug(terminal.HiGreen("moveFile")+" result (copied)",
 		zap.String("source", source), zap.String("dest", dest), zap.Bool("success", true))
 	return vf.vm.ToValue(true)
+}
+
+// parseParamsToFlags parses a comma-separated "key=value" string into -p flags.
+// E.g. "threads=10,deep=true" -> ["-p", "threads=10", "-p", "deep=true"]
+func parseParamsToFlags(params string) []string {
+	params = strings.TrimSpace(params)
+	if params == "" || params == "undefined" {
+		return nil
+	}
+	var flags []string
+	for _, pair := range strings.Split(params, ",") {
+		pair = strings.TrimSpace(pair)
+		if pair == "" || !strings.Contains(pair, "=") {
+			continue
+		}
+		flags = append(flags, "-p", pair)
+	}
+	return flags
+}
+
+// runOsmedeus executes the current osmedeus binary with the given flag (-m or -f), name, target, and optional params.
+// Returns the combined stdout+stderr output as a string.
+func (vf *vmFunc) runOsmedeus(flag, name, target, params, funcName string) goja.Value {
+	// Find the current executable
+	exePath, err := os.Executable()
+	if err != nil {
+		logger.Get().Warn(funcName+": failed to find executable", zap.Error(err))
+		return vf.vm.ToValue("")
+	}
+
+	// Build command arguments
+	args := []string{"run", flag, name, "-t", target}
+	args = append(args, parseParamsToFlags(params)...)
+
+	logger.Get().Debug("Calling "+terminal.HiGreen(funcName),
+		zap.String("exe", exePath),
+		zap.Strings("args", args))
+
+	// @NOTE: This is intentional - run_module/run_flow are utility functions exposed to workflow
+	// definitions for launching sub-scans. Input comes from trusted workflow YAML files.
+	cmd := exec.Command(exePath, args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		logger.Get().Warn(funcName+": command failed",
+			zap.String("name", name),
+			zap.String("target", target),
+			zap.Error(err),
+			zap.String("output", string(output)))
+	}
+
+	logger.Get().Debug(terminal.HiGreen(funcName)+" result",
+		zap.String("name", name),
+		zap.String("target", target),
+		zap.Int("outputLength", len(output)))
+	return vf.vm.ToValue(strings.TrimSpace(string(output)))
+}
+
+// runModule runs an osmedeus module as a subprocess
+// Usage: run_module(module, target, params?) -> string
+// params is optional comma-separated key=value pairs: "threads=10,deep=true"
+func (vf *vmFunc) runModule(call goja.FunctionCall) goja.Value {
+	module := call.Argument(0).String()
+	target := call.Argument(1).String()
+	params := call.Argument(2).String()
+
+	if module == "undefined" || module == "" || target == "undefined" || target == "" {
+		logger.Get().Warn("run_module: module and target are required")
+		return vf.vm.ToValue("")
+	}
+
+	return vf.runOsmedeus("-m", module, target, params, "run_module")
+}
+
+// runFlow runs an osmedeus flow as a subprocess
+// Usage: run_flow(flow, target, params?) -> string
+// params is optional comma-separated key=value pairs: "threads=10,deep=true"
+func (vf *vmFunc) runFlow(call goja.FunctionCall) goja.Value {
+	flow := call.Argument(0).String()
+	target := call.Argument(1).String()
+	params := call.Argument(2).String()
+
+	if flow == "undefined" || flow == "" || target == "undefined" || target == "" {
+		logger.Get().Warn("run_flow: flow and target are required")
+		return vf.vm.ToValue("")
+	}
+
+	return vf.runOsmedeus("-f", flow, target, params, "run_flow")
 }
 
 // copyFileBuffered copies a file using buffered I/O (memory-efficient for large files)
