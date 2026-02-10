@@ -1,4 +1,4 @@
-.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-docker test-ssh test-distributed test-all test-summary test-ci clean install install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release run-github-action docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
+.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-docker test-ssh test-distributed test-canary-all test-canary-repo test-canary-domain test-canary-ip canary-up canary-down test-all test-summary test-ci clean install install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release run-github-action docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
 
 # Go parameters
 GOCMD=go
@@ -191,6 +191,47 @@ test-e2e-install: build install-gotestsum
 	@echo "$(PREFIX) Running install E2E tests..."
 	$(TESTCMD) $(TESTFLAGS) -run TestInstall ./test/e2e/...
 
+# ── Canary tests (real scans inside Docker toolbox, requires Docker) ──────────
+
+# Build and start the canary container (shared setup for individual targets)
+canary-up: install-gotestsum
+	@echo "$(PREFIX) Building canary Docker image..."
+	docker-compose -f build/docker/docker-compose.canary.yaml build
+	@echo "$(PREFIX) Starting canary container..."
+	docker-compose -f build/docker/docker-compose.canary.yaml up -d
+	@echo "$(PREFIX) Waiting for API server..."
+	@for i in $$(seq 1 60); do curl -sf http://localhost:8002/health > /dev/null 2>&1 && break || sleep 2; done
+	@echo "$(PREFIX) Canary container ready."
+
+# Tear down the canary container
+canary-down:
+	@echo "$(PREFIX) Cleaning up canary container..."
+	docker-compose -f build/docker/docker-compose.canary.yaml down -v
+
+# Run ALL canary scans (builds container, runs all 3, cleans up — 30-60min)
+test-canary-all: canary-up
+	@echo "$(PREFIX) Running all canary tests (30-60 minutes)..."
+	$(TESTCMD) $(TESTFLAGS) -run TestCanary_FullSuite -timeout 60m ./test/e2e/... || ($(MAKE) canary-down && exit 1)
+	@$(MAKE) canary-down
+
+# Repo scan canary (juice-shop SAST, ~25min)
+test-canary-repo: canary-up
+	@echo "$(PREFIX) Running repo scan canary test..."
+	$(TESTCMD) $(TESTFLAGS) -run TestCanary_Repo -timeout 30m ./test/e2e/... || ($(MAKE) canary-down && exit 1)
+	@$(MAKE) canary-down
+
+# Domain-lite scan canary (hackerone.com, ~20min)
+test-canary-domain: canary-up
+	@echo "$(PREFIX) Running domain-lite scan canary test..."
+	$(TESTCMD) $(TESTFLAGS) -run TestCanary_Domain -timeout 25m ./test/e2e/... || ($(MAKE) canary-down && exit 1)
+	@$(MAKE) canary-down
+
+# CIDR scan canary (IP list, ~25min)
+test-canary-ip: canary-up
+	@echo "$(PREFIX) Running CIDR scan canary test..."
+	$(TESTCMD) $(TESTFLAGS) -run TestCanary_CIDR -timeout 30m ./test/e2e/... || ($(MAKE) canary-down && exit 1)
+	@$(MAKE) canary-down
+
 # All tests
 test-all: test-unit test-integration
 
@@ -369,6 +410,10 @@ help:
 	@echo "    make test-docker      Run Docker runner tests"
 	@echo "    make test-ssh         Run SSH runner unit tests"
 	@echo "    make test-distributed Run distributed scan E2E tests (requires Redis)"
+	@echo "    make test-canary-all   Run all canary tests (real scans in Docker, 30-60min)"
+	@echo "    make test-canary-repo  Run repo scan canary (juice-shop SAST, ~25min)"
+	@echo "    make test-canary-domain Run domain-lite canary (hackerone.com, ~20min)"
+	@echo "    make test-canary-ip    Run CIDR scan canary (IP list, ~25min)"
 	@echo "    make test-coverage    Run tests with coverage report"
 	@echo "    make test-summary     Quick pass/fail summary (dots format)"
 	@echo "    make test-ci          Run tests with JUnit XML output"

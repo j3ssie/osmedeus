@@ -1,0 +1,65 @@
+# Osmedeus Canary Test Dockerfile
+# Multi-stage build that compiles from source and layers onto the toolbox image,
+# ensuring canary tests exercise the CURRENT source code, not the last release.
+
+# ── Stage 1: build from source ──────────────────────────────────────────────
+FROM golang:1.25-bookworm AS builder
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 go build -o /osmedeus ./cmd/osmedeus
+
+# ── Stage 2: runtime (mirrors Dockerfile.toolbox) ───────────────────────────
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    wget \
+    git \
+    unzip \
+    jq \
+    bash \
+    xz-utils \
+    python3 \
+    python3-pip \
+    python3-venv \
+    chromium-browser \
+    sudo \
+    golang-go \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN ln -sf /usr/bin/python3 /usr/bin/python
+
+ENV PATH="/root/go/bin:${PATH}"
+ENV GOPATH="/root/go"
+
+RUN mkdir -p /root/osmedeus-base /root/workspaces-osmedeus /root/go/bin
+
+WORKDIR /root
+
+# Install released osmedeus (pulls workflows, tools, etc.)
+RUN curl -fsSLk https://www.osmedeus.org/install.sh | bash
+
+ENV PATH="/root/.local/bin:/root/go/bin:/root/osmedeus-base/external-binaries:${PATH}"
+
+# Overwrite the released binary with the one built from source
+COPY --from=builder /osmedeus /root/.local/bin/osmedeus
+COPY --from=builder /osmedeus /root/go/bin/osmedeus
+
+# Copy the canary entrypoint
+COPY build/docker/canary-entrypoint.sh /usr/local/bin/canary-entrypoint.sh
+RUN chmod +x /usr/local/bin/canary-entrypoint.sh
+
+# Verify the source-built binary works
+RUN osmedeus health
+
+EXPOSE 8002
+
+ENTRYPOINT ["/usr/local/bin/canary-entrypoint.sh"]
