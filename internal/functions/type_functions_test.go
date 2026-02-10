@@ -588,6 +588,202 @@ func TestIsCompress(t *testing.T) {
 	}
 }
 
+func TestDetectLanguage(t *testing.T) {
+	runtime := NewGojaRuntime()
+
+	t.Run("pure Go project", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFiles(t, dir, map[string]string{
+			"main.go":         "package main",
+			"lib/util.go":     "package lib",
+			"lib/handler.go":  "package lib",
+		})
+		expr := "detect_language('" + dir + "')"
+		result, err := runtime.Execute(expr, nil)
+		if err != nil {
+			t.Fatalf("Execute failed: %v", err)
+		}
+		if result != "golang" {
+			t.Errorf("detect_language() = %v, want golang", result)
+		}
+	})
+
+	t.Run("pure Python project", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFiles(t, dir, map[string]string{
+			"app.py":        "import os",
+			"utils.py":      "def helper(): pass",
+			"models/db.py":  "class DB: pass",
+		})
+		expr := "detect_language('" + dir + "')"
+		result, err := runtime.Execute(expr, nil)
+		if err != nil {
+			t.Fatalf("Execute failed: %v", err)
+		}
+		if result != "python" {
+			t.Errorf("detect_language() = %v, want python", result)
+		}
+	})
+
+	t.Run("mixed project majority wins", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFiles(t, dir, map[string]string{
+			"main.go":     "package main",
+			"lib.go":      "package lib",
+			"extra.go":    "package extra",
+			"script.py":   "import sys",
+		})
+		expr := "detect_language('" + dir + "')"
+		result, err := runtime.Execute(expr, nil)
+		if err != nil {
+			t.Fatalf("Execute failed: %v", err)
+		}
+		if result != "golang" {
+			t.Errorf("detect_language() = %v, want golang", result)
+		}
+	})
+
+	t.Run("empty directory returns unknown", func(t *testing.T) {
+		dir := t.TempDir()
+		expr := "detect_language('" + dir + "')"
+		result, err := runtime.Execute(expr, nil)
+		if err != nil {
+			t.Fatalf("Execute failed: %v", err)
+		}
+		if result != "unknown" {
+			t.Errorf("detect_language() = %v, want unknown", result)
+		}
+	})
+
+	t.Run("non-existent path returns unknown", func(t *testing.T) {
+		expr := "detect_language('/tmp/does_not_exist_xyz_abc')"
+		result, err := runtime.Execute(expr, nil)
+		if err != nil {
+			t.Fatalf("Execute failed: %v", err)
+		}
+		if result != "unknown" {
+			t.Errorf("detect_language() = %v, want unknown", result)
+		}
+	})
+
+	t.Run("ignored directories are skipped", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFiles(t, dir, map[string]string{
+			"main.go":                 "package main",
+			"node_modules/dep.js":     "module.exports = {}",
+			"node_modules/dep2.js":    "module.exports = {}",
+			"node_modules/dep3.js":    "module.exports = {}",
+			"vendor/lib.go":           "package vendor",
+			"test/main_test.go":       "package test",
+		})
+		expr := "detect_language('" + dir + "')"
+		result, err := runtime.Execute(expr, nil)
+		if err != nil {
+			t.Fatalf("Execute failed: %v", err)
+		}
+		// Only main.go should be counted (node_modules, vendor, test all ignored)
+		if result != "golang" {
+			t.Errorf("detect_language() = %v, want golang", result)
+		}
+	})
+}
+
+func TestDetectFolderLanguage(t *testing.T) {
+	t.Run("shebang detection", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFiles(t, dir, map[string]string{
+			"run":    "#!/usr/bin/env python\nprint('hi')",
+			"serve":  "#!/usr/bin/env python\nimport http",
+			"deploy": "#!/bin/bash\necho deploy",
+		})
+		result := detectFolderLanguage(dir)
+		if result != "python" {
+			t.Errorf("detectFolderLanguage() = %v, want python", result)
+		}
+	})
+
+	t.Run("file not directory returns unknown", func(t *testing.T) {
+		f := filepath.Join(t.TempDir(), "file.txt")
+		if err := os.WriteFile(f, []byte("hello"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		result := detectFolderLanguage(f)
+		if result != "unknown" {
+			t.Errorf("detectFolderLanguage() = %v, want unknown", result)
+		}
+	})
+
+	t.Run("typescript project", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFiles(t, dir, map[string]string{
+			"src/index.ts":     "const x = 1",
+			"src/app.tsx":      "export default App",
+			"src/util.ts":      "export function f() {}",
+		})
+		result := detectFolderLanguage(dir)
+		if result != "typescript" {
+			t.Errorf("detectFolderLanguage() = %v, want typescript", result)
+		}
+	})
+
+	t.Run("rust project", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFiles(t, dir, map[string]string{
+			"src/main.rs":  "fn main() {}",
+			"src/lib.rs":   "pub mod utils;",
+		})
+		result := detectFolderLanguage(dir)
+		if result != "rust" {
+			t.Errorf("detectFolderLanguage() = %v, want rust", result)
+		}
+	})
+}
+
+func TestDetectShebang(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		expected string
+	}{
+		{"python env", "#!/usr/bin/env python\nprint('hi')", "python"},
+		{"python direct", "#!/usr/bin/python3\nprint('hi')", "python"},
+		{"node env", "#!/usr/bin/env node\nconsole.log(1)", "javascript"},
+		{"bash", "#!/bin/bash\necho hi", "shell"},
+		{"sh", "#!/bin/sh\necho hi", "shell"},
+		{"ruby", "#!/usr/bin/env ruby\nputs 1", "ruby"},
+		{"perl", "#!/usr/bin/perl\nprint 1", "perl"},
+		{"no shebang", "just text", ""},
+		{"empty file", "", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := filepath.Join(t.TempDir(), "script")
+			if err := os.WriteFile(f, []byte(tt.content), 0755); err != nil {
+				t.Fatal(err)
+			}
+			result := detectShebang(f)
+			if result != tt.expected {
+				t.Errorf("detectShebang() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+// writeFiles creates files relative to base directory, creating intermediate dirs as needed.
+func writeFiles(t *testing.T, base string, files map[string]string) {
+	t.Helper()
+	for rel, content := range files {
+		full := filepath.Join(base, rel)
+		if err := os.MkdirAll(filepath.Dir(full), 0755); err != nil {
+			t.Fatalf("Failed to create dir for %s: %v", rel, err)
+		}
+		if err := os.WriteFile(full, []byte(content), 0644); err != nil {
+			t.Fatalf("Failed to write %s: %v", rel, err)
+		}
+	}
+}
+
 func TestIsDomain(t *testing.T) {
 	tests := []struct {
 		input    string

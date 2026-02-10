@@ -1,6 +1,8 @@
 package functions
 
 import (
+	"bufio"
+	"io/fs"
 	"net"
 	"os"
 	"path/filepath"
@@ -189,4 +191,183 @@ func (vf *vmFunc) isCompress(call goja.FunctionCall) goja.Value {
 		}
 	}
 	return vf.vm.ToValue(false)
+}
+
+// Language extension mapping: file extension → language name
+var langExtMap = map[string]string{
+	".go":      "golang",
+	".py":      "python",
+	".pyw":     "python",
+	".js":      "javascript",
+	".mjs":     "javascript",
+	".cjs":     "javascript",
+	".jsx":     "javascript",
+	".ts":      "typescript",
+	".mts":     "typescript",
+	".cts":     "typescript",
+	".tsx":     "typescript",
+	".rb":      "ruby",
+	".java":    "java",
+	".kt":      "kotlin",
+	".kts":     "kotlin",
+	".rs":      "rust",
+	".c":       "c",
+	".h":       "c",
+	".cpp":     "cpp",
+	".cc":      "cpp",
+	".cxx":     "cpp",
+	".hpp":     "cpp",
+	".hxx":     "cpp",
+	".cs":      "csharp",
+	".swift":   "swift",
+	".php":     "php",
+	".pl":      "perl",
+	".pm":      "perl",
+	".sh":      "shell",
+	".bash":    "shell",
+	".zsh":     "shell",
+	".lua":     "lua",
+	".r":       "r",
+	".scala":   "scala",
+	".ex":      "elixir",
+	".exs":     "elixir",
+	".hs":      "haskell",
+	".dart":    "dart",
+	".vue":     "vue",
+	".svelte":  "svelte",
+}
+
+// Shebang patterns: substring in first line → language name
+var shebangMap = []struct {
+	pattern  string
+	language string
+}{
+	{"python", "python"},
+	{"node", "javascript"},
+	{"ruby", "ruby"},
+	{"perl", "perl"},
+	{"/bash", "shell"},
+	{"/bin/sh", "shell"},
+	{"env bash", "shell"},
+	{"lua", "lua"},
+}
+
+// Directories to ignore during language detection (lowercase)
+var ignoredDirs = map[string]bool{
+	"test": true, "tests": true, "__tests__": true, "testdata": true,
+	"test_data": true, "testing": true,
+	"static": true, "public": true, "assets": true, "dist": true,
+	"build": true, "out": true,
+	"frontend": true, "web": true, "webapp": true, "ui": true,
+	"node_modules": true, "vendor": true, "third_party": true,
+	"third-party": true, "external": true,
+	".git": true, ".svn": true, ".hg": true,
+	"__pycache__": true, ".tox": true, ".mypy_cache": true,
+}
+
+// detectLanguage detects the dominant programming language in a folder
+func (vf *vmFunc) detectLanguage(call goja.FunctionCall) goja.Value {
+	path := call.Argument(0).String()
+	log := logger.Get()
+
+	log.Debug("Calling "+terminal.HiGreen("detect_language"), zap.String("path", path))
+
+	if path == "" || path == "undefined" {
+		return vf.vm.ToValue("unknown")
+	}
+
+	result := detectFolderLanguage(path)
+	log.Debug(terminal.HiGreen("detect_language")+" result", zap.String("path", path), zap.String("language", result))
+
+	return vf.vm.ToValue(result)
+}
+
+// detectFolderLanguage walks a directory and returns the dominant programming language.
+// Returns "unknown" if the path is not a directory or no source files are found.
+func detectFolderLanguage(path string) string {
+	info, err := os.Stat(path)
+	if err != nil || !info.IsDir() {
+		return "unknown"
+	}
+
+	counts := make(map[string]int)
+
+	_ = filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil // skip entries with errors
+		}
+
+		if d.IsDir() {
+			base := strings.ToLower(filepath.Base(p))
+			if ignoredDirs[base] {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		if !d.Type().IsRegular() {
+			return nil
+		}
+
+		ext := strings.ToLower(filepath.Ext(p))
+		if lang, ok := langExtMap[ext]; ok {
+			counts[lang]++
+			return nil
+		}
+
+		// No extension — check shebang
+		if ext == "" {
+			if lang := detectShebang(p); lang != "" {
+				counts[lang]++
+			}
+		}
+
+		return nil
+	})
+
+	if len(counts) == 0 {
+		return "unknown"
+	}
+
+	// Find language with highest count
+	bestLang := "unknown"
+	bestCount := 0
+	for lang, count := range counts {
+		if count > bestCount {
+			bestCount = count
+			bestLang = lang
+		}
+	}
+
+	return bestLang
+}
+
+// detectShebang reads the first line of a file and checks for a shebang pattern.
+// Returns the detected language or empty string.
+func detectShebang(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	// Limit scan to first 256 bytes
+	scanner.Buffer(make([]byte, 256), 256)
+	if !scanner.Scan() {
+		return ""
+	}
+	line := scanner.Text()
+
+	if !strings.HasPrefix(line, "#!") {
+		return ""
+	}
+
+	for _, sb := range shebangMap {
+		if strings.Contains(line, sb.pattern) {
+			return sb.language
+		}
+	}
+
+	return ""
 }

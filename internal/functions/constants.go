@@ -59,7 +59,8 @@ const (
 	FnIsDir      = "is_dir"      // is_dir(path) -> bool
 	FnIsGit      = "is_git"      // is_git(path) -> bool
 	FnIsURL      = "is_url"      // is_url(input) -> bool
-	FnIsCompress = "is_compress" // is_compress(path) -> bool
+	FnIsCompress      = "is_compress"      // is_compress(path) -> bool
+	FnDetectLanguage  = "detect_language"  // detect_language(path) -> string (dominant programming language)
 )
 
 // Type Conversion Functions - Convert between types
@@ -360,6 +361,7 @@ func AllFunctions() []string {
 		FnIsGit,
 		FnIsURL,
 		FnIsCompress,
+		FnDetectLanguage,
 
 		// Type Conversion Functions
 		FnParseInt,
@@ -879,6 +881,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnIsGit, "is_git(path)", "Check if path is a git repository (contains .git folder)", "bool", "is_git('{{Output}}/repo')"},
 			{FnIsURL, "is_url(input)", "Check if input is an HTTP/HTTPS URL", "bool", "is_url('https://example.com')"},
 			{FnIsCompress, "is_compress(path)", "Check if path has a compressed file extension (.zip, .tar.gz, .tgz, .gz, .tar.bz2, .tar.xz)", "bool", "is_compress('archive.tar.gz')"},
+			{FnDetectLanguage, "detect_language(path)", "Detect dominant programming language of a source code folder by file extensions and shebangs", "string", "detect_language('{{Output}}/repo')"},
 		},
 	}
 }

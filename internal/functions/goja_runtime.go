@@ -97,6 +97,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnIsGit, vf.isGit)
 	_ = vm.Set(FnIsURL, vf.isURLFunc)
 	_ = vm.Set(FnIsCompress, vf.isCompress)
+	_ = vm.Set(FnDetectLanguage, vf.detectLanguage)
 
 	// Type conversion
 	_ = vm.Set(FnParseInt, vf.parseInt)

@@ -1,5 +1,5 @@
 {
-  "_last_update_at": "2026-02-10T03:02:00.178355+00:00",
+  "_last_update_at": "2026-02-01T03:52:26.051205+00:00",
   "amass": {
     "desc": "In-depth attack surface mapping and asset discovery",
     "repo_link": "https://github.com/owasp-amass/amass",
@@ -223,6 +223,27 @@
       "arm64": "https://github.com/trufflesecurity/trufflehog/releases/download/v3.90.3/trufflehog_3.90.3_darwin_arm64.tar.gz"
     }
   },
+  "kingfisher": {
+    "desc": "Kingfisher is a blazingly fast and highly accurate tool for secret detection and live validation across files, Git repos, GitHub, GitLab, Azure Repos, BitBucket, Gitea, AWS S3, Docker images, Jira, Slack, and Confluence",
+    "repo_link": "https://github.com/mongodb/kingfisher",
+    "version": "1.76.0",
+    "package-manager": "github-release",
+    "tags": [
+      "secret-detection",
+      "security",
+      "scanning",
+      "credentials"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/mongodb/kingfisher/releases/download/v1.76.0/kingfisher-linux-x64.tgz",
+      "arm64": "https://github.com/mongodb/kingfisher/releases/download/v1.76.0/kingfisher-linux-arm64.tgz"
+    },
+    "darwin": {
+      "amd64": "https://github.com/mongodb/kingfisher/releases/download/v1.76.0/kingfisher-darwin-x64.tgz",
+      "arm64": "https://github.com/mongodb/kingfisher/releases/download/v1.76.0/kingfisher-darwin-arm64.tgz"
+    }
+  },
   "semgrep": {
     "desc": "Static analysis tool for code scanning",
     "repo_link": "https://github.com/returntocorp/semgrep",
@@ -271,7 +292,8 @@
     "tags": [
       "utility",
       "file-transfer",
-      "sync"
+      "sync",
+      "optional"
     ],
     "valide-command": "",
     "multi-commands-linux": [
@@ -703,7 +725,7 @@
   "trivy": {
     "desc": "Find vulnerabilities, misconfigurations, secrets, SBOM in containers, Kubernetes, code repositories, clouds and more",
     "repo_link": "https://github.com/aquasecurity/trivy",
-    "version": "0.69.1",
+    "version": "0.69.0",
     "package-manager": "github-release",
     "tags": [
       "vulnerability-scanner",
