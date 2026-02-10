@@ -1,5 +1,5 @@
 {
-  "_last_update_at": "2026-02-01T03:52:26.051205+00:00",
+  "_last_update_at": "2026-02-10T06:59:38.808177+00:00",
   "amass": {
     "desc": "In-depth attack surface mapping and asset discovery",
     "repo_link": "https://github.com/owasp-amass/amass",
@@ -211,6 +211,7 @@
       "secret-detection",
       "security",
       "scanning",
+      "optional",
       "credentials"
     ],
     "valide-command": "",
@@ -242,6 +243,27 @@
     "darwin": {
       "amd64": "https://github.com/mongodb/kingfisher/releases/download/v1.76.0/kingfisher-darwin-x64.tgz",
       "arm64": "https://github.com/mongodb/kingfisher/releases/download/v1.76.0/kingfisher-darwin-arm64.tgz"
+    }
+  },
+  "bearer": {
+    "desc": "Code security scanning tool (SAST) to discover, filter and prioritize security and privacy risks.",
+    "repo_link": "https://github.com/bearer/bearer",
+    "version": "2.0.0",
+    "package-manager": "github-release",
+    "tags": [
+      "code-analysis",
+      "sast",
+      "security",
+      "optional"
+    ],
+    "valide-command": "",
+    "linux": {
+      "amd64": "https://github.com/Bearer/bearer/releases/download/v2.0.0/bearer_2.0.0_linux_amd64.tar.gz",
+      "arm64": "https://github.com/Bearer/bearer/releases/download/v2.0.0/bearer_2.0.0_linux_arm64.tar.gz"
+    },
+    "darwin": {
+      "amd64": "https://github.com/Bearer/bearer/releases/download/v2.0.0/bearer_2.0.0_darwin_amd64.tar.gz",
+      "arm64": "https://github.com/Bearer/bearer/releases/download/v2.0.0/bearer_2.0.0_darwin_arm64.tar.gz"
     }
   },
   "semgrep": {
