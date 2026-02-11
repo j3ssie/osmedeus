@@ -124,6 +124,7 @@ type Artifact struct {
 	ContentType  string    `bun:"content_type" json:"content_type,omitempty"`   // json, jsonl, yaml, html, md, log, pdf, png, txt, zip, folder, unknown
 	SizeBytes    int64     `bun:"size_bytes" json:"size_bytes"`
 	LineCount    int       `bun:"line_count" json:"line_count"`
+	Optional     bool      `bun:"optional,default:false" json:"optional"`
 	Description  string    `bun:"description" json:"description,omitempty"`
 	CreatedAt    time.Time `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
 

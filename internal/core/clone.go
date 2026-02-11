@@ -46,6 +46,9 @@ func (w *Workflow) Clone() *Workflow {
 		copy(cloned.Reports, w.Reports)
 	}
 
+	// Deep copy Help
+	cloned.Help = w.Help.Clone()
+
 	// Deep copy Preferences
 	cloned.Preferences = w.Preferences.Clone()
 
@@ -145,6 +148,24 @@ func (p *Preferences) Clone() *Preferences {
 	if p.RepeatWaitTime != nil {
 		v := *p.RepeatWaitTime
 		cloned.RepeatWaitTime = &v
+	}
+
+	return cloned
+}
+
+// Clone creates a deep copy of WorkflowHelp
+func (h *WorkflowHelp) Clone() *WorkflowHelp {
+	if h == nil {
+		return nil
+	}
+
+	cloned := &WorkflowHelp{
+		Usage: h.Usage,
+	}
+
+	if len(h.ExampleTargets) > 0 {
+		cloned.ExampleTargets = make([]string, len(h.ExampleTargets))
+		copy(cloned.ExampleTargets, h.ExampleTargets)
 	}
 
 	return cloned

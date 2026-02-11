@@ -157,9 +157,9 @@ func UsageWorkflow() string {
   Commands for listing, viewing, and validating workflows.
 
 ` + terminal.BoldCyan("▶ Subcommands") + `
-  • ` + terminal.Yellow("list") + `      - List available workflows
-  • ` + terminal.Yellow("show") + `      - Show workflow details
-  • ` + terminal.Yellow("validate") + `  - Validate a workflow
+  • ` + terminal.Yellow("list") + `      - List available workflows (alias: ls)
+  • ` + terminal.Yellow("show") + `      - Show workflow details (alias: view)
+  • ` + terminal.Yellow("validate") + `  - Validate a workflow (alias: val)
 
 ` + terminal.BoldCyan("▶ Workflow Preferences") + `
   Workflows can define execution preferences in YAML that act as defaults.
@@ -724,6 +724,10 @@ func UsageAllExamples() string {
   ` + terminal.Green("# List all workflows") + `
   osmedeus workflow list
 
+  ` + terminal.Green("# Search workflows by name or description") + `
+  osmedeus workflow ls recon
+  osmedeus workflow ls --search subdomain
+
   ` + terminal.Green("# Show workflow details") + `
   osmedeus workflow show recon
 
@@ -865,8 +869,9 @@ func UsageFullExample() string {
 
 ` + terminal.BoldYellow("WORKFLOW COMMAND") + ` - Manage workflows
 ` + terminal.Gray("───────────────────────────────────────────────────────────────────") + `
-  osmedeus workflow list              List available workflows
-  osmedeus workflow show <name>       Show workflow details
+  osmedeus workflow list              List available workflows (alias: ls)
+  osmedeus workflow ls <search>       Search workflows by name or description
+  osmedeus workflow show <name>       Show workflow details (alias: view)
   osmedeus workflow validate <name>   Validate a workflow (alias: val)
 
 ` + terminal.Cyan("  List Flags:") + `

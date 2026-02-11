@@ -173,6 +173,7 @@ func ListArtifacts(cfg *config.Config) fiber.Handler {
 					"content_type":  a.ContentType,
 					"size_bytes":    a.SizeBytes,
 					"line_count":    a.LineCount,
+					"optional":      a.Optional,
 					"description":   a.Description,
 					"created_at":    a.CreatedAt,
 					"path_exists":   exists,

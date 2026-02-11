@@ -18,9 +18,10 @@ import (
 
 // workflowCmd represents the workflow command
 var workflowCmd = &cobra.Command{
-	Use:   "workflow",
+	Use:   "workflow [search]",
 	Short: "Manage workflows",
 	Long:  UsageWorkflow(),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Default to 'list' when no subcommand is specified
 		return workflowListCmd.RunE(cmd, args)
@@ -29,13 +30,20 @@ var workflowCmd = &cobra.Command{
 
 // workflowListCmd lists available workflows
 var workflowListCmd = &cobra.Command{
-	Use:     "list",
+	Use:     "list [search]",
 	Aliases: []string{"ls"},
 	Short:   "List available workflows",
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := config.Get()
 		if cfg == nil {
 			return fmt.Errorf("configuration not loaded")
+		}
+
+		// Resolve search term from positional arg or --search flag
+		searchTerm := searchQuery
+		if len(args) > 0 && args[0] != "" {
+			searchTerm = args[0]
 		}
 
 		loader := parser.NewLoader(cfg.WorkflowsPath)
@@ -56,7 +64,9 @@ var workflowListCmd = &cobra.Command{
 		printer := terminal.NewPrinter()
 		fmt.Println()
 		title := fmt.Sprintf("Available Workflows (%s)", terminal.Gray(cfg.WorkflowsPath))
-		if len(filterTags) > 0 {
+		if searchTerm != "" {
+			title = fmt.Sprintf("Available Workflows - Search: %s", terminal.Cyan(searchTerm))
+		} else if len(filterTags) > 0 {
 			title = fmt.Sprintf("Available Workflows - Filtered by tags: %s", terminal.Cyan(strings.Join(filterTags, ", ")))
 		}
 		fmt.Printf("%s %s\n", terminal.InfoSymbol(), terminal.Bold(title))
@@ -73,6 +83,7 @@ var workflowListCmd = &cobra.Command{
 				steps       string // step/module count
 				tags        string
 				targetTypes string
+				usage       string // from Help.Usage
 			}
 			var rows []workflowRow
 			uniqueTags := make(map[string]bool) // Collect unique tags across all workflows
@@ -100,9 +111,13 @@ var workflowListCmd = &cobra.Command{
 				if len(filterTags) > 0 && !hasMatchingTags(wf, filterTags) {
 					continue
 				}
+				// Skip if search term doesn't match
+				if searchTerm != "" && !matchesSearch(wf, f, searchTerm) {
+					continue
+				}
 				desc := "-"
 				if wf.Description != "" {
-					desc = truncateString(wf.Description, 50)
+					desc = truncateString(wf.Description, 60)
 				}
 				reqParams := getRequiredParams(wf)
 				// Track if any workflow has required Target
@@ -123,13 +138,14 @@ var workflowListCmd = &cobra.Command{
 					}
 				}
 				targetTypes := getTargetTypes(wf)
+				usage := wf.GetUsage()
 				name := f
 				colorName := f
 				if f == "general" {
 					name = f + " (default)"
 					colorName = terminal.Green(name)
 				}
-				rows = append(rows, workflowRow{name, colorName, "flow", desc, reqParams, steps, tags, targetTypes})
+				rows = append(rows, workflowRow{name, colorName, "flow", desc, reqParams, steps, tags, targetTypes, usage})
 			}
 
 			// Load modules
@@ -147,9 +163,13 @@ var workflowListCmd = &cobra.Command{
 				if len(filterTags) > 0 && !hasMatchingTags(wf, filterTags) {
 					continue
 				}
+				// Skip if search term doesn't match
+				if searchTerm != "" && !matchesSearch(wf, m, searchTerm) {
+					continue
+				}
 				desc := "-"
 				if wf.Description != "" {
-					desc = truncateString(wf.Description, 50)
+					desc = truncateString(wf.Description, 60)
 				}
 				reqParams := getRequiredParams(wf)
 				// Track if any workflow has required Target
@@ -170,13 +190,18 @@ var workflowListCmd = &cobra.Command{
 					}
 				}
 				targetTypes := getTargetTypes(wf)
-				rows = append(rows, workflowRow{m, m, "module", desc, reqParams, steps, tags, targetTypes})
+				usage := wf.GetUsage()
+				rows = append(rows, workflowRow{m, m, "module", desc, reqParams, steps, tags, targetTypes, usage})
 			}
 
 			// Check if any workflows matched the filter
-			if len(rows) == 0 && len(filterTags) > 0 {
+			if len(rows) == 0 && (len(filterTags) > 0 || searchTerm != "") {
 				fmt.Println()
-				printer.Warning("No workflows found with tags: %s", strings.Join(filterTags, ", "))
+				if searchTerm != "" {
+					printer.Warning("No workflows found matching: %s", searchTerm)
+				} else {
+					printer.Warning("No workflows found with tags: %s", strings.Join(filterTags, ", "))
+				}
 				fmt.Println()
 				return nil
 			}
@@ -285,6 +310,34 @@ var workflowListCmd = &cobra.Command{
 						colorSteps, strings.Repeat(" ", stepsPad),
 						colorTargetTypes, strings.Repeat(" ", targetTypesPad))
 				}
+
+				// Print usage sub-row if --usage flag is set and workflow has usage info
+				if showUsage && r.usage != "" {
+					usageText := terminal.Gray(" Usage: " + r.usage)
+					usageDisplayLen := len(stripAnsi(usageText))
+					usagePad := descWidth - usageDisplayLen
+					if usagePad < 0 {
+						usagePad = 0
+					}
+					if showTags {
+						fmt.Printf("| %s | %s | %s%s | %s | %s | %s | %s |\n",
+							strings.Repeat(" ", nameWidth),
+							strings.Repeat(" ", typeWidth),
+							usageText, strings.Repeat(" ", usagePad),
+							strings.Repeat(" ", paramsWidth),
+							strings.Repeat(" ", stepsWidth),
+							strings.Repeat(" ", targetTypesWidth),
+							strings.Repeat(" ", tagsWidth))
+					} else {
+						fmt.Printf("| %s | %s | %s%s | %s | %s | %s |\n",
+							strings.Repeat(" ", nameWidth),
+							strings.Repeat(" ", typeWidth),
+							usageText, strings.Repeat(" ", usagePad),
+							strings.Repeat(" ", paramsWidth),
+							strings.Repeat(" ", stepsWidth),
+							strings.Repeat(" ", targetTypesWidth))
+					}
+				}
 			}
 
 			fmt.Println()
@@ -349,8 +402,16 @@ var workflowListCmd = &cobra.Command{
 				fmt.Printf("◇ Available tags: %s\n", terminal.Gray(tagsDisplay))
 			}
 
-			// View workflow details hint
+			// Search & filter workflows hint
 			binaryPath := os.Args[0]
+			fmt.Println()
+			fmt.Println("◌ " + terminal.Bold("Search workflows:"))
+			fmt.Printf("  %s workflow ls %s\n", terminal.Cyan(binaryPath), terminal.Yellow("<search_term>"))
+			fmt.Printf("  %s workflow ls --search %s\n", terminal.Cyan(binaryPath), terminal.Yellow("<search_term>"))
+			fmt.Printf("  %s workflow ls --tags %s\n", terminal.Cyan(binaryPath), terminal.Yellow("recon,fast"))
+			fmt.Printf("  %s workflow ls --show-tags\n", terminal.Cyan(binaryPath))
+
+			// View workflow details hint
 			fmt.Println()
 			fmt.Println("◌ " + terminal.Bold("View workflow details:"))
 			fmt.Printf("  %s workflow show %s\n", terminal.Cyan(binaryPath), terminal.Yellow("<workflow_name>"))
@@ -359,12 +420,6 @@ var workflowListCmd = &cobra.Command{
 			fmt.Println()
 			fmt.Println("◌ " + terminal.Bold("Validate workflow:"))
 			fmt.Printf("  %s workflow validate %s\n", terminal.Cyan(binaryPath), terminal.Yellow("<workflow_name>"))
-
-			// Filter by tags hint
-			fmt.Println()
-			fmt.Println("◌ " + terminal.Bold("Filter by tags:"))
-			fmt.Printf("  %s workflow ls --tags %s\n", terminal.Cyan(binaryPath), terminal.Yellow("recon,fast"))
-			fmt.Printf("  %s workflow ls --show-tags\n", terminal.Cyan(binaryPath))
 
 			// Example run usage
 			fmt.Println()
@@ -912,9 +967,10 @@ func printMarkdownTableWithWidth(headers []string, rows [][]string, maxWidth int
 
 // workflowShowCmd shows workflow details
 var workflowShowCmd = &cobra.Command{
-	Use:   "show [name]",
-	Short: "Show workflow details",
-	Args:  cobra.ExactArgs(1),
+	Use:     "show [name]",
+	Aliases: []string{"view"},
+	Short:   "Show workflow details",
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := config.Get()
 		if cfg == nil {
@@ -967,6 +1023,16 @@ var workflowShowCmd = &cobra.Command{
 		printer.KeyValue("Kind", terminal.TypeBadge(string(workflow.Kind)))
 		printer.KeyValue("Description", workflow.Description)
 		printer.KeyValue("File", terminal.Gray(workflow.FilePath))
+
+		// Show help info
+		if workflow.Help != nil {
+			if workflow.Help.Usage != "" {
+				printer.KeyValue("Usage", terminal.Cyan(workflow.Help.Usage))
+			}
+			if len(workflow.Help.ExampleTargets) > 0 {
+				printer.KeyValue("Example Targets", terminal.Yellow(strings.Join(workflow.Help.ExampleTargets, ", ")))
+			}
+		}
 
 		// Show parameters (categorized)
 		if len(workflow.Params) > 0 {
@@ -1209,6 +1275,8 @@ var showVerbose bool
 var filterTags []string
 var showYaml bool
 var showTags bool
+var showUsage bool
+var searchQuery string
 var validateFailFast bool
 
 // Linter flags
@@ -1222,6 +1290,8 @@ func init() {
 	workflowShowCmd.Flags().BoolVar(&showYaml, "yaml", false, "show raw YAML instead of table format")
 	workflowListCmd.Flags().StringSliceVar(&filterTags, "tags", []string{}, "filter workflows by tags (comma-separated)")
 	workflowListCmd.Flags().BoolVar(&showTags, "show-tags", false, "show tags column in output")
+	workflowListCmd.Flags().BoolVar(&showUsage, "usage", false, "show usage info below description")
+	workflowListCmd.Flags().StringVar(&searchQuery, "search", "", "filter workflows by name, description, or tags")
 	workflowListCmd.Flags().BoolVarP(&showVerbose, "verbose", "v", false, "show workflows with errors")
 	workflowValidateCmd.Flags().BoolVar(&validateFailFast, "fail-fast", false, "stop on first validation failure")
 	workflowValidateCmd.Flags().BoolVar(&lintCheck, "check", false, "exit with error code if issues found (for CI)")
@@ -1245,6 +1315,23 @@ func hasMatchingTags(wf *core.Workflow, tags []string) bool {
 			if strings.EqualFold(wfTag, filterTag) {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+// matchesSearch checks if a workflow matches a search term (case-insensitive substring match)
+func matchesSearch(wf *core.Workflow, name, searchTerm string) bool {
+	lower := strings.ToLower(searchTerm)
+	if strings.Contains(strings.ToLower(name), lower) {
+		return true
+	}
+	if strings.Contains(strings.ToLower(wf.Description), lower) {
+		return true
+	}
+	for _, tag := range wf.Tags {
+		if strings.Contains(strings.ToLower(tag), lower) {
+			return true
 		}
 	}
 	return false

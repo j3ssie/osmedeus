@@ -7,7 +7,7 @@
 set -euo pipefail
 
 echo "[canary] Starting osmedeus API server on :8002 ..."
-osmedeus serve --debug --port 8002 --host 0.0.0.0 -A &
+osmedeus serve --port 8002 --host 0.0.0.0 -A &
 SERVER_PID=$!
 
 # Give the server a moment to bind

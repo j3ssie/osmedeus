@@ -23,6 +23,12 @@ func (t *TagList) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+// WorkflowHelp contains usage documentation for a workflow
+type WorkflowHelp struct {
+	ExampleTargets []string `yaml:"example_targets,omitempty"`
+	Usage          string   `yaml:"usage,omitempty"`
+}
+
 // Workflow represents either a Module or Flow
 type Workflow struct {
 	Kind         WorkflowKind  `yaml:"kind"`
@@ -30,6 +36,7 @@ type Workflow struct {
 	Description  string        `yaml:"description"`
 	Tags         TagList       `yaml:"tags,omitempty"`
 	Hidden       bool          `yaml:"hidden,omitempty"`
+	Help         *WorkflowHelp `yaml:"help,omitempty"`
 	Params       []Param       `yaml:"params"`
 	Triggers     []Trigger     `yaml:"triggers"`
 	Dependencies *Dependencies `yaml:"dependencies"`
@@ -185,4 +192,20 @@ func (w *Workflow) GetCronTriggers() []Trigger {
 		}
 	}
 	return triggers
+}
+
+// GetUsage returns the usage string from Help, or empty string if Help is nil
+func (w *Workflow) GetUsage() string {
+	if w.Help == nil {
+		return ""
+	}
+	return w.Help.Usage
+}
+
+// GetExampleTargets returns example targets from Help, or nil if Help is nil
+func (w *Workflow) GetExampleTargets() []string {
+	if w.Help == nil {
+		return nil
+	}
+	return w.Help.ExampleTargets
 }

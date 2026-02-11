@@ -2,6 +2,9 @@ name: test-example-report
 kind: module
 description: Test example report with nested parallel steps with mixed types
 tags: test,parallel,nested
+help:
+  example_targets: ['example.com', 'httpbin.org']
+  usage: osmedeus run -m test-example-report -t <target>
 
 params:
   - name: target
@@ -17,6 +20,7 @@ reports:
     path: "{{Output}}/http.json"
     type: json
     description: Structured JSON output
+    optional: true
 
   - name: markdown-report-report
     path: "{{Output}}/reports/sample-markdown-report.md"

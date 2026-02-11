@@ -57,6 +57,7 @@ func RegisterArtifacts(workflow *core.Workflow, execCtx *core.ExecutionContext, 
 			ArtifactPath: renderedPath,
 			ArtifactType: database.ArtifactTypeReport,
 			ContentType:  contentType,
+			Optional:     report.Optional,
 			Description:  report.Description,
 			CreatedAt:    time.Now(),
 		}
@@ -77,6 +78,7 @@ func RegisterArtifacts(workflow *core.Workflow, execCtx *core.ExecutionContext, 
 			Set("content_type = EXCLUDED.content_type").
 			Set("size_bytes = EXCLUDED.size_bytes").
 			Set("line_count = EXCLUDED.line_count").
+			Set("optional = EXCLUDED.optional").
 			Set("description = EXCLUDED.description").
 			Exec(ctx)
 

@@ -19,6 +19,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    build-essential \
     curl \
     wget \
     git \
@@ -55,6 +56,9 @@ RUN osmedeus install base --preset
 
 # This is for sast test
 RUN osmedeus install binary --name trivy --name semgrep --name kingfisher --name bearer
+
+# This is for general test (probe-dns, recon-http-fp, scan-content)
+RUN osmedeus install binary --name dnsx --name httpx --name puredns --name massdns --name ffuf
 
 # Copy the canary entrypoint
 COPY build/docker/canary-entrypoint.sh /usr/local/bin/canary-entrypoint.sh

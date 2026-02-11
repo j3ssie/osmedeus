@@ -229,6 +229,11 @@ func (r *InheritanceResolver) merge(parent, child *core.Workflow) (*core.Workflo
 		copy(merged.Tags, child.Tags)
 	}
 
+	// Apply child's help if set
+	if child.Help != nil {
+		merged.Help = child.Help.Clone()
+	}
+
 	// Apply overrides if present
 	if child.Override != nil {
 		if err := r.applyOverrides(merged, child.Override); err != nil {

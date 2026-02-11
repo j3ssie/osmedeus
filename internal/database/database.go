@@ -217,6 +217,11 @@ func Migrate(ctx context.Context) error {
 		return err
 	}
 
+	// Add optional column to artifacts table if it doesn't exist (for existing databases)
+	if err := addArtifactsOptionalColumn(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -254,6 +259,22 @@ func addRunsPIDColumn(ctx context.Context) error {
 			return nil
 		}
 		return fmt.Errorf("failed to add current_pid column: %w", err)
+	}
+	return nil
+}
+
+// addArtifactsOptionalColumn adds the optional column to artifacts table for existing databases
+// This is safe to run multiple times - it checks if column exists first
+func addArtifactsOptionalColumn(ctx context.Context) error {
+	_, err := db.ExecContext(ctx, "ALTER TABLE artifacts ADD COLUMN optional BOOLEAN DEFAULT FALSE")
+	if err != nil {
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "duplicate column") ||
+			strings.Contains(errStr, "already exists") ||
+			strings.Contains(errStr, "sqlstate 42701") {
+			return nil
+		}
+		return fmt.Errorf("failed to add optional column: %w", err)
 	}
 	return nil
 }

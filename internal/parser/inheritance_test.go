@@ -407,6 +407,68 @@ steps:
 	assert.Contains(t, err.Error(), "modules override can only be used with flow")
 }
 
+func TestInheritanceResolver_HelpMerge(t *testing.T) {
+	p := NewParser()
+
+	// Parent with help
+	parentContent := []byte(`
+kind: module
+name: parent-with-help
+help:
+  example_targets: ['parent.com']
+  usage: osmedeus run -m parent -t <target>
+steps:
+  - name: step1
+    type: bash
+    command: echo parent
+`)
+	parent, err := p.ParseContent(parentContent)
+	require.NoError(t, err)
+
+	t.Run("child overrides parent help", func(t *testing.T) {
+		childContent := []byte(`
+kind: module
+name: child-with-help
+extends: parent-with-help
+help:
+  example_targets: ['child.com', 'example.org']
+  usage: osmedeus run -m child -t <target>
+`)
+		child, err := p.ParseContent(childContent)
+		require.NoError(t, err)
+
+		// Manually resolve since parent isn't on disk
+		loader := NewLoader(testWorkflowsDir)
+		resolver := NewInheritanceResolver(loader)
+		merged, err := resolver.merge(parent, child)
+		require.NoError(t, err)
+
+		require.NotNil(t, merged.Help)
+		assert.Equal(t, "osmedeus run -m child -t <target>", merged.Help.Usage)
+		assert.Equal(t, []string{"child.com", "example.org"}, merged.Help.ExampleTargets)
+	})
+
+	t.Run("child without help inherits parent help", func(t *testing.T) {
+		childContent := []byte(`
+kind: module
+name: child-no-help
+extends: parent-with-help
+`)
+		child, err := p.ParseContent(childContent)
+		require.NoError(t, err)
+
+		loader := NewLoader(testWorkflowsDir)
+		resolver := NewInheritanceResolver(loader)
+		merged, err := resolver.merge(parent, child)
+		require.NoError(t, err)
+
+		// Should inherit parent's help
+		require.NotNil(t, merged.Help)
+		assert.Equal(t, "osmedeus run -m parent -t <target>", merged.Help.Usage)
+		assert.Equal(t, []string{"parent.com"}, merged.Help.ExampleTargets)
+	})
+}
+
 func boolPtr(b bool) *bool {
 	return &b
 }

@@ -6,6 +6,7 @@ type Report struct {
 	Path        string `yaml:"path"`
 	Type        string `yaml:"type"` // text, csv, json, etc.
 	Description string `yaml:"description"`
+	Optional    bool   `yaml:"optional,omitempty"`
 }
 
 // IsTextReport returns true if this is a text report

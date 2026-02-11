@@ -14,6 +14,7 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/database"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
+	"github.com/uptrace/bun"
 	"go.uber.org/zap"
 )
 
@@ -311,6 +312,11 @@ func (vf *vmFunc) dbImportSARIF(call goja.FunctionCall) goja.Value {
 		}
 	}
 
+	// Update workspace vulnerability counters from DB (source of truth)
+	if stats.New > 0 || stats.Updated > 0 {
+		updateWorkspaceVulnCounters(ctx, db, workspace)
+	}
+
 	total := stats.New + stats.Updated + stats.Unchanged
 	logger.Get().Debug("dbImportSARIF completed",
 		zap.String("workspace", workspace),
@@ -328,6 +334,56 @@ func (vf *vmFunc) dbImportSARIF(call goja.FunctionCall) goja.Value {
 		"errors":    stats.Errors,
 		"total":     total,
 	})
+}
+
+// updateWorkspaceVulnCounters counts vulnerabilities by severity from the DB
+// and updates the workspace record with accurate counters.
+func updateWorkspaceVulnCounters(ctx context.Context, db *bun.DB, workspace string) {
+	type severityCount struct {
+		Severity string `bun:"severity"`
+		Count    int    `bun:"count"`
+	}
+	var counts []severityCount
+	err := db.NewSelect().
+		TableExpr("vulnerabilities").
+		ColumnExpr("severity").
+		ColumnExpr("count(*) AS count").
+		Where("workspace = ?", workspace).
+		GroupExpr("severity").
+		Scan(ctx, &counts)
+	if err != nil {
+		logger.Get().Debug("updateWorkspaceVulnCounters: failed to count vulnerabilities", zap.Error(err))
+		return
+	}
+
+	var total, critical, high, medium, low int
+	for _, c := range counts {
+		total += c.Count
+		switch strings.ToLower(c.Severity) {
+		case "critical":
+			critical = c.Count
+		case "high":
+			high = c.Count
+		case "medium":
+			medium = c.Count
+		case "low":
+			low = c.Count
+		}
+	}
+
+	_, err = db.NewUpdate().
+		Model((*database.Workspace)(nil)).
+		Set("total_vulns = ?", total).
+		Set("vuln_critical = ?", critical).
+		Set("vuln_high = ?", high).
+		Set("vuln_medium = ?", medium).
+		Set("vuln_low = ?", low).
+		Set("updated_at = ?", time.Now()).
+		Where("name = ?", workspace).
+		Exec(ctx)
+	if err != nil {
+		logger.Get().Debug("updateWorkspaceVulnCounters: failed to update workspace", zap.Error(err))
+	}
 }
 
 // sarifFinding is an intermediate struct for markdown conversion
