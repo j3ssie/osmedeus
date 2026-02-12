@@ -765,3 +765,382 @@ func TestGlobToSQLLike(t *testing.T) {
 		})
 	}
 }
+
+// --- DNS Asset Import Tests ---
+
+func TestDbImportDNSAsset(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	testFile := "../../test/testdata/sample-jsonl-output/dns-records.txt"
+	_, err := os.Stat(testFile)
+	require.NoError(t, err, "sample dns-records.txt file must exist")
+
+	result, err := registry.Execute(
+		`db_import_dns_asset("test-workspace", "`+testFile+`")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+
+	// 3 unique domains: example.com, sub.example.com, other.example.com
+	assert.Equal(t, int64(3), result)
+
+	// Verify assets were imported
+	ctx := context.Background()
+	db := database.GetDB()
+	require.NotNil(t, db)
+
+	var assets []database.Asset
+	err = db.NewSelect().Model(&assets).
+		Where("workspace = ?", "test-workspace").
+		OrderExpr("asset_value ASC").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Len(t, assets, 3)
+
+	// Check example.com has 2 A records + 1 CNAME
+	var asset database.Asset
+	err = db.NewSelect().Model(&asset).
+		Where("workspace = ?", "test-workspace").
+		Where("asset_value = ?", "example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "domain", asset.AssetType)
+	assert.Equal(t, "dns", asset.Source)
+	assert.Equal(t, "93.184.216.34", asset.HostIP)
+	assert.Contains(t, asset.DnsRecords, "93.184.216.34")
+	assert.Contains(t, asset.DnsRecords, "93.184.216.35")
+	assert.Contains(t, asset.DnsRecords, "CNAME:cdn.example.net")
+
+	// Check sub.example.com has A + MX
+	err = db.NewSelect().Model(&asset).
+		Where("workspace = ?", "test-workspace").
+		Where("asset_value = ?", "sub.example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "10.0.0.1", asset.HostIP)
+	assert.Contains(t, asset.DnsRecords, "10.0.0.1")
+	assert.Contains(t, asset.DnsRecords, "MX:mail.example.com")
+}
+
+func TestDbImportDNSAsset_EmptyArgs(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	result, err := registry.Execute(
+		`db_import_dns_asset("", "/tmp/test.txt")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Contains(t, result.(string), "error:")
+
+	result, err = registry.Execute(
+		`db_import_dns_asset("ws", "")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Contains(t, result.(string), "error:")
+}
+
+func TestDbImportDNSAsset_CNAME(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Create a file with only CNAME records
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "cname-only.txt")
+	err := os.WriteFile(testFile, []byte("www.example.com. CNAME example.com.\n"), 0644)
+	require.NoError(t, err)
+
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`db_import_dns_asset("test-workspace", "`+testFile+`")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), result)
+
+	ctx := context.Background()
+	db := database.GetDB()
+	var asset database.Asset
+	err = db.NewSelect().Model(&asset).
+		Where("workspace = ?", "test-workspace").
+		Where("asset_value = ?", "www.example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "", asset.HostIP) // No A record
+	assert.Contains(t, asset.DnsRecords, "CNAME:example.com")
+}
+
+func TestDbImportDNSAsset_Upsert(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	testFile := "../../test/testdata/sample-jsonl-output/dns-records.txt"
+
+	// Import twice
+	result1, err := registry.Execute(
+		`db_import_dns_asset("test-workspace", "`+testFile+`")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), result1)
+
+	result2, err := registry.Execute(
+		`db_import_dns_asset("test-workspace", "`+testFile+`")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), result2)
+
+	// Should still only have 3 assets (no duplicates)
+	ctx := context.Background()
+	db := database.GetDB()
+	var count int
+	count, err = db.NewSelect().Model((*database.Asset)(nil)).
+		Where("workspace = ?", "test-workspace").
+		Count(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 3, count)
+}
+
+// --- Custom Asset Import Tests ---
+
+func TestDbImportCustomAsset(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	testFile := "../../test/testdata/sample-jsonl-output/custom-assets.jsonl"
+	_, err := os.Stat(testFile)
+	require.NoError(t, err, "sample custom-assets.jsonl file must exist")
+
+	result, err := registry.Execute(
+		`db_import_custom_asset("test-workspace", "`+testFile+`")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+
+	stats, ok := result.(map[string]interface{})
+	require.True(t, ok, "result should be a map")
+	assert.Equal(t, 3, stats["new"])
+	assert.Equal(t, 3, stats["total"])
+	assert.Equal(t, 0, stats["errors"])
+
+	// Verify specific asset fields
+	ctx := context.Background()
+	db := database.GetDB()
+	require.NotNil(t, db)
+
+	var asset database.Asset
+	err = db.NewSelect().Model(&asset).
+		Where("workspace = ?", "test-workspace").
+		Where("asset_value = ?", "api.example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "https://api.example.com", asset.URL)
+	assert.Equal(t, "url", asset.AssetType)
+	assert.Equal(t, "custom-scan", asset.Source)
+	assert.Contains(t, asset.Remarks, "API endpoint")
+	assert.Equal(t, "https://jira.example.com/PROJ-123", asset.ExternalURL)
+	assert.Contains(t, asset.Remarks, "api")
+	assert.Contains(t, asset.Remarks, "production")
+
+	// Check technologies mapped
+	err = db.NewSelect().Model(&asset).
+		Where("workspace = ?", "test-workspace").
+		Where("asset_value = ?", "cdn.example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Contains(t, asset.Technologies, "Cloudflare")
+	assert.Contains(t, asset.Technologies, "nginx")
+}
+
+func TestDbImportCustomAsset_EmptyArgs(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	result, err := registry.Execute(
+		`db_import_custom_asset("", "/tmp/test.jsonl")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Contains(t, result.(string), "error:")
+
+	result, err = registry.Execute(
+		`db_import_custom_asset("ws", "")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	assert.Contains(t, result.(string), "error:")
+}
+
+func TestDbImportCustomAsset_UpdateExisting(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	testFile := "../../test/testdata/sample-jsonl-output/custom-assets.jsonl"
+
+	// First import
+	result, err := registry.Execute(
+		`db_import_custom_asset("test-workspace", "`+testFile+`")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	stats := result.(map[string]interface{})
+	assert.Equal(t, 3, stats["new"])
+	assert.Equal(t, 0, stats["updated"])
+
+	// Second import - should update
+	result, err = registry.Execute(
+		`db_import_custom_asset("test-workspace", "`+testFile+`")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	stats = result.(map[string]interface{})
+	assert.Equal(t, 0, stats["new"])
+	assert.Equal(t, 3, stats["updated"])
+	assert.Equal(t, 3, stats["total"])
+}
+
+func TestDbImportCustomAsset_TagsAndExternalURL(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Create a JSONL with tags and external_url
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "tagged-assets.jsonl")
+	content := `{"asset_value":"tagged.example.com","asset_type":"domain","tags":["critical","external"],"external_url":"https://bugbounty.example.com/report/42"}` + "\n"
+	err := os.WriteFile(testFile, []byte(content), 0644)
+	require.NoError(t, err)
+
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`db_import_custom_asset("test-workspace", "`+testFile+`")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+
+	stats := result.(map[string]interface{})
+	assert.Equal(t, 1, stats["new"])
+
+	// Verify tags and external_url persisted
+	ctx := context.Background()
+	db := database.GetDB()
+	var asset database.Asset
+	err = db.NewSelect().Model(&asset).
+		Where("workspace = ?", "test-workspace").
+		Where("asset_value = ?", "tagged.example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "https://bugbounty.example.com/report/42", asset.ExternalURL)
+	assert.Contains(t, asset.Remarks, "critical")
+	assert.Contains(t, asset.Remarks, "external")
+}
+
+// --- Model Field Tests ---
+
+func TestAssetExternalURLField(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	db := database.GetDB()
+	require.NotNil(t, db)
+
+	now := time.Now()
+	asset := database.Asset{
+		Workspace:   "test-workspace",
+		AssetValue:  "ext-url-test.example.com",
+		AssetType:   "domain",
+		ExternalURL: "https://tracker.example.com/issue/99",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+
+	_, err := db.NewInsert().Model(&asset).Exec(ctx)
+	require.NoError(t, err)
+
+	var fetched database.Asset
+	err = db.NewSelect().Model(&fetched).
+		Where("asset_value = ?", "ext-url-test.example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "https://tracker.example.com/issue/99", fetched.ExternalURL)
+}
+
+func TestAssetRemarksField(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	db := database.GetDB()
+	require.NotNil(t, db)
+
+	now := time.Now()
+	asset := database.Asset{
+		Workspace:  "test-workspace",
+		AssetValue: "remarks-test.example.com",
+		AssetType:  "domain",
+		Remarks:    []string{"web", "api", "production"},
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+
+	_, err := db.NewInsert().Model(&asset).Exec(ctx)
+	require.NoError(t, err)
+
+	var fetched database.Asset
+	err = db.NewSelect().Model(&fetched).
+		Where("asset_value = ?", "remarks-test.example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"web", "api", "production"}, fetched.Remarks)
+}
+
+func TestAssetSizeAndLOCFields(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	db := database.GetDB()
+	require.NotNil(t, db)
+
+	now := time.Now()
+	asset := database.Asset{
+		Workspace:   "test-workspace",
+		AssetValue:  "example-corp/web-app",
+		AssetType:   "repository",
+		Language:    "Go",
+		Size:        512000,
+		LOC:         12000,
+		ExternalURL: "https://github.com/example-corp/web-app",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+
+	_, err := db.NewInsert().Model(&asset).Exec(ctx)
+	require.NoError(t, err)
+
+	var fetched database.Asset
+	err = db.NewSelect().Model(&fetched).
+		Where("asset_value = ?", "example-corp/web-app").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "repository", fetched.AssetType)
+	assert.Equal(t, "Go", fetched.Language)
+	assert.Equal(t, int64(512000), fetched.Size)
+	assert.Equal(t, int64(12000), fetched.LOC)
+	assert.Equal(t, "https://github.com/example-corp/web-app", fetched.ExternalURL)
+}

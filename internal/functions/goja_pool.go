@@ -108,6 +108,9 @@ type VMContext struct {
 
 	// RuntimeVars stores variables set via set_var() for retrieval with get_var()
 	RuntimeVars map[string]string
+
+	// suppressDetails suppresses verbose console output (propagated from step's suppress_details)
+	suppressDetails bool
 }
 
 // VMRegistrationFunc is called to register functions on a new VM
@@ -162,6 +165,7 @@ func (p *VMPool) Put(ctx *VMContext) {
 	ctx.target = ""
 	ctx.workspacePath = ""
 	ctx.RuntimeVars = nil
+	ctx.suppressDetails = false
 
 	p.pool.Put(ctx)
 }
@@ -220,6 +224,11 @@ func (v *VMContext) SetContext(ctx map[string]interface{}) {
 	// Extract workspace path (Output directory)
 	if op, ok := ctx["Output"].(string); ok {
 		v.workspacePath = op
+	}
+
+	// Extract suppress details flag (from step's suppress_details)
+	if sd, ok := ctx["SuppressDetails"].(bool); ok {
+		v.suppressDetails = sd
 	}
 }
 

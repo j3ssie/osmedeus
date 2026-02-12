@@ -224,14 +224,22 @@ type Asset struct {
 	TLS        string   `bun:"tls" json:"tls,omitempty"`
 
 	// Metadata
+	// asset type can be "http", "dns", "url", "subdomain", "ip", "repository", "file", "link", "content", "archive"
 	AssetType            string   `bun:"asset_type" json:"asset_type,omitempty"`
 	Technologies         []string `bun:"technologies,type:json" json:"tech,omitempty"`
 	ResponseTime         string   `bun:"response_time" json:"time,omitempty"`
-	Labels               string   `bun:"labels" json:"remarks,omitempty"`
+	Remarks              []string `bun:"remarks,type:json" json:"remarks,omitempty"`
 	Source               string   `bun:"source" json:"source,omitempty"`               // e.g., "httpx", "nuclei"
 	RawJsonData          string   `bun:"raw_json_data" json:"raw_json_data,omitempty"` // Original JSON
 	RawResponse          string   `bun:"raw_response" json:"raw_response,omitempty"`
 	ScreenshotBase64Data string   `bun:"screenshot_base64_data" json:"screenshot_base64_data,omitempty"`
+
+	// for repository/file assets
+	Language    string `bun:"language" json:"language,omitempty"`
+	Size        int64  `bun:"size" json:"size,omitempty"`
+	LOC         int64  `bun:"loc" json:"loc,omitempty"`
+	ExternalURL string `bun:"external_url" json:"external_url,omitempty"`
+	BlobContent string `bun:"blob_content" json:"blob_content,omitempty"`
 
 	// Timestamps
 	CreatedAt  time.Time `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`

@@ -145,6 +145,10 @@ func (i *JSONLImporter) insertAssetBatch(ctx context.Context, assets []*Asset) (
 		Set("words = EXCLUDED.words").
 		Set("lines = EXCLUDED.lines").
 		Set("remarks = EXCLUDED.remarks").
+		Set("language = EXCLUDED.language").
+		Set("size = EXCLUDED.size").
+		Set("loc = EXCLUDED.loc").
+		Set("blob_content = EXCLUDED.blob_content").
 		Set("raw_data = EXCLUDED.raw_data").
 		Set("asset_type = EXCLUDED.asset_type").
 		Set("updated_at = EXCLUDED.updated_at").
@@ -238,8 +242,24 @@ func ParseAssetLine(line []byte, defaultWorkspace, source string) (*Asset, error
 	if v, ok := raw["time"].(string); ok {
 		asset.ResponseTime = v
 	}
-	if v, ok := raw["remarks"].(string); ok {
-		asset.Labels = v
+	if v, ok := raw["remarks"].(string); ok && v != "" {
+		asset.Remarks = []string{v}
+	} else if v, ok := raw["remarks"].([]interface{}); ok {
+		asset.Remarks = interfaceSliceToStringSlice(v)
+	}
+	// Merge legacy "tags" field into Remarks
+	if v, ok := raw["tags"].([]interface{}); ok {
+		asset.Remarks = append(asset.Remarks, interfaceSliceToStringSlice(v)...)
+	}
+	// Language field
+	if v, ok := raw["language"].(string); ok {
+		asset.Language = v
+	}
+	if v, ok := raw["size"].(float64); ok {
+		asset.Size = int64(v)
+	}
+	if v, ok := raw["loc"].(float64); ok {
+		asset.LOC = int64(v)
 	}
 	if v, ok := raw["asset_type"].(string); ok {
 		asset.AssetType = v
@@ -256,6 +276,10 @@ func ParseAssetLine(line []byte, defaultWorkspace, source string) (*Asset, error
 	// Auto-classify asset type if not provided
 	if asset.AssetType == "" {
 		asset.AssetType = ClassifyAssetType(asset.AssetValue)
+	}
+	// Refine: if we have HTTP response data, it's an "http" asset
+	if asset.AssetType == "url" && (asset.StatusCode > 0 || asset.ContentLength > 0) {
+		asset.AssetType = "http"
 	}
 
 	return asset, nil

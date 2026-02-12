@@ -294,6 +294,10 @@ func (r *AssetRepository) Upsert(ctx context.Context, asset *database.Asset) err
 		Set("words = EXCLUDED.words").
 		Set("lines = EXCLUDED.lines").
 		Set("remarks = EXCLUDED.remarks").
+		Set("language = EXCLUDED.language").
+		Set("size = EXCLUDED.size").
+		Set("loc = EXCLUDED.loc").
+		Set("blob_content = EXCLUDED.blob_content").
 		Set("raw_data = EXCLUDED.raw_data").
 		Set("updated_at = EXCLUDED.updated_at").
 		Exec(ctx)
@@ -321,6 +325,10 @@ func (r *AssetRepository) BulkUpsert(ctx context.Context, assets []*database.Ass
 		Set("words = EXCLUDED.words").
 		Set("lines = EXCLUDED.lines").
 		Set("remarks = EXCLUDED.remarks").
+		Set("language = EXCLUDED.language").
+		Set("size = EXCLUDED.size").
+		Set("loc = EXCLUDED.loc").
+		Set("blob_content = EXCLUDED.blob_content").
 		Set("raw_data = EXCLUDED.raw_data").
 		Set("updated_at = EXCLUDED.updated_at").
 		Exec(ctx)

@@ -115,7 +115,7 @@ func (vf *vmFunc) cdnDelete(call goja.FunctionCall) goja.Value {
 	if len(call.Arguments) > 1 && !goja.IsUndefined(call.Argument(1)) {
 		mode = strings.ToLower(call.Argument(1).String())
 	}
-	jsonOnly := mode == "json"
+	jsonOnly := mode == "json" || vf.getContext().suppressDetails
 	logger.Get().Debug("Calling cdnDelete", zap.String("remotePath", remotePath))
 
 	if remotePath == "undefined" || remotePath == "" {
@@ -288,7 +288,7 @@ func (vf *vmFunc) cdnSyncUpload(call goja.FunctionCall) goja.Value {
 	if len(call.Arguments) > 2 && !goja.IsUndefined(call.Argument(2)) {
 		mode = strings.ToLower(call.Argument(2).String())
 	}
-	jsonOnly := mode == "json"
+	jsonOnly := mode == "json" || vf.getContext().suppressDetails
 	logger.Get().Debug("Calling cdnSyncUpload", zap.String("localDir", localDir), zap.String("remotePrefix", remotePrefix))
 
 	result := map[string]interface{}{
@@ -404,7 +404,7 @@ func (vf *vmFunc) cdnSyncDownload(call goja.FunctionCall) goja.Value {
 	if len(call.Arguments) > 2 && !goja.IsUndefined(call.Argument(2)) {
 		mode = strings.ToLower(call.Argument(2).String())
 	}
-	jsonOnly := mode == "json"
+	jsonOnly := mode == "json" || vf.getContext().suppressDetails
 	logger.Get().Debug("Calling cdnSyncDownload", zap.String("remotePrefix", remotePrefix), zap.String("localDir", localDir))
 
 	result := map[string]interface{}{

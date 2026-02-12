@@ -1,0 +1,6 @@
+example.com. A 93.184.216.34
+example.com. A 93.184.216.35
+example.com. CNAME cdn.example.net.
+sub.example.com. A 10.0.0.1
+sub.example.com. MX mail.example.com.
+other.example.com. A 192.168.1.1

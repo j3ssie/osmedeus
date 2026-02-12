@@ -201,6 +201,12 @@ const (
 	FnOsSetenv = "os_setenv" // os_setenv(name, value) -> bool
 )
 
+// SSH Functions - Remote execution via SSH
+const (
+	FnSSHExec  = "ssh_exec"  // ssh_exec(host, command, user?, key_path?, password?, port?) -> string
+	FnSSHRsync = "ssh_rsync" // ssh_rsync(host, src, dest, user?, key_path?, password?, port?) -> bool
+)
+
 // LLM Functions - Invoke LLM from workflows
 const (
 	FnLLMInvoke        = "llm_invoke"        // llm_invoke(message) -> string (simple direct message)
@@ -293,6 +299,10 @@ const (
 	FnDBImportAssetFromFile = "db_import_asset_from_file" // db_import_asset_from_file(workspace, file_path) -> int (count)
 	FnDBImportVuln          = "db_import_vuln"            // db_import_vuln(workspace, json_data) -> bool
 	FnDBImportVulnFromFile  = "db_import_vuln_from_file"  // db_import_vuln_from_file(workspace, file_path) -> int (count)
+
+	// DNS and custom asset import functions
+	FnDBImportDNSAsset    = "db_import_dns_asset"    // db_import_dns_asset(workspace, file_path) -> int
+	FnDBImportCustomAsset = "db_import_custom_asset" // db_import_custom_asset(workspace, file_path) -> map
 
 	// SARIF import functions
 	FnDBImportSARIF          = "db_import_sarif"           // db_import_sarif(workspace, file_path) -> map (stats)
@@ -544,6 +554,10 @@ func AllFunctions() []string {
 		FnDBImportVuln,
 		FnDBImportVulnFromFile,
 
+		// DNS and custom asset import functions
+		FnDBImportDNSAsset,
+		FnDBImportCustomAsset,
+
 		// SARIF import functions
 		FnDBImportSARIF,
 		FnConvertSARIFToMarkdown,
@@ -568,6 +582,10 @@ func AllFunctions() []string {
 		// Environment functions
 		FnOsGetenv,
 		FnOsSetenv,
+
+		// SSH functions
+		FnSSHExec,
+		FnSSHRsync,
 	}
 }
 
@@ -607,6 +625,7 @@ const (
 	CategoryEnvironment     = "environment"
 	CategoryTypeDetection   = "type_detection"
 	CategoryLLM             = "llm"
+	CategorySSH             = "ssh"
 )
 
 // CategoryInfo provides display metadata for a function category
@@ -644,6 +663,7 @@ func CategoryOrder() []CategoryInfo {
 		{CategoryInstaller, "Installer Functions", "Installer"},
 		{CategoryEnvironment, "Environment Functions", "Environment"},
 		{CategoryTypeDetection, "Type Detection Functions", "Type Detection"},
+		{CategorySSH, "SSH Functions", "SSH"},
 	}
 }
 
@@ -868,6 +888,8 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnDBImportAssetFromFile, "db_import_asset_from_file(workspace, file_path)", "Import assets from JSONL file (httpx format)", "int", "db_import_asset_from_file('{{Workspace}}', '{{Output}}/httpx.jsonl')"},
 			{FnDBImportVuln, "db_import_vuln(workspace, json_data)", "Import single vulnerability from JSON (nuclei format)", "bool", "db_import_vuln('{{Workspace}}', '{\"template-id\":\"...\",\"info\":{\"name\":\"...\",\"severity\":\"high\"}}')"},
 			{FnDBImportVulnFromFile, "db_import_vuln_from_file(workspace, file_path)", "Import vulnerabilities from JSONL file (nuclei format)", "int", "db_import_vuln_from_file('{{Workspace}}', '{{Output}}/nuclei.jsonl')"},
+			{FnDBImportDNSAsset, "db_import_dns_asset(workspace, file_path)", "Import DNS records from zone-style file (domain TYPE value per line), groups by domain", "int", "db_import_dns_asset('{{Workspace}}', '{{Output}}/dns-records.txt')"},
+			{FnDBImportCustomAsset, "db_import_custom_asset(workspace, file_path)", "Import assets from JSONL file with direct field mapping (any Asset column can be set per line)", "map", "db_import_custom_asset('{{Workspace}}', '{{Output}}/custom-assets.jsonl')"},
 			{FnDBImportSARIF, "db_import_sarif(workspace, file_path)", "Import vulnerabilities from SARIF file (Semgrep, Trivy, etc.)", "map", "db_import_sarif('{{Workspace}}', '{{Output}}/semgrep.sarif')"},
 			{FnDBAssetDiff, "db_asset_diff(workspace)", "Get asset diff as JSONL string", "string", "db_asset_diff('{{Workspace}}')"},
 			{FnDBVulnDiff, "db_vuln_diff(workspace)", "Get vulnerability diff as JSONL string", "string", "db_vuln_diff('{{Workspace}}')"},
@@ -886,6 +908,10 @@ func FunctionRegistry() map[string][]FunctionInfo {
 		CategoryEnvironment: {
 			{FnOsGetenv, "os_getenv(name)", "Get environment variable", "string", "os_getenv('HOME')"},
 			{FnOsSetenv, "os_setenv(name, value)", "Set environment variable", "bool", "os_setenv('API_KEY', 'secret')"},
+		},
+		CategorySSH: {
+			{FnSSHExec, "ssh_exec(host, command, user?, key_path?, password?, port?)", "Execute command on remote host via SSH (uses connection pool)", "string", "ssh_exec('10.0.0.1', 'whoami', 'root', '~/.ssh/id_rsa')"},
+			{FnSSHRsync, "ssh_rsync(host, src, dest, user?, key_path?, password?, port?)", "Copy local file/directory to remote host via rsync over SSH", "bool", "ssh_rsync('10.0.0.1', '/tmp/data.txt', '/opt/data.txt', 'root', '~/.ssh/id_rsa')"},
 		},
 		CategoryTypeDetection: {
 			{FnGetTypes, "get_types(input)", "Detect input type (file, folder, cidr, ip, url, domain, string)", "string", "get_types('192.168.1.0/24')"},

@@ -58,7 +58,7 @@ curl "http://localhost:8002/osm/api/assets?workspace=example.com&offset=50&limit
       "asset_type": "web",
       "tech": ["nginx/1.21.0", "nodejs", "express"],
       "time": "245ms",
-      "remarks": "production",
+      "remarks": ["production"],
       "source": "httpx",
       "created_at": "2025-01-15T10:30:00Z",
       "updated_at": "2025-01-15T10:30:00Z"
@@ -84,7 +84,7 @@ curl "http://localhost:8002/osm/api/assets?workspace=example.com&offset=50&limit
       "asset_type": "web",
       "tech": ["nginx/1.20.0", "php/8.1", "wordpress"],
       "time": "312ms",
-      "remarks": "admin-panel",
+      "remarks": ["admin-panel"],
       "source": "httpx",
       "created_at": "2025-01-15T10:31:00Z",
       "updated_at": "2025-01-15T10:31:00Z"
@@ -122,7 +122,11 @@ curl "http://localhost:8002/osm/api/assets?workspace=example.com&offset=50&limit
 | `asset_type` | string | Asset type classification |
 | `tech` | array | Detected technologies |
 | `time` | string | Response time |
-| `remarks` | string | Custom labels/remarks |
+| `remarks` | array | Custom labels/tags/remarks |
+| `language` | string | Repository/source language |
+| `size` | int | Repository/file size in bytes |
+| `loc` | int | Lines of code (for repository assets) |
+| `blob_content` | string | Large content (raw files, keys, etc.) |
 | `source` | string | Discovery source (httpx, nuclei, etc.) |
 | `created_at` | timestamp | Creation timestamp |
 | `updated_at` | timestamp | Last update timestamp |

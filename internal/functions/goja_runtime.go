@@ -277,6 +277,10 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnDBImportVuln, vf.dbImportVuln)
 	_ = vm.Set(FnDBImportVulnFromFile, vf.dbImportVulnFromFile)
 
+	// DNS and custom asset import functions
+	_ = vm.Set(FnDBImportDNSAsset, vf.dbImportDNSAsset)
+	_ = vm.Set(FnDBImportCustomAsset, vf.dbImportCustomAsset)
+
 	// SARIF import functions
 	_ = vm.Set(FnDBImportSARIF, vf.dbImportSARIF)
 	_ = vm.Set(FnConvertSARIFToMarkdown, vf.convertSARIFToMarkdown)
@@ -301,6 +305,10 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	// Environment functions
 	_ = vm.Set(FnOsGetenv, vf.osGetenv)
 	_ = vm.Set(FnOsSetenv, vf.osSetenv)
+
+	// SSH functions
+	_ = vm.Set(FnSSHExec, vf.sshExec)
+	_ = vm.Set(FnSSHRsync, vf.sshRsync)
 
 	// Console for debugging
 	_ = vm.Set("console", map[string]interface{}{

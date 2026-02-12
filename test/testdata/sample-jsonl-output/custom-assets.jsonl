@@ -1,0 +1,3 @@
+{"asset_value":"api.example.com","url":"https://api.example.com","asset_type":"url","source":"custom-scan","tags":["api","production"],"external_url":"https://jira.example.com/PROJ-123","remarks":"API endpoint"}
+{"asset_value":"admin.example.com","asset_type":"domain","source":"dns-enum","tags":["admin"],"host_ip":"10.0.0.5"}
+{"asset_value":"cdn.example.com","url":"https://cdn.example.com","asset_type":"url","source":"crawl","tech":["Cloudflare","nginx"]}

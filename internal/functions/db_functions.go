@@ -122,8 +122,14 @@ func (vf *vmFunc) updateAssetField(ctx context.Context, idStr, field string, val
 	}
 
 	switch field {
-	case "labels":
-		asset.Labels = value.String()
+	case "remarks":
+		asset.Remarks = []string{value.String()}
+	case "language":
+		asset.Language = value.String()
+	case "size":
+		asset.Size, _ = strconv.ParseInt(value.String(), 10, 64)
+	case "loc":
+		asset.LOC, _ = strconv.ParseInt(value.String(), 10, 64)
 	case "source":
 		asset.Source = value.String()
 	case "asset_type":
@@ -161,6 +167,50 @@ func (vf *vmFunc) updateRunField(ctx context.Context, id, field string, value go
 	return err
 }
 
+// unmarshalAssetJSON unmarshals JSON into an Asset with backward compatibility.
+// Handles old format where "remarks" is a string instead of []string,
+// and merges legacy "tags" array into Remarks.
+func unmarshalAssetJSON(rawJSON []byte, asset *database.Asset) error {
+	// First try direct unmarshal
+	if err := json.Unmarshal(rawJSON, asset); err != nil {
+		// If direct unmarshal fails (e.g. "remarks" is string instead of []string),
+		// pre-process the JSON to fix known type mismatches
+		var raw map[string]interface{}
+		if mapErr := json.Unmarshal(rawJSON, &raw); mapErr != nil {
+			return err // return original error
+		}
+		// Convert "remarks" from string to []string
+		if remarksStr, ok := raw["remarks"].(string); ok {
+			raw["remarks"] = []string{remarksStr}
+		}
+		// Remove "tags" so it doesn't interfere with unmarshal
+		delete(raw, "tags")
+		fixed, marshalErr := json.Marshal(raw)
+		if marshalErr != nil {
+			return err
+		}
+		if err2 := json.Unmarshal(fixed, asset); err2 != nil {
+			return err2
+		}
+	}
+
+	// Merge legacy "tags" and handle string "remarks" into Remarks
+	var raw map[string]interface{}
+	if err := json.Unmarshal(rawJSON, &raw); err == nil {
+		if remarksStr, ok := raw["remarks"].(string); ok && remarksStr != "" {
+			asset.Remarks = []string{remarksStr}
+		}
+		if tagsArr, ok := raw["tags"].([]interface{}); ok {
+			for _, t := range tagsArr {
+				if s, ok := t.(string); ok {
+					asset.Remarks = append(asset.Remarks, s)
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // dbImportAsset imports an asset from JSON data
 // Usage: db_import_asset('example.com', '{"host":"sub.example.com","url":"https://..."}')
 func (vf *vmFunc) dbImportAsset(call goja.FunctionCall) goja.Value {
@@ -177,7 +227,7 @@ func (vf *vmFunc) dbImportAsset(call goja.FunctionCall) goja.Value {
 	}
 
 	var asset database.Asset
-	if err := json.Unmarshal([]byte(jsonData), &asset); err != nil {
+	if err := unmarshalAssetJSON([]byte(jsonData), &asset); err != nil {
 		return vf.errorValue(fmt.Sprintf("invalid JSON: %v", err))
 	}
 
@@ -866,7 +916,11 @@ func assetToMap(asset *database.Asset) map[string]interface{} {
 		"asset_type":     asset.AssetType,
 		"technologies":   asset.Technologies,
 		"response_time":  asset.ResponseTime,
-		"labels":         asset.Labels,
+		"remarks":        asset.Remarks,
+		"language":       asset.Language,
+		"size":           asset.Size,
+		"loc":            asset.LOC,
+		"blob_content":   asset.BlobContent,
 		"source":         asset.Source,
 		"created_at":     asset.CreatedAt,
 		"updated_at":     asset.UpdatedAt,
@@ -2132,6 +2186,265 @@ func mapJSONToAsset(data map[string]interface{}, workspace, rawLine string) data
 	}
 
 	return asset
+}
+
+// domainRecords holds grouped DNS records for a single domain
+type domainRecords struct {
+	aRecords     []string
+	otherRecords []string // stored as "TYPE:value"
+}
+
+// dbImportDNSAsset imports DNS records from a zone-style file and groups by domain.
+// Each line: domain TYPE value (whitespace-separated, 3 fields).
+// Returns count of domains imported.
+// Usage: db_import_dns_asset(workspace, file_path) -> int
+func (vf *vmFunc) dbImportDNSAsset(call goja.FunctionCall) goja.Value {
+	logger.Get().Debug("Calling " + terminal.HiGreen("dbImportDNSAsset"))
+
+	if len(call.Arguments) < 2 {
+		return vf.errorValue("db_import_dns_asset requires 2 arguments: workspace, file_path")
+	}
+
+	workspace := call.Argument(0).String()
+	filePath := call.Argument(1).String()
+
+	if workspace == "" || workspace == "undefined" {
+		return vf.errorValue("workspace cannot be empty")
+	}
+	if filePath == "" || filePath == "undefined" {
+		return vf.errorValue("file_path cannot be empty")
+	}
+
+	db := database.GetDB()
+	if db == nil {
+		return vf.errorValue("database not connected")
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to open file: %v", err))
+	}
+	defer func() { _ = file.Close() }()
+
+	// Group records by domain
+	domains := make(map[string]*domainRecords)
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, ";") || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) < 3 {
+			continue
+		}
+
+		domain := strings.TrimRight(fields[0], ".")
+		recordType := strings.ToUpper(fields[1])
+		value := strings.TrimRight(fields[2], ".")
+
+		if domain == "" || value == "" {
+			continue
+		}
+
+		dr, exists := domains[domain]
+		if !exists {
+			dr = &domainRecords{}
+			domains[domain] = dr
+		}
+
+		if recordType == "A" || recordType == "AAAA" {
+			dr.aRecords = append(dr.aRecords, value)
+		} else {
+			dr.otherRecords = append(dr.otherRecords, recordType+":"+value)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return vf.errorValue(fmt.Sprintf("error reading file: %v", err))
+	}
+
+	// Upsert each domain as an asset
+	ctx := context.Background()
+	now := time.Now()
+	imported := 0
+
+	for domain, dr := range domains {
+		// Build dns_records: A records as plain IPs, others as "TYPE:value"
+		var dnsRecords []string
+		dnsRecords = append(dnsRecords, dr.aRecords...)
+		dnsRecords = append(dnsRecords, dr.otherRecords...)
+
+		hostIP := ""
+		if len(dr.aRecords) > 0 {
+			hostIP = dr.aRecords[0]
+		}
+
+		// Check if asset already exists
+		var existing database.Asset
+		selectErr := db.NewSelect().Model(&existing).
+			Where("workspace = ?", workspace).
+			Where("asset_value = ?", domain).
+			Where("url = ?", "").
+			Scan(ctx)
+
+		if selectErr != nil {
+			// New asset - insert
+			asset := database.Asset{
+				Workspace:  workspace,
+				AssetValue: domain,
+				AssetType:  "domain",
+				Source:     "dns",
+				HostIP:     hostIP,
+				DnsRecords: dnsRecords,
+				CreatedAt:  now,
+				UpdatedAt:  now,
+				LastSeenAt: now,
+			}
+			_, insertErr := db.NewInsert().Model(&asset).Exec(ctx)
+			if insertErr != nil {
+				logger.Get().Debug("failed to insert DNS asset", zap.Error(insertErr))
+				continue
+			}
+		} else {
+			// Update existing
+			_, updateErr := db.NewUpdate().Model((*database.Asset)(nil)).
+				Set("dns_records = ?", dnsRecords).
+				Set("host_ip = ?", hostIP).
+				Set("source = ?", "dns").
+				Set("updated_at = ?", now).
+				Set("last_seen_at = ?", now).
+				Where("id = ?", existing.ID).
+				Exec(ctx)
+			if updateErr != nil {
+				logger.Get().Debug("failed to update DNS asset", zap.Error(updateErr))
+				continue
+			}
+		}
+		imported++
+	}
+
+	logger.Get().Debug("dbImportDNSAsset completed",
+		zap.String("workspace", workspace),
+		zap.String("file", filePath),
+		zap.Int("domains", imported))
+
+	return vf.vm.ToValue(imported)
+}
+
+// dbImportCustomAsset imports assets from a JSONL file with direct field mapping.
+// Each line is JSON that maps directly to Asset struct fields via json tags.
+// Returns stats map {new, updated, errors, total}.
+// Usage: db_import_custom_asset(workspace, file_path) -> map
+func (vf *vmFunc) dbImportCustomAsset(call goja.FunctionCall) goja.Value {
+	logger.Get().Debug("Calling " + terminal.HiGreen("dbImportCustomAsset"))
+
+	if len(call.Arguments) < 2 {
+		return vf.errorValue("db_import_custom_asset requires 2 arguments: workspace, file_path")
+	}
+
+	workspace := call.Argument(0).String()
+	filePath := call.Argument(1).String()
+
+	if workspace == "" || workspace == "undefined" {
+		return vf.errorValue("workspace cannot be empty")
+	}
+	if filePath == "" || filePath == "undefined" {
+		return vf.errorValue("file_path cannot be empty")
+	}
+
+	db := database.GetDB()
+	if db == nil {
+		return vf.errorValue("database not connected")
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to open file: %v", err))
+	}
+	defer func() { _ = file.Close() }()
+
+	ctx := context.Background()
+	stats := database.ImportStats{}
+
+	scanner := bufio.NewScanner(file)
+	buf := make([]byte, 0, 10*1024*1024) // 10MB buffer
+	scanner.Buffer(buf, 10*1024*1024)
+
+	now := time.Now()
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		var asset database.Asset
+		if err := unmarshalAssetJSON([]byte(line), &asset); err != nil {
+			logger.Get().Debug("skipping invalid JSON line", zap.Error(err))
+			stats.Errors++
+			continue
+		}
+
+		// Force workspace from function argument
+		asset.Workspace = workspace
+		asset.LastSeenAt = now
+
+		// Check if asset already exists
+		var existing database.Asset
+		selectErr := db.NewSelect().Model(&existing).
+			Where("workspace = ?", workspace).
+			Where("asset_value = ?", asset.AssetValue).
+			Where("url = ?", asset.URL).
+			Scan(ctx)
+
+		if selectErr != nil {
+			// New asset - insert
+			asset.CreatedAt = now
+			asset.UpdatedAt = now
+			_, insertErr := db.NewInsert().Model(&asset).Exec(ctx)
+			if insertErr != nil {
+				logger.Get().Debug("failed to insert custom asset", zap.Error(insertErr))
+				stats.Errors++
+				continue
+			}
+			stats.New++
+		} else {
+			// Update existing - preserve ID and CreatedAt
+			asset.ID = existing.ID
+			asset.CreatedAt = existing.CreatedAt
+			asset.UpdatedAt = now
+			_, updateErr := db.NewUpdate().Model(&asset).WherePK().Exec(ctx)
+			if updateErr != nil {
+				logger.Get().Debug("failed to update custom asset", zap.Error(updateErr))
+				stats.Errors++
+				continue
+			}
+			stats.Updated++
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return vf.errorValue(fmt.Sprintf("error reading file: %v", err))
+	}
+
+	total := stats.New + stats.Updated
+	logger.Get().Debug("dbImportCustomAsset completed",
+		zap.String("workspace", workspace),
+		zap.String("file", filePath),
+		zap.Int("new", stats.New),
+		zap.Int("updated", stats.Updated),
+		zap.Int("errors", stats.Errors),
+		zap.Int("total", total))
+
+	return vf.vm.ToValue(map[string]interface{}{
+		"new":     stats.New,
+		"updated": stats.Updated,
+		"errors":  stats.Errors,
+		"total":   total,
+	})
 }
 
 // dbImportVuln imports a single vulnerability from JSON data (nuclei format)

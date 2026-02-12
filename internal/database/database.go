@@ -222,6 +222,36 @@ func Migrate(ctx context.Context) error {
 		return err
 	}
 
+	// Add remarks column to assets table if it doesn't exist (for existing databases)
+	if err := addAssetRemarksColumn(ctx); err != nil {
+		return err
+	}
+
+	// Add language column to assets table if it doesn't exist (for existing databases)
+	if err := addAssetLanguageColumn(ctx); err != nil {
+		return err
+	}
+
+	// Add blob_content column to assets table if it doesn't exist (for existing databases)
+	if err := addAssetBlobContentColumn(ctx); err != nil {
+		return err
+	}
+
+	// Add external_url column to assets table if it doesn't exist (for existing databases)
+	if err := addAssetExternalURLColumn(ctx); err != nil {
+		return err
+	}
+
+	// Add size column to assets table if it doesn't exist (for existing databases)
+	if err := addAssetSizeColumn(ctx); err != nil {
+		return err
+	}
+
+	// Add loc column to assets table if it doesn't exist (for existing databases)
+	if err := addAssetLOCColumn(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -275,6 +305,96 @@ func addArtifactsOptionalColumn(ctx context.Context) error {
 			return nil
 		}
 		return fmt.Errorf("failed to add optional column: %w", err)
+	}
+	return nil
+}
+
+// addAssetRemarksColumn adds the remarks column to assets table for existing databases
+func addAssetRemarksColumn(ctx context.Context) error {
+	_, err := db.ExecContext(ctx, "ALTER TABLE assets ADD COLUMN remarks JSON")
+	if err != nil {
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "duplicate column") ||
+			strings.Contains(errStr, "already exists") ||
+			strings.Contains(errStr, "sqlstate 42701") {
+			return nil
+		}
+		return fmt.Errorf("failed to add remarks column: %w", err)
+	}
+	return nil
+}
+
+// addAssetLanguageColumn adds the language column to assets table for existing databases
+func addAssetLanguageColumn(ctx context.Context) error {
+	_, err := db.ExecContext(ctx, "ALTER TABLE assets ADD COLUMN language TEXT DEFAULT ''")
+	if err != nil {
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "duplicate column") ||
+			strings.Contains(errStr, "already exists") ||
+			strings.Contains(errStr, "sqlstate 42701") {
+			return nil
+		}
+		return fmt.Errorf("failed to add language column: %w", err)
+	}
+	return nil
+}
+
+// addAssetBlobContentColumn adds the blob_content column to assets table for existing databases
+func addAssetBlobContentColumn(ctx context.Context) error {
+	_, err := db.ExecContext(ctx, "ALTER TABLE assets ADD COLUMN blob_content TEXT DEFAULT ''")
+	if err != nil {
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "duplicate column") ||
+			strings.Contains(errStr, "already exists") ||
+			strings.Contains(errStr, "sqlstate 42701") {
+			return nil
+		}
+		return fmt.Errorf("failed to add blob_content column: %w", err)
+	}
+	return nil
+}
+
+// addAssetSizeColumn adds the size column to assets table for existing databases
+func addAssetSizeColumn(ctx context.Context) error {
+	_, err := db.ExecContext(ctx, "ALTER TABLE assets ADD COLUMN size INTEGER DEFAULT 0")
+	if err != nil {
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "duplicate column") ||
+			strings.Contains(errStr, "already exists") ||
+			strings.Contains(errStr, "sqlstate 42701") {
+			return nil
+		}
+		return fmt.Errorf("failed to add size column: %w", err)
+	}
+	return nil
+}
+
+// addAssetLOCColumn adds the loc column to assets table for existing databases
+func addAssetLOCColumn(ctx context.Context) error {
+	_, err := db.ExecContext(ctx, "ALTER TABLE assets ADD COLUMN loc INTEGER DEFAULT 0")
+	if err != nil {
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "duplicate column") ||
+			strings.Contains(errStr, "already exists") ||
+			strings.Contains(errStr, "sqlstate 42701") {
+			return nil
+		}
+		return fmt.Errorf("failed to add loc column: %w", err)
+	}
+	return nil
+}
+
+// addAssetExternalURLColumn adds the external_url column to assets table for existing databases
+func addAssetExternalURLColumn(ctx context.Context) error {
+	_, err := db.ExecContext(ctx, "ALTER TABLE assets ADD COLUMN external_url TEXT DEFAULT ''")
+	if err != nil {
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "duplicate column") ||
+			strings.Contains(errStr, "already exists") ||
+			strings.Contains(errStr, "sqlstate 42701") {
+			return nil
+		}
+		return fmt.Errorf("failed to add external_url column: %w", err)
 	}
 	return nil
 }

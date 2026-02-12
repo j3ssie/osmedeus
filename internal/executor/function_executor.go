@@ -45,6 +45,9 @@ func (e *FunctionExecutor) Execute(ctx context.Context, step *core.Step, execCtx
 	}
 
 	vars := execCtx.GetVariables()
+	if step.SuppressDetails {
+		vars["SuppressDetails"] = true
+	}
 	var outputs []interface{}
 	var err error
 
