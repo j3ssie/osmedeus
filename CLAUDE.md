@@ -22,6 +22,7 @@ make test-canary-all    # Canary tests: real scans in Docker (30-60min)
 make test-canary-repo   # Canary: SAST scan on juice-shop (~25min)
 make test-canary-domain # Canary: domain recon on hackerone.com (~20min)
 make test-canary-ip     # Canary: CIDR scan on IP list (~25min)
+make test-canary-general # Canary: domain-list-recon on hackerone.com subdomains (~40min)
 go test -v ./internal/functions/...  # Run tests for specific package
 go test -v -run TestName ./...       # Run single test by name
 

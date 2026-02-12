@@ -1499,10 +1499,11 @@ make test-docker
 make test-ssh
 
 # Canary tests (real-world scans in Docker, 20-60 min each)
-make test-canary-all      # All canary scenarios (30-60min)
+make test-canary-all      # All canary scenarios (60-90min)
 make test-canary-repo     # SAST on juice-shop (~25min)
 make test-canary-domain   # Domain recon on hackerone.com (~20min)
 make test-canary-ip       # CIDR scanning (~25min)
+make test-canary-general  # Domain-list-recon on hackerone.com subdomains (~40min)
 make canary-up            # Build & start canary container (shared setup)
 make canary-down          # Teardown canary container
 
@@ -1561,7 +1562,8 @@ Canary tests are real-world integration tests that run actual security scans ins
 | `TestCanary_Repo` | juice-shop | ~25min | SAST scanning, SARIF import, vulnerability DB |
 | `TestCanary_Domain` | hackerone.com | ~20min | DNS enumeration, subdomain discovery |
 | `TestCanary_CIDR` | Public IPs | ~25min | Network range scanning |
-| `TestCanary_FullSuite` | All above | ~60min | Complete lifecycle with container management |
+| `TestCanary_General` | hackerone.com subdomains | ~40min | Domain-list-recon (probing, fingerprinting, scanning) |
+| `TestCanary_FullSuite` | All above | ~90min | Complete lifecycle with container management |
 
 ### Running Canary Tests
 

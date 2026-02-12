@@ -684,8 +684,6 @@ func testCanaryGeneralScan(t *testing.T) {
 		"resources.hackerone.com",
 		"events.hackerone.com",
 		"mta-sts.hackerone.com",
-		"a]]b]c]d.hackerone.com",
-		"o1.email.hackerone.com",
 		"info.hackerone.com",
 	}, "\\n")
 	_, err := dockerExec(t, log, "sh", "-c",
