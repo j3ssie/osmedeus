@@ -1,0 +1,126 @@
+name: test-foreach-path-friendly
+kind: module
+description: Test auto-generated _<variable>_ path-friendly variable in foreach loops
+tags: test,foreach,loop,path-friendly
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: create-input-urls
+    type: bash
+    commands:
+      - mkdir -p {{Output}}/osm-test
+      - |
+        cat > {{Output}}/osm-test/urls.txt << 'EOF'
+        https://example.com/path
+        http://sub.test.org:8080/api
+        simple-value
+        EOF
+
+  - name: test-path-friendly-basic
+    log: "Testing auto-generated _url_ path-friendly variable"
+    type: foreach
+    input: "{{Output}}/osm-test/urls.txt"
+    variable: url
+    threads: 1
+    step:
+      name: use-path-friendly
+      type: bash
+      command: echo "RAW:[[url]] SAFE:[[_url_]]" >> {{Output}}/osm-test/basic-results.txt
+
+  - name: verify-basic
+    type: bash
+    command: |
+      echo "=== Basic Path-Friendly Results ==="
+      cat {{Output}}/osm-test/basic-results.txt
+      # Verify slashes and colons are replaced with underscores
+      grep -q "SAFE:https___example.com_path" {{Output}}/osm-test/basic-results.txt && echo "VERIFY:basic_url_ok"
+      grep -q "SAFE:http___sub.test.org_8080_api" {{Output}}/osm-test/basic-results.txt && echo "VERIFY:port_url_ok"
+      # Simple value with no unsafe chars should be unchanged
+      grep -q "SAFE:simple-value" {{Output}}/osm-test/basic-results.txt && echo "VERIFY:simple_ok"
+
+  - name: test-path-friendly-as-dir
+    log: "Testing _url_ used as directory name"
+    type: foreach
+    input: "{{Output}}/osm-test/urls.txt"
+    variable: url
+    threads: 1
+    step:
+      name: create-dir-per-url
+      type: bash
+      commands:
+        - mkdir -p {{Output}}/osm-test/per-url/[[_url_]]
+        - echo "scanned [[url]]" > {{Output}}/osm-test/per-url/[[_url_]]/result.txt
+
+  - name: verify-dirs
+    type: bash
+    command: |
+      echo "=== Directory Creation Results ==="
+      ls {{Output}}/osm-test/per-url/
+      # Verify directories were created with safe names
+      test -d "{{Output}}/osm-test/per-url/https___example.com_path" && echo "VERIFY:dir1_ok"
+      test -d "{{Output}}/osm-test/per-url/http___sub.test.org_8080_api" && echo "VERIFY:dir2_ok"
+      test -d "{{Output}}/osm-test/per-url/simple-value" && echo "VERIFY:dir3_ok"
+      # Verify result files exist inside
+      test -f "{{Output}}/osm-test/per-url/https___example.com_path/result.txt" && echo "VERIFY:file1_ok"
+
+  - name: create-long-urls
+    type: bash
+    command: |
+      cat > {{Output}}/osm-test/long-urls.txt << 'EOF'
+      https://very-long-example-domain.com/with/a/very/deep/path/structure
+      https://very-long-example-domain.com/with/a/very/deep/path/structure
+      EOF
+
+  - name: test-path-friendly-long
+    log: "Testing deterministic truncation for long values"
+    type: foreach
+    input: "{{Output}}/osm-test/long-urls.txt"
+    variable: url
+    threads: 1
+    step:
+      name: output-long-safe
+      type: bash
+      command: echo "LONG:[[_url_]]" >> {{Output}}/osm-test/long-results.txt
+
+  - name: verify-long
+    type: bash
+    command: |
+      echo "=== Long URL Truncation Results ==="
+      cat {{Output}}/osm-test/long-results.txt
+      FIRST=$(sed -n '1s/^LONG://p' {{Output}}/osm-test/long-results.txt)
+      SECOND=$(sed -n '2s/^LONG://p' {{Output}}/osm-test/long-results.txt)
+      [ "$FIRST" = "$SECOND" ] && echo "VERIFY:deterministic_ok"
+      LEN=$(printf '%s' "$FIRST" | wc -c | tr -d ' ')
+      [ "$LEN" -le 29 ] && echo "VERIFY:truncated_ok"
+
+  - name: test-id-still-works
+    log: "Testing that _id_ still works alongside _url_"
+    type: foreach
+    input: "{{Output}}/osm-test/urls.txt"
+    variable: url
+    threads: 1
+    step:
+      name: use-both-vars
+      type: bash
+      command: echo "ID:[[_id_]] SAFE:[[_url_]]" >> {{Output}}/osm-test/id-results.txt
+
+  - name: verify-id
+    type: bash
+    command: |
+      echo "=== ID + Path-Friendly Results ==="
+      cat {{Output}}/osm-test/id-results.txt
+      grep -q "ID:1 SAFE:https___example.com_path" {{Output}}/osm-test/id-results.txt && echo "VERIFY:id_and_safe_ok"
+
+  - name: final-summary
+    type: bash
+    command: |
+      echo "=== Foreach Path-Friendly Test Summary ==="
+      echo "All path-friendly variable tests completed"
+      echo "=== Test Complete ==="
+
+  - name: cleanup
+    type: bash
+    command: rm -rf {{Output}}/osm-test

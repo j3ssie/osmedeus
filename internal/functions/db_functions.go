@@ -233,20 +233,32 @@ func (vf *vmFunc) dbImportAsset(call goja.FunctionCall) goja.Value {
 	}
 
 	asset.Workspace = workspace
-	asset.CreatedAt = time.Now()
-	asset.UpdatedAt = time.Now()
+	now := time.Now()
 
 	ctx := context.Background()
-	_, err := db.NewInsert().Model(&asset).
-		On("CONFLICT (workspace, asset_value, url) DO UPDATE").
-		Set("updated_at = EXCLUDED.updated_at").
-		Set("status_code = EXCLUDED.status_code").
-		Set("title = EXCLUDED.title").
-		Set("technologies = EXCLUDED.technologies").
-		Exec(ctx)
 
-	if err != nil {
-		return vf.errorValue(fmt.Sprintf("import failed: %v", err))
+	// Check if asset already exists
+	var existing database.Asset
+	selectErr := db.NewSelect().Model(&existing).
+		Where("workspace = ? AND asset_value = ? AND url = ?", workspace, asset.AssetValue, asset.URL).
+		Scan(ctx)
+
+	if selectErr != nil {
+		// New asset - insert
+		asset.CreatedAt = now
+		asset.UpdatedAt = now
+		_, insertErr := db.NewInsert().Model(&asset).Exec(ctx)
+		if insertErr != nil {
+			return vf.errorValue(fmt.Sprintf("import failed: %v", insertErr))
+		}
+	} else {
+		// Merge: preserve existing non-empty fields, fill gaps with incoming
+		mergeAssetFields(&existing, &asset)
+		asset.UpdatedAt = now
+		_, updateErr := db.NewUpdate().Model(&asset).WherePK().Exec(ctx)
+		if updateErr != nil {
+			return vf.errorValue(fmt.Sprintf("import failed: %v", updateErr))
+		}
 	}
 
 	return vf.vm.ToValue(true)
@@ -280,37 +292,40 @@ func (vf *vmFunc) dbQuickImportAsset(call goja.FunctionCall) goja.Value {
 
 	ctx := context.Background()
 
-	// Check if asset already exists
-	exists, err := db.NewSelect().
-		Model((*database.Asset)(nil)).
-		Where("workspace = ? AND asset_value = ?", workspace, assetValue).
-		Exists(ctx)
-	if err != nil {
-		return vf.errorValue(fmt.Sprintf("check failed: %v", err))
-	}
-
 	now := time.Now()
 	asset := &database.Asset{
 		Workspace:  workspace,
 		AssetValue: assetValue,
 		AssetType:  assetType,
-		CreatedAt:  now,
-		UpdatedAt:  now,
 	}
 
-	// Insert or update
-	_, err = db.NewInsert().Model(asset).
-		On("CONFLICT (workspace, asset_value, url) DO UPDATE").
-		Set("updated_at = EXCLUDED.updated_at").
-		Set("asset_type = EXCLUDED.asset_type").
-		Exec(ctx)
+	// Check if asset already exists
+	var existing database.Asset
+	selectErr := db.NewSelect().Model(&existing).
+		Where("workspace = ? AND asset_value = ?", workspace, assetValue).
+		Scan(ctx)
 
-	if err != nil {
-		return vf.errorValue(fmt.Sprintf("import failed: %v", err))
+	isNew := selectErr != nil
+	if isNew {
+		// New asset - insert
+		asset.CreatedAt = now
+		asset.UpdatedAt = now
+		_, insertErr := db.NewInsert().Model(asset).Exec(ctx)
+		if insertErr != nil {
+			return vf.errorValue(fmt.Sprintf("import failed: %v", insertErr))
+		}
+	} else {
+		// Merge: preserve existing non-empty fields, fill gaps with incoming
+		mergeAssetFields(&existing, asset)
+		asset.UpdatedAt = now
+		_, updateErr := db.NewUpdate().Model(asset).WherePK().Exec(ctx)
+		if updateErr != nil {
+			return vf.errorValue(fmt.Sprintf("import failed: %v", updateErr))
+		}
 	}
 
 	// Create event log for new assets only
-	if !exists {
+	if isNew {
 		eventLog := &database.EventLog{
 			Topic:      "db.new.asset",
 			EventID:    uuid.New().String(),
@@ -351,18 +366,30 @@ func (vf *vmFunc) dbPartialImportAsset(call goja.FunctionCall) goja.Value {
 		Workspace:  workspace,
 		AssetValue: assetValue,
 		AssetType:  assetType,
-		CreatedAt:  now,
-		UpdatedAt:  now,
 	}
 
-	_, err := db.NewInsert().Model(asset).
-		On("CONFLICT (workspace, asset_value, url) DO UPDATE").
-		Set("updated_at = EXCLUDED.updated_at").
-		Set("asset_type = EXCLUDED.asset_type").
-		Exec(ctx)
+	// Check if asset already exists
+	var existing database.Asset
+	selectErr := db.NewSelect().Model(&existing).
+		Where("workspace = ? AND asset_value = ?", workspace, assetValue).
+		Scan(ctx)
 
-	if err != nil {
-		return vf.errorValue(fmt.Sprintf("import failed: %v", err))
+	if selectErr != nil {
+		// New asset - insert
+		asset.CreatedAt = now
+		asset.UpdatedAt = now
+		_, insertErr := db.NewInsert().Model(asset).Exec(ctx)
+		if insertErr != nil {
+			return vf.errorValue(fmt.Sprintf("import failed: %v", insertErr))
+		}
+	} else {
+		// Merge: preserve existing non-empty fields, fill gaps with incoming
+		mergeAssetFields(&existing, asset)
+		asset.UpdatedAt = now
+		_, updateErr := db.NewUpdate().Model(asset).WherePK().Exec(ctx)
+		if updateErr != nil {
+			return vf.errorValue(fmt.Sprintf("import failed: %v", updateErr))
+		}
 	}
 
 	return vf.vm.ToValue(true)
@@ -404,20 +431,34 @@ func (vf *vmFunc) dbPartialImportAssetFile(call goja.FunctionCall) goja.Value {
 			Workspace:  workspace,
 			AssetValue: line,
 			AssetType:  assetType,
-			CreatedAt:  now,
-			UpdatedAt:  now,
 		}
 
-		_, err := db.NewInsert().Model(asset).
-			On("CONFLICT (workspace, asset_value, url) DO UPDATE").
-			Set("updated_at = EXCLUDED.updated_at").
-			Set("asset_type = EXCLUDED.asset_type").
-			Exec(ctx)
+		// Check if asset already exists
+		var existing database.Asset
+		selectErr := db.NewSelect().Model(&existing).
+			Where("workspace = ? AND asset_value = ?", workspace, line).
+			Scan(ctx)
 
-		if err != nil {
-			logger.Get().Warn("dbPartialImportAssetFile: failed to import line",
-				zap.String("line", line), zap.Error(err))
-			continue
+		if selectErr != nil {
+			// New asset - insert
+			asset.CreatedAt = now
+			asset.UpdatedAt = now
+			_, insertErr := db.NewInsert().Model(asset).Exec(ctx)
+			if insertErr != nil {
+				logger.Get().Warn("dbPartialImportAssetFile: failed to import line",
+					zap.String("line", line), zap.Error(insertErr))
+				continue
+			}
+		} else {
+			// Merge: preserve existing non-empty fields, fill gaps with incoming
+			mergeAssetFields(&existing, asset)
+			asset.UpdatedAt = now
+			_, updateErr := db.NewUpdate().Model(asset).WherePK().Exec(ctx)
+			if updateErr != nil {
+				logger.Get().Warn("dbPartialImportAssetFile: failed to update line",
+					zap.String("line", line), zap.Error(updateErr))
+				continue
+			}
 		}
 		count++
 	}
@@ -2015,30 +2056,32 @@ func (vf *vmFunc) dbImportAssetFromFile(call goja.FunctionCall) goja.Value {
 				continue
 			}
 			stats.New++
-		} else if hasAssetChanged(&existing, &asset) {
-			// Changed - full update
-			asset.ID = existing.ID
-			asset.CreatedAt = existing.CreatedAt
-			asset.UpdatedAt = now
-			_, updateErr := db.NewUpdate().Model(&asset).WherePK().Exec(ctx)
-			if updateErr != nil {
-				logger.Get().Debug("failed to update asset", zap.Error(updateErr))
-				stats.Errors++
-				continue
-			}
-			stats.Updated++
 		} else {
-			// Unchanged - only update last_seen_at
-			_, updateErr := db.NewUpdate().Model((*database.Asset)(nil)).
-				Set("last_seen_at = ?", now).
-				Where("id = ?", existing.ID).
-				Exec(ctx)
-			if updateErr != nil {
-				logger.Get().Debug("failed to update last_seen_at", zap.Error(updateErr))
-				stats.Errors++
-				continue
+			// Merge: preserve existing non-empty fields, fill gaps with incoming
+			mergeAssetFields(&existing, &asset)
+			asset.UpdatedAt = now
+
+			if hasAssetChanged(&existing, &asset) {
+				_, updateErr := db.NewUpdate().Model(&asset).WherePK().Exec(ctx)
+				if updateErr != nil {
+					logger.Get().Debug("failed to update asset", zap.Error(updateErr))
+					stats.Errors++
+					continue
+				}
+				stats.Updated++
+			} else {
+				// Unchanged - only update last_seen_at
+				_, updateErr := db.NewUpdate().Model((*database.Asset)(nil)).
+					Set("last_seen_at = ?", now).
+					Where("id = ?", existing.ID).
+					Exec(ctx)
+				if updateErr != nil {
+					logger.Get().Debug("failed to update last_seen_at", zap.Error(updateErr))
+					stats.Errors++
+					continue
+				}
+				stats.Unchanged++
 			}
-			stats.Unchanged++
 		}
 	}
 
@@ -2418,9 +2461,8 @@ func (vf *vmFunc) dbImportCustomAsset(call goja.FunctionCall) goja.Value {
 			}
 			stats.New++
 		} else {
-			// Update existing - preserve ID and CreatedAt
-			asset.ID = existing.ID
-			asset.CreatedAt = existing.CreatedAt
+			// Merge: preserve existing non-empty fields, fill gaps with incoming
+			mergeAssetFields(&existing, &asset)
 			asset.UpdatedAt = now
 			_, updateErr := db.NewUpdate().Model(&asset).WherePK().Exec(ctx)
 			if updateErr != nil {
@@ -2498,9 +2540,8 @@ func (vf *vmFunc) dbImportVuln(call goja.FunctionCall) goja.Value {
 		Scan(ctx)
 
 	if err == nil {
-		// Vulnerability exists, update it
-		vuln.ID = existing.ID
-		vuln.CreatedAt = existing.CreatedAt
+		// Merge: preserve existing non-empty fields, fill gaps with incoming
+		mergeVulnFields(&existing, &vuln)
 		_, err = db.NewUpdate().Model(&vuln).WherePK().Exec(ctx)
 	} else {
 		// Insert new vulnerability
@@ -2593,30 +2634,32 @@ func (vf *vmFunc) dbImportVulnFromFile(call goja.FunctionCall) goja.Value {
 				continue
 			}
 			stats.New++
-		} else if hasVulnChanged(&existing, &vuln) {
-			// Changed - full update
-			vuln.ID = existing.ID
-			vuln.CreatedAt = existing.CreatedAt
-			vuln.UpdatedAt = now
-			_, updateErr := db.NewUpdate().Model(&vuln).WherePK().Exec(ctx)
-			if updateErr != nil {
-				logger.Get().Debug("failed to update vulnerability", zap.Error(updateErr))
-				stats.Errors++
-				continue
-			}
-			stats.Updated++
 		} else {
-			// Unchanged - only update last_seen_at
-			_, updateErr := db.NewUpdate().Model((*database.Vulnerability)(nil)).
-				Set("last_seen_at = ?", now).
-				Where("id = ?", existing.ID).
-				Exec(ctx)
-			if updateErr != nil {
-				logger.Get().Debug("failed to update last_seen_at", zap.Error(updateErr))
-				stats.Errors++
-				continue
+			// Merge: preserve existing non-empty fields, fill gaps with incoming
+			mergeVulnFields(&existing, &vuln)
+			vuln.UpdatedAt = now
+
+			if hasVulnChanged(&existing, &vuln) {
+				_, updateErr := db.NewUpdate().Model(&vuln).WherePK().Exec(ctx)
+				if updateErr != nil {
+					logger.Get().Debug("failed to update vulnerability", zap.Error(updateErr))
+					stats.Errors++
+					continue
+				}
+				stats.Updated++
+			} else {
+				// Unchanged - only update last_seen_at
+				_, updateErr := db.NewUpdate().Model((*database.Vulnerability)(nil)).
+					Set("last_seen_at = ?", now).
+					Where("id = ?", existing.ID).
+					Exec(ctx)
+				if updateErr != nil {
+					logger.Get().Debug("failed to update last_seen_at", zap.Error(updateErr))
+					stats.Errors++
+					continue
+				}
+				stats.Unchanged++
 			}
-			stats.Unchanged++
 		}
 	}
 

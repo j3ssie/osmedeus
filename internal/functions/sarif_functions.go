@@ -280,30 +280,32 @@ func (vf *vmFunc) dbImportSARIF(call goja.FunctionCall) goja.Value {
 					continue
 				}
 				stats.New++
-			} else if hasVulnChanged(&existing, &vuln) {
-				// Changed - full update
-				vuln.ID = existing.ID
-				vuln.CreatedAt = existing.CreatedAt
-				vuln.UpdatedAt = now
-				_, updateErr := db.NewUpdate().Model(&vuln).WherePK().Exec(ctx)
-				if updateErr != nil {
-					logger.Get().Debug("failed to update SARIF vulnerability", zap.Error(updateErr))
-					stats.Errors++
-					continue
-				}
-				stats.Updated++
 			} else {
-				// Unchanged - only update last_seen_at
-				_, updateErr := db.NewUpdate().Model((*database.Vulnerability)(nil)).
-					Set("last_seen_at = ?", now).
-					Where("id = ?", existing.ID).
-					Exec(ctx)
-				if updateErr != nil {
-					logger.Get().Debug("failed to update last_seen_at", zap.Error(updateErr))
-					stats.Errors++
-					continue
+				// Merge: preserve existing non-empty fields, fill gaps with incoming
+				mergeVulnFields(&existing, &vuln)
+				vuln.UpdatedAt = now
+
+				if hasVulnChanged(&existing, &vuln) {
+					_, updateErr := db.NewUpdate().Model(&vuln).WherePK().Exec(ctx)
+					if updateErr != nil {
+						logger.Get().Debug("failed to update SARIF vulnerability", zap.Error(updateErr))
+						stats.Errors++
+						continue
+					}
+					stats.Updated++
+				} else {
+					// Unchanged - only update last_seen_at
+					_, updateErr := db.NewUpdate().Model((*database.Vulnerability)(nil)).
+						Set("last_seen_at = ?", now).
+						Where("id = ?", existing.ID).
+						Exec(ctx)
+					if updateErr != nil {
+						logger.Get().Debug("failed to update last_seen_at", zap.Error(updateErr))
+						stats.Errors++
+						continue
+					}
+					stats.Unchanged++
 				}
-				stats.Unchanged++
 			}
 		}
 	}

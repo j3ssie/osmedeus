@@ -212,7 +212,7 @@ func TestLimitedBuffer_TruncatesAtLimit(t *testing.T) {
 func TestLimitedBuffer_DiscardsAfterFull(t *testing.T) {
 	buf := NewLimitedBuffer(5)
 
-	buf.Write([]byte("hello"))
+	_, _ = buf.Write([]byte("hello"))
 	assert.Equal(t, 5, buf.Len())
 	assert.False(t, buf.Overflow())
 
@@ -228,10 +228,10 @@ func TestLimitedBuffer_DiscardsAfterFull(t *testing.T) {
 func TestLimitedBuffer_MultipleWrites(t *testing.T) {
 	buf := NewLimitedBuffer(10)
 
-	buf.Write([]byte("aaa"))  // 3 bytes, total 3
-	buf.Write([]byte("bbb"))  // 3 bytes, total 6
-	buf.Write([]byte("ccc"))  // 3 bytes, total 9
-	buf.Write([]byte("dddd")) // 4 bytes, only 1 fits -> total 10
+	_, _ = buf.Write([]byte("aaa"))  // 3 bytes, total 3
+	_, _ = buf.Write([]byte("bbb"))  // 3 bytes, total 6
+	_, _ = buf.Write([]byte("ccc"))  // 3 bytes, total 9
+	_, _ = buf.Write([]byte("dddd")) // 4 bytes, only 1 fits -> total 10
 
 	assert.Equal(t, 10, buf.Len())
 	assert.True(t, buf.Overflow())
@@ -252,8 +252,8 @@ func TestCombineOutput_Normal(t *testing.T) {
 	stdout := NewLimitedBuffer(100)
 	stderr := NewLimitedBuffer(100)
 
-	stdout.Write([]byte("out"))
-	stderr.Write([]byte("err"))
+	_, _ = stdout.Write([]byte("out"))
+	_, _ = stderr.Write([]byte("err"))
 
 	result := combineOutput(stdout, stderr)
 	assert.Equal(t, "outerr", result)
@@ -271,8 +271,8 @@ func TestCombineOutput_Truncated(t *testing.T) {
 	stdout := NewLimitedBuffer(5)
 	stderr := NewLimitedBuffer(5)
 
-	stdout.Write([]byte("long output that overflows"))
-	stderr.Write([]byte("err"))
+	_, _ = stdout.Write([]byte("long output that overflows"))
+	_, _ = stderr.Write([]byte("err"))
 
 	result := combineOutput(stdout, stderr)
 	assert.True(t, stdout.Overflow())

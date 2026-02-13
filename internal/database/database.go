@@ -82,9 +82,9 @@ func applySQLitePerformancePragmas(ctx context.Context) {
 
 	pragmas := []string{
 		"PRAGMA synchronous = NORMAL", // Faster writes, safe with WAL
-		"PRAGMA cache_size = -2000",   // 2MB cache (negative = KB)
+		"PRAGMA cache_size = -10000",  // 10MB cache (negative = KB)
 		"PRAGMA temp_store = MEMORY",  // Temp tables in memory
-		"PRAGMA mmap_size = 16777216", // 16MB memory-mapped I/O
+		"PRAGMA mmap_size = 83886080", // 80MB memory-mapped I/O
 	}
 
 	for _, pragma := range pragmas {

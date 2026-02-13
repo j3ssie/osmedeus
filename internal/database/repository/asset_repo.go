@@ -282,23 +282,23 @@ func (r *AssetRepository) Upsert(ctx context.Context, asset *database.Asset) err
 	_, err := r.db.NewInsert().
 		Model(asset).
 		On("CONFLICT (workspace, asset_value, url) DO UPDATE").
-		Set("status_code = EXCLUDED.status_code").
-		Set("title = EXCLUDED.title").
-		Set("tech = EXCLUDED.tech").
-		Set("content_type = EXCLUDED.content_type").
-		Set("content_length = EXCLUDED.content_length").
-		Set("host_ip = EXCLUDED.host_ip").
-		Set("a_records = EXCLUDED.a_records").
-		Set("tls = EXCLUDED.tls").
-		Set("response_time = EXCLUDED.response_time").
-		Set("words = EXCLUDED.words").
-		Set("lines = EXCLUDED.lines").
-		Set("remarks = EXCLUDED.remarks").
-		Set("language = EXCLUDED.language").
-		Set("size = EXCLUDED.size").
-		Set("loc = EXCLUDED.loc").
-		Set("blob_content = EXCLUDED.blob_content").
-		Set("raw_data = EXCLUDED.raw_data").
+		Set("status_code = CASE WHEN EXCLUDED.status_code != 0 THEN EXCLUDED.status_code ELSE assets.status_code END").
+		Set("title = CASE WHEN EXCLUDED.title != '' THEN EXCLUDED.title ELSE assets.title END").
+		Set("tech = CASE WHEN EXCLUDED.tech IS NOT NULL AND EXCLUDED.tech != '[]' AND EXCLUDED.tech != 'null' THEN EXCLUDED.tech ELSE assets.tech END").
+		Set("content_type = CASE WHEN EXCLUDED.content_type != '' THEN EXCLUDED.content_type ELSE assets.content_type END").
+		Set("content_length = CASE WHEN EXCLUDED.content_length != 0 THEN EXCLUDED.content_length ELSE assets.content_length END").
+		Set("host_ip = CASE WHEN EXCLUDED.host_ip != '' THEN EXCLUDED.host_ip ELSE assets.host_ip END").
+		Set("a_records = CASE WHEN EXCLUDED.a_records IS NOT NULL AND EXCLUDED.a_records != '[]' AND EXCLUDED.a_records != 'null' THEN EXCLUDED.a_records ELSE assets.a_records END").
+		Set("tls = CASE WHEN EXCLUDED.tls != '' THEN EXCLUDED.tls ELSE assets.tls END").
+		Set("response_time = CASE WHEN EXCLUDED.response_time != '' THEN EXCLUDED.response_time ELSE assets.response_time END").
+		Set("words = CASE WHEN EXCLUDED.words != 0 THEN EXCLUDED.words ELSE assets.words END").
+		Set("lines = CASE WHEN EXCLUDED.lines != 0 THEN EXCLUDED.lines ELSE assets.lines END").
+		Set("remarks = CASE WHEN EXCLUDED.remarks IS NOT NULL AND EXCLUDED.remarks != '[]' AND EXCLUDED.remarks != 'null' THEN EXCLUDED.remarks ELSE assets.remarks END").
+		Set("language = CASE WHEN EXCLUDED.language != '' THEN EXCLUDED.language ELSE assets.language END").
+		Set("size = CASE WHEN EXCLUDED.size != 0 THEN EXCLUDED.size ELSE assets.size END").
+		Set("loc = CASE WHEN EXCLUDED.loc != 0 THEN EXCLUDED.loc ELSE assets.loc END").
+		Set("blob_content = CASE WHEN EXCLUDED.blob_content != '' THEN EXCLUDED.blob_content ELSE assets.blob_content END").
+		Set("raw_data = CASE WHEN EXCLUDED.raw_data != '' THEN EXCLUDED.raw_data ELSE assets.raw_data END").
 		Set("updated_at = EXCLUDED.updated_at").
 		Exec(ctx)
 	return err
@@ -313,23 +313,23 @@ func (r *AssetRepository) BulkUpsert(ctx context.Context, assets []*database.Ass
 	_, err := r.db.NewInsert().
 		Model(&assets).
 		On("CONFLICT (workspace, asset_value, url) DO UPDATE").
-		Set("status_code = EXCLUDED.status_code").
-		Set("title = EXCLUDED.title").
-		Set("tech = EXCLUDED.tech").
-		Set("content_type = EXCLUDED.content_type").
-		Set("content_length = EXCLUDED.content_length").
-		Set("host_ip = EXCLUDED.host_ip").
-		Set("a_records = EXCLUDED.a_records").
-		Set("tls = EXCLUDED.tls").
-		Set("response_time = EXCLUDED.response_time").
-		Set("words = EXCLUDED.words").
-		Set("lines = EXCLUDED.lines").
-		Set("remarks = EXCLUDED.remarks").
-		Set("language = EXCLUDED.language").
-		Set("size = EXCLUDED.size").
-		Set("loc = EXCLUDED.loc").
-		Set("blob_content = EXCLUDED.blob_content").
-		Set("raw_data = EXCLUDED.raw_data").
+		Set("status_code = CASE WHEN EXCLUDED.status_code != 0 THEN EXCLUDED.status_code ELSE assets.status_code END").
+		Set("title = CASE WHEN EXCLUDED.title != '' THEN EXCLUDED.title ELSE assets.title END").
+		Set("tech = CASE WHEN EXCLUDED.tech IS NOT NULL AND EXCLUDED.tech != '[]' AND EXCLUDED.tech != 'null' THEN EXCLUDED.tech ELSE assets.tech END").
+		Set("content_type = CASE WHEN EXCLUDED.content_type != '' THEN EXCLUDED.content_type ELSE assets.content_type END").
+		Set("content_length = CASE WHEN EXCLUDED.content_length != 0 THEN EXCLUDED.content_length ELSE assets.content_length END").
+		Set("host_ip = CASE WHEN EXCLUDED.host_ip != '' THEN EXCLUDED.host_ip ELSE assets.host_ip END").
+		Set("a_records = CASE WHEN EXCLUDED.a_records IS NOT NULL AND EXCLUDED.a_records != '[]' AND EXCLUDED.a_records != 'null' THEN EXCLUDED.a_records ELSE assets.a_records END").
+		Set("tls = CASE WHEN EXCLUDED.tls != '' THEN EXCLUDED.tls ELSE assets.tls END").
+		Set("response_time = CASE WHEN EXCLUDED.response_time != '' THEN EXCLUDED.response_time ELSE assets.response_time END").
+		Set("words = CASE WHEN EXCLUDED.words != 0 THEN EXCLUDED.words ELSE assets.words END").
+		Set("lines = CASE WHEN EXCLUDED.lines != 0 THEN EXCLUDED.lines ELSE assets.lines END").
+		Set("remarks = CASE WHEN EXCLUDED.remarks IS NOT NULL AND EXCLUDED.remarks != '[]' AND EXCLUDED.remarks != 'null' THEN EXCLUDED.remarks ELSE assets.remarks END").
+		Set("language = CASE WHEN EXCLUDED.language != '' THEN EXCLUDED.language ELSE assets.language END").
+		Set("size = CASE WHEN EXCLUDED.size != 0 THEN EXCLUDED.size ELSE assets.size END").
+		Set("loc = CASE WHEN EXCLUDED.loc != 0 THEN EXCLUDED.loc ELSE assets.loc END").
+		Set("blob_content = CASE WHEN EXCLUDED.blob_content != '' THEN EXCLUDED.blob_content ELSE assets.blob_content END").
+		Set("raw_data = CASE WHEN EXCLUDED.raw_data != '' THEN EXCLUDED.raw_data ELSE assets.raw_data END").
 		Set("updated_at = EXCLUDED.updated_at").
 		Exec(ctx)
 	return err

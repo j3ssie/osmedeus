@@ -1212,6 +1212,68 @@ func TestExecutionContext_CloneForLoop_EmptyLoopVar(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func TestExecutionContext_CloneForLoop_PathFriendlyVariable(t *testing.T) {
+	ctx := core.NewExecutionContext("test", core.KindModule, "run-1", "test.com")
+
+	// Simple value: unsafe chars replaced with underscores
+	clone := ctx.CloneForLoop("url", "https://example.com/path", 1)
+
+	pathVar, ok := clone.GetVariable("_url_")
+	assert.True(t, ok)
+	sanitized, _ := pathVar.(string)
+	assert.Equal(t, "https___example.com_path", sanitized)
+	assert.NotContains(t, sanitized, "/")
+	assert.NotContains(t, sanitized, ":")
+}
+
+func TestExecutionContext_CloneForLoop_PathFriendlyLongValue(t *testing.T) {
+	ctx := core.NewExecutionContext("test", core.KindModule, "run-1", "test.com")
+
+	// Long value: deterministic truncation with CRC32 hash
+	longURL := "https://very-long-example-domain.com/with/a/very/deep/path/structure"
+	clone1 := ctx.CloneForLoop("url", longURL, 1)
+	clone2 := ctx.CloneForLoop("url", longURL, 2)
+
+	v1, ok := clone1.GetVariable("_url_")
+	assert.True(t, ok)
+	s1 := v1.(string)
+
+	v2, ok := clone2.GetVariable("_url_")
+	assert.True(t, ok)
+	s2 := v2.(string)
+
+	// Same input produces same output (deterministic)
+	assert.Equal(t, s1, s2)
+	// Truncated: 20 chars prefix + "_" + 8 hex chars = 29 chars
+	assert.LessOrEqual(t, len(s1), 29)
+}
+
+func TestExecutionContext_CloneForLoop_PathFriendlyEmptyLoopVar(t *testing.T) {
+	ctx := core.NewExecutionContext("test", core.KindModule, "run-1", "test.com")
+
+	// Empty loopVar: no __ variable should be created
+	clone := ctx.CloneForLoop("", "some-value", 1)
+
+	_, ok := clone.GetVariable("__")
+	assert.False(t, ok, "Should not create __ variable when loopVar is empty")
+}
+
+func TestExecutionContext_CloneForLoop_PathFriendlyNonString(t *testing.T) {
+	ctx := core.NewExecutionContext("test", core.KindModule, "run-1", "test.com")
+
+	// Non-string loopValue: _count_ should not be created
+	clone := ctx.CloneForLoop("count", 42, 1)
+
+	// The raw loop variable should still be set
+	rawVar, ok := clone.GetVariable("count")
+	assert.True(t, ok)
+	assert.Equal(t, 42, rawVar)
+
+	// But the path-friendly variable should not exist
+	_, ok = clone.GetVariable("_count_")
+	assert.False(t, ok, "Should not create path-friendly variable for non-string values")
+}
+
 // Tests for step dependencies (DAG-style execution)
 
 func TestHasAnyStepDependencies(t *testing.T) {

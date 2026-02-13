@@ -1,6 +1,9 @@
 package core
 
 import (
+	"fmt"
+	"hash/crc32"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -183,12 +186,17 @@ func (c *ExecutionContext) Clone() *ExecutionContext {
 //   - Shares Params reference (documented as immutable after init)
 //   - Pre-sets loop variables to avoid separate SetVariable calls
 //   - Reduces map copy overhead by ~33% (skips Params copy)
+//
+// Auto-set loop variables:
+//   - loopVar (e.g. "url"): the raw loop value
+//   - _id_: 1-based iteration number
+//   - _<loopVar>_ (e.g. "_url_"): path-friendly sanitized version of the loop value (string values only)
 func (c *ExecutionContext) CloneForLoop(loopVar string, loopValue interface{}, iterID int) *ExecutionContext {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	// Estimate capacity: parent variables + 2 loop variables
-	varCapacity := len(c.Variables) + 2
+	// Estimate capacity: parent variables + 3 loop variables (_id_, loopVar, _loopVar_)
+	varCapacity := len(c.Variables) + 3
 
 	clone := &ExecutionContext{
 		WorkflowName:  c.WorkflowName,
@@ -215,6 +223,10 @@ func (c *ExecutionContext) CloneForLoop(loopVar string, loopValue interface{}, i
 	// Pre-set loop variables (avoids separate SetVariable calls)
 	if loopVar != "" {
 		clone.Variables[loopVar] = loopValue
+		// Auto-generate path-friendly version: _<loopVar>_ (e.g., _url_)
+		if strValue, ok := loopValue.(string); ok {
+			clone.Variables["_"+loopVar+"_"] = sanitizeToPathFriendlyDeterministic(strValue)
+		}
 	}
 	clone.Variables["_id_"] = iterID
 
@@ -222,4 +234,30 @@ func (c *ExecutionContext) CloneForLoop(loopVar string, loopValue interface{}, i
 	clone.updateSnapshot()
 
 	return clone
+}
+
+// sanitizeToPathFriendlyDeterministic converts a string to a filesystem-safe name.
+// Replaces /\:*?"<>| with underscores. If the result exceeds 30 characters,
+// it is truncated to prefix(20)_crc32hex(8) for determinism.
+// CRC32 is computed on the original input so inputs differing only in unsafe chars
+// produce different hashes.
+func sanitizeToPathFriendlyDeterministic(s string) string {
+	hash := crc32.ChecksumIEEE([]byte(s))
+
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		switch r {
+		case '/', '\\', ':', '*', '?', '"', '<', '>', '|':
+			b.WriteByte('_')
+		default:
+			b.WriteRune(r)
+		}
+	}
+	sanitized := b.String()
+
+	if len(sanitized) > 30 {
+		return fmt.Sprintf("%s_%08x", sanitized[:20], hash)
+	}
+	return sanitized
 }
