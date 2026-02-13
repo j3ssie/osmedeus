@@ -40,6 +40,7 @@ func init() {
 	scanCmd.Flags().IntVarP(&concurrency, "concurrency", "c", 1, "number of targets to run concurrently")
 	scanCmd.Flags().StringVarP(&runTactic, "tactic", "B", "default", "run tactic: aggressive, default, gently")
 	scanCmd.Flags().StringArrayVarP(&excludeModules, "exclude", "x", nil, "module(s) to exclude from execution (can be specified multiple times)")
+	scanCmd.Flags().StringArrayVarP(&fuzzyExcludeModules, "fuzzy-exclude", "X", nil, "exclude modules whose name contains the given substring (can be specified multiple times)")
 	scanCmd.Flags().StringVarP(&spaceName, "space", "S", "", "override {{TargetSpace}} variable")
 	scanCmd.Flags().StringVarP(&workspacesFolder, "workspaces-folder", "W", "", "override {{Workspaces}} variable")
 	scanCmd.Flags().StringVar(&heuristicsCheck, "heuristics-check", "basic", "heuristics check level: none, basic, advanced")

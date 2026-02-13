@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -68,6 +69,11 @@ func (e *FunctionExecutor) Execute(ctx context.Context, step *core.Step, execCtx
 	result.Duration = result.EndTime.Sub(result.StartTime)
 
 	if err != nil {
+		if errors.Is(err, functions.ErrSkipModule) {
+			result.Status = core.StepStatusSkipped
+			result.Error = err
+			return result, err
+		}
 		result.Status = core.StepStatusFailed
 		result.Error = err
 		return result, err

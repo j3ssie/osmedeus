@@ -708,6 +708,18 @@ func (vf *vmFunc) exit(call goja.FunctionCall) goja.Value {
 	return goja.Undefined()
 }
 
+// skip stops execution of the remaining steps in the current module.
+// The flow continues to the next module. Accepts an optional message.
+// Usage: skip(message?) -> void
+func (vf *vmFunc) skip(call goja.FunctionCall) goja.Value {
+	msg := call.Argument(0).String()
+	if msg == "undefined" || msg == "" {
+		msg = "skip() called"
+	}
+	logger.Get().Info("Module skip requested: " + msg)
+	panic(vf.vm.NewGoError(&SkipModuleError{Message: msg}))
+}
+
 // execCmd executes a bash command and returns the stdout output
 // Usage: exec_cmd(command) -> string
 func (vf *vmFunc) execCmd(call goja.FunctionCall) goja.Value {

@@ -568,6 +568,16 @@ func isModuleExcluded(moduleName string, excludeList []string) bool {
 	return false
 }
 
+// isFuzzyModuleExcluded checks if a module name contains any of the fuzzy exclude patterns
+func isFuzzyModuleExcluded(moduleName string, fuzzyList []string) bool {
+	for _, pattern := range fuzzyList {
+		if strings.Contains(moduleName, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
 // formatDuration formats a duration in human-readable format
 func formatDuration(d time.Duration) string {
 	if d < time.Second {
@@ -1233,6 +1243,25 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 			metrics.RecordStepDuration(string(step.Type), string(stepResult.Status), stepResult.Duration.Seconds())
 
 			if err != nil {
+				// Check if this is a skip-module signal
+				if errors.Is(err, functions.ErrSkipModule) {
+					msg := "skip() called"
+					var skipErr *functions.SkipModuleError
+					if errors.As(err, &skipErr) {
+						msg = skipErr.Message
+					}
+					execCtx.Logger.Info("Module skipped",
+						zap.String("step", step.Name),
+						zap.String("message", msg),
+					)
+					result.Status = core.RunStatusSkipped
+					result.Message = msg
+					result.Exports = execCtx.Exports
+					result.EndTime = time.Now()
+					metrics.RecordWorkflowEnd(module.Name, string(core.KindModule), string(result.Status), result.EndTime.Sub(result.StartTime).Seconds())
+					return result, nil
+				}
+
 				execCtx.Logger.Error("Step failed",
 					zap.String("step", step.Name),
 					zap.Error(err),
@@ -1475,6 +1504,21 @@ func (e *Executor) executeStepsDAG(ctx context.Context, steps []core.Step, execC
 			}
 
 			if err != nil {
+				// Check if this is a skip-module signal
+				if errors.Is(err, functions.ErrSkipModule) {
+					if firstError == nil {
+						firstError = err
+					}
+					// Mark all remaining steps as completed to break the main loop
+					for name := range stepMap {
+						if !executed[name] {
+							executed[name] = true
+							atomic.AddInt32(&completedCount, 1)
+						}
+					}
+					cond.Signal()
+					return
+				}
 				failed[sName] = true
 				if firstError == nil && !e.shouldContinueOnError(s) {
 					firstError = err
@@ -1502,6 +1546,18 @@ func (e *Executor) executeStepsDAG(ctx context.Context, steps []core.Step, execC
 	result.Steps = collector.Results()
 
 	if firstError != nil {
+		// Check if the error was a skip-module signal (not a failure)
+		if errors.Is(firstError, functions.ErrSkipModule) {
+			msg := "skip() called"
+			var skipErr *functions.SkipModuleError
+			if errors.As(firstError, &skipErr) {
+				msg = skipErr.Message
+			}
+			result.Status = core.RunStatusSkipped
+			result.Message = msg
+			result.EndTime = time.Now()
+			return nil
+		}
 		result.Status = core.RunStatusFailed
 		result.Error = firstError
 		result.EndTime = time.Now()
@@ -1762,6 +1818,7 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 
 	// Parse excluded modules
 	excludeList := parseExcludeList(params["exclude_modules"])
+	fuzzyExcludeList := parseExcludeList(params["fuzzy_exclude_modules"])
 
 	// Pre-load all modules in parallel for faster startup
 	execCtx.Logger.Debug("Pre-loading modules", zap.Int("count", len(flow.Modules)))
@@ -1812,8 +1869,8 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 
 		modRef := moduleMap[modName]
 
-		// Check if module is excluded
-		if isModuleExcluded(modRef.Name, excludeList) {
+		// Check if module is excluded (exact match or fuzzy substring match)
+		if isModuleExcluded(modRef.Name, excludeList) || isFuzzyModuleExcluded(modRef.Name, fuzzyExcludeList) {
 			execCtx.Logger.Info("Skipping excluded module", zap.String("module", modRef.Name))
 			executed[modRef.Name] = true
 			// Unblock dependents even for excluded modules
@@ -2110,6 +2167,16 @@ func (e *Executor) executeStep(ctx context.Context, step *core.Step, execCtx *co
 		)
 		ok, err := e.functionRegistry.EvaluateCondition(renderedCondition, execCtx.GetVariables())
 		if err != nil {
+			// Check if skip() was called inside a pre_condition
+			if errors.Is(err, functions.ErrSkipModule) {
+				result.Status = core.StepStatusSkipped
+				result.Error = err
+				result.EndTime = time.Now()
+				if e.progressBar == nil {
+					e.printer.StepSkipped(step.Name)
+				}
+				return result, err
+			}
 			stepLogger.Debug("Pre-condition evaluation failed", zap.Error(err))
 			result.Status = core.StepStatusFailed
 			result.Error = fmt.Errorf("pre-condition evaluation failed: %w", err)
@@ -2243,6 +2310,18 @@ func (e *Executor) executeStep(ctx context.Context, step *core.Step, execCtx *co
 		sp.Stop()
 	}
 	if err != nil {
+		// Check if this is a skip-module signal (not a failure)
+		if errors.Is(err, functions.ErrSkipModule) {
+			result.Status = core.StepStatusSkipped
+			result.Error = err
+			result.EndTime = time.Now()
+			result.Duration = result.EndTime.Sub(result.StartTime)
+			if e.progressBar == nil {
+				e.printer.StepSkipped(step.Name)
+			}
+			return result, err
+		}
+
 		result.Status = core.StepStatusFailed
 		result.Error = err
 		result.EndTime = time.Now()

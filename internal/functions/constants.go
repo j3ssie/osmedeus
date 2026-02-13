@@ -1,5 +1,29 @@
 package functions
 
+import (
+	"errors"
+	"fmt"
+)
+
+// ErrSkipModule is a sentinel error used by skip() to signal that the
+// remaining steps in the current module should be skipped. The flow
+// continues to the next module.
+var ErrSkipModule = errors.New("skip module")
+
+// SkipModuleError carries an optional message and wraps ErrSkipModule
+// so that errors.Is(err, ErrSkipModule) works through the chain.
+type SkipModuleError struct {
+	Message string
+}
+
+func (e *SkipModuleError) Error() string {
+	return fmt.Sprintf("skip module: %s", e.Message)
+}
+
+func (e *SkipModuleError) Unwrap() error {
+	return ErrSkipModule
+}
+
 // Function name constants for easy reference and consistency
 // This file serves as a central reference for all available workflow functions
 
@@ -79,6 +103,7 @@ const (
 	FnPrintf         = "printf"       // printf(message) -> void (print message to stdout)
 	FnCatFile        = "cat_file"     // cat_file(path) -> void (print file content to stdout)
 	FnExit           = "exit"         // exit(code) -> void (exit scan with code)
+	FnSkip           = "skip"         // skip(message?) -> void (skip remaining steps in current module)
 	FnExecCmd        = "exec_cmd"     // exec_cmd(command) -> string (alias for bash)
 	FnBash           = "bash"
 	FnSleep          = "sleep"            // sleep(seconds) -> void (pause for n seconds)
@@ -391,6 +416,7 @@ func AllFunctions() []string {
 		FnPrintf,
 		FnCatFile,
 		FnExit,
+		FnSkip,
 		FnExecCmd,
 		FnBash,
 		FnSleep,
@@ -727,6 +753,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnPrintf, "printf(message)", "Print message to stdout", "void", "printf('Scan started')"},
 			{FnCatFile, "cat_file(path)", "Print file content to stdout", "void", "cat_file('{{Output}}/results.txt')"},
 			{FnExit, "exit(code)", "Exit scan with code", "void", "exit(1)"},
+			{FnSkip, "skip(message?)", "Skip remaining steps in current module and continue to next module", "void", "skip('target not applicable')"},
 			{FnBash, "bash(command)", "Execute bash command and return output", "string", "bash('whoami')"},
 			{FnExecCmd, "exec_cmd(command)", "Alias for bash(command)", "string", "exec_cmd('whoami')"},
 			{FnSleep, "sleep(seconds)", "Pause for n seconds", "void", "sleep(5)"},

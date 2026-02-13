@@ -49,6 +49,7 @@ var (
 	threadsHold          int
 	runTactic            string
 	excludeModules       []string
+	fuzzyExcludeModules  []string
 	spaceName            string
 	workspacesFolder     string
 	heuristicsCheck      string
@@ -108,6 +109,7 @@ func init() {
 	runCmd.Flags().IntVarP(&concurrency, "concurrency", "c", 1, "number of targets to run concurrently")
 	runCmd.Flags().StringVarP(&runTactic, "tactic", "B", "default", "run tactic: aggressive, default, gently")
 	runCmd.Flags().StringArrayVarP(&excludeModules, "exclude", "x", nil, "module(s) to exclude from execution (can be specified multiple times)")
+	runCmd.Flags().StringArrayVarP(&fuzzyExcludeModules, "fuzzy-exclude", "X", nil, "exclude modules whose name contains the given substring (can be specified multiple times)")
 	runCmd.Flags().StringVarP(&spaceName, "space", "S", "", "override {{TargetSpace}} variable")
 	runCmd.Flags().StringVarP(&workspacesFolder, "workspaces-folder", "W", "", "override {{Workspaces}} variable")
 	runCmd.Flags().StringVar(&heuristicsCheck, "heuristics-check", "basic", "heuristics check level: none, basic, advanced")
@@ -788,6 +790,7 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 	params["tactic"] = runTactic
 	params["threads_hold"] = fmt.Sprintf("%d", threadsHold)
 	params["exclude_modules"] = strings.Join(excludeModules, ",")
+	params["fuzzy_exclude_modules"] = strings.Join(fuzzyExcludeModules, ",")
 	params["space_name"] = spaceName
 	params["workspaces_folder"] = workspacesFolder
 	params["heuristics_check"] = heuristicsCheck
@@ -806,6 +809,7 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 		zap.String("tactic", runTactic),
 		zap.Int("threads_hold", threadsHold),
 		zap.Strings("exclude_modules", excludeModules),
+		zap.Strings("fuzzy_exclude_modules", fuzzyExcludeModules),
 		zap.Int("param_count", len(params)),
 	)
 

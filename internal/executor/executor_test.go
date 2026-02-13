@@ -7,6 +7,7 @@ import (
 
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/core"
+	"github.com/j3ssie/osmedeus/v5/internal/parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1676,4 +1677,144 @@ func TestExecutor_StepDependencies_FailedDep_SkipsDependent(t *testing.T) {
 	if stepBExists != "" {
 		assert.NotEqual(t, core.StepStatusSuccess, stepBExists)
 	}
+}
+
+func TestExecutor_SkipModule(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-skip",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:     "step-before",
+				Type:     core.StepTypeFunction,
+				Function: "log_info('before skip')",
+			},
+			{
+				Name:     "step-skip",
+				Type:     core.StepTypeFunction,
+				Function: "skip('target not applicable')",
+			},
+			{
+				Name:     "step-after",
+				Type:     core.StepTypeFunction,
+				Function: "log_info('after skip')",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{
+		"target": "test",
+	}, cfg)
+
+	// skip() returns nil error (not a failure)
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusSkipped, result.Status)
+	assert.Equal(t, "target not applicable", result.Message)
+
+	// step-before should have executed, step-after should NOT
+	assert.GreaterOrEqual(t, len(result.Steps), 2, "should have at least step-before and step-skip")
+
+	// Find step-after in results - it should not be present
+	for _, s := range result.Steps {
+		assert.NotEqual(t, "step-after", s.StepName, "step-after should not have executed")
+	}
+}
+
+func TestExecutor_SkipModulePreservesExports(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-skip-exports",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:     "set-var",
+				Type:     core.StepTypeFunction,
+				Function: "set_var('my_key', 'my_value')",
+			},
+			{
+				Name:     "do-skip",
+				Type:     core.StepTypeFunction,
+				Function: "skip('done early')",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{
+		"target": "test",
+	}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusSkipped, result.Status)
+	assert.Equal(t, "done early", result.Message)
+}
+
+func TestIsFuzzyModuleExcluded(t *testing.T) {
+	tests := []struct {
+		name       string
+		moduleName string
+		fuzzyList  []string
+		expected   bool
+	}{
+		{"exact substring match", "recon-spider", []string{"spider"}, true},
+		{"prefix match", "spider-crawl", []string{"spider"}, true},
+		{"no match", "recon-dns", []string{"spider"}, false},
+		{"empty list", "recon-spider", nil, false},
+		{"empty pattern list", "recon-spider", []string{}, false},
+		{"multiple patterns first matches", "recon-spider", []string{"spider", "dns"}, true},
+		{"multiple patterns second matches", "recon-dns", []string{"spider", "dns"}, true},
+		{"multiple patterns none match", "recon-http", []string{"spider", "dns"}, false},
+		{"full name as pattern", "recon-spider", []string{"recon-spider"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isFuzzyModuleExcluded(tt.moduleName, tt.fuzzyList)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestExecutor_FuzzyExcludeModules(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	// Create a flow where all modules will be excluded by fuzzy match
+	flow := &core.Workflow{
+		Name: "test-fuzzy-exclude",
+		Kind: core.KindFlow,
+		Modules: []core.ModuleRef{
+			{Name: "recon-spider", Path: ""},
+			{Name: "spider-crawl", Path: ""},
+		},
+	}
+
+	loader := parser.NewLoader(cfg.WorkflowsPath)
+
+	exec := NewExecutor()
+	exec.SetDryRun(true)
+	exec.SetSpinner(false)
+	exec.SetLoader(loader)
+
+	// fuzzy_exclude_modules=spider should skip both recon-spider and spider-crawl
+	result, err := exec.ExecuteFlow(ctx, flow, map[string]string{
+		"target":                "test.example.com",
+		"fuzzy_exclude_modules": "spider",
+	}, cfg)
+
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
 }

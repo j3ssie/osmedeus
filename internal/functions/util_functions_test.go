@@ -2,6 +2,7 @@ package functions
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -910,5 +911,51 @@ func TestMoveFile(t *testing.T) {
 		require.NoError(t, statErr)
 		// Check that execute bit is set (at least for owner)
 		assert.True(t, info.Mode()&0100 != 0, "expected executable permission to be preserved")
+	})
+}
+
+func TestSkip(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("skip without message returns ErrSkipModule", func(t *testing.T) {
+		_, err := runtime.Execute(`skip()`, nil)
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, ErrSkipModule), "error should wrap ErrSkipModule")
+	})
+
+	t.Run("skip with message preserves message", func(t *testing.T) {
+		_, err := runtime.Execute(`skip('target not applicable')`, nil)
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, ErrSkipModule), "error should wrap ErrSkipModule")
+		var skipErr *SkipModuleError
+		assert.True(t, errors.As(err, &skipErr), "error should be extractable as SkipModuleError")
+		assert.Equal(t, "target not applicable", skipErr.Message)
+	})
+
+	t.Run("skip default message", func(t *testing.T) {
+		_, err := runtime.Execute(`skip()`, nil)
+		require.Error(t, err)
+		var skipErr *SkipModuleError
+		if errors.As(err, &skipErr) {
+			assert.Equal(t, "skip() called", skipErr.Message)
+		}
+	})
+}
+
+func TestSkipModuleError(t *testing.T) {
+	t.Run("Error returns formatted message", func(t *testing.T) {
+		err := &SkipModuleError{Message: "test message"}
+		assert.Equal(t, "skip module: test message", err.Error())
+	})
+
+	t.Run("Unwrap returns ErrSkipModule", func(t *testing.T) {
+		err := &SkipModuleError{Message: "test"}
+		assert.Equal(t, ErrSkipModule, err.Unwrap())
+	})
+
+	t.Run("errors.Is works through chain", func(t *testing.T) {
+		skipErr := &SkipModuleError{Message: "inner"}
+		wrapped := errors.Join(errors.New("outer"), skipErr)
+		assert.True(t, errors.Is(wrapped, ErrSkipModule))
 	})
 }

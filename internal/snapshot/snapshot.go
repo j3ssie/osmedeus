@@ -127,8 +127,8 @@ func ImportWorkspace(source, workspacesPath string, skipDB bool, cfg *config.Con
 	}
 
 	// Extract the zip into the workspaces root — zip entries already contain
-	// the workspace directory prefix (e.g. "shopee.vn/file.txt"), so extracting
-	// into workspacesPath produces workspacesPath/shopee.vn/file.txt.
+	// the workspace directory prefix (e.g. "example.com/file.txt"), so extracting
+	// into workspacesPath produces workspacesPath/example.com/file.txt.
 	filesCount, err := extractZip(zipPath, workspacesPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract archive: %w", err)
@@ -222,8 +222,8 @@ func ForceImportWorkspace(source, workspacesPath string, skipDB bool, cfg *confi
 	}
 
 	// Extract the zip into the workspaces root — zip entries already contain
-	// the workspace directory prefix (e.g. "shopee.vn/file.txt"), so extracting
-	// into workspacesPath produces workspacesPath/shopee.vn/file.txt.
+	// the workspace directory prefix (e.g. "example.com/file.txt"), so extracting
+	// into workspacesPath produces workspacesPath/example.com/file.txt.
 	filesCount, err := extractZip(zipPath, workspacesPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract archive: %w", err)

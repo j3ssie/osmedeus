@@ -217,7 +217,7 @@ func TestExtractZip(t *testing.T) {
 
 	t.Run("extracts zip with directory prefix without double nesting", func(t *testing.T) {
 		// Simulate what createHighCompressionZip produces: entries prefixed with workspace name
-		// e.g. "shopee.vn/output.txt", "shopee.vn/subdir/nested.txt"
+		// e.g. "example.com/output.txt", "example.com/subdir/nested.txt"
 		zipPath := filepath.Join(os.TempDir(), "test-extract-prefix.zip")
 		defer func() { _ = os.Remove(zipPath) }()
 
@@ -227,24 +227,24 @@ func TestExtractZip(t *testing.T) {
 		writer := zip.NewWriter(zipFile)
 
 		// Directory entry with proper permissions
-		dirHeader := &zip.FileHeader{Name: "shopee.vn/"}
+		dirHeader := &zip.FileHeader{Name: "example.com/"}
 		dirHeader.SetMode(0755)
 		_, err = writer.CreateHeader(dirHeader)
 		require.NoError(t, err)
 
 		// File inside the directory
-		f, err := writer.Create("shopee.vn/output.txt")
+		f, err := writer.Create("example.com/output.txt")
 		require.NoError(t, err)
 		_, err = f.Write([]byte("scan results"))
 		require.NoError(t, err)
 
 		// Nested subdirectory with proper permissions
-		subDirHeader := &zip.FileHeader{Name: "shopee.vn/subdir/"}
+		subDirHeader := &zip.FileHeader{Name: "example.com/subdir/"}
 		subDirHeader.SetMode(0755)
 		_, err = writer.CreateHeader(subDirHeader)
 		require.NoError(t, err)
 
-		f, err = writer.Create("shopee.vn/subdir/nested.txt")
+		f, err = writer.Create("example.com/subdir/nested.txt")
 		require.NoError(t, err)
 		_, err = f.Write([]byte("nested content"))
 		require.NoError(t, err)
@@ -261,18 +261,18 @@ func TestExtractZip(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 2, filesCount) // 2 files (directories are not counted)
 
-		// Verify correct structure: workspacesDir/shopee.vn/output.txt (NOT workspacesDir/shopee.vn/shopee.vn/output.txt)
-		content, err := os.ReadFile(filepath.Join(workspacesDir, "shopee.vn", "output.txt"))
+		// Verify correct structure: workspacesDir/example.com/output.txt (NOT workspacesDir/example.com/example.com/output.txt)
+		content, err := os.ReadFile(filepath.Join(workspacesDir, "example.com", "output.txt"))
 		require.NoError(t, err)
 		assert.Equal(t, "scan results", string(content))
 
-		content, err = os.ReadFile(filepath.Join(workspacesDir, "shopee.vn", "subdir", "nested.txt"))
+		content, err = os.ReadFile(filepath.Join(workspacesDir, "example.com", "subdir", "nested.txt"))
 		require.NoError(t, err)
 		assert.Equal(t, "nested content", string(content))
 
 		// Verify NO double nesting
-		_, err = os.Stat(filepath.Join(workspacesDir, "shopee.vn", "shopee.vn"))
-		assert.True(t, os.IsNotExist(err), "should not have double-nested shopee.vn/shopee.vn directory")
+		_, err = os.Stat(filepath.Join(workspacesDir, "example.com", "example.com"))
+		assert.True(t, os.IsNotExist(err), "should not have double-nested example.com/example.com directory")
 	})
 
 	t.Run("fails with non-existent zip", func(t *testing.T) {
