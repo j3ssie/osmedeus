@@ -577,6 +577,13 @@ func (s *Server) PrintStartupInfo(addr string) {
 		p.Info("Starting Osmedeus server %s", terminal.Cyan("http://"+addr))
 	}
 
+	// Master mode info
+	if s.options.Master != nil {
+		p.Info("Master mode %s", terminal.Cyan("enabled"))
+		p.Info("Redis connected at %s",
+			terminal.Cyan(fmt.Sprintf("%s:%d", s.config.Redis.Host, s.config.Redis.Port)))
+	}
+
 	// Database info
 	p.Info("Database initialized %s", terminal.Cyan(s.config.Database.DBEngine))
 

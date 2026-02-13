@@ -1192,7 +1192,7 @@ var workflowShowCmd = &cobra.Command{
 			}
 			fmt.Println()
 			fmt.Println()
-			fmt.Printf("  %s\n", terminal.Gray("Tip: Use --verbose to show all variables with descriptions and default values"))
+			fmt.Printf(" %s%s\n", terminal.BoldCyan(terminal.SymbolLightning), terminal.Gray("Tip: Use --verbose to show all variables with descriptions and default values or --yaml to see raw workflow file"))
 		}
 
 		fmt.Println()

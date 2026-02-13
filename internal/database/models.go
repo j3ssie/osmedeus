@@ -220,7 +220,7 @@ type Asset struct {
 
 	// Network data
 	HostIP     string   `bun:"host_ip" json:"host_ip,omitempty"`
-	DnsRecords []string `bun:"dns_records,type:json" json:"a,omitempty"`
+	DnsRecords []string `bun:"dns_records,type:json" json:"dns_records,omitempty"`
 	TLS        string   `bun:"tls" json:"tls,omitempty"`
 
 	// Metadata

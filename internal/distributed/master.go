@@ -14,6 +14,7 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
 	"github.com/j3ssie/osmedeus/v5/internal/database/repository"
+	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
 	"github.com/uptrace/bun"
 	"go.uber.org/zap"
@@ -58,19 +59,19 @@ func NewMaster(cfg *config.Config) (*Master, error) {
 	hostname, _ := os.Hostname()
 	masterID := fmt.Sprintf("master-%s-%s", hostname, uuid.NewString()[:8])
 
-	logger, _ := zap.NewProduction()
+	log := logger.Get()
 
 	// Initialize event broker
 	eventBroker, err := broker.GetSharedBroker()
 	if err != nil {
-		logger.Warn("failed to initialize event broker", zap.Error(err))
+		log.Warn("Failed to initialize event broker", zap.Error(err))
 	}
 
 	return &Master{
 		ID:          masterID,
 		client:      client,
 		config:      cfg,
-		logger:      logger,
+		logger:      log,
 		printer:     terminal.NewPrinter(),
 		eventBroker: eventBroker,
 		db:          database.GetDB(),
@@ -105,6 +106,8 @@ func (m *Master) Start(ctx context.Context) error {
 	m.mu.Unlock()
 
 	m.printer.Success("Master %s started", m.ID)
+	m.printer.Info("Redis connected at %s",
+		terminal.Cyan(fmt.Sprintf("%s:%d", m.config.Redis.Host, m.config.Redis.Port)))
 	m.printer.Info("Waiting for workers and tasks...")
 
 	// Start lock refresh goroutine
@@ -134,7 +137,7 @@ func (m *Master) Start(ctx context.Context) error {
 	// Wait for shutdown
 	<-ctx.Done()
 
-	m.logger.Info("master shutting down", zap.String("master_id", m.ID))
+	m.printer.Info("Master %s shutting down...", terminal.Cyan(m.ID))
 	m.cleanup(context.Background())
 
 	return nil
@@ -151,7 +154,7 @@ func (m *Master) lockRefreshLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			if err := m.client.RefreshMasterLock(ctx, m.ID, MasterLockTTL); err != nil {
-				m.logger.Error("failed to refresh master lock", zap.Error(err))
+				m.printer.Error("Failed to refresh master lock: %s", err)
 				// If we lose the lock, we should stop
 				m.mu.Lock()
 				m.running = false
@@ -181,7 +184,7 @@ func (m *Master) workerMonitorLoop(ctx context.Context) {
 func (m *Master) checkWorkerHealth(ctx context.Context) {
 	workers, err := m.client.GetAllWorkers(ctx)
 	if err != nil {
-		m.logger.Warn("failed to get workers", zap.Error(err))
+		m.printer.Warning("Failed to get workers: %s", err)
 		return
 	}
 
@@ -194,18 +197,15 @@ func (m *Master) checkWorkerHealth(ctx context.Context) {
 
 		// Check if worker is dead (missed heartbeats)
 		if heartbeat.IsZero() || now.Sub(heartbeat) > HeartbeatTimeout {
-			m.logger.Warn("worker appears dead",
-				zap.String("worker_id", worker.ID),
-				zap.Duration("since_heartbeat", now.Sub(heartbeat)),
-			)
-			m.printer.Warning("Worker %s appears dead, reassigning tasks...", worker.ID)
+			m.printer.Warning("Worker %s appears dead (last heartbeat %s ago), reassigning tasks...",
+				terminal.Cyan(worker.ID), now.Sub(heartbeat).Round(time.Second))
 
 			// Reassign the worker's running tasks
 			m.reassignWorkerTasks(ctx, worker.ID)
 
 			// Remove the dead worker
 			if err := m.client.RemoveWorker(ctx, worker.ID); err != nil {
-				m.logger.Error("failed to remove dead worker", zap.Error(err))
+				m.printer.Warning("Failed to remove dead worker: %s", err)
 			}
 		}
 	}
@@ -215,16 +215,14 @@ func (m *Master) checkWorkerHealth(ctx context.Context) {
 func (m *Master) reassignWorkerTasks(ctx context.Context, workerID string) {
 	tasks, err := m.client.GetAllRunningTasks(ctx)
 	if err != nil {
-		m.logger.Error("failed to get running tasks", zap.Error(err))
+		m.printer.Error("Failed to get running tasks: %s", err)
 		return
 	}
 
 	for _, task := range tasks {
 		if task.WorkerID == workerID {
-			m.logger.Info("reassigning task",
-				zap.String("task_id", task.ID),
-				zap.String("worker_id", workerID),
-			)
+			m.printer.Info("Reassigning task %s from worker %s",
+				terminal.Cyan(task.ID), terminal.Cyan(workerID))
 
 			// Reset task status
 			task.Status = TaskStatusPending
@@ -233,13 +231,13 @@ func (m *Master) reassignWorkerTasks(ctx context.Context, workerID string) {
 
 			// Push back to pending queue
 			if err := m.client.PushTask(ctx, task); err != nil {
-				m.logger.Error("failed to reassign task", zap.Error(err))
+				m.printer.Error("Failed to reassign task %s: %s", task.ID, err)
 				continue
 			}
 
 			// Remove from running
 			if err := m.client.RemoveTaskRunning(ctx, task.ID); err != nil {
-				m.logger.Error("failed to remove task from running", zap.Error(err))
+				m.printer.Warning("Failed to remove task from running: %s", err)
 			}
 		}
 	}
@@ -254,7 +252,7 @@ func (m *Master) cleanup(ctx context.Context) {
 	m.mu.Unlock()
 
 	if err := m.client.ReleaseMasterLock(ctx, m.ID); err != nil {
-		m.logger.Warn("failed to release master lock", zap.Error(err))
+		m.printer.Warning("Failed to release master lock: %s", err)
 	}
 
 	m.client.Close()
@@ -270,11 +268,8 @@ func (m *Master) SubmitTask(ctx context.Context, task *Task) error {
 	}
 	task.Status = TaskStatusPending
 
-	m.logger.Info("submitting task",
-		zap.String("task_id", task.ID),
-		zap.String("workflow", task.WorkflowName),
-		zap.String("target", task.Target),
-	)
+	m.printer.Info("Submitting task %s: %s -> %s",
+		terminal.Cyan(task.ID), terminal.Yellow(task.WorkflowName), terminal.Green(task.Target))
 
 	return m.client.PushTask(ctx, task)
 }
@@ -356,7 +351,6 @@ func (m *Master) IsRunning() bool {
 
 // eventSubscriptionLoop subscribes to Redis pub/sub events and forwards them to the handler
 func (m *Master) eventSubscriptionLoop(ctx context.Context) {
-	m.logger.Info("starting event subscription loop")
 
 	err := m.eventBroker.SubscribeEvents(ctx, func(event *core.Event) {
 		m.logger.Debug("received event via Redis",
@@ -379,7 +373,7 @@ func (m *Master) eventSubscriptionLoop(ctx context.Context) {
 	})
 
 	if err != nil && ctx.Err() == nil {
-		m.logger.Error("event subscription error", zap.Error(err))
+		m.printer.Error("Event subscription error: %s", err)
 	}
 }
 
@@ -402,7 +396,7 @@ func (m *Master) persistEventLog(ctx context.Context, event *core.Event) {
 
 	repo := repository.NewEventLogRepository(m.db)
 	if err := repo.Create(ctx, eventLog); err != nil {
-		m.logger.Warn("failed to persist event log", zap.Error(err))
+		m.logger.Debug("failed to persist event log", zap.Error(err))
 	}
 }
 
@@ -412,22 +406,19 @@ func (m *Master) persistEventLog(ctx context.Context, event *core.Event) {
 
 // dataProcessorLoop processes data from worker data queues
 func (m *Master) dataProcessorLoop(ctx context.Context) {
-	m.logger.Info("starting data processor loop")
-
 	keys := []string{KeyDataRuns, KeyDataSteps, KeyDataEvents, KeyDataArtifacts}
 	timeout := 1 * time.Second
 
 	for {
 		select {
 		case <-ctx.Done():
-			m.logger.Info("data processor loop stopping")
 			return
 		default:
 			// Try to pop from any of the data queues
 			key, envelope, err := m.client.PopDataMulti(ctx, timeout, keys...)
 			if err != nil {
 				if ctx.Err() == nil {
-					m.logger.Warn("error popping from data queue", zap.Error(err))
+					m.printer.Warning("Error popping from data queue: %s", err)
 				}
 				continue
 			}
@@ -465,7 +456,7 @@ func (m *Master) processWorkerData(ctx context.Context, key string, envelope *Da
 	case KeyDataArtifacts:
 		m.processArtifactData(ctx, envelope)
 	default:
-		m.logger.Warn("unknown data queue key", zap.String("key", key))
+		m.printer.Warning("Unknown data queue key: %s", key)
 	}
 }
 
@@ -473,7 +464,7 @@ func (m *Master) processWorkerData(ctx context.Context, key string, envelope *Da
 func (m *Master) processRunData(ctx context.Context, envelope *DataEnvelope) {
 	var run database.Run
 	if err := json.Unmarshal(envelope.Data, &run); err != nil {
-		m.logger.Error("failed to unmarshal run data", zap.Error(err))
+		m.printer.Warning("Failed to unmarshal run data: %s", err)
 		return
 	}
 
@@ -485,16 +476,12 @@ func (m *Master) processRunData(ctx context.Context, envelope *DataEnvelope) {
 		// Update existing run
 		run.ID = existing.ID
 		if err := repo.Update(ctx, &run); err != nil {
-			m.logger.Error("failed to update run", zap.Error(err), zap.String("run_uuid", run.RunUUID))
-		} else {
-			m.logger.Debug("updated run from worker", zap.String("run_uuid", run.RunUUID))
+			m.printer.Warning("Failed to update run %s: %s", run.RunUUID, err)
 		}
 	} else {
 		// Create new run
 		if err := repo.Create(ctx, &run); err != nil {
-			m.logger.Error("failed to create run", zap.Error(err), zap.String("run_uuid", run.RunUUID))
-		} else {
-			m.logger.Debug("created run from worker", zap.String("run_uuid", run.RunUUID))
+			m.printer.Warning("Failed to create run %s: %s", run.RunUUID, err)
 		}
 	}
 }
@@ -503,19 +490,14 @@ func (m *Master) processRunData(ctx context.Context, envelope *DataEnvelope) {
 func (m *Master) processStepData(ctx context.Context, envelope *DataEnvelope) {
 	var step database.StepResult
 	if err := json.Unmarshal(envelope.Data, &step); err != nil {
-		m.logger.Error("failed to unmarshal step data", zap.Error(err))
+		m.printer.Warning("Failed to unmarshal step data: %s", err)
 		return
 	}
 
 	// Insert step result
 	_, err := m.db.NewInsert().Model(&step).Exec(ctx)
 	if err != nil {
-		m.logger.Error("failed to create step result", zap.Error(err), zap.String("step_name", step.StepName))
-	} else {
-		m.logger.Debug("created step result from worker",
-			zap.String("step_name", step.StepName),
-			zap.Int64("run_id", step.RunID),
-		)
+		m.printer.Warning("Failed to create step result %s: %s", step.StepName, err)
 	}
 }
 
@@ -523,15 +505,13 @@ func (m *Master) processStepData(ctx context.Context, envelope *DataEnvelope) {
 func (m *Master) processEventData(ctx context.Context, envelope *DataEnvelope) {
 	var eventLog database.EventLog
 	if err := json.Unmarshal(envelope.Data, &eventLog); err != nil {
-		m.logger.Error("failed to unmarshal event data", zap.Error(err))
+		m.printer.Warning("Failed to unmarshal event data: %s", err)
 		return
 	}
 
 	repo := repository.NewEventLogRepository(m.db)
 	if err := repo.Create(ctx, &eventLog); err != nil {
-		m.logger.Error("failed to create event log", zap.Error(err), zap.String("topic", eventLog.Topic))
-	} else {
-		m.logger.Debug("created event log from worker", zap.String("topic", eventLog.Topic))
+		m.printer.Warning("Failed to create event log for topic %s: %s", eventLog.Topic, err)
 	}
 }
 
@@ -539,15 +519,13 @@ func (m *Master) processEventData(ctx context.Context, envelope *DataEnvelope) {
 func (m *Master) processArtifactData(ctx context.Context, envelope *DataEnvelope) {
 	var artifact database.Artifact
 	if err := json.Unmarshal(envelope.Data, &artifact); err != nil {
-		m.logger.Error("failed to unmarshal artifact data", zap.Error(err))
+		m.printer.Warning("Failed to unmarshal artifact data: %s", err)
 		return
 	}
 
 	// Insert artifact
 	_, err := m.db.NewInsert().Model(&artifact).Exec(ctx)
 	if err != nil {
-		m.logger.Error("failed to create artifact", zap.Error(err), zap.String("name", artifact.Name))
-	} else {
-		m.logger.Debug("created artifact from worker", zap.String("name", artifact.Name))
+		m.printer.Warning("Failed to create artifact %s: %s", artifact.Name, err)
 	}
 }

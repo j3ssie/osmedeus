@@ -1,0 +1,65 @@
+# Distributed E2E stack: Redis + master + worker
+# Usage:
+#   make distributed-e2e-up      # Build image + start stack + wait for health
+#   make distributed-e2e-run     # Submit scan + tail worker logs
+#   make distributed-e2e-down    # Tear down everything
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: osm-e2e-redis
+    ports:
+      - "6399:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - osm-e2e-network
+
+  master:
+    build:
+      context: ../..
+      dockerfile: build/docker/Dockerfile
+    image: osmedeus:e2e
+    container_name: osm-e2e-master
+    ports:
+      - "8002:8002"
+    volumes:
+      - workspaces:/root/workspaces-osmedeus
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["serve", "--master", "--redis-url", "redis://redis:6379", "-A"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    networks:
+      - osm-e2e-network
+
+  worker:
+    image: osmedeus:e2e
+    container_name: osm-e2e-worker
+    volumes:
+      - workspaces:/root/workspaces-osmedeus
+    depends_on:
+      redis:
+        condition: service_healthy
+      master:
+        condition: service_healthy
+    command: ["worker", "join", "--redis-url", "redis://redis:6379"]
+    networks:
+      - osm-e2e-network
+
+volumes:
+  workspaces:
+    driver: local
+
+networks:
+  osm-e2e-network:
+    driver: bridge

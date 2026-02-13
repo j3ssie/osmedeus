@@ -327,7 +327,7 @@ const (
 
 	// DNS and custom asset import functions
 	FnDBImportDNSAsset    = "db_import_dns_asset"    // db_import_dns_asset(workspace, file_path) -> int
-	FnDBImportCustomAsset = "db_import_custom_asset" // db_import_custom_asset(workspace, file_path) -> map
+	FnDBImportCustomAsset = "db_import_custom_asset" // db_import_custom_asset(workspace, file_path, [asset_type], [source]) -> map
 
 	// SARIF import functions
 	FnDBImportSARIF          = "db_import_sarif"           // db_import_sarif(workspace, file_path) -> map (stats)
@@ -916,7 +916,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnDBImportVuln, "db_import_vuln(workspace, json_data)", "Import single vulnerability from JSON (nuclei format)", "bool", "db_import_vuln('{{Workspace}}', '{\"template-id\":\"...\",\"info\":{\"name\":\"...\",\"severity\":\"high\"}}')"},
 			{FnDBImportVulnFromFile, "db_import_vuln_from_file(workspace, file_path)", "Import vulnerabilities from JSONL file (nuclei format)", "int", "db_import_vuln_from_file('{{Workspace}}', '{{Output}}/nuclei.jsonl')"},
 			{FnDBImportDNSAsset, "db_import_dns_asset(workspace, file_path)", "Import DNS records from zone-style file (domain TYPE value per line), groups by domain", "int", "db_import_dns_asset('{{Workspace}}', '{{Output}}/dns-records.txt')"},
-			{FnDBImportCustomAsset, "db_import_custom_asset(workspace, file_path)", "Import assets from JSONL file with direct field mapping (any Asset column can be set per line)", "map", "db_import_custom_asset('{{Workspace}}', '{{Output}}/custom-assets.jsonl')"},
+			{FnDBImportCustomAsset, "db_import_custom_asset(workspace, file_path, [asset_type], [source])", "Import assets from JSONL file with direct field mapping; optional asset_type/source defaults apply when line has no value", "map", "db_import_custom_asset('{{Workspace}}', '{{Output}}/custom-assets.jsonl', 'subdomain', 'recon')"},
 			{FnDBImportSARIF, "db_import_sarif(workspace, file_path)", "Import vulnerabilities from SARIF file (Semgrep, Trivy, etc.)", "map", "db_import_sarif('{{Workspace}}', '{{Output}}/semgrep.sarif')"},
 			{FnDBAssetDiff, "db_asset_diff(workspace)", "Get asset diff as JSONL string", "string", "db_asset_diff('{{Workspace}}')"},
 			{FnDBVulnDiff, "db_vuln_diff(workspace)", "Get vulnerability diff as JSONL string", "string", "db_vuln_diff('{{Workspace}}')"},

@@ -438,7 +438,6 @@ definitions:
       embeddings:
         items:
           items:
-            format: float64
             type: number
           type: array
         type: array

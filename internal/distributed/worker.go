@@ -11,9 +11,9 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
 	"github.com/j3ssie/osmedeus/v5/internal/executor"
+	"github.com/j3ssie/osmedeus/v5/internal/heuristics"
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
-	"go.uber.org/zap"
 )
 
 // Worker represents a worker node that processes tasks
@@ -24,7 +24,6 @@ type Worker struct {
 	config   *config.Config
 	executor *executor.Executor
 	loader   *parser.Loader
-	logger   *zap.Logger
 	printer  *terminal.Printer
 
 	// Stats
@@ -42,8 +41,9 @@ func NewWorker(cfg *config.Config) (*Worker, error) {
 	hostname, _ := os.Hostname()
 	workerID := fmt.Sprintf("%s-%s", hostname, uuid.NewString()[:8])
 
-	logger, _ := zap.NewProduction()
 	exec := executor.NewExecutor()
+	loader := parser.NewLoader(cfg.WorkflowsPath)
+	exec.SetLoader(loader)
 
 	return &Worker{
 		ID:       workerID,
@@ -51,8 +51,7 @@ func NewWorker(cfg *config.Config) (*Worker, error) {
 		client:   client,
 		config:   cfg,
 		executor: exec,
-		loader:   parser.NewLoader(cfg.WorkflowsPath),
-		logger:   logger,
+		loader:   loader,
 		printer:  terminal.NewPrinter(),
 	}, nil
 }
@@ -88,12 +87,16 @@ func (w *Worker) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			w.logger.Info("worker shutting down", zap.String("worker_id", w.ID))
+			w.printer.Info("Worker %s shutting down...", terminal.Cyan(w.ID))
 			w.cleanup(context.Background())
 			return nil
 		default:
 			if err := w.processNextTask(ctx); err != nil {
-				w.logger.Error("error processing task", zap.Error(err))
+				// Suppress context-canceled errors during shutdown
+				if ctx.Err() != nil {
+					continue
+				}
+				w.printer.Warning("Error processing task: %s", err)
 				time.Sleep(time.Second) // Brief pause before retrying
 			}
 		}
@@ -128,7 +131,7 @@ func (w *Worker) heartbeatLoop(ctx context.Context) {
 			return
 		case <-ticker.C:
 			if err := w.client.UpdateWorkerHeartbeat(ctx, w.ID); err != nil {
-				w.logger.Warn("failed to send heartbeat", zap.Error(err))
+				w.printer.Warning("Failed to send heartbeat: %s", err)
 			}
 		}
 	}
@@ -145,17 +148,13 @@ func (w *Worker) processNextTask(ctx context.Context) error {
 		return nil // Timeout, no task available
 	}
 
-	w.logger.Info("received task",
-		zap.String("task_id", task.ID),
-		zap.String("workflow", task.WorkflowName),
-		zap.String("target", task.Target),
-	)
-	w.printer.Info("Received task %s: %s -> %s", task.ID, task.WorkflowName, task.Target)
+	w.printer.Info("Received task %s: %s -> %s",
+		terminal.Cyan(task.ID), terminal.Yellow(task.WorkflowName), terminal.Green(task.Target))
 
 	// Mark task as running
 	task.MarkRunning(w.ID)
 	if err := w.client.SetTaskRunning(ctx, task); err != nil {
-		w.logger.Error("failed to mark task running", zap.Error(err))
+		w.printer.Warning("Failed to mark task running: %s", err)
 	}
 
 	// Update worker status
@@ -166,21 +165,21 @@ func (w *Worker) processNextTask(ctx context.Context) error {
 
 	// Report result
 	if err := w.client.SetTaskResult(ctx, result); err != nil {
-		w.logger.Error("failed to report task result", zap.Error(err))
+		w.printer.Warning("Failed to report task result: %s", err)
 	}
 
 	// Remove from running
 	if err := w.client.RemoveTaskRunning(ctx, task.ID); err != nil {
-		w.logger.Error("failed to remove task from running", zap.Error(err))
+		w.printer.Warning("Failed to remove task from running: %s", err)
 	}
 
 	// Update stats and status
 	if result.Status == TaskStatusCompleted {
 		w.tasksComplete++
-		w.printer.Success("Task %s completed", task.ID)
+		w.printer.Success("Task %s completed", terminal.Cyan(task.ID))
 	} else {
 		w.tasksFailed++
-		w.printer.Error("Task %s failed: %s", task.ID, result.Error)
+		w.printer.Error("Task %s failed: %s", terminal.Cyan(task.ID), result.Error)
 	}
 	w.updateStatus(ctx, "idle", "")
 
@@ -211,6 +210,35 @@ func (w *Worker) executeTask(ctx context.Context, task *Task) *TaskResult {
 		}
 	}
 
+	// Create run record for distributed tracking
+	now := time.Now()
+	runUUID := uuid.New().String()
+	paramsInterface := make(map[string]interface{})
+	for k, v := range params {
+		paramsInterface[k] = v
+	}
+	totalSteps := countWorkflowSteps(workflow, w.loader)
+
+	run := &database.Run{
+		RunUUID:      runUUID,
+		WorkflowName: workflow.Name,
+		WorkflowKind: string(workflow.Kind),
+		Target:       task.Target,
+		Params:       paramsInterface,
+		Status:       "running",
+		TriggerType:  "distributed",
+		StartedAt:    &now,
+		TotalSteps:   totalSteps,
+		Workspace:    computeWorkspace(task.Target),
+		RunPriority:  "high",
+		RunMode:      "distributed",
+	}
+	// Goes through distributed hooks → Redis → master DB
+	_ = database.CreateRun(ctx, run)
+
+	// Wire up executor for run tracking
+	w.executor.SetDBRunUUID(runUUID)
+
 	// Execute based on workflow kind
 	var wfResult *core.WorkflowResult
 	if workflow.IsFlow() {
@@ -219,26 +247,42 @@ func (w *Worker) executeTask(ctx context.Context, task *Task) *TaskResult {
 		wfResult, err = w.executor.ExecuteModule(ctx, workflow, params, w.config)
 	}
 
+	// Determine final status and error message
+	var finalStatus string
+	var errorMsg string
 	if err != nil {
+		finalStatus = "failed"
+		errorMsg = err.Error()
 		result.Status = TaskStatusFailed
 		result.Error = err.Error()
-		return result
-	}
-
-	// Check result status
-	if wfResult.Status == core.RunStatusFailed {
+	} else if wfResult.Status == core.RunStatusFailed {
+		finalStatus = "failed"
 		result.Status = TaskStatusFailed
 		if wfResult.Error != nil {
-			result.Error = wfResult.Error.Error()
+			errorMsg = wfResult.Error.Error()
+			result.Error = errorMsg
 		} else {
-			result.Error = "workflow execution failed"
+			errorMsg = "workflow execution failed"
+			result.Error = errorMsg
 		}
 	} else {
+		finalStatus = "completed"
 		result.Status = TaskStatusCompleted
 		result.Exports = wfResult.Exports
 	}
 
-	result.CompletedAt = time.Now()
+	// Send final status update to master via Redis hooks
+	completedAt := time.Now()
+	run.Status = finalStatus
+	run.ErrorMessage = errorMsg
+	run.CompletedAt = &completedAt
+	run.UpdatedAt = completedAt
+	if finalStatus == "completed" {
+		run.CompletedSteps = totalSteps
+	}
+	_ = database.CreateRun(ctx, run) // upsert — master matches by run_uuid
+
+	result.CompletedAt = completedAt
 	return result
 }
 
@@ -255,15 +299,15 @@ func (w *Worker) updateStatus(ctx context.Context, status string, taskID string)
 		TasksFailed:   w.tasksFailed,
 	}
 	if err := w.client.RegisterWorker(ctx, info); err != nil {
-		w.logger.Warn("failed to update worker status", zap.Error(err))
+		w.printer.Warning("Failed to update worker status: %s", err)
 	}
 }
 
 // cleanup removes the worker from the registry
 func (w *Worker) cleanup(ctx context.Context) {
-	w.printer.Info("Cleaning up worker %s...", w.ID)
+	w.printer.Info("Cleaning up worker %s...", terminal.Cyan(w.ID))
 	if err := w.client.RemoveWorker(ctx, w.ID); err != nil {
-		w.logger.Warn("failed to remove worker", zap.Error(err))
+		w.printer.Warning("Failed to remove worker: %s", err)
 	}
 	w.client.Close()
 }
@@ -276,6 +320,35 @@ func (w *Worker) GetID() string {
 // GetClient returns the Redis client
 func (w *Worker) GetClient() *Client {
 	return w.client
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+// countWorkflowSteps counts the total number of steps in a workflow.
+// For flows, it sums the steps of all referenced modules.
+func countWorkflowSteps(workflow *core.Workflow, loader *parser.Loader) int {
+	if workflow.IsFlow() && loader != nil {
+		total := 0
+		for _, mod := range workflow.Modules {
+			m, err := loader.LoadWorkflow(mod.Name)
+			if err == nil {
+				total += len(m.Steps)
+			}
+		}
+		return total
+	}
+	return len(workflow.Steps)
+}
+
+// computeWorkspace derives a workspace name from the target using heuristic analysis.
+func computeWorkspace(target string) string {
+	info, err := heuristics.Analyze(target, "basic")
+	if err == nil && info != nil && info.RootDomain != "" {
+		return info.RootDomain
+	}
+	return target
 }
 
 // =============================================================================
@@ -326,12 +399,12 @@ func (w *Worker) registerDistributedHooks() {
 		},
 	}
 	database.RegisterDistributedHooks(hooks)
-	w.logger.Info("registered distributed hooks for database writes")
+	w.printer.Info("Registered distributed hooks for database writes")
 }
 
 // unregisterDistributedHooks removes the distributed hooks
 func (w *Worker) unregisterDistributedHooks() {
 	database.UnregisterDistributedHooks()
 	config.SetWorkerMode(false, "")
-	w.logger.Info("unregistered distributed hooks")
+	w.printer.Info("Unregistered distributed hooks")
 }

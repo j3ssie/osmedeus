@@ -115,8 +115,6 @@ func runServer(cmd *cobra.Command, args []string) error {
 				log.Error("Master error", zap.Error(err))
 			}
 		}()
-
-		log.Info("Started distributed master node")
 	}
 
 	// Create server with master reference for distributed endpoints

@@ -50,6 +50,9 @@ var workerJoinCmd = &cobra.Command{
 			return errRedisNotConfigured
 		}
 
+		// Ensure external-binaries are in PATH so workflow steps can find tools
+		ensureExternalBinariesInPath(cfg)
+
 		// Create worker
 		worker, err := distributed.NewWorker(cfg)
 		if err != nil {

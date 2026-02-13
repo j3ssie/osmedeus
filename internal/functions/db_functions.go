@@ -208,6 +208,16 @@ func unmarshalAssetJSON(rawJSON []byte, asset *database.Asset) error {
 				}
 			}
 		}
+		// Backward compat: accept "a" key for DNS records when "dns_records" is absent
+		if len(asset.DnsRecords) == 0 {
+			if aArr, ok := raw["a"].([]interface{}); ok {
+				for _, r := range aArr {
+					if s, ok := r.(string); ok {
+						asset.DnsRecords = append(asset.DnsRecords, s)
+					}
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -1978,7 +1988,7 @@ func (vf *vmFunc) dbSelectToJSONL(call goja.FunctionCall) goja.Value {
 }
 
 // dbImportAssetFromFile imports assets from a JSONL file (httpx format)
-// Usage: db_import_asset_from_file(workspace, file_path) -> map with stats {new, updated, unchanged, errors, total}
+// Usage: db_import_asset_from_file(workspace, file_path[, source]) -> map with stats {new, updated, unchanged, errors, total}
 func (vf *vmFunc) dbImportAssetFromFile(call goja.FunctionCall) goja.Value {
 	logger.Get().Debug("Calling " + terminal.HiGreen("dbImportAssetFromFile"))
 
@@ -1988,6 +1998,12 @@ func (vf *vmFunc) dbImportAssetFromFile(call goja.FunctionCall) goja.Value {
 
 	workspace := call.Argument(0).String()
 	filePath := call.Argument(1).String()
+
+	// Parse optional source (3rd arg)
+	var defaultSource string
+	if len(call.Arguments) >= 3 {
+		defaultSource = call.Argument(2).String()
+	}
 
 	if workspace == "" || workspace == "undefined" {
 		return vf.errorValue("workspace cannot be empty")
@@ -2036,6 +2052,10 @@ func (vf *vmFunc) dbImportAssetFromFile(call goja.FunctionCall) goja.Value {
 		// Map httpx fields to Asset model
 		asset := mapJSONToAsset(data, workspace, line)
 		asset.LastSeenAt = now
+
+		if asset.Source == "" && defaultSource != "" {
+			asset.Source = defaultSource
+		}
 
 		// Check if asset already exists
 		var existing database.Asset
@@ -2185,8 +2205,16 @@ func mapJSONToAsset(data map[string]interface{}, workspace, rawLine string) data
 		asset.HostIP = v
 	}
 
-	// DNS A records
-	if aRecords, ok := data["a"].([]interface{}); ok {
+	// DNS records - prefer "dns_records" key, fall back to "a" for httpx compat
+	if aRecords, ok := data["dns_records"].([]interface{}); ok {
+		var records []string
+		for _, r := range aRecords {
+			if s, ok := r.(string); ok {
+				records = append(records, s)
+			}
+		}
+		asset.DnsRecords = records
+	} else if aRecords, ok := data["a"].([]interface{}); ok {
 		var records []string
 		for _, r := range aRecords {
 			if s, ok := r.(string); ok {
@@ -2224,9 +2252,12 @@ func mapJSONToAsset(data map[string]interface{}, workspace, rawLine string) data
 		}
 	}
 
-	// Webserver as source
-	if v, ok := data["webserver"].(string); ok {
-		asset.Source = v
+	// Merge webserver and cdn_name into remarks
+	if v, ok := data["webserver"].(string); ok && v != "" {
+		asset.Remarks = append(asset.Remarks, v)
+	}
+	if v, ok := data["cdn_name"].(string); ok && v != "" {
+		asset.Remarks = append(asset.Remarks, v)
 	}
 
 	// Prefer URL over raw IP for asset_value (more descriptive identifier)
@@ -2391,11 +2422,25 @@ func (vf *vmFunc) dbImportCustomAsset(call goja.FunctionCall) goja.Value {
 	logger.Get().Debug("Calling " + terminal.HiGreen("dbImportCustomAsset"))
 
 	if len(call.Arguments) < 2 {
-		return vf.errorValue("db_import_custom_asset requires 2 arguments: workspace, file_path")
+		return vf.errorValue("db_import_custom_asset requires at least 2 arguments: workspace, file_path")
 	}
 
 	workspace := call.Argument(0).String()
 	filePath := call.Argument(1).String()
+
+	var defaultAssetType, defaultSource string
+	if len(call.Arguments) >= 3 {
+		defaultAssetType = call.Argument(2).String()
+		if defaultAssetType == "undefined" {
+			defaultAssetType = ""
+		}
+	}
+	if len(call.Arguments) >= 4 {
+		defaultSource = call.Argument(3).String()
+		if defaultSource == "undefined" {
+			defaultSource = ""
+		}
+	}
 
 	if workspace == "" || workspace == "undefined" {
 		return vf.errorValue("workspace cannot be empty")
@@ -2440,6 +2485,27 @@ func (vf *vmFunc) dbImportCustomAsset(call goja.FunctionCall) goja.Value {
 		// Force workspace from function argument
 		asset.Workspace = workspace
 		asset.LastSeenAt = now
+
+		// Default asset_value to url when missing
+		if asset.AssetValue == "" && asset.URL != "" {
+			asset.AssetValue = asset.URL
+		}
+
+		// Merge webserver into remarks
+		var rawData map[string]interface{}
+		if json.Unmarshal([]byte(line), &rawData) == nil {
+			if ws, ok := rawData["webserver"].(string); ok && ws != "" {
+				asset.Remarks = append(asset.Remarks, ws)
+			}
+		}
+
+		// Apply optional defaults when the JSONL line has no value
+		if asset.AssetType == "" && defaultAssetType != "" {
+			asset.AssetType = defaultAssetType
+		}
+		if asset.Source == "" && defaultSource != "" {
+			asset.Source = defaultSource
+		}
 
 		// Check if asset already exists
 		var existing database.Asset

@@ -1,4 +1,4 @@
-.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-docker test-ssh test-distributed test-canary-all test-canary-repo test-canary-domain test-canary-ip test-canary-general canary-up canary-down test-all test-summary test-ci clean install install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release run-github-action docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
+.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-docker test-ssh test-distributed distributed-e2e-up distributed-e2e-run distributed-e2e-down test-canary-all test-canary-repo test-canary-domain test-canary-ip test-canary-general canary-up canary-down test-all test-summary test-ci clean install install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release run-github-action docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
 
 # Go parameters
 GOCMD=go
@@ -165,6 +165,29 @@ test-distributed: build install-gotestsum
 	$(TESTCMD) $(TESTFLAGS) -run Distributed ./test/e2e/...
 	@echo "$(PREFIX) Cleaning up..."
 	docker-compose -f build/docker/docker-compose.distributed-test.yaml down -v
+
+# Distributed E2E stack: redis + master + worker in Docker, then submit a real scan
+distributed-e2e-up:
+	@echo "$(PREFIX) Building distributed E2E stack..."
+	docker-compose -f build/docker/docker-compose.distributed-e2e.yaml build
+	@echo "$(PREFIX) Starting distributed E2E stack (redis + master + worker)..."
+	docker-compose -f build/docker/docker-compose.distributed-e2e.yaml up -d
+	@echo "$(PREFIX) Waiting for master to be healthy..."
+	@for i in $$(seq 1 30); do \
+		curl -sf http://localhost:8002/health > /dev/null 2>&1 && break; \
+		sleep 2; \
+	done
+	@echo "$(PREFIX) Stack is ready. Master: http://localhost:8002"
+
+distributed-e2e-run:
+	@echo "$(PREFIX) Submitting distributed scan from master container..."
+	docker exec osm-e2e-master osmedeus run -f repo -D -t https://github.com/juice-shop/juice-shop
+	@echo "$(PREFIX) Scan submitted. Tailing worker logs (Ctrl+C to stop)..."
+	docker-compose -f build/docker/docker-compose.distributed-e2e.yaml logs -f worker
+
+distributed-e2e-down:
+	@echo "$(PREFIX) Stopping distributed E2E stack..."
+	docker-compose -f build/docker/docker-compose.distributed-e2e.yaml down -v
 
 # API E2E tests (requires Docker for Redis, builds binary first)
 test-e2e-api: build install-gotestsum
@@ -426,6 +449,9 @@ help:
 	@echo "    make test-docker      Run Docker runner tests"
 	@echo "    make test-ssh         Run SSH runner unit tests"
 	@echo "    make test-distributed Run distributed scan E2E tests (requires Redis)"
+	@echo "    make distributed-e2e-up    Build and start distributed E2E stack (Docker)"
+	@echo "    make distributed-e2e-run   Submit a real scan to the distributed stack"
+	@echo "    make distributed-e2e-down  Tear down distributed E2E stack"
 	@echo "    make test-canary-all   Run all canary tests (real scans in Docker, 30-60min)"
 	@echo "    make test-canary-repo  Run repo scan canary (juice-shop SAST, ~25min)"
 	@echo "    make test-canary-domain Run domain-lite canary (hackerone.com, ~20min)"

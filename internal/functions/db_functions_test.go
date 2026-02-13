@@ -86,6 +86,19 @@ func TestDbImportAssetFromFile(t *testing.T) {
 	assert.Equal(t, "text/html", asset.ContentType)
 	assert.Contains(t, asset.Technologies, "Cloudflare")
 	assert.NotEmpty(t, asset.RawJsonData)
+
+	// Check webserver and cdn_name are in remarks
+	assert.Contains(t, asset.Remarks, "cloudflare") // webserver
+	assert.Contains(t, asset.Remarks, "cloudflare") // cdn_name (same value here)
+
+	// Check gslink asset has both nginx and cloudfront in remarks
+	var gsAsset database.Asset
+	err = db.NewSelect().Model(&gsAsset).
+		Where("asset_value = ?", "gslink.hackerone.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Contains(t, gsAsset.Remarks, "nginx")
+	assert.Contains(t, gsAsset.Remarks, "cloudfront")
 }
 
 func TestDbImportAssetFromFile_EmptyWorkspace(t *testing.T) {
@@ -321,7 +334,8 @@ func TestMapJSONToAsset(t *testing.T) {
 	assert.Equal(t, []string{"1.2.3.4", "5.6.7.8"}, asset.DnsRecords)
 	assert.Equal(t, []string{"Nginx", "PHP"}, asset.Technologies)
 	assert.Equal(t, "123ms", asset.ResponseTime)
-	assert.Equal(t, "nginx", asset.Source)
+	assert.Equal(t, "", asset.Source) // webserver no longer mapped to source
+	assert.Contains(t, asset.Remarks, "nginx") // webserver now in remarks
 	assert.NotEmpty(t, asset.RawJsonData)
 }
 
@@ -1143,4 +1157,164 @@ func TestAssetSizeAndLOCFields(t *testing.T) {
 	assert.Equal(t, int64(512000), fetched.Size)
 	assert.Equal(t, int64(12000), fetched.LOC)
 	assert.Equal(t, "https://github.com/example-corp/web-app", fetched.ExternalURL)
+}
+
+// --- DNS Records Key Tests ---
+
+func TestMapJSONToAsset_DnsRecordsKey(t *testing.T) {
+	// "dns_records" key should be accepted as the primary key
+	data := map[string]interface{}{
+		"host":        "example.com",
+		"url":         "http://example.com",
+		"dns_records": []interface{}{"10.0.0.1", "10.0.0.2"},
+	}
+	asset := mapJSONToAsset(data, "test-workspace", `{"host":"example.com"}`)
+	assert.Equal(t, []string{"10.0.0.1", "10.0.0.2"}, asset.DnsRecords)
+
+	// "a" key should still work as a fallback
+	dataLegacy := map[string]interface{}{
+		"host": "legacy.com",
+		"url":  "http://legacy.com",
+		"a":    []interface{}{"1.2.3.4"},
+	}
+	assetLegacy := mapJSONToAsset(dataLegacy, "test-workspace", `{"host":"legacy.com"}`)
+	assert.Equal(t, []string{"1.2.3.4"}, assetLegacy.DnsRecords)
+
+	// When both keys exist, "dns_records" takes precedence
+	dataBoth := map[string]interface{}{
+		"host":        "both.com",
+		"url":         "http://both.com",
+		"dns_records": []interface{}{"10.0.0.1"},
+		"a":           []interface{}{"1.2.3.4"},
+	}
+	assetBoth := mapJSONToAsset(dataBoth, "test-workspace", `{"host":"both.com"}`)
+	assert.Equal(t, []string{"10.0.0.1"}, assetBoth.DnsRecords)
+}
+
+// --- Optional Defaults Tests ---
+
+func TestDbImportCustomAsset_OptionalDefaults(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Create JSONL: first line has no asset_type/source, second has them
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "defaults.jsonl")
+	content := `{"asset_value":"no-type.example.com","url":"http://no-type.example.com"}` + "\n" +
+		`{"asset_value":"has-type.example.com","url":"http://has-type.example.com","asset_type":"http","source":"httpx"}` + "\n"
+	err := os.WriteFile(testFile, []byte(content), 0644)
+	require.NoError(t, err)
+
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`db_import_custom_asset("test-workspace", "`+testFile+`", "subdomain", "recon")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	stats := result.(map[string]interface{})
+	assert.Equal(t, 2, stats["new"])
+
+	ctx := context.Background()
+	db := database.GetDB()
+
+	// First asset should have defaults applied
+	var asset1 database.Asset
+	err = db.NewSelect().Model(&asset1).
+		Where("workspace = ?", "test-workspace").
+		Where("asset_value = ?", "no-type.example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "subdomain", asset1.AssetType)
+	assert.Equal(t, "recon", asset1.Source)
+
+	// Second asset should keep its own values
+	var asset2 database.Asset
+	err = db.NewSelect().Model(&asset2).
+		Where("workspace = ?", "test-workspace").
+		Where("asset_value = ?", "has-type.example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "http", asset2.AssetType)
+	assert.Equal(t, "httpx", asset2.Source)
+}
+
+func TestDbImportCustomAsset_PartialDefaults(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "partial.jsonl")
+	content := `{"asset_value":"partial.example.com","url":"http://partial.example.com"}` + "\n"
+	err := os.WriteFile(testFile, []byte(content), 0644)
+	require.NoError(t, err)
+
+	registry := NewRegistry()
+	// Only 3rd arg (asset_type) provided, no 4th arg (source)
+	result, err := registry.Execute(
+		`db_import_custom_asset("test-workspace", "`+testFile+`", "dns")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+	stats := result.(map[string]interface{})
+	assert.Equal(t, 1, stats["new"])
+
+	ctx := context.Background()
+	db := database.GetDB()
+
+	var asset database.Asset
+	err = db.NewSelect().Model(&asset).
+		Where("workspace = ?", "test-workspace").
+		Where("asset_value = ?", "partial.example.com").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "dns", asset.AssetType)
+	assert.Equal(t, "", asset.Source)
+}
+
+func TestDbImportCustomAsset_ContentDiscovery(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	testFile := "../../test/testdata/sample-jsonl-output/cusom-content-discovery.jsonl"
+	_, err := os.Stat(testFile)
+	require.NoError(t, err, "sample cusom-content-discovery.jsonl file must exist")
+
+	result, err := registry.Execute(
+		`db_import_custom_asset("test-workspace", "`+testFile+`", "url", "content-discovery")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+
+	stats, ok := result.(map[string]interface{})
+	require.True(t, ok, "result should be a map")
+	assert.Equal(t, 9, stats["new"])
+	assert.Equal(t, 9, stats["total"])
+	assert.Equal(t, 0, stats["errors"])
+
+	ctx := context.Background()
+	db := database.GetDB()
+	require.NotNil(t, db)
+
+	// Line 1: url=http://cdn.doitac.example.com/common/, no asset_value, webserver=UploadServer
+	var asset1 database.Asset
+	err = db.NewSelect().Model(&asset1).
+		Where("workspace = ?", "test-workspace").
+		Where("asset_value = ?", "http://cdn.doitac.example.com/common/").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "http://cdn.doitac.example.com/common/", asset1.URL)
+	assert.Contains(t, asset1.Remarks, "UploadServer")
+
+	// Line 6: url=http://e-procurement.example.com/static, remarks=["Modern-App"], webserver=SGW
+	var asset6 database.Asset
+	err = db.NewSelect().Model(&asset6).
+		Where("workspace = ?", "test-workspace").
+		Where("asset_value = ?", "http://e-procurement.example.com/static").
+		Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "http://e-procurement.example.com/static", asset6.URL)
+	assert.Contains(t, asset6.Remarks, "Modern-App")
+	assert.Contains(t, asset6.Remarks, "SGW")
 }

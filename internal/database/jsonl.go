@@ -228,7 +228,9 @@ func ParseAssetLine(line []byte, defaultWorkspace, source string) (*Asset, error
 	if v, ok := raw["host_ip"].(string); ok {
 		asset.HostIP = v
 	}
-	if v, ok := raw["a"].([]interface{}); ok {
+	if v, ok := raw["dns_records"].([]interface{}); ok {
+		asset.DnsRecords = interfaceSliceToStringSlice(v)
+	} else if v, ok := raw["a"].([]interface{}); ok {
 		asset.DnsRecords = interfaceSliceToStringSlice(v)
 	}
 	if v, ok := raw["tls"].(string); ok {
