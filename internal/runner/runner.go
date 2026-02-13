@@ -1,10 +1,10 @@
 package runner
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 )
@@ -13,32 +13,91 @@ import (
 // with very large command outputs (10MB default)
 const MaxOutputSize = 10 * 1024 * 1024
 
-// combineOutput efficiently combines stdout and stderr using a single allocation.
-// This reduces memory allocations from 3 to 1 compared to stdout.String() + stderr.String().
-// Outputs exceeding MaxOutputSize are truncated with a warning message.
-func combineOutput(stdout, stderr *bytes.Buffer) string {
-	totalLen := stdout.Len() + stderr.Len()
+// MaxStderrSize limits stderr capture (1MB) since stderr is typically small
+const MaxStderrSize = 1 * 1024 * 1024
+
+// LimitedBuffer wraps bytes.Buffer and silently discards writes after maxSize.
+// This prevents unbounded memory growth when a tool produces GBs of output.
+type LimitedBuffer struct {
+	buf      []byte
+	maxSize  int
+	overflow bool
+	mu       sync.Mutex
+}
+
+// NewLimitedBuffer creates a LimitedBuffer with the given max size.
+func NewLimitedBuffer(maxSize int) *LimitedBuffer {
+	return &LimitedBuffer{
+		maxSize: maxSize,
+	}
+}
+
+// Write implements io.Writer. Writes beyond maxSize are silently discarded.
+func (lb *LimitedBuffer) Write(p []byte) (n int, err error) {
+	lb.mu.Lock()
+	defer lb.mu.Unlock()
+
+	if len(lb.buf) >= lb.maxSize {
+		lb.overflow = true
+		return len(p), nil // pretend we wrote it all
+	}
+
+	remaining := lb.maxSize - len(lb.buf)
+	if len(p) > remaining {
+		lb.buf = append(lb.buf, p[:remaining]...)
+		lb.overflow = true
+		return len(p), nil
+	}
+
+	lb.buf = append(lb.buf, p...)
+	return len(p), nil
+}
+
+// Bytes returns the buffered bytes.
+func (lb *LimitedBuffer) Bytes() []byte {
+	lb.mu.Lock()
+	defer lb.mu.Unlock()
+	return lb.buf
+}
+
+// Len returns the number of buffered bytes.
+func (lb *LimitedBuffer) Len() int {
+	lb.mu.Lock()
+	defer lb.mu.Unlock()
+	return len(lb.buf)
+}
+
+// Overflow returns true if any writes were discarded.
+func (lb *LimitedBuffer) Overflow() bool {
+	lb.mu.Lock()
+	defer lb.mu.Unlock()
+	return lb.overflow
+}
+
+// combineOutput efficiently combines stdout and stderr from LimitedBuffers.
+// Appends "[output truncated]" if either buffer overflowed.
+func combineOutput(stdout, stderr *LimitedBuffer) string {
+	stdoutBytes := stdout.Bytes()
+	stderrBytes := stderr.Bytes()
+	totalLen := len(stdoutBytes) + len(stderrBytes)
+
 	if totalLen == 0 {
 		return ""
 	}
 
-	if totalLen > MaxOutputSize {
-		// Truncate with message
-		var sb strings.Builder
-		sb.Grow(MaxOutputSize + 30)
-		limit := min(MaxOutputSize, stdout.Len())
-		sb.Write(stdout.Bytes()[:limit])
-		if remaining := MaxOutputSize - limit; remaining > 0 && stderr.Len() > 0 {
-			sb.Write(stderr.Bytes()[:min(remaining, stderr.Len())])
-		}
-		sb.WriteString("\n[output truncated]")
-		return sb.String()
-	}
+	truncated := stdout.Overflow() || stderr.Overflow()
 
 	var sb strings.Builder
-	sb.Grow(totalLen)
-	sb.Write(stdout.Bytes())
-	sb.Write(stderr.Bytes())
+	if truncated {
+		sb.Grow(totalLen + 20)
+	} else {
+		sb.Grow(totalLen)
+	}
+	sb.Write(stdoutBytes)
+	sb.Write(stderrBytes)
+	if truncated {
+		sb.WriteString("\n[output truncated]")
+	}
 	return sb.String()
 }
 

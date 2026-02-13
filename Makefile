@@ -50,7 +50,9 @@ build:
 	@mkdir -p $(BINARY_DIR)
 	$(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME) ./cmd/osmedeus
 	@echo "$(PREFIX) Installing $(BINARY_NAME) to $(GOBIN_PATH)..."
-	@cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/
+	@mkdir -p $(GOBIN_PATH)
+	@rm -f $(GOBIN_PATH)/$(BINARY_NAME)
+	@cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/$(BINARY_NAME)
 
 # Install to GOBIN (or GOPATH/bin) - requires prior build
 install:
@@ -59,7 +61,7 @@ install:
 		echo "$(PREFIX) Binary not found, building first..."; \
 		$(MAKE) build; \
 	else \
-		cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/; \
+		mkdir -p $(GOBIN_PATH) && rm -f $(GOBIN_PATH)/$(BINARY_NAME) && cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/$(BINARY_NAME); \
 	fi
 
 # Build for multiple platforms
@@ -349,7 +351,9 @@ snapshot-release:
 	@mkdir -p $(BINARY_DIR)
 	$(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME) ./cmd/osmedeus
 	@echo "$(PREFIX) Installing $(BINARY_NAME) to $(GOBIN_PATH)..."
-	@cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/
+	@mkdir -p $(GOBIN_PATH)
+	@rm -f $(GOBIN_PATH)/$(BINARY_NAME)
+	@cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/$(BINARY_NAME)
 	@echo "$(PREFIX) Building snapshot release"
 	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --clean --skip=announce,publish,validate
 	@echo "$(PREFIX) Install script copied to dist/install.sh"
@@ -360,7 +364,9 @@ local-release:
 	@echo "$(PREFIX) Building $(BINARY_NAME)..."
 	@mkdir -p $(BINARY_DIR)
 	$(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME) ./cmd/osmedeus
-	@cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/
+	@mkdir -p $(GOBIN_PATH)
+	@rm -f $(GOBIN_PATH)/$(BINARY_NAME)
+	@cp $(BINARY_DIR)/$(BINARY_NAME) $(GOBIN_PATH)/$(BINARY_NAME)
 	@echo "$(PREFIX) Building local snapshot for mac and linux arm only for testing..."
 	export GORELEASER_CURRENT_TAG="$(VERSION)" && goreleaser release --config test/goreleaser-debug.yaml --clean --skip=announce,publish,validate
 

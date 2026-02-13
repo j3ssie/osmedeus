@@ -723,6 +723,12 @@ func installBinariesViaNix(names []string, registry installer.BinaryRegistry, bi
 
 		// Check if already in PATH
 		if installer.IsBinaryInPath(name) {
+			if !installer.IsCoreUnixTool(name) {
+				entry, ok := registry[name]
+				if ok {
+					_ = installer.CopyInstalledBinaryToFolder(name, &entry, binariesFolder)
+				}
+			}
 			printer.Info("Binary '%s' already available in PATH, skipping", terminal.HiBlue(name))
 			continue
 		}
@@ -1773,6 +1779,12 @@ func installBinariesParallel(names []string, registry installer.BinaryRegistry,
 	var toInstall []string
 	for _, name := range names {
 		if installer.IsBinaryInPath(name) {
+			if !installer.IsCoreUnixTool(name) {
+				entry, ok := registry[name]
+				if ok {
+					_ = installer.CopyInstalledBinaryToFolder(name, &entry, binariesFolder)
+				}
+			}
 			status[name] = "installed"
 		} else {
 			toInstall = append(toInstall, name)

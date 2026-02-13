@@ -34,6 +34,7 @@ server:
 	cfg := hotCfg.Get()
 	if cfg == nil {
 		t.Fatal("Expected config to be loaded")
+		return
 	}
 	if cfg.Server.Port != 8002 {
 		t.Errorf("Expected port 8002, got %d", cfg.Server.Port)

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/j3ssie/osmedeus/v5/internal/json"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -387,7 +388,7 @@ func (vf *vmFunc) dbPartialImportAssetFile(call goja.FunctionCall) goja.Value {
 	if err != nil {
 		return vf.errorValue(fmt.Sprintf("failed to open file: %v", err))
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	ctx := context.Background()
 	count := 0
@@ -2183,6 +2184,11 @@ func mapJSONToAsset(data map[string]interface{}, workspace, rawLine string) data
 	// Webserver as source
 	if v, ok := data["webserver"].(string); ok {
 		asset.Source = v
+	}
+
+	// Prefer URL over raw IP for asset_value (more descriptive identifier)
+	if asset.AssetValue != "" && asset.URL != "" && net.ParseIP(asset.AssetValue) != nil {
+		asset.AssetValue = asset.URL
 	}
 
 	return asset

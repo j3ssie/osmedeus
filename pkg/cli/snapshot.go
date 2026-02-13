@@ -50,7 +50,7 @@ The workspace will be extracted to the workspaces folder and
 optionally imported to the database with data_source="imported".
 
 Examples:
-  osmedeus snapshot import ~/snapshot/example.com_1234567890.zip
+  osmedeus snapshot import ~/snapshot/example.com_2026-02-13T18-20-34Z.zip
   osmedeus snapshot import https://example.com/workspace.zip
   osmedeus snapshot import ~/backup.zip --force`,
 	Args: cobra.ExactArgs(1),
@@ -103,7 +103,7 @@ func runSnapshotExport(cmd *cobra.Command, args []string) error {
 		if err := os.MkdirAll(cfg.SnapshotPath, 0755); err != nil {
 			return fmt.Errorf("failed to create snapshot directory: %w", err)
 		}
-		outputPath = filepath.Join(cfg.SnapshotPath, fmt.Sprintf("%s_%d.zip", workspaceName, getTimestamp()))
+		outputPath = filepath.Join(cfg.SnapshotPath, fmt.Sprintf("%s_%s.zip", workspaceName, getTimestamp()))
 	}
 
 	printer.Info("Exporting workspace: %s", workspaceName)
@@ -134,22 +134,15 @@ func runSnapshotImport(cmd *cobra.Command, args []string) error {
 	source := args[0]
 
 	// Show warning
-	printer.Warning("WARNING: Workspace Snapshot Import")
-	fmt.Println()
-	fmt.Println("Only import snapshots from trusted sources!")
-	fmt.Println()
-	fmt.Println("Imported workspace data may contain:")
-	fmt.Println("- Database records that could conflict with existing data")
-	fmt.Println("- File paths that reference external resources")
-	fmt.Println("- Configuration that may not be compatible")
-	fmt.Println()
-	fmt.Println("The imported workspace database state may be unstable.")
+	printer.Warning("Only import snapshots from %s. Imported data may conflict with existing DB records.", terminal.BoldYellow("trusted sources"))
 	fmt.Println()
 
-	// Ask for confirmation
-	if !confirmPrompt("Continue with import?") {
-		printer.Info("Import cancelled.")
-		return nil
+	// Skip confirmation when --force is provided
+	if !globalForce {
+		if !confirmPrompt("Continue with import?") {
+			printer.Info("Import cancelled.")
+			return nil
+		}
 	}
 
 	printer.Info("Importing from: %s", source)
@@ -245,9 +238,9 @@ func formatBytes(bytes int64) string {
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
-// getTimestamp returns current Unix timestamp
-func getTimestamp() int64 {
-	return time.Now().Unix()
+// getTimestamp returns current UTC time in ISO 8601 format (e.g. 2026-02-13T18-20-34Z)
+func getTimestamp() string {
+	return time.Now().UTC().Format("2006-01-02T15-04-05Z")
 }
 
 // UsageSnapshot returns usage text for snapshot command

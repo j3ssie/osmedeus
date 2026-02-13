@@ -33,6 +33,7 @@ var (
 	dbRefresh        string
 	dbClear          bool
 	dbListTables     bool
+	dbIncludeHeavy   bool
 )
 
 // defaultHiddenColumns are columns hidden by default for all tables
@@ -43,7 +44,7 @@ var tableDefaultColumns = map[string][]string{
 	"runs":            {"run_uuid", "workflow_name", "target", "workspace", "trigger_type", "status", "completed_steps", "total_steps"},
 	"step_results":    {"step_name", "step_type", "status", "duration_ms", "command"},
 	"artifacts":       {"name", "path", "type", "size_bytes", "line_count"},
-	"assets":          {"asset_value", "host_ip", "title", "status_code", "last_seen_at", "technologies"},
+	"assets":          {"asset_value", "url", "status_code", "content_length", "title"},
 	"event_logs":      {"topic", "source", "processed", "data_type", "workspace", "data"},
 	"schedules":       {"name", "workflow_name", "workflow_kind", "target", "trigger_type", "schedule", "is_enabled", "run_count"},
 	"workspaces":      {"name", "data_source", "total_assets", "total_ips", "total_vulns", "risk_score"},
@@ -132,6 +133,7 @@ func init() {
 	dbCmd.PersistentFlags().StringVar(&dbRefresh, "refresh", "", "auto-refresh interval (e.g., 5s, 1m, 30s)")
 	dbCmd.PersistentFlags().BoolVar(&dbListTables, "list", false, "list all available table names")
 	dbCmd.PersistentFlags().BoolVar(&dbClear, "clear", false, "clear all records from the specified table (requires --table and --force)")
+	dbCmd.PersistentFlags().BoolVar(&dbIncludeHeavy, "include-heavy", false, "include large fields (raw_response, screenshot, blob_content) in output")
 
 	dbIndexWorkflowCmd.Flags().BoolVar(&dbIndexForce, "force", false, "force re-index all workflows regardless of checksum")
 
@@ -402,7 +404,8 @@ func runDBListTUI(ctx context.Context) error {
 
 	// Record fetcher wraps database.GetTableRecords
 	recordFetcher := func(ctx context.Context, tableName string, offset, limit int, filters map[string]string, search string) (*terminal.TableRecords, error) {
-		result, err := database.GetTableRecords(ctx, tableName, offset, limit, filters, search)
+		excludeCols := getDefaultExcludeColumns(tableName)
+		result, err := database.GetTableRecords(ctx, tableName, offset, limit, filters, search, excludeCols)
 		if err != nil {
 			return nil, err
 		}
@@ -458,7 +461,8 @@ func listTableRecordsJSON(ctx context.Context) error {
 	}
 
 	filters := parseWhereFilters(dbWhere)
-	records, err := database.GetTableRecords(ctx, dbTable, dbOffset, dbLimit, filters, dbSearch)
+	excludeCols := getDefaultExcludeColumns(dbTable)
+	records, err := database.GetTableRecords(ctx, dbTable, dbOffset, dbLimit, filters, dbSearch, excludeCols)
 	if err != nil {
 		return fmt.Errorf("failed to get records: %w", err)
 	}
@@ -560,7 +564,8 @@ func listTableRecordsOnce(ctx context.Context, cfg *config.Config, printer *term
 	// Determine if we should hide default columns (when no specific columns requested and not --all)
 	hideDefaultColumns := !dbAll && len(requestedColumns) == 0 && tableDefaultColumns[dbTable] == nil
 
-	records, err := database.GetTableRecords(ctx, dbTable, dbOffset, dbLimit, filters, dbSearch)
+	sqlExcludeCols := getDefaultExcludeColumns(dbTable)
+	records, err := database.GetTableRecords(ctx, dbTable, dbOffset, dbLimit, filters, dbSearch, sqlExcludeCols)
 	if err != nil {
 		return fmt.Errorf("failed to get records: %w", err)
 	}
@@ -651,6 +656,18 @@ func parseExcludeColumns(excludeFlag string) map[string]bool {
 		excludeMap[strings.TrimSpace(col)] = true
 	}
 	return excludeMap
+}
+
+// getDefaultExcludeColumns returns heavy columns to exclude for a given table.
+// Returns nil if --include-heavy is set or the table has no heavy columns.
+func getDefaultExcludeColumns(tableName string) []string {
+	if dbIncludeHeavy {
+		return nil
+	}
+	if tableName == "assets" {
+		return database.AssetHeavyColumns
+	}
+	return nil
 }
 
 // getEffectiveColumns determines which columns to display based on flags and table defaults

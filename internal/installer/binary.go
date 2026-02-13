@@ -266,6 +266,8 @@ var coreUnixTools = map[string]bool{
 	"which": true, "whoami": true, "hostname": true, "date": true,
 	"env": true, "echo": true, "printf": true, "tee": true,
 	"bash": true, "sh": true, "zsh": true,
+	// Version control
+	"git": true,
 }
 
 // IsCoreUnixTool returns true if the binary name is a core Unix tool
@@ -320,7 +322,7 @@ func InstallBinary(name string, registry BinaryRegistry, binariesFolder string, 
 			terminal.Gray(terminal.SymbolBowtie), terminal.HiBlue(name))
 		entry, ok := registry[name]
 		if ok {
-			_ = copyInstalledBinaryToFolder(name, &entry, binariesFolder)
+			_ = CopyInstalledBinaryToFolder(name, &entry, binariesFolder)
 		}
 		return nil
 	}
@@ -376,7 +378,7 @@ func InstallBinary(name string, registry BinaryRegistry, binariesFolder string, 
 		}
 
 		// After successful command execution, copy the binary to external-binaries
-		if err := copyInstalledBinaryToFolder(name, &entry, binariesFolder); err != nil {
+		if err := CopyInstalledBinaryToFolder(name, &entry, binariesFolder); err != nil {
 			logger.Get().Warn("Failed to copy binary to external-binaries folder",
 				zap.String("name", name),
 				zap.Error(err))
@@ -594,10 +596,10 @@ func copyFile(src, dest string) error {
 	return os.Chmod(dest, srcInfo.Mode())
 }
 
-// copyInstalledBinaryToFolder finds a binary using LookPath and copies it to the destination folder
+// CopyInstalledBinaryToFolder finds a binary using LookPath and copies it to the destination folder
 // Uses the validate command (valide-command) from registry to locate the binary
 // Returns nil if binary not found (installation may have failed) or copy succeeds
-func copyInstalledBinaryToFolder(name string, entry *BinaryEntry, destFolder string) error {
+func CopyInstalledBinaryToFolder(name string, entry *BinaryEntry, destFolder string) error {
 	// Determine which command to look for
 	lookupCmd := name
 	if entry != nil && entry.ValidateCommand != "" {

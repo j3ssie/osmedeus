@@ -161,9 +161,10 @@ func (r *DockerRunner) execInContainer(ctx context.Context, command string) (*Co
 	// Create new process group so we can kill all children on interrupt
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	stdout := NewLimitedBuffer(MaxOutputSize)
+	stderr := NewLimitedBuffer(MaxStderrSize)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	// Start the command
 	if err := cmd.Start(); err != nil {
@@ -200,7 +201,7 @@ func (r *DockerRunner) execInContainer(ctx context.Context, command string) (*Co
 		}
 
 		return &CommandResult{
-			Output:   combineOutput(&stdout, &stderr),
+			Output:   combineOutput(stdout, stderr),
 			ExitCode: -1,
 			Error:    ctx.Err(),
 		}, nil
@@ -218,7 +219,7 @@ func (r *DockerRunner) execInContainer(ctx context.Context, command string) (*Co
 			}
 		}
 		return &CommandResult{
-			Output:   combineOutput(&stdout, &stderr),
+			Output:   combineOutput(stdout, stderr),
 			ExitCode: exitCode,
 			Error:    err,
 		}, nil
@@ -259,9 +260,10 @@ func (r *DockerRunner) runEphemeral(ctx context.Context, command string) (*Comma
 	// Create new process group so we can kill all children on interrupt
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	stdout := NewLimitedBuffer(MaxOutputSize)
+	stderr := NewLimitedBuffer(MaxStderrSize)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	// Set environment from host if needed
 	cmd.Env = os.Environ()
@@ -301,7 +303,7 @@ func (r *DockerRunner) runEphemeral(ctx context.Context, command string) (*Comma
 		}
 
 		return &CommandResult{
-			Output:   combineOutput(&stdout, &stderr),
+			Output:   combineOutput(stdout, stderr),
 			ExitCode: -1,
 			Error:    ctx.Err(),
 		}, nil
@@ -319,7 +321,7 @@ func (r *DockerRunner) runEphemeral(ctx context.Context, command string) (*Comma
 			}
 		}
 		return &CommandResult{
-			Output:   combineOutput(&stdout, &stderr),
+			Output:   combineOutput(stdout, stderr),
 			ExitCode: exitCode,
 			Error:    err,
 		}, nil

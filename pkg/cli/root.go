@@ -88,6 +88,12 @@ var rootCmd = &cobra.Command{
 		_ = cmd.Help()
 	},
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Skip heavy initialization for lightweight commands (help, version, completion)
+		// These don't need config loading, database, or auto-setup
+		if isLightweightCommand(cmd) {
+			return nil
+		}
+
 		// Handle CI output format - disable colors and decorations early
 		if ciOutputFormat {
 			disableColor = true
@@ -509,6 +515,28 @@ func showInPager(content string) {
 	}
 	// Fallback: direct output
 	fmt.Print(content)
+}
+
+// isLightweightCommand returns true if the command doesn't need full initialization
+// (config loading, logger, auto-setup). This prevents ~50MB of overhead for help/version.
+func isLightweightCommand(cmd *cobra.Command) bool {
+	name := cmd.Name()
+	lightweight := map[string]bool{
+		"help":       true,
+		"version":    true,
+		"completion": true,
+	}
+	// Check command and its parents for lightweight commands
+	for c := cmd; c != nil; c = c.Parent() {
+		if lightweight[c.Name()] {
+			return true
+		}
+	}
+	// Root command with no args shows help (or usage examples)
+	if name == "osmedeus" {
+		return true
+	}
+	return false
 }
 
 // shouldSkipAutoSetup returns true if auto-setup should be skipped for this command

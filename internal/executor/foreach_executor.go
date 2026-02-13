@@ -82,10 +82,33 @@ func (e *ForeachExecutor) Execute(ctx context.Context, step *core.Step, execCtx 
 		}
 	}
 
+	// Auto-enable streaming for large inputs (>1000 lines) to avoid OOM
+	autoStreaming := false
+	var autoStreamFile string
+	if streamingOutput == "" {
+		lineCount, countErr := countInputLines(step.Input)
+		if countErr == nil && lineCount > 1000 {
+			autoStreaming = true
+			tmpFile, tmpErr := os.CreateTemp("", "osmedeus-foreach-*.txt")
+			if tmpErr == nil {
+				autoStreamFile = tmpFile.Name()
+				streamingOutput = autoStreamFile
+				_ = tmpFile.Close()
+			}
+		}
+	}
+	// Clean up auto-stream temp file on exit
+	if autoStreamFile != "" {
+		defer func() { _ = os.Remove(autoStreamFile) }()
+	}
+
 	// Execute with streaming worker pool
 	outputs, err := e.executeWithWorkerPoolStreaming(ctx, step, step.Input, threads, execCtx, streamingOutput)
 
-	if streamingOutput != "" {
+	if autoStreaming && autoStreamFile != "" {
+		// Read back a truncated version of the auto-streamed output
+		result.Output = readTruncatedFile(autoStreamFile, 10*1024*1024) // 10MB max
+	} else if streamingOutput != "" {
 		// In streaming mode, output is written to file
 		result.Output = fmt.Sprintf("Results streamed to: %s", streamingOutput)
 	} else {
@@ -545,4 +568,23 @@ func (e *ForeachExecutor) preProcessVariable(expr, varName, varValue string, exe
 
 	// Convert result to string
 	return fmt.Sprintf("%v", result), nil
+}
+
+// readTruncatedFile reads up to maxBytes from a file, appending "[output truncated]" if the file is larger.
+func readTruncatedFile(path string, maxBytes int) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = f.Close() }()
+
+	buf := make([]byte, maxBytes+1) // read 1 extra byte to detect truncation
+	n, _ := f.Read(buf)
+	if n == 0 {
+		return ""
+	}
+	if n > maxBytes {
+		return string(buf[:maxBytes]) + "\n[output truncated]"
+	}
+	return string(buf[:n])
 }

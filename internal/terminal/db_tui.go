@@ -410,8 +410,7 @@ func (m dbTUIModel) updateTableList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // assetsDefaultColumns are the columns selected by default for assets table
 var assetsDefaultColumns = map[string]bool{
-	"asset_value": true, "host": true, "host_ip": true, "title": true, "status_code": true,
-	"words": true, "technologies": true, "labels": true, "source": true,
+	"asset_value": true, "url": true, "status_code": true, "content_length": true, "title": true,
 }
 
 // getDefaultSelectedColumns returns default column selection for a table

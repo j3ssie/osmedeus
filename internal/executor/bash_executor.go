@@ -1,12 +1,12 @@
 package executor
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -189,16 +189,20 @@ func (e *BashExecutor) executeCommand(ctx context.Context, command string, timeo
 	// @NOTE: yes yes, I know this is a security risk. This is the intended behavior as it suppose to be that flexible so you should think twice of what you will run or design your workflow better
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	stdout := runner.NewLimitedBuffer(runner.MaxOutputSize)
+	stderr := runner.NewLimitedBuffer(runner.MaxStderrSize)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	err := cmd.Run()
 	duration := time.Since(startTime).Seconds()
 
-	output := stdout.String()
+	output := string(stdout.Bytes())
 	if stderr.Len() > 0 {
-		output += "\n" + stderr.String()
+		output += "\n" + string(stderr.Bytes())
+	}
+	if stdout.Overflow() || stderr.Overflow() {
+		output += "\n[output truncated]"
 	}
 
 	// Check for context cancellation first (Ctrl+C or timeout)
@@ -213,7 +217,7 @@ func (e *BashExecutor) executeCommand(ctx context.Context, command string, timeo
 
 	if err != nil {
 		metrics.RecordToolExecution(toolName, "error", duration)
-		return output, fmt.Errorf("command failed: %w\nstderr: %s", err, stderr.String())
+		return output, fmt.Errorf("command failed: %w\nstderr: %s", err, string(stderr.Bytes()))
 	}
 
 	metrics.RecordToolExecution(toolName, "success", duration)
@@ -235,7 +239,8 @@ func (e *BashExecutor) executeSequential(ctx context.Context, commands []string,
 	return strings.Join(outputs, "\n"), nil
 }
 
-// executeParallel executes commands in parallel
+// executeParallel executes commands in parallel with bounded concurrency.
+// Uses a worker pool capped at runtime.NumCPU()*2 to prevent unbounded goroutine/memory growth.
 func (e *BashExecutor) executeParallel(ctx context.Context, commands []string, timeout time.Duration) (string, error) {
 	type result struct {
 		index  int
@@ -243,19 +248,41 @@ func (e *BashExecutor) executeParallel(ctx context.Context, commands []string, t
 		err    error
 	}
 
+	maxWorkers := runtime.NumCPU() * 2
+	if maxWorkers > len(commands) {
+		maxWorkers = len(commands)
+	}
+
+	type workItem struct {
+		index   int
+		command string
+	}
+
+	workQueue := make(chan workItem, maxWorkers)
 	results := make(chan result, len(commands))
 	var wg sync.WaitGroup
 
-	for i, cmd := range commands {
+	// Start bounded worker pool
+	for range maxWorkers {
 		wg.Add(1)
-		go func(idx int, command string) {
+		go func() {
 			defer wg.Done()
-			output, err := e.executeCommand(ctx, command, timeout)
-			results <- result{index: idx, output: output, err: err}
-		}(i, cmd)
+			for work := range workQueue {
+				output, err := e.executeCommand(ctx, work.command, timeout)
+				results <- result{index: work.index, output: output, err: err}
+			}
+		}()
 	}
 
-	// Wait for all commands to complete
+	// Feed work items
+	go func() {
+		for i, cmd := range commands {
+			workQueue <- workItem{index: i, command: cmd}
+		}
+		close(workQueue)
+	}()
+
+	// Wait for all workers to complete
 	go func() {
 		wg.Wait()
 		close(results)

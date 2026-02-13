@@ -216,7 +216,7 @@ func TestAgentExecutor_SimpleCompletion(t *testing.T) {
 	server := newMockLLMServer(func(w http.ResponseWriter, r *http.Request) {
 		resp := mockLLMResponse("The analysis is complete.")
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
@@ -270,11 +270,11 @@ func TestAgentExecutor_ToolCallLoop(t *testing.T) {
 					},
 				},
 			})
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		} else {
 			// Second call: return final response
 			resp := mockLLMResponse("Command output was: hello")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -320,7 +320,7 @@ func TestAgentExecutor_MaxIterationsLimit(t *testing.T) {
 				},
 			},
 		})
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
@@ -368,11 +368,11 @@ func TestAgentExecutor_StopCondition(t *testing.T) {
 					},
 				},
 			})
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		} else {
 			// Return text with DONE keyword
 			resp := mockLLMResponse("Analysis DONE successfully")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -411,12 +411,12 @@ func TestAgentExecutor_SystemPrompt(t *testing.T) {
 	server := newMockLLMServer(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var req ChatCompletionRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 		receivedMessages = req.Messages
 
 		w.Header().Set("Content-Type", "application/json")
 		resp := mockLLMResponse("Response")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
@@ -456,12 +456,12 @@ func TestAgentExecutor_ToolsInRequest(t *testing.T) {
 	server := newMockLLMServer(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var req ChatCompletionRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 		receivedTools = req.Tools
 
 		w.Header().Set("Content-Type", "application/json")
 		resp := mockLLMResponse("Done")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
@@ -504,7 +504,7 @@ func TestAgentExecutor_MemoryPersist(t *testing.T) {
 	server := newMockLLMServer(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		resp := mockLLMResponse("Persisted response")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
@@ -555,19 +555,19 @@ func TestAgentExecutor_MemoryResume(t *testing.T) {
 		{Role: "assistant", Content: "Previous answer"},
 	}
 	data, _ := json.MarshalIndent(priorMessages, "", "  ")
-	os.WriteFile(resumePath, data, 0o644)
+	require.NoError(t, os.WriteFile(resumePath, data, 0o644))
 
 	var receivedMessages []ChatMessage
 
 	server := newMockLLMServer(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var req ChatCompletionRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 		receivedMessages = req.Messages
 
 		w.Header().Set("Content-Type", "application/json")
 		resp := mockLLMResponse("Resumed response")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
@@ -625,10 +625,10 @@ func TestAgentExecutor_CustomToolHandler(t *testing.T) {
 					},
 				},
 			})
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		} else {
 			resp := mockLLMResponse("Greeting sent")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -673,7 +673,7 @@ func TestAgentExecutor_ContextCancellation(t *testing.T) {
 		// This should not be reached because context is already cancelled
 		w.Header().Set("Content-Type", "application/json")
 		resp := mockLLMResponse("Should not reach")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
@@ -728,10 +728,10 @@ func TestAgentExecutor_MultipleToolCalls(t *testing.T) {
 					},
 				},
 			})
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		} else {
 			resp := mockLLMResponse("Both commands executed")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -903,10 +903,10 @@ func TestExecutor_AgentStep_FullIntegration(t *testing.T) {
 					},
 				},
 			})
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		} else {
 			resp := mockLLMResponse("Integration test passed")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -944,7 +944,7 @@ func TestExecutor_AgentStep_FullIntegration(t *testing.T) {
 			{
 				Name:    "verify-step",
 				Type:    core.StepTypeBash,
-				Command: fmt.Sprintf("echo 'agent result: {{result}}'"),
+				Command: "echo 'agent result: {{result}}'",
 			},
 		},
 	}
@@ -981,17 +981,17 @@ func TestAgentExecutor_PlanningStage(t *testing.T) {
 
 		body, _ := io.ReadAll(r.Body)
 		var req ChatCompletionRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 		receivedMessages = append(receivedMessages, req.Messages)
 
 		if count == 1 {
 			// Planning phase: return plan text
 			resp := mockLLMResponse("Step 1: Scan ports\nStep 2: Check services\nStep 3: Report findings")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		} else {
 			// Execution phase: return final response
 			resp := mockLLMResponse("Plan executed successfully")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -1053,17 +1053,17 @@ func TestAgentExecutor_PlanningStage_WithMaxTokens(t *testing.T) {
 
 		body, _ := io.ReadAll(r.Body)
 		var req ChatCompletionRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 
 		// Return plan or final based on whether tools are present
 		if len(req.Tools) == 0 {
 			// Planning request — verify max_tokens
 			assert.Equal(t, 500, req.MaxTokens)
 			resp := mockLLMResponse("Short plan")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		} else {
 			resp := mockLLMResponse("Done")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -1106,7 +1106,7 @@ func TestAgentExecutor_MultiGoal(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 
 		resp := mockLLMResponse(fmt.Sprintf("Goal %d complete", count))
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
@@ -1180,11 +1180,11 @@ func TestAgentExecutor_MultiGoal_SharedConversation(t *testing.T) {
 
 		body, _ := io.ReadAll(r.Body)
 		var req ChatCompletionRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 		receivedMessages = append(receivedMessages, req.Messages)
 
 		resp := mockLLMResponse("response")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
@@ -1227,13 +1227,13 @@ func TestAgentExecutor_ModelFallback(t *testing.T) {
 
 		body, _ := io.ReadAll(r.Body)
 		var req ChatCompletionRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 		receivedModels = append(receivedModels, req.Model)
 
 		// Fail for first model, succeed for second
 		if req.Model == "bad-model" {
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"error": map[string]interface{}{
 					"message": "model not found",
 					"type":    "invalid_request_error",
@@ -1243,7 +1243,7 @@ func TestAgentExecutor_ModelFallback(t *testing.T) {
 		}
 
 		resp := mockLLMResponse("Fallback succeeded")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
@@ -1288,17 +1288,17 @@ func TestAgentExecutor_StructuredOutput(t *testing.T) {
 
 		body, _ := io.ReadAll(r.Body)
 		var req ChatCompletionRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 
 		if count == 1 {
 			// First call: agent completes with unstructured text
 			resp := mockLLMResponse("Found some results")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		} else {
 			// Second call: structured output request — verify response_format is set
 			assert.NotNil(t, req.ResponseFormat, "structured output call should have response_format")
 			resp := mockLLMResponse(`{"subdomains":[{"name":"sub.test.com","status":"active"}]}`)
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -1334,7 +1334,7 @@ func TestAgentExecutor_StructuredOutput_AlreadyJSON(t *testing.T) {
 	server := newMockLLMServer(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		resp := mockLLMResponse(`{"results":["a","b"]}`)
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
@@ -1385,10 +1385,10 @@ func TestAgentExecutor_TracingHooks(t *testing.T) {
 					},
 				},
 			})
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		} else {
 			resp := mockLLMResponse("Traced complete")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -1424,7 +1424,7 @@ func TestAgentExecutor_TracingHooks_EmptyHooks(t *testing.T) {
 	server := newMockLLMServer(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		resp := mockLLMResponse("No hooks")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
@@ -1480,18 +1480,18 @@ func TestAgentExecutor_SubAgentSpawn(t *testing.T) {
 					},
 				},
 			})
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		case 2:
 			// Child: return final result
 			resp := mockLLMResponse("Found open ports: 80, 443, 8080")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		case 3:
 			// Parent: final response using child result
 			resp := mockLLMResponse("Recon complete. Open ports: 80, 443, 8080")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		default:
 			resp := mockLLMResponse("unexpected call")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -1552,10 +1552,10 @@ func TestAgentExecutor_SubAgentDepthLimit(t *testing.T) {
 					},
 				},
 			})
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		} else {
 			resp := mockLLMResponse("Done with depth error")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -1609,7 +1609,8 @@ func TestAgentExecutor_SubAgentFailure(t *testing.T) {
 		count := atomic.AddInt32(&callCount, 1)
 		w.Header().Set("Content-Type", "application/json")
 
-		if count == 1 {
+		switch count {
+		case 1:
 			// Parent: spawn sub-agent
 			resp := mockLLMToolCallResponse([]core.LLMToolCall{
 				{
@@ -1621,20 +1622,20 @@ func TestAgentExecutor_SubAgentFailure(t *testing.T) {
 					},
 				},
 			})
-			json.NewEncoder(w).Encode(resp)
-		} else if count == 2 {
+			_ = json.NewEncoder(w).Encode(resp)
+		case 2:
 			// Child: return server error
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"error": map[string]interface{}{
 					"message": "internal server error",
 					"type":    "server_error",
 				},
 			})
-		} else {
+		default:
 			// Parent: handle error gracefully
 			resp := mockLLMResponse("Sub-agent failed but I handled it")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -1698,7 +1699,7 @@ func TestAgentExecutor_SubAgentRecursive(t *testing.T) {
 					},
 				},
 			})
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		case 2:
 			// Child: spawn grandchild
 			resp := mockLLMToolCallResponse([]core.LLMToolCall{
@@ -1711,22 +1712,22 @@ func TestAgentExecutor_SubAgentRecursive(t *testing.T) {
 					},
 				},
 			})
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		case 3:
 			// Grandchild: return result
 			resp := mockLLMResponse("Grandchild result: data collected")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		case 4:
 			// Child: return using grandchild data
 			resp := mockLLMResponse("Child processed grandchild data")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		case 5:
 			// Parent: final response
 			resp := mockLLMResponse("Parent summarized: all levels complete")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		default:
 			resp := mockLLMResponse("unexpected")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -1802,14 +1803,14 @@ func TestAgentExecutor_MessageWindowWithSummary(t *testing.T) {
 
 		body, _ := io.ReadAll(r.Body)
 		var req ChatCompletionRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 
 		// Check if this is a summarization request (no tools)
 		if len(req.Tools) == 0 && len(req.Messages) > 0 {
 			lastMsg := req.Messages[len(req.Messages)-1]
 			if content, ok := lastMsg.Content.(string); ok && strings.Contains(content, "Summarize") {
 				resp := mockLLMResponse("Summary of earlier context")
-				json.NewEncoder(w).Encode(resp)
+				_ = json.NewEncoder(w).Encode(resp)
 				return
 			}
 		}
@@ -1826,10 +1827,10 @@ func TestAgentExecutor_MessageWindowWithSummary(t *testing.T) {
 					},
 				},
 			})
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		} else {
 			resp := mockLLMResponse("Compression test complete")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()

@@ -187,11 +187,7 @@ func resolveLocation(result sarifResult) (uri string, location string) {
 
 // extractCWETags extracts CWE-related tags from rule properties
 func extractCWETags(rule sarifRule) []string {
-	var tags []string
-	for _, tag := range rule.Properties.Tags {
-		tags = append(tags, tag)
-	}
-	return tags
+	return append([]string{}, rule.Properties.Tags...)
 }
 
 // dbImportSARIF imports vulnerabilities from a SARIF file into the database

@@ -2966,8 +2966,13 @@ func GetTableColumns(tableName string) []string {
 	return nil
 }
 
-// GetTableRecords returns paginated records from a specific table with optional filters and search
-func GetTableRecords(ctx context.Context, tableName string, offset, limit int, filters map[string]string, search string) (*TableRecords, error) {
+// AssetHeavyColumns are columns excluded from asset queries by default to prevent OOM.
+// These fields can be multi-MB per row (HTTP responses, screenshots, file contents).
+var AssetHeavyColumns = []string{"raw_json_data", "raw_response", "screenshot_base64_data", "blob_content"}
+
+// GetTableRecords returns paginated records from a specific table with optional filters and search.
+// excludeColumns specifies columns to omit from the SELECT (useful for skipping large blob fields).
+func GetTableRecords(ctx context.Context, tableName string, offset, limit int, filters map[string]string, search string, excludeColumns []string) (*TableRecords, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database not connected")
 	}
@@ -3058,6 +3063,9 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 		}
 		result.TotalCount = count
 		fetchQuery := applyFilters(db.NewSelect().Model(&records))
+		if len(excludeColumns) > 0 {
+			fetchQuery = fetchQuery.ExcludeColumn(excludeColumns...)
+		}
 		err = fetchQuery.Order("created_at DESC").Offset(offset).Limit(limit).Scan(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch records: %w", err)

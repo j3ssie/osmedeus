@@ -288,8 +288,8 @@ steps:
 
 	// Change to localDir to test relative path
 	oldWd, _ := os.Getwd()
-	defer os.Chdir(oldWd)
-	os.Chdir(localDir)
+	defer func() { _ = os.Chdir(oldWd) }()
+	require.NoError(t, os.Chdir(localDir))
 
 	// Test: ./local-module.yaml should load from CWD
 	workflow, err := loader.LoadWorkflowByPath("./local-module.yaml")

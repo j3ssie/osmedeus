@@ -70,20 +70,33 @@ func (r *Registry) GetRuntime() *OttoRuntime {
 	return r.runtime
 }
 
-// DefaultRegistry is the global function registry
-var DefaultRegistry = NewRegistry()
+// defaultRegistry is lazily initialized on first use to avoid allocating
+// Goja VM resources at package import time. This saves memory for lightweight
+// commands (help, version) that don't need function evaluation.
+var (
+	defaultRegistry     *Registry
+	defaultRegistryOnce sync.Once
+)
+
+// GetDefaultRegistry returns the global function registry, initializing it on first use.
+func GetDefaultRegistry() *Registry {
+	defaultRegistryOnce.Do(func() {
+		defaultRegistry = NewRegistry()
+	})
+	return defaultRegistry
+}
 
 // Execute executes a function using the default registry
 func Execute(expr string, ctx map[string]interface{}) (interface{}, error) {
-	return DefaultRegistry.Execute(expr, ctx)
+	return GetDefaultRegistry().Execute(expr, ctx)
 }
 
 // EvaluateCondition evaluates a condition using the default registry
 func EvaluateCondition(condition string, ctx map[string]interface{}) (bool, error) {
-	return DefaultRegistry.EvaluateCondition(condition, ctx)
+	return GetDefaultRegistry().EvaluateCondition(condition, ctx)
 }
 
 // EvaluateExports evaluates exports using the default registry
 func EvaluateExports(exports map[string]string, ctx map[string]interface{}) (map[string]interface{}, error) {
-	return DefaultRegistry.EvaluateExports(exports, ctx)
+	return GetDefaultRegistry().EvaluateExports(exports, ctx)
 }

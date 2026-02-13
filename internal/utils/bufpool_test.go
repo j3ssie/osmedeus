@@ -8,6 +8,7 @@ func TestGetPutLargeBuffer(t *testing.T) {
 	buf := GetLargeBuffer()
 	if buf == nil {
 		t.Fatal("expected non-nil buffer")
+		return
 	}
 	if len(*buf) != LargeBufferSize {
 		t.Errorf("expected buffer size %d, got %d", LargeBufferSize, len(*buf))

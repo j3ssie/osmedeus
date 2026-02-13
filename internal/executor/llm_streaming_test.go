@@ -18,7 +18,7 @@ import (
 
 // writeSSEChunk writes a single SSE data line
 func writeSSEChunk(w http.ResponseWriter, data string) {
-	fmt.Fprintf(w, "data: %s\n\n", data)
+	_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()
 	}
@@ -299,7 +299,7 @@ func TestStreamingFallbackOnError(t *testing.T) {
 	// Server returns HTTP 500 — should error gracefully
 	server := newStreamingMockServer(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"error": map[string]interface{}{
 				"message": "server overloaded",
 				"type":    "server_error",
@@ -396,7 +396,7 @@ func TestAgentExecutor_StreamFlagInRequest(t *testing.T) {
 	server := newMockLLMServer(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var req ChatCompletionRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 		receivedStream = req.Stream
 
 		// Respond with non-streaming format since the mock doesn't do SSE
@@ -599,9 +599,9 @@ func TestStreamingSSEWithComments(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 
 		// SSE comment (keep-alive)
-		fmt.Fprintf(w, ": this is a comment\n\n")
+		_, _ = fmt.Fprintf(w, ": this is a comment\n\n")
 		writeSSEChunk(w, makeStreamChunk("c1", "m1", "with comments"))
-		fmt.Fprintf(w, ": another comment\n\n")
+		_, _ = fmt.Fprintf(w, ": another comment\n\n")
 		writeSSEChunk(w, makeStreamChunkDone("c1", "m1", nil))
 		writeSSEChunk(w, "[DONE]")
 	})
@@ -628,7 +628,7 @@ func TestStreamingLLMStepIntegration(t *testing.T) {
 	server := newStreamingMockServer(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var req ChatCompletionRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 
 		if req.Stream {
 			w.Header().Set("Content-Type", "text/event-stream")
@@ -643,7 +643,7 @@ func TestStreamingLLMStepIntegration(t *testing.T) {
 			// Fallback non-streaming response
 			w.Header().Set("Content-Type", "application/json")
 			resp := mockLLMResponse("Non-streaming response")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 		}
 	})
 	defer server.Close()
@@ -738,13 +738,13 @@ func TestStreamingNonStreamingFallback(t *testing.T) {
 	server := newMockLLMServer(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var req ChatCompletionRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 
 		assert.False(t, req.Stream, "stream should be false in request")
 
 		w.Header().Set("Content-Type", "application/json")
 		resp := mockLLMResponse("non-streaming")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	defer server.Close()
 
@@ -828,10 +828,10 @@ func TestStreamingEmptyDataLines(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 
 		// Various non-data lines
-		fmt.Fprintf(w, "event: message\n")
-		fmt.Fprintf(w, "id: 1\n")
+		_, _ = fmt.Fprintf(w, "event: message\n")
+		_, _ = fmt.Fprintf(w, "id: 1\n")
 		writeSSEChunk(w, makeStreamChunk("c1", "m1", "content"))
-		fmt.Fprintf(w, "\n") // blank line
+		_, _ = fmt.Fprintf(w, "\n") // blank line
 		writeSSEChunk(w, makeStreamChunkDone("c1", "m1", nil))
 		writeSSEChunk(w, "[DONE]")
 	})
@@ -894,7 +894,7 @@ func TestStreamingAgentWithToolCalls(t *testing.T) {
 	server := newStreamingMockServer(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var req ChatCompletionRequest
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 
 		callCount++
 		w.Header().Set("Content-Type", "text/event-stream")

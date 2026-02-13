@@ -20,6 +20,7 @@ func TestRunControlPlaneRegisterAndGet(t *testing.T) {
 
 	if activeRun == nil {
 		t.Fatal("Register returned nil")
+		return
 	}
 
 	if activeRun.RunUUID != runUUID {

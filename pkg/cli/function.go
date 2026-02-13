@@ -130,16 +130,13 @@ func runFunctionEval(cmd *cobra.Command, args []string) error {
 		defer signal.Stop(sigChan)
 	}
 
-	// Connect to database for db_* functions (skip if --disable-db is set)
+	// Store config for lazy database connection — db_* functions
+	// will connect on first GetDB() call, avoiding initialization
+	// overhead when only non-db functions are used.
 	if !disableDB {
 		cfg := config.Get()
 		if cfg != nil {
-			// Try to connect to database - don't fail if DB not available
-			if _, dbErr := database.Connect(cfg); dbErr != nil {
-				if verbose {
-					printer.Info("Database connection warning: %s", dbErr)
-				}
-			}
+			database.SetLazyConfig(cfg)
 		}
 	}
 

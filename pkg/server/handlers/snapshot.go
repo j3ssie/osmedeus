@@ -95,7 +95,7 @@ func SnapshotExport(cfg *config.Config) fiber.Handler {
 		}
 
 		// Generate output path
-		zipFilename := fmt.Sprintf("%s_%d.zip", req.Workspace, time.Now().Unix())
+		zipFilename := fmt.Sprintf("%s_%s.zip", req.Workspace, time.Now().UTC().Format("2006-01-02T15-04-05Z"))
 		outputPath := filepath.Join(cfg.SnapshotPath, zipFilename)
 
 		// Export workspace

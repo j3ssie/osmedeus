@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -51,9 +50,10 @@ func (r *HostRunner) Execute(ctx context.Context, command string) (*CommandResul
 		cmd.Env = env
 	}
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	stdout := NewLimitedBuffer(MaxOutputSize)
+	stderr := NewLimitedBuffer(MaxStderrSize)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	// Start the command
 	if err := cmd.Start(); err != nil {
@@ -91,7 +91,7 @@ func (r *HostRunner) Execute(ctx context.Context, command string) (*CommandResul
 		}
 
 		return &CommandResult{
-			Output:   combineOutput(&stdout, &stderr),
+			Output:   combineOutput(stdout, stderr),
 			ExitCode: -1,
 			Error:    ctx.Err(),
 		}, nil
@@ -109,7 +109,7 @@ func (r *HostRunner) Execute(ctx context.Context, command string) (*CommandResul
 			}
 		}
 		return &CommandResult{
-			Output:   combineOutput(&stdout, &stderr),
+			Output:   combineOutput(stdout, stderr),
 			ExitCode: exitCode,
 			Error:    err,
 		}, nil

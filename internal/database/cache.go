@@ -18,8 +18,8 @@ type CacheConfig struct {
 // DefaultCacheConfig returns sensible defaults
 func DefaultCacheConfig() *CacheConfig {
 	return &CacheConfig{
-		MaxCost:     64 << 20,        // 64MB
-		NumCounters: 1e7,             // 10M counters
+		MaxCost:     8 << 20,         // 8MB (sufficient for thousands of ~1KB workflow entries)
+		NumCounters: 1e5,             // 100K counters (ristretto recommends 10x expected items)
 		BufferItems: 64,              // 64 keys per buffer
 		TTL:         5 * time.Minute, // 5 minute TTL
 	}

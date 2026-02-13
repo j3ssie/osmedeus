@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/j3ssie/osmedeus/v5/internal/config"
@@ -17,7 +18,11 @@ import (
 	"github.com/uptrace/bun/driver/sqliteshim"
 )
 
-var db *bun.DB
+var (
+	db         *bun.DB
+	lazyConfig *config.Config
+	lazyMu     sync.Mutex
+)
 
 // Connect establishes a database connection based on configuration
 func Connect(cfg *config.Config) (*bun.DB, error) {
@@ -76,10 +81,10 @@ func applySQLitePerformancePragmas(ctx context.Context) {
 	}
 
 	pragmas := []string{
-		"PRAGMA synchronous = NORMAL",  // Faster writes, safe with WAL
-		"PRAGMA cache_size = -64000",   // 64MB cache (negative = KB)
-		"PRAGMA temp_store = MEMORY",   // Temp tables in memory
-		"PRAGMA mmap_size = 268435456", // 256MB memory-mapped I/O
+		"PRAGMA synchronous = NORMAL", // Faster writes, safe with WAL
+		"PRAGMA cache_size = -2000",   // 2MB cache (negative = KB)
+		"PRAGMA temp_store = MEMORY",  // Temp tables in memory
+		"PRAGMA mmap_size = 16777216", // 16MB memory-mapped I/O
 	}
 
 	for _, pragma := range pragmas {
@@ -124,8 +129,33 @@ func getSSLMode(mode string) string {
 	return mode
 }
 
-// GetDB returns the global database instance
+// SetLazyConfig stores a config for deferred database connection.
+// The actual connection is established on the first GetDB() call.
+func SetLazyConfig(cfg *config.Config) {
+	lazyMu.Lock()
+	defer lazyMu.Unlock()
+	lazyConfig = cfg
+}
+
+// GetDB returns the global database instance, connecting lazily if
+// SetLazyConfig was called but Connect has not yet been invoked.
 func GetDB() *bun.DB {
+	if db != nil {
+		return db
+	}
+	lazyMu.Lock()
+	defer lazyMu.Unlock()
+	if db != nil {
+		return db
+	}
+	if lazyConfig == nil {
+		return nil
+	}
+	cfg := lazyConfig
+	lazyConfig = nil // prevent retry loops on persistent failure
+	if _, err := Connect(cfg); err != nil {
+		return nil
+	}
 	return db
 }
 
