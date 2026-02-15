@@ -141,7 +141,12 @@ func New(cfg *config.Config, opts *Options) (*Server, error) {
 
 	// Apply middleware
 	app.Use(recover.New())
-	app.Use(logger.New())
+	app.Use(logger.New(logger.Config{
+		Next: func(c *fiber.Ctx) bool {
+			// Skip logging for Next.js static routes
+			return strings.Contains(c.Path(), "_next")
+		},
+	}))
 	app.Use(cors.New(cors.Config{
 		AllowOriginsFunc: func(origin string) bool {
 			// Reflect all origins - returns true to allow and echo back the origin

@@ -2213,6 +2213,13 @@ func mapJSONToAsset(data map[string]interface{}, workspace, rawLine string) data
 		asset.HostIP = v
 	}
 
+	// NEW: If host field contains an IP and HostIP wasn't explicitly set, store it
+	if asset.HostIP == "" && asset.AssetValue != "" {
+		if net.ParseIP(asset.AssetValue) != nil {
+			asset.HostIP = asset.AssetValue
+		}
+	}
+
 	// DNS records - prefer "dns_records" key, fall back to "a" for httpx compat
 	if aRecords, ok := data["dns_records"].([]interface{}); ok {
 		var records []string
@@ -2842,6 +2849,11 @@ func mapJSONToVuln(data map[string]interface{}, workspace, rawLine string) datab
 	// response -> DetailHTTPResponse
 	if v, ok := data["response"].(string); ok {
 		vuln.DetailHTTPResponse = v
+	}
+
+	// Set default confidence to "firm" if not specified
+	if vuln.Confidence == "" {
+		vuln.Confidence = "firm"
 	}
 
 	return vuln

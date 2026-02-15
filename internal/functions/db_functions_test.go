@@ -339,6 +339,44 @@ func TestMapJSONToAsset(t *testing.T) {
 	assert.NotEmpty(t, asset.RawJsonData)
 }
 
+func TestMapJSONToAsset_HostIPFromIPHost(t *testing.T) {
+	data := map[string]interface{}{
+		"host":        "143.92.73.100",
+		"url":         "https://fms.example.com",
+		"status_code": float64(200),
+	}
+
+	asset := mapJSONToAsset(data, "test-workspace", `{"host":"143.92.73.100"}`)
+
+	assert.Equal(t, "https://fms.example.com", asset.AssetValue)
+	assert.Equal(t, "143.92.73.100", asset.HostIP) // NEW: IP should be stored
+}
+
+func TestMapJSONToAsset_ExplicitHostIPPreferred(t *testing.T) {
+	data := map[string]interface{}{
+		"host":    "143.92.73.100",
+		"host_ip": "203.0.113.42", // Different IP
+		"url":     "https://example.com",
+	}
+
+	asset := mapJSONToAsset(data, "test-workspace", `{}`)
+
+	assert.Equal(t, "203.0.113.42", asset.HostIP) // Explicit value wins
+	assert.Equal(t, "https://example.com", asset.AssetValue)
+}
+
+func TestMapJSONToAsset_DomainHostNoChange(t *testing.T) {
+	data := map[string]interface{}{
+		"host": "example.com",
+		"url":  "https://example.com",
+	}
+
+	asset := mapJSONToAsset(data, "test-workspace", `{}`)
+
+	assert.Equal(t, "", asset.HostIP) // No IP detected
+	assert.Equal(t, "example.com", asset.AssetValue)
+}
+
 func TestMapJSONToVuln(t *testing.T) {
 	data := map[string]interface{}{
 		"template-id": "test-vuln",
