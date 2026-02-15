@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -11,8 +12,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
+	"github.com/j3ssie/osmedeus/v5/internal/distributed"
 	"github.com/j3ssie/osmedeus/v5/internal/executor"
 	"github.com/j3ssie/osmedeus/v5/internal/functions"
 	"github.com/j3ssie/osmedeus/v5/internal/template"
@@ -105,6 +108,10 @@ func init() {
 	evalCmd.Flags().BoolVar(&funcRepeat, "repeat", false, "repeat run after completion")
 	evalCmd.Flags().StringVar(&funcRepeatWaitTime, "repeat-wait-time", "5s", "wait time between repeats (e.g., 30s, 20m, 10h, 1d)")
 
+	// Distributed mode flags for eval commands
+	evalCmd.Flags().StringVar(&redisURL, "redis-url", "", "Redis connection URL for distributed mode (enables run_on_master/run_on_worker routing)")
+	functionEvalCmd.Flags().StringVar(&redisURL, "redis-url", "", "Redis connection URL for distributed mode (enables run_on_master/run_on_worker routing)")
+
 	functionCmd.AddCommand(functionEvalCmd)
 	functionCmd.AddCommand(functionListCmd)
 }
@@ -140,56 +147,40 @@ func runFunctionEval(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Determine script source: --function-file > -f flag > positional arg > -e flag > stdin
-	var script string
-
-	// Read script from function file if provided
-	if funcFunctionFile != "" {
-		data, err := os.ReadFile(funcFunctionFile)
-		if err != nil {
-			printer.Error("Failed to read function file: %s", err)
-			return fmt.Errorf("failed to read function file: %w", err)
-		}
-		script = strings.TrimSpace(string(data))
-	} else if evalFunctionName != "" {
-		// Handle -f/--function flag: build script from function name + positional args
-		var quotedArgs []string
-		for _, arg := range args {
-			quotedArgs = append(quotedArgs, fmt.Sprintf("%q", arg))
-		}
-		script = fmt.Sprintf("%s(%s)", evalFunctionName, strings.Join(quotedArgs, ", "))
-	} else if len(args) > 0 && args[0] != "-" {
-		if len(args) > 1 {
-			// Multiple args: treat first as function name, rest as arguments
-			// e.g., "func_name arg1 arg2" → "func_name("arg1", "arg2")"
-			var quotedArgs []string
-			for _, arg := range args[1:] {
-				quotedArgs = append(quotedArgs, fmt.Sprintf("%q", arg))
+	// If --redis-url is provided, register distributed hooks for master-mode eval
+	if redisURL != "" {
+		cfg := config.Get()
+		if cfg != nil {
+			redisCfg, err := distributed.ParseRedisURL(redisURL)
+			if err != nil {
+				return err
 			}
-			script = fmt.Sprintf("%s(%s)", args[0], strings.Join(quotedArgs, ", "))
-		} else {
-			// Single arg: check if it is a bare function name and add () if needed
-			script = normalizeScriptExpression(args[0])
+			cfg.Redis = *redisCfg
 		}
-	} else if evalScript != "" {
-		// Script provided via -e flag
-		script = evalScript
-	} else if evalStdin || (len(args) > 0 && args[0] == "-") {
-		// Read script from stdin
-		data, err := io.ReadAll(os.Stdin)
+		if cfg == nil || !cfg.IsRedisConfigured() {
+			return fmt.Errorf("redis not configured")
+		}
+		client, err := distributed.NewClientFromConfig(cfg)
 		if err != nil {
-			printer.Error("Failed to read from stdin: %s", err)
-			return fmt.Errorf("failed to read from stdin: %w", err)
+			return fmt.Errorf("failed to create redis client: %w", err)
 		}
-		script = strings.TrimSpace(string(data))
+		defer client.Close()
+		ctx := context.Background()
+		if err := client.Ping(ctx); err != nil {
+			return fmt.Errorf("failed to connect to redis: %w", err)
+		}
+		hostname, _ := os.Hostname()
+		masterID := fmt.Sprintf("%s-master-eval-%s", hostname, uuid.NewString()[:8])
+		config.SetWorkerMode(true, masterID)
+		cleanup := distributed.RegisterDistributedHooksFromClient(client, masterID)
+		defer cleanup()
+		printer.Info("Distributed mode enabled (id: %s)", terminal.Cyan(masterID))
 	}
 
-	if script != "" {
-		script = normalizeScriptExpression(script)
-	}
-
-	if script == "" {
-		return fmt.Errorf("no script provided: use positional argument, -e flag, --function-file, or --stdin")
+	script, err := resolveEvalScript(args)
+	if err != nil {
+		printer.Error("%s", err)
+		return err
 	}
 
 	// Main execution loop
@@ -450,6 +441,62 @@ func runFunctionList(cmd *cobra.Command, args []string) error {
 		printMarkdownTable(headers, rows)
 	}
 	return nil
+}
+
+// resolveEvalScript determines the script to execute from various sources:
+// --function-file > -f flag > positional arg > -e flag > --stdin.
+// Returns the resolved script string or an error.
+func resolveEvalScript(args []string) (string, error) {
+	var script string
+
+	// Read script from function file if provided
+	if funcFunctionFile != "" {
+		data, err := os.ReadFile(funcFunctionFile)
+		if err != nil {
+			return "", fmt.Errorf("failed to read function file: %w", err)
+		}
+		script = strings.TrimSpace(string(data))
+	} else if evalFunctionName != "" {
+		// Handle -f/--function flag: build script from function name + positional args
+		var quotedArgs []string
+		for _, arg := range args {
+			quotedArgs = append(quotedArgs, fmt.Sprintf("%q", arg))
+		}
+		script = fmt.Sprintf("%s(%s)", evalFunctionName, strings.Join(quotedArgs, ", "))
+	} else if len(args) > 0 && args[0] != "-" {
+		if len(args) > 1 {
+			// Multiple args: treat first as function name, rest as arguments
+			// e.g., "func_name arg1 arg2" → "func_name("arg1", "arg2")"
+			var quotedArgs []string
+			for _, arg := range args[1:] {
+				quotedArgs = append(quotedArgs, fmt.Sprintf("%q", arg))
+			}
+			script = fmt.Sprintf("%s(%s)", args[0], strings.Join(quotedArgs, ", "))
+		} else {
+			// Single arg: check if it is a bare function name and add () if needed
+			script = normalizeScriptExpression(args[0])
+		}
+	} else if evalScript != "" {
+		// Script provided via -e flag
+		script = evalScript
+	} else if evalStdin || (len(args) > 0 && args[0] == "-") {
+		// Read script from stdin
+		data, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return "", fmt.Errorf("failed to read from stdin: %w", err)
+		}
+		script = strings.TrimSpace(string(data))
+	}
+
+	if script != "" {
+		script = normalizeScriptExpression(script)
+	}
+
+	if script == "" {
+		return "", fmt.Errorf("no script provided: use positional argument, -e flag, --function-file, or --stdin")
+	}
+
+	return script, nil
 }
 
 // normalizeScriptExpression checks if the input is a bare function name (without parentheses)

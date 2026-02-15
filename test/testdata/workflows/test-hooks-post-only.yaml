@@ -1,0 +1,19 @@
+name: test-hooks-post-only
+kind: module
+description: Test module with only post-scan hooks
+tags: test,hooks
+
+params:
+  - name: target
+    required: true
+
+hooks:
+  post_scan_steps:
+    - name: post-notify
+      type: bash
+      command: echo "[HOOK-POST] Notify completion for {{Target}}"
+
+steps:
+  - name: main-step
+    type: bash
+    command: echo "[MAIN] Running for {{Target}}"

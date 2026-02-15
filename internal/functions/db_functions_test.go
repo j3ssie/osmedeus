@@ -334,7 +334,7 @@ func TestMapJSONToAsset(t *testing.T) {
 	assert.Equal(t, []string{"1.2.3.4", "5.6.7.8"}, asset.DnsRecords)
 	assert.Equal(t, []string{"Nginx", "PHP"}, asset.Technologies)
 	assert.Equal(t, "123ms", asset.ResponseTime)
-	assert.Equal(t, "", asset.Source) // webserver no longer mapped to source
+	assert.Equal(t, "", asset.Source)          // webserver no longer mapped to source
 	assert.Contains(t, asset.Remarks, "nginx") // webserver now in remarks
 	assert.NotEmpty(t, asset.RawJsonData)
 }

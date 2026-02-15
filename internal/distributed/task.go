@@ -51,6 +51,11 @@ type WorkerInfo struct {
 	LastHeartbeat time.Time `json:"last_heartbeat"`
 	TasksComplete int       `json:"tasks_complete"`
 	TasksFailed   int       `json:"tasks_failed"`
+	IPAddress     string    `json:"ip_address,omitempty"`
+	PublicIP      string    `json:"public_ip,omitempty"`
+	SSHEnabled    bool      `json:"ssh_enabled,omitempty"`
+	SSHKeysPath   string    `json:"ssh_keys_path,omitempty"`
+	Alias         string    `json:"alias,omitempty"`
 }
 
 // NewTask creates a new task with the given parameters
@@ -136,6 +141,22 @@ func (t *Task) MarkCompleted() {
 	t.Status = TaskStatusCompleted
 	now := time.Now()
 	t.CompletedAt = &now
+}
+
+// ExecuteRequest represents a request from a worker to execute something on the master or another worker.
+// ExecuteType "func" executes a utility function expression.
+// ExecuteType "run" submits a workflow task to the pending queue.
+// TargetRole controls where the request is executed: "master" or "worker".
+type ExecuteRequest struct {
+	ExecuteType string `json:"execute_type"`           // "func", "run", or "bash"
+	TargetRole  string `json:"target_role"`            // "master" or "worker"
+	Data        string `json:"data,omitempty"`         // function expression (for "func"), workflow name (for "run"), or command (for "bash")
+	Target      string `json:"target,omitempty"`       // target (for "run")
+	Params      string `json:"params,omitempty"`       // comma-separated key=value (for "run")
+	TargetScope string `json:"target_scope,omitempty"` // For worker-targeted: "all", alias, worker ID, or public IP
+	Action      string `json:"action,omitempty"`       // deprecated: use ExecuteType instead
+	Expr        string `json:"expr,omitempty"`         // deprecated: use Data instead
+	Workflow    string `json:"workflow,omitempty"`     // deprecated: use Data instead (for "run")
 }
 
 // MarkFailed marks the task as failed with an error message

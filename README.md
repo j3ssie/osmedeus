@@ -28,7 +28,7 @@ Built for both beginners and experts, it delivers powerful, composable automatio
 - **Template Engine** - Powerful variable interpolation with built-in and custom variables
 - **Utility Functions** - Rich function library with event generation, bulk processing, and JSON operations
 - **REST API Server** - Manage, trigger, and cancel workflows programmatically
-- **Distributed Execution** - Scale with Redis-based master-worker pattern for parallel scanning
+- **Distributed Execution** - Scale with Redis-based master-worker pattern for parallel scanning (workers identified as `wosm-<uuid8>`)
 - **Notifications** - Telegram bot and webhook integrations
 - **Cloud Storage** - S3-compatible storage for artifact management
 - **LLM Integration** - AI-powered workflow steps with chat completions, embeddings, and agentic tool-calling loops
@@ -85,6 +85,7 @@ osmedeus func eval 'log_info("OS: " + PlatformOS + ", Arch: " + PlatformArch)'
 
 # Install from preset repositories
 osmedeus install base --preset
+osmedeus install base --preset --keep-setting   # preserve existing osm-settings.yaml
 osmedeus install workflow --preset
 
 # Show all usage examples

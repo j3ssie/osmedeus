@@ -1,0 +1,21 @@
+name: test-hooks-default-type
+kind: module
+description: Test that hook steps default to bash type when type is omitted
+tags: test,hooks
+
+params:
+  - name: target
+    required: true
+
+hooks:
+  pre_scan_steps:
+    - name: pre-no-type
+      command: echo "[HOOK-PRE] Default type for {{Target}}"
+  post_scan_steps:
+    - name: post-no-type
+      command: echo "[HOOK-POST] Default type for {{Target}}"
+
+steps:
+  - name: main-step
+    type: bash
+    command: echo "[MAIN] Running for {{Target}}"

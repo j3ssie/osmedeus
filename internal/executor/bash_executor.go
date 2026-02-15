@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -103,17 +104,25 @@ func (e *BashExecutor) Execute(ctx context.Context, step *core.Step, execCtx *co
 		return result, err
 	}
 
+	// Extract binaries path for fallback resolution
+	binariesPath := ""
+	if bp, ok := execCtx.GetVariable("Binaries"); ok {
+		if bpStr, ok := bp.(string); ok {
+			binariesPath = bpStr
+		}
+	}
+
 	var output string
 
 	// Determine execution mode
 	if len(step.ParallelCommands) > 0 {
-		output, err = e.executeParallel(ctx, step.ParallelCommands, timeout)
+		output, err = e.executeParallel(ctx, step.ParallelCommands, timeout, binariesPath)
 	} else if len(step.Commands) > 0 {
-		output, err = e.executeSequential(ctx, step.Commands, timeout)
+		output, err = e.executeSequential(ctx, step.Commands, timeout, binariesPath)
 	} else if step.Command != "" {
 		// Assemble command with structured args if present
 		finalCmd := assembleCommand(step.Command, step.SpeedArgs, step.ConfigArgs, step.InputArgs, step.OutputArgs)
-		output, err = e.executeCommand(ctx, finalCmd, timeout)
+		output, err = e.executeCommandWithFallback(ctx, finalCmd, timeout, binariesPath)
 	} else {
 		err = fmt.Errorf("no command specified")
 	}
@@ -179,7 +188,7 @@ func (e *BashExecutor) executeCommand(ctx context.Context, command string, timeo
 		}
 		if result.ExitCode != 0 {
 			metrics.RecordToolExecution(toolName, "failed", duration)
-			return result.Output, fmt.Errorf("command exited with code %d", result.ExitCode)
+			return result.Output, newExitCodeErrorf(result.ExitCode, "command exited with code %d", result.ExitCode)
 		}
 		metrics.RecordToolExecution(toolName, "success", duration)
 		return strings.TrimSpace(result.Output), nil
@@ -216,6 +225,13 @@ func (e *BashExecutor) executeCommand(ctx context.Context, command string, timeo
 	}
 
 	if err != nil {
+		// Extract exit code if available for fallback detection
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			exitCode := exitErr.ExitCode()
+			metrics.RecordToolExecution(toolName, "failed", duration)
+			return output, newExitCodeErrorf(exitCode, "command failed with exit code %d\nstderr: %s", exitCode, string(stderr.Bytes()))
+		}
 		metrics.RecordToolExecution(toolName, "error", duration)
 		return output, fmt.Errorf("command failed: %w\nstderr: %s", err, string(stderr.Bytes()))
 	}
@@ -224,12 +240,60 @@ func (e *BashExecutor) executeCommand(ctx context.Context, command string, timeo
 	return strings.TrimSpace(output), nil
 }
 
+// executeCommandWithFallback wraps executeCommand with automatic retry on exit code 127.
+// Fallback 1: strip timeout prefix. Fallback 2: prepend binariesPath to the binary.
+func (e *BashExecutor) executeCommandWithFallback(ctx context.Context, command string, timeout time.Duration, binariesPath string) (string, error) {
+	output, err := e.executeCommand(ctx, command, timeout)
+	if err == nil {
+		return output, nil
+	}
+
+	// Only attempt fallback on exit code 127 (command not found)
+	var ecErr *exitCodeError
+	if !errors.As(err, &ecErr) || ecErr.code != 127 {
+		return output, err
+	}
+
+	// Don't retry if context is already cancelled
+	if ctx.Err() != nil {
+		return output, err
+	}
+
+	currentCmd := command
+
+	// Fallback 1: strip timeout prefix
+	if result := stripTimeoutPrefix(currentCmd); result.stripped && result.command != "" {
+		// Use parsed duration from timeout prefix as fallback if step timeout is not set
+		retryTimeout := timeout
+		if retryTimeout == 0 && result.duration > 0 {
+			retryTimeout = result.duration
+		}
+		output, err = e.executeCommand(ctx, result.command, retryTimeout)
+		if err == nil {
+			return output, nil
+		}
+		// Check if still 127 for next fallback
+		if !errors.As(err, &ecErr) || ecErr.code != 127 {
+			return output, err
+		}
+		currentCmd = result.command
+	}
+
+	// Fallback 2: prepend binaries path
+	if prepended, ok := prependBinariesPath(currentCmd, binariesPath); ok {
+		output, err = e.executeCommand(ctx, prepended, timeout)
+		return output, err
+	}
+
+	return output, err
+}
+
 // executeSequential executes commands sequentially
-func (e *BashExecutor) executeSequential(ctx context.Context, commands []string, timeout time.Duration) (string, error) {
+func (e *BashExecutor) executeSequential(ctx context.Context, commands []string, timeout time.Duration, binariesPath string) (string, error) {
 	var outputs []string
 
 	for _, cmd := range commands {
-		output, err := e.executeCommand(ctx, cmd, timeout)
+		output, err := e.executeCommandWithFallback(ctx, cmd, timeout, binariesPath)
 		outputs = append(outputs, output)
 		if err != nil {
 			return strings.Join(outputs, "\n"), err
@@ -241,7 +305,7 @@ func (e *BashExecutor) executeSequential(ctx context.Context, commands []string,
 
 // executeParallel executes commands in parallel with bounded concurrency.
 // Uses a worker pool capped at runtime.NumCPU()*2 to prevent unbounded goroutine/memory growth.
-func (e *BashExecutor) executeParallel(ctx context.Context, commands []string, timeout time.Duration) (string, error) {
+func (e *BashExecutor) executeParallel(ctx context.Context, commands []string, timeout time.Duration, binariesPath string) (string, error) {
 	type result struct {
 		index  int
 		output string
@@ -268,7 +332,7 @@ func (e *BashExecutor) executeParallel(ctx context.Context, commands []string, t
 		go func() {
 			defer wg.Done()
 			for work := range workQueue {
-				output, err := e.executeCommand(ctx, work.command, timeout)
+				output, err := e.executeCommandWithFallback(ctx, work.command, timeout, binariesPath)
 				results <- result{index: work.index, output: output, err: err}
 			}
 		}()

@@ -1159,6 +1159,14 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 		}
 	}
 
+	// Set HooksEnabled variable for state export
+	execCtx.SetVariable("HooksEnabled", module.HookCount() > 0)
+
+	// Execute pre-scan hook steps
+	if module.Hooks != nil && len(module.Hooks.PreScanSteps) > 0 {
+		e.executeHookSteps(ctx, "pre_scan_steps", module.Hooks.PreScanSteps, execCtx)
+	}
+
 	// Execute steps
 	e.logger.Debug("Starting step execution loop",
 		zap.Int("total_steps", len(module.Steps)),
@@ -1295,6 +1303,11 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 
 			currentStep++
 		}
+	}
+
+	// Execute post-scan hook steps
+	if module.Hooks != nil && len(module.Hooks.PostScanSteps) > 0 {
+		e.executeHookSteps(ctx, "post_scan_steps", module.Hooks.PostScanSteps, execCtx)
 	}
 
 	result.Status = core.RunStatusCompleted
@@ -1816,6 +1829,23 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 		}
 	}
 
+	// Set HooksEnabled variable for state export
+	execCtx.SetVariable("HooksEnabled", flow.HookCount() > 0)
+
+	// Execute pre-scan hook steps
+	if flow.Hooks != nil && len(flow.Hooks.PreScanSteps) > 0 {
+		// Flow needs a runner for hook steps — create a host runner
+		binaryPath, _ := os.Executable()
+		hookRunner, hookErr := runner.NewRunner(flow, binaryPath)
+		if hookErr == nil {
+			if setupErr := hookRunner.Setup(ctx); setupErr == nil {
+				e.stepDispatcher.SetRunner(hookRunner)
+				e.executeHookSteps(ctx, "pre_scan_steps", flow.Hooks.PreScanSteps, execCtx)
+				_ = hookRunner.Cleanup(ctx)
+			}
+		}
+	}
+
 	// Parse excluded modules
 	excludeList := parseExcludeList(params["exclude_modules"])
 	fuzzyExcludeList := parseExcludeList(params["fuzzy_exclude_modules"])
@@ -2077,6 +2107,19 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 		return result, ctx.Err()
 	}
 
+	// Execute post-scan hook steps
+	if flow.Hooks != nil && len(flow.Hooks.PostScanSteps) > 0 {
+		binaryPath, _ := os.Executable()
+		hookRunner, hookErr := runner.NewRunner(flow, binaryPath)
+		if hookErr == nil {
+			if setupErr := hookRunner.Setup(ctx); setupErr == nil {
+				e.stepDispatcher.SetRunner(hookRunner)
+				e.executeHookSteps(ctx, "post_scan_steps", flow.Hooks.PostScanSteps, execCtx)
+				_ = hookRunner.Cleanup(ctx)
+			}
+		}
+	}
+
 	result.Status = core.RunStatusCompleted
 	result.EndTime = time.Now()
 	result.Exports = execCtx.Exports
@@ -2130,6 +2173,30 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	}
 
 	return result, nil
+}
+
+// executeHookSteps runs a list of hook steps (pre_scan or post_scan).
+// Hook failures are non-fatal — they log a warning and continue.
+func (e *Executor) executeHookSteps(ctx context.Context, hookName string, steps []core.Step, execCtx *core.ExecutionContext) {
+	for i := range steps {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		step := &steps[i]
+		if step.Type == "" {
+			step.Type = core.StepTypeBash
+		}
+		_, err := e.executeStep(ctx, step, execCtx)
+		if err != nil {
+			execCtx.Logger.Warn("Hook step failed",
+				zap.String("hook", hookName),
+				zap.String("step", step.Name),
+				zap.Error(err))
+		}
+	}
 }
 
 // executeStep executes a single step

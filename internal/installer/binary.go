@@ -317,12 +317,12 @@ func InstallBinary(name string, registry BinaryRegistry, binariesFolder string, 
 				terminal.Gray(terminal.SymbolBowtie), terminal.HiBlue(name))
 			return nil
 		}
-		// Non-core tools: show exists, still copy to external-binaries
-		fmt.Printf("[%s] Binary '%s' already available in PATH, copying to external-binaries\n",
+		// Non-core tools: show exists, still symlink to external-binaries
+		fmt.Printf("[%s] Binary '%s' already available in PATH, symlinking to external-binaries\n",
 			terminal.Gray(terminal.SymbolBowtie), terminal.HiBlue(name))
 		entry, ok := registry[name]
 		if ok {
-			_ = CopyInstalledBinaryToFolder(name, &entry, binariesFolder)
+			_ = SymlinkInstalledBinaryToFolder(name, &entry, binariesFolder)
 		}
 		return nil
 	}
@@ -377,9 +377,9 @@ func InstallBinary(name string, registry BinaryRegistry, binariesFolder string, 
 			return err
 		}
 
-		// After successful command execution, copy the binary to external-binaries
-		if err := CopyInstalledBinaryToFolder(name, &entry, binariesFolder); err != nil {
-			logger.Get().Warn("Failed to copy binary to external-binaries folder",
+		// After successful command execution, symlink the binary to external-binaries
+		if err := SymlinkInstalledBinaryToFolder(name, &entry, binariesFolder); err != nil {
+			logger.Get().Warn("Failed to symlink binary to external-binaries folder",
 				zap.String("name", name),
 				zap.Error(err))
 			// Don't return error - installation succeeded, this is just an optimization
@@ -596,10 +596,27 @@ func copyFile(src, dest string) error {
 	return os.Chmod(dest, srcInfo.Mode())
 }
 
-// CopyInstalledBinaryToFolder finds a binary using LookPath and copies it to the destination folder
+// symlinkOrCopyFile creates a symlink from src to dest, falling back to copy if symlink fails
+func symlinkOrCopyFile(src, dest string) error {
+	// Remove existing file/symlink at dest
+	if _, err := os.Lstat(dest); err == nil {
+		if err := os.Remove(dest); err != nil {
+			return fmt.Errorf("failed to remove existing destination: %w", err)
+		}
+	}
+	// Try symlink first, fall back to copy
+	if err := os.Symlink(src, dest); err != nil {
+		logger.Get().Warn("Symlink failed, falling back to copy",
+			zap.String("src", src), zap.String("dest", dest), zap.Error(err))
+		return copyFile(src, dest)
+	}
+	return nil
+}
+
+// SymlinkInstalledBinaryToFolder finds a binary using LookPath and symlinks it to the destination folder
 // Uses the validate command (valide-command) from registry to locate the binary
-// Returns nil if binary not found (installation may have failed) or copy succeeds
-func CopyInstalledBinaryToFolder(name string, entry *BinaryEntry, destFolder string) error {
+// Returns nil if binary not found (installation may have failed) or symlink succeeds
+func SymlinkInstalledBinaryToFolder(name string, entry *BinaryEntry, destFolder string) error {
 	// Determine which command to look for
 	lookupCmd := name
 	if entry != nil && entry.ValidateCommand != "" {
@@ -631,15 +648,15 @@ func CopyInstalledBinaryToFolder(name string, entry *BinaryEntry, destFolder str
 		return nil
 	}
 
-	logger.Get().Info("Copying binary to external-binaries",
+	logger.Get().Info("Symlinking binary to external-binaries",
 		zap.String("from", binaryPath),
 		zap.String("to", destPath))
 
-	if err := copyFile(binaryPath, destPath); err != nil {
-		return fmt.Errorf("failed to copy binary: %w", err)
+	if err := symlinkOrCopyFile(binaryPath, destPath); err != nil {
+		return fmt.Errorf("failed to symlink binary: %w", err)
 	}
 
-	return os.Chmod(destPath, 0755)
+	return nil
 }
 
 // ListBinaries returns all binary names in the registry

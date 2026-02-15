@@ -1,0 +1,19 @@
+name: test-hooks-pre-only
+kind: module
+description: Test module with only pre-scan hooks
+tags: test,hooks
+
+params:
+  - name: target
+    required: true
+
+hooks:
+  pre_scan_steps:
+    - name: pre-init
+      type: bash
+      command: echo "[HOOK-PRE] Initializing for {{Target}}"
+
+steps:
+  - name: main-step
+    type: bash
+    command: echo "[MAIN] Running for {{Target}}"

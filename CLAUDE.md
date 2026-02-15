@@ -188,7 +188,8 @@ osmedeus func e 'log_info("{{target}}")'         # Evaluate function
 osmedeus --usage-example                         # Show all usage examples
 osmedeus server                                  # Start REST API (see docs/api/ for endpoints)
 osmedeus server --master                         # Start as distributed master
-osmedeus worker join                             # Join as distributed worker
+osmedeus worker join                             # Join as distributed worker (ID: wosm-<uuid8>)
+osmedeus worker join --get-public-ip             # Join with public IP detection (alias: wosm-<ip>)
 osmedeus install binary --name <name>            # Install specific binary
 osmedeus install binary --all                    # Install all binaries
 osmedeus install binary --name <name> --check    # Check if binary is installed
@@ -198,6 +199,7 @@ osmedeus install binary --nix-installation       # Install Nix package manager
 osmedeus install binary --list-registry-nix-build      # List Nix binaries
 osmedeus install binary --list-registry-direct-fetch   # List direct-fetch binaries
 osmedeus install base --preset                   # Install base from preset repository
+osmedeus install base --preset --keep-setting    # Install base, restore previous osm-settings.yaml
 osmedeus install workflow --preset               # Install workflows from preset repository
 osmedeus install validate --preset               # Validate/install ready-to-use base
 osmedeus install env                             # Add binaries to PATH (auto-detects shell)
@@ -270,6 +272,8 @@ REST API documentation with curl examples is in `docs/api/`. Key endpoint catego
 - **Decision Routing**: Uses switch/case syntax for conditional workflow branching
 - **Run Registry**: Tracks active runs with PID management for cancellation support
 - **Write Coordinator**: Batches database writes (step results, progress, artifacts) reducing I/O by ~70%
+- **Install Base Backup**: `InstallBase()` automatically backs up `osm-settings.yaml` to `backup-osm-settings.yaml`; `--keep-setting` flag restores the previous settings after installation
+- **Worker Identity**: Worker IDs use `wosm-<uuid8>` format; default alias is `wosm-<public-ip>` or `wosm-<local-ip>` when no `--alias` is provided
 
 ## SARIF Integration
 

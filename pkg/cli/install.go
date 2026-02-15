@@ -36,6 +36,7 @@ var (
 	validateSample          bool
 	validatePreset          bool
 	installEnvAll           bool
+	keepSetting             bool
 	goGetterSources         []string
 	goGetterDest            string
 	listRegistryNixBuild    bool
@@ -270,6 +271,7 @@ func runInstallBase(cmd *cobra.Command, args []string) error {
 			cfg.BinariesPath,
 			headers,
 		)
+		inst.KeepSetting = keepSetting
 		if err := inst.InstallBase(presetURL); err != nil {
 			return err
 		}
@@ -333,6 +335,7 @@ func runInstallBase(cmd *cobra.Command, args []string) error {
 		cfg.BinariesPath,
 		headers,
 	)
+	inst.KeepSetting = keepSetting
 
 	if err := inst.InstallBase(source); err != nil {
 		return err
@@ -726,7 +729,7 @@ func installBinariesViaNix(names []string, registry installer.BinaryRegistry, bi
 			if !installer.IsCoreUnixTool(name) {
 				entry, ok := registry[name]
 				if ok {
-					_ = installer.CopyInstalledBinaryToFolder(name, &entry, binariesFolder)
+					_ = installer.SymlinkInstalledBinaryToFolder(name, &entry, binariesFolder)
 				}
 			}
 			printer.Info("Binary '%s' already available in PATH, skipping", terminal.HiBlue(name))
@@ -1138,6 +1141,7 @@ func runInstallValidate(cmd *cobra.Command, args []string) error {
 			cfg.BinariesPath,
 			headers,
 		)
+		inst.KeepSetting = keepSetting
 		if err := inst.InstallBase(presetURL); err != nil {
 			return err
 		}
@@ -1586,6 +1590,7 @@ func init() {
 
 	installBaseCmd.Flags().BoolVar(&baseSample, "sample", false, "initialize base folder from embedded sample (replaces existing base folder)")
 	installBaseCmd.Flags().BoolVar(&basePreset, "preset", false, "install from OSM_PRESET_URL environment variable (default: DEFAULT_BASE_REPO)")
+	installBaseCmd.Flags().BoolVar(&keepSetting, "keep-setting", false, "restore previous osm-settings.yaml after base installation")
 	installWorkflowCmd.Flags().BoolVar(&workflowPreset, "preset", false, "install from OSM_WORKFLOW_URL environment variable (default: DEFAULT_WORKFLOW_REPO)")
 	// Note: --force flag is now global (defined in root.go)
 
@@ -1621,6 +1626,7 @@ func init() {
 
 	installValidateCmd.Flags().BoolVar(&validateSample, "sample", false, "initialize base folder from embedded sample (replaces existing base folder)")
 	installValidateCmd.Flags().BoolVar(&validatePreset, "preset", false, "install ready-to-use base from default repository")
+	installValidateCmd.Flags().BoolVar(&keepSetting, "keep-setting", false, "restore previous osm-settings.yaml after base installation")
 }
 
 // parseCustomHeaders converts the string slice of "Key: Value" pairs to a map
@@ -1782,7 +1788,7 @@ func installBinariesParallel(names []string, registry installer.BinaryRegistry,
 			if !installer.IsCoreUnixTool(name) {
 				entry, ok := registry[name]
 				if ok {
-					_ = installer.CopyInstalledBinaryToFolder(name, &entry, binariesFolder)
+					_ = installer.SymlinkInstalledBinaryToFolder(name, &entry, binariesFolder)
 				}
 			}
 			status[name] = "installed"

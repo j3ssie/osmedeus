@@ -34,6 +34,7 @@ var (
 	dbClear          bool
 	dbListTables     bool
 	dbIncludeHeavy   bool
+	dbCleanWS        bool
 )
 
 // defaultHiddenColumns are columns hidden by default for all tables
@@ -134,6 +135,8 @@ func init() {
 	dbCmd.PersistentFlags().BoolVar(&dbListTables, "list", false, "list all available table names")
 	dbCmd.PersistentFlags().BoolVar(&dbClear, "clear", false, "clear all records from the specified table (requires --table and --force)")
 	dbCmd.PersistentFlags().BoolVar(&dbIncludeHeavy, "include-heavy", false, "include large fields (raw_response, screenshot, blob_content) in output")
+
+	dbCleanCmd.Flags().BoolVar(&dbCleanWS, "clean-ws", false, "also remove workspace data directory (e.g. ~/workspaces-osmedeus)")
 
 	dbIndexWorkflowCmd.Flags().BoolVar(&dbIndexForce, "force", false, "force re-index all workflows regardless of checksum")
 
@@ -254,6 +257,24 @@ func runDBClean(cmd *cobra.Command, args []string) error {
 
 		printer.Success("Database cleaned and schema updated")
 		printer.Info("Database: %s", getDatabaseInfo(cfg, db))
+	}
+
+	// Clean workspace data directory if --clean-ws is set
+	if dbCleanWS {
+		wsPath := cfg.GetWorkspacesDir()
+		if wsPath == "" {
+			printer.Warning("Workspaces path not configured, skipping workspace cleanup")
+		} else {
+			printer.Info("Removing workspace data: %s", wsPath)
+			if err := os.RemoveAll(wsPath); err != nil {
+				return fmt.Errorf("failed to remove workspaces directory: %w", err)
+			}
+			// Recreate the empty directory
+			if err := os.MkdirAll(wsPath, 0755); err != nil {
+				return fmt.Errorf("failed to recreate workspaces directory: %w", err)
+			}
+			printer.Success("Workspace data cleaned: %s", wsPath)
+		}
 	}
 
 	return nil

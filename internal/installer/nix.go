@@ -117,18 +117,18 @@ func InstallBinaryViaNix(binaryName string, nixPackage string, binariesFolder st
 	// Store output for caller to display
 	NixInstallOutput = string(output)
 
-	// Copy binary from Nix profile to binaries folder
+	// Symlink binary from Nix profile to binaries folder
 	if binariesFolder != "" {
-		if err := copyNixBinaryToFolder(binaryName, binariesFolder); err != nil {
-			return fmt.Errorf("failed to copy binary to folder: %w", err)
+		if err := symlinkNixBinaryToFolder(binaryName, binariesFolder); err != nil {
+			return fmt.Errorf("failed to symlink binary to folder: %w", err)
 		}
 	}
 
 	return nil
 }
 
-// copyNixBinaryToFolder finds a binary installed by Nix and copies it to the target folder
-func copyNixBinaryToFolder(binaryName string, binariesFolder string) error {
+// symlinkNixBinaryToFolder finds a binary installed by Nix and symlinks it to the target folder
+func symlinkNixBinaryToFolder(binaryName string, binariesFolder string) error {
 	// Find the binary path using 'which'
 	cmd := exec.Command("which", binaryName)
 	output, err := cmd.Output()
@@ -161,33 +161,11 @@ func copyNixBinaryToFolder(binaryName string, binariesFolder string) error {
 
 	destPath := filepath.Join(binariesFolder, binaryName)
 
-	logger.Get().Info("Copying binary to external folder",
+	logger.Get().Info("Symlinking binary to external folder",
 		zap.String("src", srcPath),
 		zap.String("dest", destPath))
 
-	// Copy the file
-	srcFile, err := os.Open(srcPath)
-	if err != nil {
-		return fmt.Errorf("failed to open source binary: %w", err)
-	}
-	defer func() { _ = srcFile.Close() }()
-
-	destFile, err := os.Create(destPath)
-	if err != nil {
-		return fmt.Errorf("failed to create destination binary: %w", err)
-	}
-	defer func() { _ = destFile.Close() }()
-
-	if _, err := io.Copy(destFile, srcFile); err != nil {
-		return fmt.Errorf("failed to copy binary: %w", err)
-	}
-
-	// Make executable
-	if err := os.Chmod(destPath, 0755); err != nil {
-		return fmt.Errorf("failed to make binary executable: %w", err)
-	}
-
-	return nil
+	return symlinkOrCopyFile(srcPath, destPath)
 }
 
 // GetNixPackageName returns the Nix package name for a binary

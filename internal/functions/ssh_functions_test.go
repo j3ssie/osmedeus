@@ -137,6 +137,157 @@ func TestSSHExec_DefaultUserAndPort(t *testing.T) {
 	assert.Equal(t, "", result)
 }
 
-// NOTE: Integration tests for ssh_exec and ssh_rsync against a real SSH server
-// are in the e2e test suite (test-e2e-ssh). Unit tests here only validate
-// input validation since connecting to a real host would be slow/flaky.
+// --- sync_from_master input validation tests ---
+
+func TestSyncFromMaster_EmptySrc(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`sync_from_master("", "/tmp/dest")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, false, result)
+}
+
+func TestSyncFromMaster_EmptyDest(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`sync_from_master("/tmp/src", "")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, false, result)
+}
+
+func TestSyncFromMaster_NoArgs(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`sync_from_master()`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, false, result)
+}
+
+// --- sync_from_worker input validation tests ---
+
+func TestSyncFromWorker_EmptyIdentifier(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`sync_from_worker("", "10.0.0.2", "/tmp/src", "/tmp/dest")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, false, result)
+}
+
+func TestSyncFromWorker_EmptySrc(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`sync_from_worker("worker-1", "10.0.0.2", "", "/tmp/dest")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, false, result)
+}
+
+func TestSyncFromWorker_EmptyDest(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`sync_from_worker("worker-1", "10.0.0.2", "/tmp/src", "")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, false, result)
+}
+
+func TestSyncFromWorker_NoArgs(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`sync_from_worker()`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, false, result)
+}
+
+func TestSyncFromWorker_NoHost(t *testing.T) {
+	// No SSH hooks registered and no explicit IP -> no host resolved
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`sync_from_worker("worker-1", "", "/tmp/src", "/tmp/dest")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, false, result)
+}
+
+// --- rsync_to_worker input validation tests ---
+
+func TestRsyncToWorker_EmptyIdentifier(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`rsync_to_worker("", "10.0.0.2", "/tmp/src", "/tmp/dest")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, false, result)
+}
+
+func TestRsyncToWorker_EmptySrc(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`rsync_to_worker("worker-1", "10.0.0.2", "", "/tmp/dest")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, false, result)
+}
+
+func TestRsyncToWorker_EmptyDest(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`rsync_to_worker("worker-1", "10.0.0.2", "/tmp/src", "")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, false, result)
+}
+
+func TestRsyncToWorker_NoArgs(t *testing.T) {
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`rsync_to_worker()`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, false, result)
+}
+
+func TestRsyncToWorker_NoHost(t *testing.T) {
+	// No SSH hooks registered and no explicit IP -> no host resolved
+	registry := NewRegistry()
+	result, err := registry.Execute(
+		`rsync_to_worker("worker-1", "", "/tmp/src", "/tmp/dest")`,
+		map[string]interface{}{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, false, result)
+}
+
+// NOTE: Integration tests for ssh_exec, ssh_rsync, and sync functions against
+// a real SSH server are in the e2e test suite (test-e2e-ssh). Unit tests here
+// only validate input validation since connecting to a real host would be slow/flaky.

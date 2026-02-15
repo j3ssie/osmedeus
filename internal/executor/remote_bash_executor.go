@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -87,16 +88,24 @@ func (e *RemoteBashExecutor) Execute(ctx context.Context, step *core.Step, execC
 		_ = r.Cleanup(cleanupCtx)
 	}()
 
+	// Extract binaries path for fallback resolution
+	binariesPath := ""
+	if bp, ok := execCtx.GetVariable("Binaries"); ok {
+		if bpStr, ok := bp.(string); ok {
+			binariesPath = bpStr
+		}
+	}
+
 	// Execute command(s) using the runner
 	var output string
 	if len(step.ParallelCommands) > 0 {
-		output, err = e.executeParallel(ctx, r, step.ParallelCommands, timeout)
+		output, err = e.executeParallel(ctx, r, step.ParallelCommands, timeout, binariesPath)
 	} else if len(step.Commands) > 0 {
-		output, err = e.executeSequential(ctx, r, step.Commands, timeout)
+		output, err = e.executeSequential(ctx, r, step.Commands, timeout, binariesPath)
 	} else if step.Command != "" {
 		// Assemble command with structured args if present
 		finalCmd := assembleCommand(step.Command, step.SpeedArgs, step.ConfigArgs, step.InputArgs, step.OutputArgs)
-		output, err = e.executeCommand(ctx, r, finalCmd, timeout)
+		output, err = e.executeCommandWithFallback(ctx, r, finalCmd, timeout, binariesPath)
 	} else {
 		err = fmt.Errorf("no command specified")
 	}
@@ -186,18 +195,65 @@ func (e *RemoteBashExecutor) executeCommand(ctx context.Context, r runner.Runner
 	}
 
 	if cmdResult.ExitCode != 0 {
-		return cmdResult.Output, fmt.Errorf("command exited with code %d", cmdResult.ExitCode)
+		return cmdResult.Output, newExitCodeErrorf(cmdResult.ExitCode, "command exited with code %d", cmdResult.ExitCode)
 	}
 
 	return strings.TrimSpace(cmdResult.Output), nil
 }
 
+// executeCommandWithFallback wraps executeCommand with automatic retry on exit code 127.
+// Fallback 1: strip timeout prefix. Fallback 2: prepend binariesPath to the binary.
+func (e *RemoteBashExecutor) executeCommandWithFallback(ctx context.Context, r runner.Runner, command string, timeout time.Duration, binariesPath string) (string, error) {
+	output, err := e.executeCommand(ctx, r, command, timeout)
+	if err == nil {
+		return output, nil
+	}
+
+	// Only attempt fallback on exit code 127 (command not found)
+	var ecErr *exitCodeError
+	if !errors.As(err, &ecErr) || ecErr.code != 127 {
+		return output, err
+	}
+
+	// Don't retry if context is already cancelled
+	if ctx.Err() != nil {
+		return output, err
+	}
+
+	currentCmd := command
+
+	// Fallback 1: strip timeout prefix
+	if result := stripTimeoutPrefix(currentCmd); result.stripped && result.command != "" {
+		// Use parsed duration from timeout prefix as fallback if step timeout is not set
+		retryTimeout := timeout
+		if retryTimeout == 0 && result.duration > 0 {
+			retryTimeout = result.duration
+		}
+		output, err = e.executeCommand(ctx, r, result.command, retryTimeout)
+		if err == nil {
+			return output, nil
+		}
+		if !errors.As(err, &ecErr) || ecErr.code != 127 {
+			return output, err
+		}
+		currentCmd = result.command
+	}
+
+	// Fallback 2: prepend binaries path
+	if prepended, ok := prependBinariesPath(currentCmd, binariesPath); ok {
+		output, err = e.executeCommand(ctx, r, prepended, timeout)
+		return output, err
+	}
+
+	return output, err
+}
+
 // executeSequential executes commands sequentially
-func (e *RemoteBashExecutor) executeSequential(ctx context.Context, r runner.Runner, commands []string, timeout time.Duration) (string, error) {
+func (e *RemoteBashExecutor) executeSequential(ctx context.Context, r runner.Runner, commands []string, timeout time.Duration, binariesPath string) (string, error) {
 	var outputs []string
 
 	for _, cmd := range commands {
-		output, err := e.executeCommand(ctx, r, cmd, timeout)
+		output, err := e.executeCommandWithFallback(ctx, r, cmd, timeout, binariesPath)
 		outputs = append(outputs, output)
 		if err != nil {
 			return strings.Join(outputs, "\n"), err
@@ -208,7 +264,7 @@ func (e *RemoteBashExecutor) executeSequential(ctx context.Context, r runner.Run
 }
 
 // executeParallel executes commands in parallel
-func (e *RemoteBashExecutor) executeParallel(ctx context.Context, r runner.Runner, commands []string, timeout time.Duration) (string, error) {
+func (e *RemoteBashExecutor) executeParallel(ctx context.Context, r runner.Runner, commands []string, timeout time.Duration, binariesPath string) (string, error) {
 	type cmdResult struct {
 		index  int
 		output string
@@ -222,7 +278,7 @@ func (e *RemoteBashExecutor) executeParallel(ctx context.Context, r runner.Runne
 		wg.Add(1)
 		go func(idx int, command string) {
 			defer wg.Done()
-			output, err := e.executeCommand(ctx, r, command, timeout)
+			output, err := e.executeCommandWithFallback(ctx, r, command, timeout, binariesPath)
 			results <- cmdResult{index: idx, output: output, err: err}
 		}(i, cmd)
 	}

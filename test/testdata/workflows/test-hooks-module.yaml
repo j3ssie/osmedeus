@@ -1,0 +1,33 @@
+name: test-hooks-module
+kind: module
+description: Test module with pre/post scan hooks
+tags: test,hooks
+
+params:
+  - name: target
+    required: true
+
+hooks:
+  pre_scan_steps:
+    - name: pre-start-log
+      type: bash
+      command: echo "[HOOK-PRE] Starting scan for {{Target}}"
+    - name: pre-setup
+      type: bash
+      command: echo "[HOOK-PRE] Setup complete"
+  post_scan_steps:
+    - name: post-cleanup
+      type: bash
+      command: echo "[HOOK-POST] Cleaning up for {{Target}}"
+    - name: post-finish-log
+      type: bash
+      command: echo "[HOOK-POST] Scan finished"
+
+steps:
+  - name: main-step
+    type: bash
+    command: echo "[MAIN] Scanning {{Target}}"
+
+  - name: second-step
+    type: bash
+    command: echo "[MAIN] Analysis complete"

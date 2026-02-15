@@ -120,6 +120,8 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnPickValid, vf.pickValid)
 	_ = vm.Set(FnRunModule, vf.runModule)
 	_ = vm.Set(FnRunFlow, vf.runFlow)
+	_ = vm.Set(FnRunOnMaster, vf.runOnMaster)
+	_ = vm.Set(FnRunOnWorker, vf.runOnWorker)
 	_ = vm.Set(FnExecPython, vf.execPython)
 	_ = vm.Set(FnExecPythonFile, vf.execPythonFile)
 
@@ -207,6 +209,10 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnZipDir, vf.zipDir)
 	_ = vm.Set(FnUnzipDir, vf.unzipDir)
 	_ = vm.Set(FnExtractTo, vf.extractTo)
+
+	// Snapshot functions
+	_ = vm.Set(FnSnapshotExport, vf.snapshotExport)
+	_ = vm.Set(FnSnapshotImport, vf.snapshotImport)
 
 	// Diff functions
 	_ = vm.Set(FnExtractDiff, vf.extractDiff)
@@ -310,6 +316,9 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	// SSH functions
 	_ = vm.Set(FnSSHExec, vf.sshExec)
 	_ = vm.Set(FnSSHRsync, vf.sshRsync)
+	_ = vm.Set(FnSyncFromMaster, vf.syncFromMaster)
+	_ = vm.Set(FnSyncFromWorker, vf.syncFromWorker)
+	_ = vm.Set(FnRsyncToWorker, vf.rsyncToWorker)
 
 	// Console for debugging
 	_ = vm.Set("console", map[string]interface{}{

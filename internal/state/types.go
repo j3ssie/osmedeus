@@ -24,6 +24,9 @@ type RunInfo struct {
 	ErrorMessage   string         `json:"error_message,omitempty"`
 	TotalSteps     int            `json:"total_steps"`
 	CompletedSteps int            `json:"completed_steps"`
+	HooksEnabled   bool           `json:"hooks_enabled"`
+	RunMode        string         `json:"run_mode,omitempty"`
+	RunPriority    string         `json:"run_priority,omitempty"`
 }
 
 // WorkspaceInfo contains workspace information for export
@@ -61,5 +64,8 @@ type ExportContext struct {
 	ErrorMessage   string
 	TotalSteps     int
 	CompletedSteps int
+	HooksEnabled   bool
+	RunMode        string
+	RunPriority    string
 	Artifacts      []string
 }

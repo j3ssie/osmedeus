@@ -122,6 +122,7 @@ func upsertWorkflowMeta(ctx context.Context, w *core.Workflow, force bool) error
 		existing.Hidden = w.Hidden
 		existing.StepCount = len(w.Steps)
 		existing.ModuleCount = len(w.Modules)
+		existing.HookCount = w.HookCount()
 		existing.ParamsJSON = paramsJSON
 		existing.IndexedAt = now
 		existing.UpdatedAt = now
@@ -147,6 +148,7 @@ func upsertWorkflowMeta(ctx context.Context, w *core.Workflow, force bool) error
 		Hidden:      w.Hidden,
 		StepCount:   len(w.Steps),
 		ModuleCount: len(w.Modules),
+		HookCount:   w.HookCount(),
 		ParamsJSON:  paramsJSON,
 		IndexedAt:   now,
 		CreatedAt:   now,

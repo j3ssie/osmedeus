@@ -23,6 +23,12 @@ func (t *TagList) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+// WorkflowHooks defines pre/post execution steps for workflows
+type WorkflowHooks struct {
+	PreScanSteps  []Step `yaml:"pre_scan_steps,omitempty"`
+	PostScanSteps []Step `yaml:"post_scan_steps,omitempty"`
+}
+
 // WorkflowHelp contains usage documentation for a workflow
 type WorkflowHelp struct {
 	ExampleTargets []string `yaml:"example_targets,omitempty"`
@@ -44,6 +50,9 @@ type Workflow struct {
 
 	// Execution preferences (optional, can be overridden by CLI flags)
 	Preferences *Preferences `yaml:"preferences,omitempty"`
+
+	// Hooks for pre/post scan steps
+	Hooks *WorkflowHooks `yaml:"hooks,omitempty"`
 
 	// Runner configuration (module-kind only)
 	Runner       RunnerType    `yaml:"runner,omitempty"`
@@ -208,4 +217,12 @@ func (w *Workflow) GetExampleTargets() []string {
 		return nil
 	}
 	return w.Help.ExampleTargets
+}
+
+// HookCount returns the total number of hook steps (pre + post)
+func (w *Workflow) HookCount() int {
+	if w.Hooks == nil {
+		return 0
+	}
+	return len(w.Hooks.PreScanSteps) + len(w.Hooks.PostScanSteps)
 }

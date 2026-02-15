@@ -111,6 +111,8 @@ const (
 	FnPickValid      = "pick_valid"       // pick_valid(v1, v2, ..., v10) -> any (first valid value)
 	FnRunModule      = "run_module"       // run_module(module, target, params?) -> string (run osmedeus module)
 	FnRunFlow        = "run_flow"         // run_flow(flow, target, params?) -> string (run osmedeus flow)
+	FnRunOnMaster    = "run_on_master"    // run_on_master(action, ...args) -> bool (execute on master node)
+	FnRunOnWorker    = "run_on_worker"    // run_on_worker(scope, action, ...args) -> bool (execute on worker nodes)
 	FnExecPython     = "exec_python"      // exec_python(code) -> string (run inline Python, prefer python3)
 	FnExecPythonFile = "exec_python_file" // exec_python_file(path) -> string (run Python file, prefer python3)
 )
@@ -228,8 +230,11 @@ const (
 
 // SSH Functions - Remote execution via SSH
 const (
-	FnSSHExec  = "ssh_exec"  // ssh_exec(host, command, user?, key_path?, password?, port?) -> string
-	FnSSHRsync = "ssh_rsync" // ssh_rsync(host, src, dest, user?, key_path?, password?, port?) -> bool
+	FnSSHExec        = "ssh_exec"         // ssh_exec(host, command, user?, key_path?, password?, port?) -> string
+	FnSSHRsync       = "ssh_rsync"        // ssh_rsync(host, src, dest, user?, key_path?, password?, port?) -> bool
+	FnSyncFromMaster = "sync_from_master" // sync_from_master(src, dest) -> bool
+	FnSyncFromWorker = "sync_from_worker" // sync_from_worker(identifier, ip, src, dest) -> bool
+	FnRsyncToWorker  = "rsync_to_worker"  // rsync_to_worker(identifier, ip, src, dest) -> bool
 )
 
 // LLM Functions - Invoke LLM from workflows
@@ -244,6 +249,12 @@ const (
 	FnZipDir    = "zip_dir"    // zip_dir(source, dest) -> bool
 	FnUnzipDir  = "unzip_dir"  // unzip_dir(source, dest) -> bool
 	FnExtractTo = "extract_to" // extract_to(source, dest) -> bool (auto-detect .zip, .tar.gz, .tar.bz2, .tar.xz, .tgz; removes dest first)
+)
+
+// Snapshot Functions - Workspace export/import
+const (
+	FnSnapshotExport = "snapshot_export" // snapshot_export(workspace, dest?) -> string (zip path on success, empty on failure)
+	FnSnapshotImport = "snapshot_import" // snapshot_import(source) -> string (workspace name on success, empty on failure)
 )
 
 // Diff Functions - Compare files
@@ -424,6 +435,8 @@ func AllFunctions() []string {
 		FnPickValid,
 		FnRunModule,
 		FnRunFlow,
+		FnRunOnMaster,
+		FnRunOnWorker,
 		FnExecPython,
 		FnExecPythonFile,
 
@@ -511,6 +524,10 @@ func AllFunctions() []string {
 		FnZipDir,
 		FnUnzipDir,
 		FnExtractTo,
+
+		// Snapshot Functions
+		FnSnapshotExport,
+		FnSnapshotImport,
 
 		// Diff Functions
 		FnExtractDiff,
@@ -612,6 +629,9 @@ func AllFunctions() []string {
 		// SSH functions
 		FnSSHExec,
 		FnSSHRsync,
+		FnSyncFromMaster,
+		FnSyncFromWorker,
+		FnRsyncToWorker,
 	}
 }
 
@@ -642,6 +662,7 @@ const (
 	CategoryCDNStorage      = "cdn_storage"
 	CategoryUnixCommands    = "unix_commands"
 	CategoryArchive         = "archive"
+	CategorySnapshot        = "snapshot"
 	CategoryDiff            = "diff"
 	CategoryOutput          = "output"
 	CategoryURLProcessing   = "url_processing"
@@ -652,6 +673,7 @@ const (
 	CategoryTypeDetection   = "type_detection"
 	CategoryLLM             = "llm"
 	CategorySSH             = "ssh"
+	CategoryDistributed     = "distributed"
 )
 
 // CategoryInfo provides display metadata for a function category
@@ -681,6 +703,7 @@ func CategoryOrder() []CategoryInfo {
 		{CategoryCDNStorage, "CDN/Storage Functions", "CDN/Storage"},
 		{CategoryUnixCommands, "Unix Command Wrappers", "Unix"},
 		{CategoryArchive, "Archive Functions (Go)", "Archive"},
+		{CategorySnapshot, "Snapshot Functions", "Snapshot"},
 		{CategoryDiff, "Diff Functions", "Diff"},
 		{CategoryOutput, "Output Functions", "Output"},
 		{CategoryURLProcessing, "URL Processing Functions", "URL"},
@@ -690,6 +713,7 @@ func CategoryOrder() []CategoryInfo {
 		{CategoryEnvironment, "Environment Functions", "Environment"},
 		{CategoryTypeDetection, "Type Detection Functions", "Type Detection"},
 		{CategorySSH, "SSH Functions", "SSH"},
+		{CategoryDistributed, "Distributed Functions", "Distributed"},
 	}
 }
 
@@ -849,6 +873,10 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnUnzipDir, "unzip_dir(source, dest)", "Unzip archive using Go archive/zip", "bool", "unzip_dir('/tmp/archive.zip', '/tmp/extracted')"},
 			{FnExtractTo, "extract_to(source, dest)", "Auto-detect archive format (.zip, .tar.gz, .tar.bz2, .tar.xz, .tgz) and extract to dest (removes dest first)", "bool", "extract_to('/tmp/repo.tar.gz', '/tmp/repo')"},
 		},
+		CategorySnapshot: {
+			{FnSnapshotExport, "snapshot_export(workspace, dest?)", "Export workspace as ZIP snapshot (subprocess)", "string", "snapshot_export('example.com')"},
+			{FnSnapshotImport, "snapshot_import(source)", "Import workspace from ZIP snapshot (subprocess, force mode)", "string", "snapshot_import('/path/to/example.com_snapshot.zip')"},
+		},
 		CategoryDiff: {
 			{FnExtractDiff, "extract_diff(file1, file2)", "Lines only in file2 (new content)", "string", "extract_diff('{{Output}}/old-subs.txt', '{{Output}}/new-subs.txt')"},
 		},
@@ -939,6 +967,13 @@ func FunctionRegistry() map[string][]FunctionInfo {
 		CategorySSH: {
 			{FnSSHExec, "ssh_exec(host, command, user?, key_path?, password?, port?)", "Execute command on remote host via SSH (uses connection pool)", "string", "ssh_exec('10.0.0.1', 'whoami', 'root', '~/.ssh/id_rsa')"},
 			{FnSSHRsync, "ssh_rsync(host, src, dest, user?, key_path?, password?, port?)", "Copy local file/directory to remote host via rsync over SSH", "bool", "ssh_rsync('10.0.0.1', '/tmp/data.txt', '/opt/data.txt', 'root', '~/.ssh/id_rsa')"},
+			{FnSyncFromMaster, "sync_from_master(src, dest)", "Request master to rsync file/folder to this worker via SSH", "bool", "sync_from_master('/opt/osmedeus/base/wordlists', '{{BaseFolder}}/wordlists')"},
+			{FnSyncFromWorker, "sync_from_worker(identifier, ip, src, dest)", "Pull file/folder from a worker via rsync over SSH", "bool", "sync_from_worker('worker-1', '10.0.0.2', '/opt/output/results.txt', '/tmp/results.txt')"},
+			{FnRsyncToWorker, "rsync_to_worker(identifier, ip, src, dest)", "Push file/folder to a worker via rsync over SSH", "bool", "rsync_to_worker('worker-1', '10.0.0.2', '/tmp/data.txt', '/opt/data.txt')"},
+		},
+		CategoryDistributed: {
+			{FnRunOnMaster, "run_on_master(action, ...args)", "Execute on master: 'func' runs JS expression, 'run' submits workflow, 'bash' runs shell command", "bool", "run_on_master('bash', 'nmap -sV target.com')"},
+			{FnRunOnWorker, "run_on_worker(scope, action, ...args)", "Execute on worker(s): scope='all'/alias/ID/IP; actions: 'func', 'run', 'bash'", "bool", "run_on_worker('all', 'bash', 'apt update && apt install -y nmap')"},
 		},
 		CategoryTypeDetection: {
 			{FnGetTypes, "get_types(input)", "Detect input type (file, folder, cidr, ip, url, domain, string)", "string", "get_types('192.168.1.0/24')"},

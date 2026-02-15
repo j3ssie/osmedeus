@@ -11,6 +11,10 @@ import (
 const (
 	// DatabaseFileName is the name of the database file to preserve during base installation
 	DatabaseFileName = "database-osm.sqlite"
+	// SettingsFileName is the name of the settings file
+	SettingsFileName = "osm-settings.yaml"
+	// SettingsBackupName is the name of the settings backup file
+	SettingsBackupName = "backup-osm-settings.yaml"
 )
 
 // Installer handles installation of workflows, base folder, and binaries
@@ -20,6 +24,7 @@ type Installer struct {
 	BinariesFolder string
 	CustomHeaders  map[string]string
 	Printer        *terminal.Printer
+	KeepSetting    bool
 }
 
 // NewInstaller creates a new Installer with the given paths
@@ -116,6 +121,20 @@ func (i *Installer) InstallBase(source string) error {
 		}
 	}
 
+	// Backup osm-settings.yaml before base folder is removed
+	settingsPath := filepath.Join(i.BaseFolder, SettingsFileName)
+	var settingsBackupPath string
+
+	if _, err := os.Stat(settingsPath); err == nil {
+		i.Printer.Info("Backing up settings...")
+		settingsBackupPath, err = backupFile(settingsPath)
+		if err != nil {
+			i.Printer.Warning("Failed to backup settings: %s", err)
+		} else {
+			defer func() { _ = os.Remove(settingsBackupPath) }()
+		}
+	}
+
 	// Fetch source to temp directory
 	i.Printer.Info("Fetching source...")
 	tempDir, err := FetchToTemp(source, i.CustomHeaders)
@@ -173,6 +192,26 @@ func (i *Installer) InstallBase(source string) error {
 			// Log restored count for verification
 			if entries, err := os.ReadDir(binariesPath); err == nil {
 				i.Printer.Info("Restored %d items to external-binaries", len(entries))
+			}
+		}
+	}
+
+	// Save settings backup to persistent path for reference
+	if settingsBackupPath != "" {
+		persistentBackupPath := filepath.Join(i.BaseFolder, SettingsBackupName)
+		if err := restoreFile(settingsBackupPath, persistentBackupPath); err != nil {
+			i.Printer.Warning("Failed to save settings backup: %s", err)
+		} else {
+			i.Printer.Info("Previous settings backed up to: %s", terminal.Cyan(persistentBackupPath))
+		}
+
+		// If --keep-setting, restore the old settings over the new one
+		if i.KeepSetting {
+			newSettingsPath := filepath.Join(i.BaseFolder, SettingsFileName)
+			if err := restoreFile(settingsBackupPath, newSettingsPath); err != nil {
+				i.Printer.Warning("Failed to restore settings: %s", err)
+			} else {
+				i.Printer.Success("Previous settings restored to: %s", terminal.Cyan(newSettingsPath))
 			}
 		}
 	}

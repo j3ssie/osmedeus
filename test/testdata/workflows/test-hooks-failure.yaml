@@ -1,0 +1,29 @@
+name: test-hooks-failure
+kind: module
+description: Test that a failing hook step does not abort the workflow
+tags: test,hooks
+
+params:
+  - name: target
+    required: true
+
+hooks:
+  pre_scan_steps:
+    - name: pre-fail
+      type: bash
+      command: exit 1
+    - name: pre-after-fail
+      type: bash
+      command: echo "[HOOK-PRE] Runs after failed hook"
+  post_scan_steps:
+    - name: post-fail
+      type: bash
+      command: exit 1
+    - name: post-after-fail
+      type: bash
+      command: echo "[HOOK-POST] Runs after failed hook"
+
+steps:
+  - name: main-step
+    type: bash
+    command: echo "[MAIN] Should still run despite hook failures"

@@ -2,7 +2,6 @@ package installer
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -86,18 +85,18 @@ func InstallBinaryViaGo(binaryName string, goPackage string, binariesFolder stri
 		return fmt.Errorf("failed to install %s via go install: %w", pkg, err)
 	}
 
-	// Copy binary from GOBIN to binaries folder if specified
+	// Symlink binary from GOBIN to binaries folder if specified
 	if binariesFolder != "" {
-		if err := copyGoBinaryToFolder(binaryName, binariesFolder); err != nil {
-			return fmt.Errorf("failed to copy binary to folder: %w", err)
+		if err := symlinkGoBinaryToFolder(binaryName, binariesFolder); err != nil {
+			return fmt.Errorf("failed to symlink binary to folder: %w", err)
 		}
 	}
 
 	return nil
 }
 
-// copyGoBinaryToFolder finds a binary installed by go and copies it to the target folder
-func copyGoBinaryToFolder(binaryName string, binariesFolder string) error {
+// symlinkGoBinaryToFolder finds a binary installed by go and symlinks it to the target folder
+func symlinkGoBinaryToFolder(binaryName string, binariesFolder string) error {
 	goBinPath, err := GetGoBinPath()
 	if err != nil {
 		return err
@@ -121,33 +120,11 @@ func copyGoBinaryToFolder(binaryName string, binariesFolder string) error {
 
 	destPath := filepath.Join(binariesFolder, binaryName)
 
-	logger.Get().Info("Copying binary to external folder",
+	logger.Get().Info("Symlinking binary to external folder",
 		zap.String("src", srcPath),
 		zap.String("dest", destPath))
 
-	// Copy the file
-	srcFile, err := os.Open(srcPath)
-	if err != nil {
-		return fmt.Errorf("failed to open source binary: %w", err)
-	}
-	defer func() { _ = srcFile.Close() }()
-
-	destFile, err := os.Create(destPath)
-	if err != nil {
-		return fmt.Errorf("failed to create destination binary: %w", err)
-	}
-	defer func() { _ = destFile.Close() }()
-
-	if _, err := io.Copy(destFile, srcFile); err != nil {
-		return fmt.Errorf("failed to copy binary: %w", err)
-	}
-
-	// Make executable
-	if err := os.Chmod(destPath, 0755); err != nil {
-		return fmt.Errorf("failed to make binary executable: %w", err)
-	}
-
-	return nil
+	return symlinkOrCopyFile(srcPath, destPath)
 }
 
 // GetGoPackageName returns the go_install package path for a binary

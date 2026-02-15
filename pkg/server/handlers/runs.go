@@ -145,6 +145,7 @@ func createRunRecord(ctx context.Context, _ *config.Config, workflow *core.Workf
 		Workspace:    workspace,
 		RunPriority:  priority,
 		RunMode:      runMode,
+		HooksEnabled: workflow.HookCount() > 0,
 	}
 
 	if err := database.CreateRun(ctx, run); err != nil {
@@ -793,6 +794,7 @@ func DuplicateRun(cfg *config.Config) fiber.Handler {
 			Status:       "pending",
 			TriggerType:  "api",
 			TotalSteps:   original.TotalSteps,
+			HooksEnabled: original.HooksEnabled,
 			// Reset timing/progress fields (StartedAt, CompletedAt, CompletedSteps are zero values)
 		}
 

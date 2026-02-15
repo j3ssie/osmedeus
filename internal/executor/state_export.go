@@ -24,6 +24,23 @@ func buildExportContext(result *core.WorkflowResult, execCtx *core.ExecutionCont
 		ctx.WorkspacePath = execCtx.WorkspacePath
 		ctx.WorkspaceName = execCtx.WorkspaceName
 		ctx.Params = execCtx.Params
+
+		// Read hook/run metadata from execution context variables
+		if v, ok := execCtx.GetVariable("HooksEnabled"); ok {
+			if b, ok := v.(bool); ok {
+				ctx.HooksEnabled = b
+			}
+		}
+		if v, ok := execCtx.GetVariable("RunMode"); ok {
+			if s, ok := v.(string); ok {
+				ctx.RunMode = s
+			}
+		}
+		if v, ok := execCtx.GetVariable("RunPriority"); ok {
+			if s, ok := v.(string); ok {
+				ctx.RunPriority = s
+			}
+		}
 	}
 
 	// Populate/override from result

@@ -3,10 +3,13 @@ package distributed
 import (
 	"context"
 	"fmt"
-	"github.com/j3ssie/osmedeus/v5/internal/json"
 	"os"
+	"os/exec"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/j3ssie/osmedeus/v5/internal/json"
 
 	"github.com/google/uuid"
 	"github.com/j3ssie/osmedeus/v5/internal/broker"
@@ -14,6 +17,8 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
 	"github.com/j3ssie/osmedeus/v5/internal/database/repository"
+	"github.com/j3ssie/osmedeus/v5/internal/executor"
+	"github.com/j3ssie/osmedeus/v5/internal/functions"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
 	"github.com/uptrace/bun"
@@ -406,7 +411,7 @@ func (m *Master) persistEventLog(ctx context.Context, event *core.Event) {
 
 // dataProcessorLoop processes data from worker data queues
 func (m *Master) dataProcessorLoop(ctx context.Context) {
-	keys := []string{KeyDataRuns, KeyDataSteps, KeyDataEvents, KeyDataArtifacts}
+	keys := []string{KeyDataRuns, KeyDataSteps, KeyDataEvents, KeyDataArtifacts, KeyDataExecute}
 	timeout := 1 * time.Second
 
 	for {
@@ -432,6 +437,18 @@ func (m *Master) dataProcessorLoop(ctx context.Context) {
 
 // processWorkerData processes data received from a worker
 func (m *Master) processWorkerData(ctx context.Context, key string, envelope *DataEnvelope) {
+	m.logger.Debug("processing worker data",
+		zap.String("key", key),
+		zap.String("type", envelope.Type),
+		zap.String("worker_id", envelope.WorkerID),
+	)
+
+	// Execute requests don't require a database connection
+	if key == KeyDataExecute {
+		m.processExecuteData(ctx, envelope)
+		return
+	}
+
 	if m.db == nil {
 		m.logger.Debug("skipping data processing - no database connection",
 			zap.String("key", key),
@@ -439,12 +456,6 @@ func (m *Master) processWorkerData(ctx context.Context, key string, envelope *Da
 		)
 		return
 	}
-
-	m.logger.Debug("processing worker data",
-		zap.String("key", key),
-		zap.String("type", envelope.Type),
-		zap.String("worker_id", envelope.WorkerID),
-	)
 
 	switch key {
 	case KeyDataRuns:
@@ -528,4 +539,284 @@ func (m *Master) processArtifactData(ctx context.Context, envelope *DataEnvelope
 	if err != nil {
 		m.printer.Warning("Failed to create artifact %s: %s", artifact.Name, err)
 	}
+}
+
+// =============================================================================
+// Execute Request Processing
+// =============================================================================
+
+// processExecuteData processes an execute request from a worker
+func (m *Master) processExecuteData(ctx context.Context, envelope *DataEnvelope) {
+	var req ExecuteRequest
+	if err := json.Unmarshal(envelope.Data, &req); err != nil {
+		m.printer.Warning("Failed to unmarshal execute request: %s", err)
+		return
+	}
+
+	// Resolve execute type: prefer new ExecuteType field, fall back to legacy Action
+	executeType := req.ExecuteType
+	if executeType == "" {
+		executeType = req.Action
+	}
+
+	// Resolve target role: default to "master" for backward compatibility
+	targetRole := req.TargetRole
+	if targetRole == "" {
+		targetRole = "master"
+	}
+
+	m.logger.Info("processing execute request from worker",
+		zap.String("worker_id", envelope.WorkerID),
+		zap.String("execute_type", executeType),
+		zap.String("target_role", targetRole),
+		zap.String("data", req.Data),
+	)
+
+	// Route requests not targeted at master to workers
+	if targetRole != "master" {
+		m.routeExecuteToWorkers(ctx, &req, envelope.WorkerID)
+		return
+	}
+
+	switch executeType {
+	case "func":
+		// Resolve data: prefer new Data field, fall back to legacy Expr
+		expr := req.Data
+		if expr == "" {
+			expr = req.Expr
+		}
+		m.executeFunc(ctx, expr, envelope.WorkerID)
+	case "run":
+		// Resolve data: prefer new Data field, fall back to legacy Workflow
+		workflow := req.Data
+		if workflow == "" {
+			workflow = req.Workflow
+		}
+		m.executeRun(ctx, workflow, req.Target, req.Params, envelope.WorkerID)
+	case "bash":
+		command := req.Data
+		if command == "" {
+			command = req.Expr // legacy fallback
+		}
+		m.executeBash(ctx, command, envelope.WorkerID)
+	case "sync_to_worker":
+		// Data=src path on master, Target=dest path on worker
+		m.executeSyncToWorker(ctx, req.Data, req.Target, envelope.WorkerID)
+	default:
+		m.printer.Warning("Unknown execute type from worker %s: %s", envelope.WorkerID, executeType)
+	}
+}
+
+// executeFunc runs a utility function expression on the master
+func (m *Master) executeFunc(ctx context.Context, expr, workerID string) {
+	if expr == "" {
+		m.printer.Warning("Empty expression from worker %s", workerID)
+		return
+	}
+
+	m.logger.Debug("executing function from worker",
+		zap.String("worker_id", workerID),
+		zap.String("expr", expr),
+	)
+
+	// Build context with built-in variables so functions have access to paths
+	execCtx := executor.BuildBuiltinVariables(m.config, nil)
+
+	registry := functions.NewRegistry()
+	_, err := registry.Execute(expr, execCtx)
+	if err != nil {
+		m.printer.Warning("Failed to execute function from worker %s: %s (expr: %s)",
+			workerID, err, expr)
+		return
+	}
+
+	m.logger.Info("executed function from worker",
+		zap.String("worker_id", workerID),
+		zap.String("expr", expr),
+	)
+}
+
+// executeRun submits a workflow task to the pending queue on behalf of a worker
+func (m *Master) executeRun(ctx context.Context, workflow, target, params, workerID string) {
+	if workflow == "" || target == "" {
+		m.printer.Warning("Missing workflow or target from worker %s", workerID)
+		return
+	}
+
+	m.logger.Debug("submitting run request from worker",
+		zap.String("worker_id", workerID),
+		zap.String("workflow", workflow),
+		zap.String("target", target),
+		zap.String("params", params),
+	)
+
+	// Parse params into map
+	taskParams := make(map[string]interface{})
+	if params != "" {
+		for _, pair := range strings.Split(params, ",") {
+			pair = strings.TrimSpace(pair)
+			if pair == "" {
+				continue
+			}
+			parts := strings.SplitN(pair, "=", 2)
+			if len(parts) == 2 {
+				taskParams[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+			}
+		}
+	}
+
+	task := NewTask(
+		uuid.NewString()[:8],
+		workflow,
+		"module", // default to module; master can detect flow if needed
+		target,
+		taskParams,
+	)
+
+	if err := m.SubmitTask(ctx, task); err != nil {
+		m.printer.Warning("Failed to submit task from worker %s: %s", workerID, err)
+		return
+	}
+
+	m.logger.Info("submitted task from worker",
+		zap.String("worker_id", workerID),
+		zap.String("task_id", task.ID),
+		zap.String("workflow", workflow),
+		zap.String("target", target),
+	)
+}
+
+// executeBash runs a shell command on the master on behalf of a worker
+func (m *Master) executeBash(ctx context.Context, command, workerID string) {
+	if command == "" {
+		m.printer.Warning("Empty bash command from worker %s", workerID)
+		return
+	}
+
+	m.logger.Debug("executing bash from worker",
+		zap.String("worker_id", workerID),
+		zap.String("command", command))
+
+	// @NOTE: This is intentional - bash commands come from trusted workflow YAML files
+	// via the distributed system. Workers send requests through run_on_master('bash', cmd).
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		m.printer.Warning("Bash execution failed from worker %s: %s (output: %s)",
+			workerID, err, string(output))
+		return
+	}
+
+	m.logger.Info("executed bash from worker",
+		zap.String("worker_id", workerID),
+		zap.String("command", command),
+		zap.Int("output_len", len(output)))
+}
+
+// executeSyncToWorker rsyncs a file/folder from the master to the requesting worker.
+// src is the path on the master, dest is the path on the worker.
+func (m *Master) executeSyncToWorker(ctx context.Context, src, dest, workerID string) {
+	if src == "" || dest == "" {
+		m.printer.Warning("sync_to_worker: missing src or dest from worker %s", workerID)
+		return
+	}
+
+	// Look up the requesting worker's SSH info
+	worker, err := m.client.GetWorker(ctx, workerID)
+	if err != nil || worker == nil {
+		m.printer.Warning("sync_to_worker: failed to get worker %s: %v", workerID, err)
+		return
+	}
+	if !worker.SSHEnabled {
+		m.printer.Warning("sync_to_worker: worker %s does not have SSH enabled", workerID)
+		return
+	}
+
+	host := worker.PublicIP
+	if host == "" {
+		host = worker.IPAddress
+	}
+	if host == "" {
+		m.printer.Warning("sync_to_worker: worker %s has no IP address", workerID)
+		return
+	}
+
+	m.logger.Debug("syncing to worker",
+		zap.String("worker_id", workerID),
+		zap.String("host", host),
+		zap.String("src", src),
+		zap.String("dest", dest),
+	)
+
+	// Build rsync command: rsync -avz -e "ssh -i <key> -p 22 -o StrictHostKeyChecking=no" src root@host:dest
+	args := []string{"-avz", "-e"}
+	keyPath := worker.SSHKeysPath
+	if keyPath != "" {
+		args = append(args, fmt.Sprintf("ssh -i %s -p 22 -o StrictHostKeyChecking=no -o ConnectTimeout=30", keyPath))
+	} else {
+		args = append(args, "ssh -p 22 -o StrictHostKeyChecking=no -o ConnectTimeout=30")
+	}
+	rsyncDest := fmt.Sprintf("root@%s:%s", host, dest)
+	args = append(args, src, rsyncDest)
+
+	rsyncCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(rsyncCtx, "rsync", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		m.printer.Warning("sync_to_worker: rsync to worker %s failed: %s (output: %s)",
+			workerID, err, string(output))
+		return
+	}
+
+	m.logger.Info("synced to worker",
+		zap.String("worker_id", workerID),
+		zap.String("host", host),
+		zap.String("src", src),
+		zap.String("dest", dest),
+	)
+}
+
+// routeExecuteToWorkers routes an execute request to target worker(s) via per-worker queues.
+func (m *Master) routeExecuteToWorkers(ctx context.Context, req *ExecuteRequest, senderWorkerID string) {
+	workers, err := m.client.GetAllWorkers(ctx)
+	if err != nil {
+		m.printer.Warning("Failed to get workers for routing: %s", err)
+		return
+	}
+
+	scope := req.TargetScope
+	if scope == "" {
+		scope = "all"
+	}
+
+	var targets []*WorkerInfo
+	if scope == "all" {
+		targets = workers
+	} else {
+		for _, w := range workers {
+			if w.ID == scope || w.Alias == scope || w.PublicIP == scope {
+				targets = append(targets, w)
+				break
+			}
+		}
+	}
+
+	if len(targets) == 0 {
+		m.printer.Warning("No workers matched scope %q for execute request from %s", scope, senderWorkerID)
+		return
+	}
+
+	for _, w := range targets {
+		key := KeyDataExecuteForWorker(w.ID)
+		if err := m.client.PushData(ctx, key, "execute", req, senderWorkerID); err != nil {
+			m.printer.Warning("Failed to route execute to worker %s: %s", w.ID, err)
+		}
+	}
+
+	m.logger.Info("routed execute request to workers",
+		zap.String("scope", scope),
+		zap.Int("target_count", len(targets)),
+		zap.String("sender", senderWorkerID))
 }

@@ -1110,6 +1110,7 @@ func createCLIRunRecord(ctx context.Context, cfg *config.Config, workflow *core.
 		Workspace:    workspace,
 		RunPriority:  "critical", // CLI runs execute immediately
 		RunMode:      "local",
+		HooksEnabled: workflow.HookCount() > 0,
 	}
 
 	if err := database.CreateRun(ctx, run); err != nil {

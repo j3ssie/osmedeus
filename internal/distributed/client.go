@@ -28,11 +28,18 @@ const (
 	KeyEventsPrefix = KeyPrefix + "events:" // osm:events:{topic}
 
 	// Data queue keys (for worker -> master data)
-	KeyDataRuns      = KeyPrefix + "data:runs"
-	KeyDataSteps     = KeyPrefix + "data:steps"
-	KeyDataEvents    = KeyPrefix + "data:events"
-	KeyDataArtifacts = KeyPrefix + "data:artifacts"
+	KeyDataRuns          = KeyPrefix + "data:runs"
+	KeyDataSteps         = KeyPrefix + "data:steps"
+	KeyDataEvents        = KeyPrefix + "data:events"
+	KeyDataArtifacts     = KeyPrefix + "data:artifacts"
+	KeyDataExecute       = KeyPrefix + "data:execute"
+	KeyDataExecuteWorker = KeyPrefix + "data:execute:worker:" // osm:data:execute:worker:{worker_id}
 )
+
+// KeyDataExecuteForWorker returns the per-worker execute queue key.
+func KeyDataExecuteForWorker(workerID string) string {
+	return KeyDataExecuteWorker + workerID
+}
 
 // Timeouts and intervals
 const (
@@ -300,6 +307,33 @@ func (c *Client) GetAllWorkers(ctx context.Context) ([]*WorkerInfo, error) {
 	}
 
 	return workers, nil
+}
+
+// GetWorker retrieves a single worker by ID
+func (c *Client) GetWorker(ctx context.Context, workerID string) (*WorkerInfo, error) {
+	cmd := c.client.B().Hget().Key(KeyWorkers).Field(workerID).Build()
+	data, err := c.client.Do(ctx, cmd).ToString()
+	if err != nil {
+		if rueidis.IsRedisNil(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get worker: %w", err)
+	}
+	return UnmarshalWorkerInfo([]byte(data))
+}
+
+// GetWorkerByAlias retrieves a worker by its alias
+func (c *Client) GetWorkerByAlias(ctx context.Context, alias string) (*WorkerInfo, error) {
+	workers, err := c.GetAllWorkers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, w := range workers {
+		if w.Alias == alias {
+			return w, nil
+		}
+	}
+	return nil, nil
 }
 
 // RemoveWorker removes a worker from the registry

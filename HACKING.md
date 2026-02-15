@@ -34,7 +34,7 @@ osmedeus/
 │   ├── console/            # Console output capture
 │   ├── core/               # Core types (Workflow, Step, Trigger, etc.)
 │   ├── database/           # SQLite/PostgreSQL via Bun ORM
-│   ├── distributed/        # Distributed execution (master/worker)
+│   ├── distributed/        # Distributed execution (master/worker, worker ID: wosm-<uuid8>)
 │   ├── executor/           # Workflow execution engine
 │   ├── fileio/             # High-performance file I/O (mmap)
 │   ├── functions/          # Utility functions (Goja JS runtime)
@@ -1598,12 +1598,24 @@ Osmedeus supports installing base folders and workflows from curated preset repo
 # Install base folder from preset repository
 osmedeus install base --preset
 
+# Install base and restore previous osm-settings.yaml (API keys, Redis config, etc.)
+osmedeus install base --preset --keep-setting
+
 # Install workflows from preset repository
 osmedeus install workflow --preset
 
 # Validate and install ready-to-use base
 osmedeus install validate --preset
 ```
+
+### Settings Backup
+
+When `install base` runs, the entire base folder (including `osm-settings.yaml`) is deleted and replaced. To prevent losing custom settings:
+
+- **Automatic backup**: `osm-settings.yaml` is always backed up to `~/osmedeus-base/backup-osm-settings.yaml` before removal
+- **`--keep-setting` flag**: Restores the previous `osm-settings.yaml` over the newly installed one after installation
+
+This is handled by the `Installer.KeepSetting` field in `internal/installer/installer.go`.
 
 ### Environment Variables
 

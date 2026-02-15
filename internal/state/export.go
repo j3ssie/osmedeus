@@ -31,22 +31,31 @@ func Export(stateFile string, ctx *ExportContext) error {
 		UpdatedAt: time.Now(),
 	}
 
-	// Always use context data first for run info (has correct in-memory status)
-	// The DB read happens before status is updated, so it returns stale data.
-	// Context data comes from the in-memory result which has the correct status.
-	if ctx != nil {
-		export.Run = runInfoFromContext(ctx)
-	}
-
-	// Optionally enrich with DB data for fields not available in context
-	// (currently all fields are available in context, so this is just for future-proofing)
-	if export.Run == nil && ctx != nil && ctx.RunUUID != "" && db != nil {
+	// Prefer DB Run record as primary data source — it has correct TotalSteps
+	// (calculated via calculateTotalSteps which sums module steps for flows),
+	// CompletedSteps (updated by WriteCoordinator), RunMode, and RunPriority.
+	// Context provides status and completed_at because the DB UpdateRunStatus
+	// call happens AFTER state export inside the executor.
+	if ctx != nil && ctx.RunUUID != "" && db != nil {
 		var run database.Run
 		err := db.NewSelect().Model(&run).
 			Where("run_uuid = ?", ctx.RunUUID).Scan(dbCtx)
 		if err == nil {
 			export.Run = runInfoFromDB(&run)
+			// Override status and completed_at from context — DB still has
+			// "running" status at export time since UpdateRunStatus runs after export
+			if ctx.Status != "" {
+				export.Run.Status = ctx.Status
+			}
+			if ctx.CompletedAt != nil {
+				export.Run.CompletedAt = ctx.CompletedAt
+			}
 		}
+	}
+
+	// Fallback to context-only if DB is unavailable
+	if export.Run == nil && ctx != nil {
+		export.Run = runInfoFromContext(ctx)
 	}
 
 	// Try to load workspace from database first
@@ -99,6 +108,9 @@ func runInfoFromDB(run *database.Run) *RunInfo {
 		ErrorMessage:   run.ErrorMessage,
 		TotalSteps:     run.TotalSteps,
 		CompletedSteps: run.CompletedSteps,
+		HooksEnabled:   run.HooksEnabled,
+		RunMode:        run.RunMode,
+		RunPriority:    run.RunPriority,
 	}
 }
 
@@ -119,6 +131,9 @@ func runInfoFromContext(ctx *ExportContext) *RunInfo {
 		ErrorMessage:   ctx.ErrorMessage,
 		TotalSteps:     ctx.TotalSteps,
 		CompletedSteps: ctx.CompletedSteps,
+		HooksEnabled:   ctx.HooksEnabled,
+		RunMode:        ctx.RunMode,
+		RunPriority:    ctx.RunPriority,
 	}
 }
 

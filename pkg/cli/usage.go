@@ -324,7 +324,9 @@ func UsageWorker() string {
 
 ` + terminal.BoldCyan("▶ Subcommands") + `
   • ` + terminal.Yellow("join") + `    - Join the distributed worker pool
-  • ` + terminal.Yellow("status") + `  - Show worker pool status
+  • ` + terminal.Yellow("status") + `  - Show worker pool status (alias: ls); use ` + terminal.Yellow("--json") + ` for JSON output
+  • ` + terminal.Yellow("set") + `     - Update a worker field (alias, public-ip, ssh-enabled, ssh-keys-path)
+  • ` + terminal.Yellow("eval") + `    - Evaluate a function expression with distributed hooks
 
 ` + docsFooter()
 }
@@ -344,6 +346,9 @@ func UsageWorkerJoin() string {
   ` + terminal.Green("# Join using a specific Redis URL") + `
   osmedeus worker join ` + terminal.Yellow("--redis-url") + ` redis://user:pass@localhost:6379/0
 
+  ` + terminal.Green("# Join and auto-detect public IP") + `
+  osmedeus worker join ` + terminal.Yellow("--get-public-ip") + `
+
 ` + docsFooter()
 }
 
@@ -351,6 +356,69 @@ func UsageWorkerJoin() string {
 func UsageWorkerStatus() string {
 	return terminal.BoldCyan("◆ Description") + `
   Display the status of all workers connected to the Redis server.
+
+  Use ` + terminal.Yellow("--json") + ` to output worker info as JSON for scripting and automation.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Show worker status as a table") + `
+  osmedeus worker status
+
+  ` + terminal.Green("# Output worker info as JSON") + `
+  osmedeus worker status ` + terminal.Yellow("--json") + `
+
+` + docsFooter()
+}
+
+// UsageWorkerEval returns the Long description for the worker eval command
+func UsageWorkerEval() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Evaluate a utility function expression with distributed hooks registered.
+
+  This connects to Redis and registers run_on_master() hooks so that
+  expressions can route calls to the master node. Useful for one-shot
+  operations from a worker context (e.g., inside Docker or CI pipelines)
+  without running a full worker loop.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Simple function eval with distributed hooks") + `
+  osmedeus worker eval 'log_info("hello from worker eval")' ` + terminal.Yellow("--redis-url") + ` redis://localhost:6379
+
+  ` + terminal.Green("# Route a call to the master node") + `
+  osmedeus worker eval 'run_on_master("func", "log_info(\"routed via redis\")")' ` + terminal.Yellow("--redis-url") + ` redis://localhost:6379
+
+  ` + terminal.Green("# With target variable") + `
+  osmedeus worker eval 'log_info("hello")' ` + terminal.Yellow("-t") + ` example.com ` + terminal.Yellow("--redis-url") + ` redis://localhost:6379
+
+  ` + terminal.Green("# Read script from stdin") + `
+  echo 'run_on_master("func", "db_import_sarif(\"ws\", \"/path/f.sarif\")")' | osmedeus worker eval ` + terminal.Yellow("--stdin") + ` ` + terminal.Yellow("--redis-url") + ` redis://localhost:6379
+
+` + docsFooter()
+}
+
+// UsageWorkerSet returns the Long description for the worker set command
+func UsageWorkerSet() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Update a field on a registered worker. The worker can be identified by its
+  ID or alias.
+
+` + terminal.BoldCyan("▶ Valid Fields") + `
+  • ` + terminal.Yellow("alias") + `          - Human-friendly name for the worker
+  • ` + terminal.Yellow("public-ip") + `      - Public IP address
+  • ` + terminal.Yellow("ssh-enabled") + `    - Whether SSH is enabled (true/false)
+  • ` + terminal.Yellow("ssh-keys-path") + `  - Path to SSH keys
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Set an alias for a worker") + `
+  osmedeus worker set <worker-id> alias scanner-1
+
+  ` + terminal.Green("# Set public IP") + `
+  osmedeus worker set scanner-1 public-ip 203.0.113.10
+
+  ` + terminal.Green("# Enable SSH") + `
+  osmedeus worker set scanner-1 ssh-enabled true
+
+  ` + terminal.Green("# With custom Redis URL") + `
+  osmedeus worker set <worker-id> alias prod-1 ` + terminal.Yellow("--redis-url") + ` redis://localhost:6379
 
 ` + docsFooter()
 }
@@ -510,12 +578,14 @@ func UsageDBSeed() string {
 func UsageDBClean() string {
 	return terminal.BoldCyan("◆ Description") + `
   Remove all data from all database tables.
+  Use --clean-ws to also remove workspace data (e.g. ~/workspaces-osmedeus).
 
   ` + terminal.Yellow("WARNING:") + ` This is a destructive operation that cannot be undone.
   Use the --force flag to skip the confirmation prompt.
 
-` + terminal.BoldCyan("▷ Example") + `
+` + terminal.BoldCyan("▷ Examples") + `
   ` + terminal.Green("osmedeus db clean --force") + `
+  ` + terminal.Green("osmedeus db clean --force --clean-ws") + `
 
 ` + docsFooter()
 }
@@ -744,6 +814,9 @@ func UsageAllExamples() string {
   ` + terminal.Green("# Check worker status") + `
   osmedeus worker status
 
+  ` + terminal.Green("# Evaluate function with distributed hooks (one-shot)") + `
+  osmedeus worker eval 'run_on_master("func", "log_info(\"hello\")")' ` + terminal.Yellow("--redis-url") + ` redis://localhost:6379
+
 ` + terminal.BoldCyan("▶ Install Examples") + `
   ` + terminal.Green("# Install binary") + `
   osmedeus install binary ` + terminal.Yellow("--name") + ` nuclei
@@ -900,6 +973,7 @@ func UsageFullExample() string {
 ` + terminal.Gray("───────────────────────────────────────────────────────────────────") + `
   osmedeus worker join                Join the distributed worker pool
   osmedeus worker status              Show worker pool status
+  osmedeus worker eval <script>       Evaluate function with distributed hooks
 
 ` + terminal.Cyan("  Join Flags:") + `
   ` + terminal.Yellow("--redis-url") + `            Redis connection URL
@@ -907,6 +981,13 @@ func UsageFullExample() string {
 
 ` + terminal.Cyan("  Status Flags:") + `
   ` + terminal.Yellow("--redis-url") + `            Redis connection URL
+
+` + terminal.Cyan("  Eval Flags:") + `
+  ` + terminal.Yellow("--redis-url") + `            Redis connection URL
+  ` + terminal.Yellow("-e, --eval") + `             Script to evaluate
+  ` + terminal.Yellow("-t, --target") + `           Target value for {{target}} variable
+  ` + terminal.Yellow("--params") + `               Additional parameters (key=value format)
+  ` + terminal.Yellow("--stdin") + `                Read script from stdin
 
 ` + terminal.BoldYellow("DATABASE COMMAND") + ` - Database management
 ` + terminal.Gray("───────────────────────────────────────────────────────────────────") + `

@@ -1085,6 +1085,116 @@ func (vf *vmFunc) moveFile(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(true)
 }
 
+// snapshotExport exports a workspace as a ZIP snapshot by running osmedeus snapshot export as a subprocess.
+// Usage: snapshot_export(workspace, dest?) -> string (zip path on success, empty on failure)
+func (vf *vmFunc) snapshotExport(call goja.FunctionCall) goja.Value {
+	workspace := call.Argument(0).String()
+	dest := call.Argument(1).String()
+
+	if workspace == "undefined" || workspace == "" {
+		logger.Get().Warn("snapshot_export: workspace is required")
+		return vf.vm.ToValue("")
+	}
+	if dest == "undefined" {
+		dest = ""
+	}
+
+	// Find the current executable
+	exePath, err := os.Executable()
+	if err != nil {
+		logger.Get().Warn("snapshot_export: failed to find executable", zap.Error(err))
+		return vf.vm.ToValue("")
+	}
+
+	// Build command arguments
+	args := []string{"snapshot", "export", workspace}
+	if dest != "" {
+		args = append(args, "-o", dest)
+	}
+
+	logger.Get().Debug("Calling "+terminal.HiGreen("snapshot_export"),
+		zap.String("workspace", workspace),
+		zap.String("dest", dest))
+
+	// @NOTE: This is intentional - snapshot_export() is a utility function exposed to workflow
+	// definitions for exporting workspaces. Input comes from trusted workflow YAML files.
+	cmd := exec.Command(exePath, args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		logger.Get().Warn("snapshot_export: command failed",
+			zap.String("workspace", workspace),
+			zap.Error(err),
+			zap.String("output", string(output)))
+		return vf.vm.ToValue("")
+	}
+
+	// Parse output to extract the zip file path from "File: <path>" line
+	var zipPath string
+	for _, line := range strings.Split(string(output), "\n") {
+		line = strings.TrimSpace(line)
+		if idx := strings.Index(line, "File:"); idx >= 0 {
+			zipPath = strings.TrimSpace(line[idx+len("File:"):])
+			break
+		}
+	}
+
+	logger.Get().Debug(terminal.HiGreen("snapshot_export")+" result",
+		zap.String("workspace", workspace),
+		zap.String("zipPath", zipPath))
+	return vf.vm.ToValue(zipPath)
+}
+
+// snapshotImport imports a workspace from a ZIP snapshot by running osmedeus snapshot import as a subprocess.
+// Usage: snapshot_import(source) -> string (workspace name on success, empty on failure)
+func (vf *vmFunc) snapshotImport(call goja.FunctionCall) goja.Value {
+	source := call.Argument(0).String()
+
+	if source == "undefined" || source == "" {
+		logger.Get().Warn("snapshot_import: source is required")
+		return vf.vm.ToValue("")
+	}
+
+	// Find the current executable
+	exePath, err := os.Executable()
+	if err != nil {
+		logger.Get().Warn("snapshot_import: failed to find executable", zap.Error(err))
+		return vf.vm.ToValue("")
+	}
+
+	// Build command arguments with --force to skip interactive confirmation
+	args := []string{"snapshot", "import", source, "--force"}
+
+	logger.Get().Debug("Calling "+terminal.HiGreen("snapshot_import"),
+		zap.String("source", source))
+
+	// @NOTE: This is intentional - snapshot_import() is a utility function exposed to workflow
+	// definitions for importing workspaces. Input comes from trusted workflow YAML files.
+	cmd := exec.Command(exePath, args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		logger.Get().Warn("snapshot_import: command failed",
+			zap.String("source", source),
+			zap.Error(err),
+			zap.String("output", string(output)))
+		return vf.vm.ToValue("")
+	}
+
+	// Parse output to extract workspace name from "Workspace: <name>" line
+	var workspaceName string
+	for _, line := range strings.Split(string(output), "\n") {
+		line = strings.TrimSpace(line)
+		if idx := strings.Index(line, "Workspace:"); idx >= 0 {
+			workspaceName = strings.TrimSpace(line[idx+len("Workspace:"):])
+			break
+		}
+	}
+
+	logger.Get().Debug(terminal.HiGreen("snapshot_import")+" result",
+		zap.String("source", source),
+		zap.String("workspace", workspaceName))
+	return vf.vm.ToValue(workspaceName)
+}
+
 // parseParamsToFlags parses a comma-separated "key=value" string into -p flags.
 // E.g. "threads=10,deep=true" -> ["-p", "threads=10", "-p", "deep=true"]
 func parseParamsToFlags(params string) []string {
@@ -1170,6 +1280,213 @@ func (vf *vmFunc) runFlow(call goja.FunctionCall) goja.Value {
 	}
 
 	return vf.runOsmedeus("-f", flow, target, params, "run_flow")
+}
+
+// runOnMaster executes an action on the master node in distributed mode.
+// In distributed mode, the request is sent via Redis to the master.
+// In standalone mode, falls back to local execution.
+//
+// Usage:
+//
+//	run_on_master('func', 'db_import_sarif("ws", "/path/file.sarif")') -> bool
+//	run_on_master('run', 'subdomain', 'example.com', 'threads=10') -> bool
+//	run_on_master('bash', 'nmap -sV target.com') -> bool
+func (vf *vmFunc) runOnMaster(call goja.FunctionCall) goja.Value {
+	action := call.Argument(0).String()
+	if action == "undefined" || action == "" {
+		logger.Get().Warn("run_on_master: action is required (func, run, or bash)")
+		return vf.vm.ToValue(false)
+	}
+
+	log := logger.Get()
+
+	switch action {
+	case "func":
+		expr := call.Argument(1).String()
+		if expr == "undefined" || expr == "" {
+			log.Warn("run_on_master: expression is required for 'func' action")
+			return vf.vm.ToValue(false)
+		}
+
+		log.Debug("Calling "+terminal.HiGreen("run_on_master"),
+			zap.String("action", "func"),
+			zap.String("expr", expr))
+
+		// Try distributed path first
+		if trySendExecuteRequest("func", expr, "", "", "", "master", "") {
+			log.Debug("run_on_master: sent func request to master via Redis")
+			return vf.vm.ToValue(true)
+		}
+
+		// Fallback: execute locally using the current runtime
+		log.Warn("run_on_master: not in distributed mode, executing locally",
+			zap.String("action", action),
+			zap.String("hint", "ensure worker mode is active and Redis is configured"))
+		execCtx := make(map[string]interface{})
+		_, err := vf.runtime.Execute(expr, execCtx)
+		if err != nil {
+			log.Warn("run_on_master: local execution failed",
+				zap.String("expr", expr),
+				zap.Error(err))
+			return vf.vm.ToValue(false)
+		}
+		return vf.vm.ToValue(true)
+
+	case "run":
+		workflow := call.Argument(1).String()
+		target := call.Argument(2).String()
+		params := call.Argument(3).String()
+
+		if workflow == "undefined" || workflow == "" || target == "undefined" || target == "" {
+			log.Warn("run_on_master: workflow and target are required for 'run' action")
+			return vf.vm.ToValue(false)
+		}
+		if params == "undefined" {
+			params = ""
+		}
+
+		log.Debug("Calling "+terminal.HiGreen("run_on_master"),
+			zap.String("action", "run"),
+			zap.String("workflow", workflow),
+			zap.String("target", target),
+			zap.String("params", params))
+
+		// Try distributed path first
+		if trySendExecuteRequest("run", "", workflow, target, params, "master", "") {
+			log.Debug("run_on_master: sent run request to master via Redis")
+			return vf.vm.ToValue(true)
+		}
+
+		// Fallback: run locally as subprocess
+		log.Warn("run_on_master: not in distributed mode, running locally",
+			zap.String("action", action),
+			zap.String("hint", "ensure worker mode is active and Redis is configured"))
+		vf.runOsmedeus("-m", workflow, target, params, "run_on_master")
+		return vf.vm.ToValue(true)
+
+	case "bash":
+		command := call.Argument(1).String()
+		if command == "undefined" || command == "" {
+			log.Warn("run_on_master: command is required for 'bash' action")
+			return vf.vm.ToValue(false)
+		}
+
+		log.Debug("Calling "+terminal.HiGreen("run_on_master"),
+			zap.String("action", "bash"),
+			zap.String("command", command))
+
+		// Try distributed path first
+		if trySendExecuteRequest("bash", command, "", "", "", "master", "") {
+			log.Debug("run_on_master: sent bash request to master via Redis")
+			return vf.vm.ToValue(true)
+		}
+
+		// Fallback: execute locally
+		log.Warn("run_on_master: not in distributed mode, executing bash locally")
+		// @NOTE: This is intentional - run_on_master('bash', cmd) is a utility function
+		// exposed to workflow definitions. Input comes from trusted workflow YAML files.
+		cmd := exec.Command("sh", "-c", command)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Warn("run_on_master: local bash execution failed",
+				zap.String("command", command), zap.Error(err),
+				zap.String("output", string(output)))
+			return vf.vm.ToValue(false)
+		}
+		return vf.vm.ToValue(true)
+
+	default:
+		log.Warn("run_on_master: unknown action",
+			zap.String("action", action),
+			zap.String("valid", "func, run, bash"))
+		return vf.vm.ToValue(false)
+	}
+}
+
+// runOnWorker executes an action on worker node(s) in distributed mode.
+// In distributed mode, the request is routed via Redis through the master to target workers.
+// In standalone mode, falls back to local execution.
+//
+// Usage:
+//
+//	run_on_worker('all', 'func', 'log_info("hello")') -> bool
+//	run_on_worker('scanner-1', 'run', 'subdomain', 'example.com', 'threads=10') -> bool
+//	run_on_worker('all', 'bash', 'apt update && apt install -y nmap') -> bool
+func (vf *vmFunc) runOnWorker(call goja.FunctionCall) goja.Value {
+	scope := call.Argument(0).String()
+	if scope == "undefined" || scope == "" {
+		scope = "all"
+	}
+	action := call.Argument(1).String()
+	if action == "undefined" || action == "" {
+		logger.Get().Warn("run_on_worker: action is required (func, run, bash)")
+		return vf.vm.ToValue(false)
+	}
+
+	log := logger.Get()
+
+	switch action {
+	case "func":
+		expr := call.Argument(2).String()
+		if expr == "undefined" || expr == "" {
+			log.Warn("run_on_worker: expression required for 'func' action")
+			return vf.vm.ToValue(false)
+		}
+		if trySendExecuteRequest("func", expr, "", "", "", "worker", scope) {
+			return vf.vm.ToValue(true)
+		}
+		// Fallback: execute locally
+		log.Warn("run_on_worker: not in distributed mode, executing locally")
+		execCtx := make(map[string]interface{})
+		_, err := vf.runtime.Execute(expr, execCtx)
+		if err != nil {
+			log.Warn("run_on_worker: local execution failed", zap.Error(err))
+			return vf.vm.ToValue(false)
+		}
+		return vf.vm.ToValue(true)
+
+	case "run":
+		workflow := call.Argument(2).String()
+		target := call.Argument(3).String()
+		params := call.Argument(4).String()
+		if workflow == "undefined" || workflow == "" || target == "undefined" || target == "" {
+			log.Warn("run_on_worker: workflow and target required for 'run' action")
+			return vf.vm.ToValue(false)
+		}
+		if params == "undefined" {
+			params = ""
+		}
+		if trySendExecuteRequest("run", "", workflow, target, params, "worker", scope) {
+			return vf.vm.ToValue(true)
+		}
+		// Fallback: run locally
+		log.Warn("run_on_worker: not in distributed mode, running locally")
+		vf.runOsmedeus("-m", workflow, target, params, "run_on_worker")
+		return vf.vm.ToValue(true)
+
+	case "bash":
+		command := call.Argument(2).String()
+		if command == "undefined" || command == "" {
+			log.Warn("run_on_worker: command required for 'bash' action")
+			return vf.vm.ToValue(false)
+		}
+		if trySendExecuteRequest("bash", command, "", "", "", "worker", scope) {
+			return vf.vm.ToValue(true)
+		}
+		// Fallback: execute locally
+		log.Warn("run_on_worker: not in distributed mode, executing bash locally")
+		// @NOTE: This is intentional - run_on_worker('scope', 'bash', cmd) is a utility function
+		// exposed to workflow definitions. Input comes from trusted workflow YAML files.
+		cmd := exec.Command("sh", "-c", command)
+		_, _ = cmd.CombinedOutput()
+		return vf.vm.ToValue(true)
+
+	default:
+		log.Warn("run_on_worker: unknown action (expected 'func', 'run', or 'bash'). "+
+			"Did you forget the scope argument? Correct usage: run_on_worker(scope, action, ...args)",
+			zap.String("action", action))
+		return vf.vm.ToValue(false)
+	}
 }
 
 // copyFileBuffered copies a file using buffered I/O (memory-efficient for large files)

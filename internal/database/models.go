@@ -40,8 +40,9 @@ type Run struct {
 	CurrentPID int `bun:"current_pid" json:"current_pid,omitempty"`
 
 	// Priority and mode
-	RunPriority string `bun:"run_priority,notnull,default:'high'" json:"run_priority"` // low, normal, high, critical
-	RunMode     string `bun:"run_mode,notnull,default:'local'" json:"run_mode"`        // local, distributed, cloud
+	RunPriority  string `bun:"run_priority,notnull,default:'high'" json:"run_priority"` // low, normal, high, critical
+	RunMode      string `bun:"run_mode,notnull,default:'local'" json:"run_mode"`        // local, distributed, cloud
+	HooksEnabled bool   `bun:"hooks_enabled,default:false" json:"hooks_enabled"`
 
 	// Relations
 	Steps     []*StepResult `bun:"rel:has-many,join:id=run_id" json:"steps,omitempty"`
@@ -308,6 +309,7 @@ type WorkflowMeta struct {
 	// Metadata
 	StepCount   int    `bun:"step_count" json:"step_count"`
 	ModuleCount int    `bun:"module_count" json:"module_count"`
+	HookCount   int    `bun:"hook_count" json:"hook_count"`
 	ParamsJSON  string `bun:"params_json" json:"params_json"` // Serialized params
 
 	// Timestamps
