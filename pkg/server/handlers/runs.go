@@ -286,6 +286,16 @@ func CreateRun(cfg *config.Config) fiber.Handler {
 			})
 		}
 
+		// Validate input for dangerous shell characters
+		if !req.SkipValidation {
+			if err := validateCreateRunInput(&req); err != nil {
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+					"error":   true,
+					"message": err.Error(),
+				})
+			}
+		}
+
 		// Handle empty target mode
 		if req.EmptyTarget {
 			req.Target = generateEmptyTarget()

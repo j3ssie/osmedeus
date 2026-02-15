@@ -184,8 +184,11 @@ func TestExecutor_DependencyTargetTypes_Fail(t *testing.T) {
 	}, cfg)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "target")
-	assert.Contains(t, err.Error(), "required types")
+	var ttmErr *TargetTypeMismatchError
+	require.ErrorAs(t, err, &ttmErr)
+	assert.Equal(t, "not-a-domain", ttmErr.Supplied)
+	assert.Equal(t, "domain,url", ttmErr.ExpectedType)
+	assert.Equal(t, "unknown", ttmErr.DetectedType)
 }
 
 func TestExecutor_DependencyTargetTypes_Unknown(t *testing.T) {

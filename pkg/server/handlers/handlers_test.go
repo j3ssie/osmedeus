@@ -589,6 +589,146 @@ func TestReloadWorkflows(t *testing.T) {
 	assert.Contains(t, result["message"], "reloaded")
 }
 
+func TestContainsDangerousChars(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"example.com", false},
+		{"192.168.1.1", false},
+		{"my-module", false},
+		{"sub.domain.com", false},
+		{"path/to/file", false},
+		{"target;rm -rf /", true},
+		{"target|cat /etc/passwd", true},
+		{"target&background", true},
+		{"target`whoami`", true},
+		{"target$(id)", true},
+		{"target with space", true},
+		{"target'inject", true},
+		{`target"inject`, true},
+		{"target${HOME}", true},
+		{"target(cmd)", true},
+		{"target{a,b}", true},
+		{"target[0]", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			assert.Equal(t, tt.expected, containsDangerousChars(tt.input))
+		})
+	}
+}
+
+func TestValidateCreateRunInput(t *testing.T) {
+	t.Run("clean input passes", func(t *testing.T) {
+		req := &CreateRunRequest{
+			Target: "example.com",
+			Flow:   "recon-flow",
+			Params: map[string]string{"threads": "10"},
+		}
+		assert.NoError(t, validateCreateRunInput(req))
+	})
+
+	t.Run("dangerous target rejected", func(t *testing.T) {
+		req := &CreateRunRequest{
+			Target: "example.com;id",
+			Module: "test-module",
+		}
+		err := validateCreateRunInput(req)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "target")
+		assert.Contains(t, err.Error(), ";")
+	})
+
+	t.Run("dangerous targets array entry rejected", func(t *testing.T) {
+		req := &CreateRunRequest{
+			Targets: []string{"good.com", "bad|cmd"},
+			Module:  "test-module",
+		}
+		err := validateCreateRunInput(req)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "targets[1]")
+		assert.Contains(t, err.Error(), "|")
+	})
+
+	t.Run("dangerous param value rejected", func(t *testing.T) {
+		req := &CreateRunRequest{
+			Target: "example.com",
+			Module: "test-module",
+			Params: map[string]string{"safe": "ok", "bad": "val$(id)"},
+		}
+		err := validateCreateRunInput(req)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "params")
+		assert.Contains(t, err.Error(), "$")
+	})
+
+	t.Run("dangerous flow name rejected", func(t *testing.T) {
+		req := &CreateRunRequest{
+			Target: "example.com",
+			Flow:   "flow name",
+		}
+		err := validateCreateRunInput(req)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "flow")
+	})
+
+	t.Run("dangerous module name rejected", func(t *testing.T) {
+		req := &CreateRunRequest{
+			Target: "example.com",
+			Module: "mod`whoami`",
+		}
+		err := validateCreateRunInput(req)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "module")
+	})
+
+	t.Run("dangerous ssh_host rejected", func(t *testing.T) {
+		req := &CreateRunRequest{
+			Target:  "example.com",
+			Module:  "test",
+			SSHHost: "host&bg",
+		}
+		err := validateCreateRunInput(req)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ssh_host")
+	})
+
+	t.Run("dangerous docker_image rejected", func(t *testing.T) {
+		req := &CreateRunRequest{
+			Target:      "example.com",
+			Module:      "test",
+			DockerImage: "image;bad",
+		}
+		err := validateCreateRunInput(req)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "docker_image")
+	})
+
+	t.Run("empty fields are skipped", func(t *testing.T) {
+		req := &CreateRunRequest{
+			Module: "test-module",
+		}
+		assert.NoError(t, validateCreateRunInput(req))
+	})
+}
+
+func TestValidateCreateRunInput_SkipValidation(t *testing.T) {
+	req := &CreateRunRequest{
+		Target:         "example.com;id",
+		Module:         "test-module",
+		SkipValidation: true,
+	}
+	// When SkipValidation is true, the handler skips calling validateCreateRunInput,
+	// so calling the validator directly should still catch it
+	err := validateCreateRunInput(req)
+	require.Error(t, err, "validator itself still detects dangerous chars")
+
+	// But the SkipValidation field being set means the handler won't call it
+	assert.True(t, req.SkipValidation)
+}
+
 func TestGetSettings(t *testing.T) {
 	cfg := &config.Config{
 		BaseFolder: "/test/base",

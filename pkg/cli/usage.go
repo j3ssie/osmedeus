@@ -115,6 +115,18 @@ func UsageRun() string {
   osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--chunk-size") + ` 250 ` + terminal.Yellow("--chunk-part") + ` 0  ` + terminal.Gray("# Machine 1") + `
   osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--chunk-size") + ` 250 ` + terminal.Yellow("--chunk-part") + ` 1  ` + terminal.Gray("# Machine 2") + `
 
+  ` + terminal.Green("# Queue a run for later processing") + `
+  osmedeus run ` + terminal.Yellow("--queue") + ` ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-t") + ` example.com
+
+  ` + terminal.Green("# Queue with file target") + `
+  osmedeus run ` + terminal.Yellow("--queue") + ` ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt
+
+  ` + terminal.Green("# Process queued tasks (alias for 'osmedeus worker queue run')") + `
+  osmedeus run ` + terminal.Yellow("--queue-run") + `
+
+  ` + terminal.Green("# Process queued tasks with concurrency") + `
+  osmedeus run ` + terminal.Yellow("--queue-run") + ` ` + terminal.Yellow("--concurrency") + ` 3
+
 ` + docsFooter()
 }
 
@@ -147,6 +159,9 @@ func UsageServe() string {
 
   ` + terminal.Green("# Start as distributed master node") + `
   osmedeus serve ` + terminal.Yellow("--master") + `
+
+  ` + terminal.Green("# Start server without queue polling") + `
+  osmedeus serve ` + terminal.Yellow("--no-queue-polling") + `
 
 ` + docsFooter()
 }
@@ -327,6 +342,7 @@ func UsageWorker() string {
   • ` + terminal.Yellow("status") + `  - Show worker pool status (alias: ls); use ` + terminal.Yellow("--json") + ` for JSON output
   • ` + terminal.Yellow("set") + `     - Update a worker field (alias, public-ip, ssh-enabled, ssh-keys-path)
   • ` + terminal.Yellow("eval") + `    - Evaluate a function expression with distributed hooks
+  • ` + terminal.Yellow("queue") + `   - Manage and process queued tasks (list, new, run)
 
 ` + docsFooter()
 }
@@ -419,6 +435,73 @@ func UsageWorkerSet() string {
 
   ` + terminal.Green("# With custom Redis URL") + `
   osmedeus worker set <worker-id> alias prod-1 ` + terminal.Yellow("--redis-url") + ` redis://localhost:6379
+
+` + docsFooter()
+}
+
+// UsageWorkerQueue returns the Long description for the worker queue command
+func UsageWorkerQueue() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Manage and process queued tasks. Tasks can be queued via the ` + terminal.Yellow("--queue") + ` flag
+  on ` + terminal.Yellow("osmedeus run") + ` or via ` + terminal.Yellow("osmedeus worker queue new") + `.
+
+` + terminal.BoldCyan("▶ Subcommands") + `
+  • ` + terminal.Yellow("list") + `  - List all queued tasks (alias: ls)
+  • ` + terminal.Yellow("new") + `   - Queue a new task for later processing
+  • ` + terminal.Yellow("run") + `   - Process queued tasks (polls DB and Redis)
+
+` + docsFooter()
+}
+
+// UsageWorkerQueueList returns the Long description for the worker queue list command
+func UsageWorkerQueueList() string {
+	return terminal.BoldCyan("◆ Description") + `
+  List all queued tasks from the database.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# List all queued tasks") + `
+  osmedeus worker queue list
+
+  ` + terminal.Green("# Output as JSON") + `
+  osmedeus worker queue list ` + terminal.Yellow("--json") + `
+
+` + docsFooter()
+}
+
+// UsageWorkerQueueNew returns the Long description for the worker queue new command
+func UsageWorkerQueueNew() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Queue a new task for later processing. Creates a DB record and optionally
+  pushes to Redis if configured.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Queue a module run") + `
+  osmedeus worker queue new ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-t") + ` example.com
+
+  ` + terminal.Green("# Queue a flow run with targets from file") + `
+  osmedeus worker queue new ` + terminal.Yellow("-f") + ` general ` + terminal.Yellow("-T") + ` targets.txt
+
+  ` + terminal.Green("# Queue with parameters") + `
+  osmedeus worker queue new ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-t") + ` example.com ` + terminal.Yellow("-p") + ` 'threads=20'
+
+` + docsFooter()
+}
+
+// UsageWorkerQueueRun returns the Long description for the worker queue run command
+func UsageWorkerQueueRun() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Process queued tasks by polling both the database and Redis (if configured).
+  Uses a shared channel with deduplication to prevent double-execution.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Process queued tasks with default concurrency") + `
+  osmedeus worker queue run
+
+  ` + terminal.Green("# Process with higher concurrency") + `
+  osmedeus worker queue run ` + terminal.Yellow("--concurrency") + ` 3
+
+  ` + terminal.Green("# Process with custom Redis URL") + `
+  osmedeus worker queue run ` + terminal.Yellow("--redis-url") + ` redis://localhost:6379
 
 ` + docsFooter()
 }
@@ -1172,6 +1255,35 @@ func UsageClientExec() string {
 
   ` + terminal.Green("# JSON output") + `
   osmedeus client ` + terminal.Yellow("--json") + ` exec 'trim("  test  ")'
+
+` + docsFooter()
+}
+
+// UsageUninstall returns the Long description for the uninstall command
+func UsageUninstall() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Remove Osmedeus installation including base folder, configuration,
+  and optionally workspace data.
+
+  ` + terminal.BoldRed("WARNING: This is a destructive and irreversible operation!") + `
+
+` + terminal.BoldCyan("▶ What Gets Removed") + `
+  • ` + terminal.Yellow("~/osmedeus-base") + `         - Settings, workflows, binaries, data
+  • ` + terminal.Yellow("~/.osmedeus") + `             - Initialization marker
+  • ` + terminal.Yellow("osmedeus binary") + `         - Removed from PATH (up to 3 locations)
+
+  With ` + terminal.Yellow("--clean") + `:
+  • ` + terminal.Yellow("~/workspaces-osmedeus") + `   - All scan results and workspace data
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Preview what will be removed (no --force = confirmation prompt)") + `
+  osmedeus uninstall
+
+  ` + terminal.Green("# Uninstall without workspaces (keeps scan results)") + `
+  osmedeus uninstall ` + terminal.Yellow("--force") + `
+
+  ` + terminal.Green("# Full uninstall including all scan data") + `
+  osmedeus uninstall ` + terminal.Yellow("--force") + ` ` + terminal.Yellow("--clean") + `
 
 ` + docsFooter()
 }

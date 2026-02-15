@@ -38,11 +38,12 @@ import (
 // when target type validation fails.
 type TargetTypeMismatchError struct {
 	Supplied     string
+	DetectedType string
 	ExpectedType string
 }
 
 func (e *TargetTypeMismatchError) Error() string {
-	return fmt.Sprintf("target type mismatch: supplied %s, expected type %s", e.Supplied, e.ExpectedType)
+	return fmt.Sprintf("target type mismatch: supplied %s (detected %s), expected type %s", e.Supplied, e.DetectedType, e.ExpectedType)
 }
 
 // StepCompletedCallback is called after each step completes
@@ -803,7 +804,12 @@ func (e *Executor) checkDependencies(deps *core.Dependencies, execCtx *core.Exec
 				for _, t := range deps.TargetTypes {
 					required = append(required, string(t))
 				}
-				return fmt.Errorf("target '%s' does not match any of required types: %s", execCtx.Target, strings.Join(required, ", "))
+				detected := string(heuristics.DetectType(execCtx.Target))
+				return &TargetTypeMismatchError{
+					Supplied:     execCtx.Target,
+					DetectedType: detected,
+					ExpectedType: strings.Join(required, ","),
+				}
 			}
 		}
 
@@ -879,8 +885,10 @@ func (e *Executor) validateTargetVariable(deps *core.Dependencies, execCtx *core
 		}
 
 		if !matches {
+			detected := string(heuristics.DetectType(target))
 			return &TargetTypeMismatchError{
 				Supplied:     target,
+				DetectedType: detected,
 				ExpectedType: string(v.Type),
 			}
 		}
@@ -2397,19 +2405,34 @@ func (e *Executor) executeStep(ctx context.Context, step *core.Step, execCtx *co
 		// Show failed step (skip when progress bar is active)
 		if e.progressBar == nil {
 			e.printer.StepFailedWithCommand(step.Name, stepSymbol, err, stepCommand, cmdPrefix)
+
+			// Show enriched foreach iteration details if available
+			var foreachErr *ForeachIterationError
+			if errors.As(err, &foreachErr) {
+				isDebug := logger.Get().Check(zap.DebugLevel, "") != nil
+				e.printer.ForeachFailedDetail(foreachErr.InputValue, foreachErr.RenderedCommand, foreachErr.Output, isDebug)
+			}
 		}
 
 		// Process on_error handlers
 		e.processOnError(ctx, step, execCtx, err)
 
 		// Log step failure to state execution log file
-		execCtx.Logger.Error("Step failed",
+		logFields := []zap.Field{
 			zap.String("step_name", step.Name),
 			zap.String("step_type", string(step.Type)),
 			zap.String("command", stepCommand),
 			zap.Duration("duration", result.Duration),
 			zap.Error(err),
-		)
+		}
+		var foreachLogErr *ForeachIterationError
+		if errors.As(err, &foreachLogErr) {
+			logFields = append(logFields,
+				zap.String("failed_input", foreachLogErr.InputValue),
+				zap.String("failed_command", foreachLogErr.RenderedCommand),
+			)
+		}
+		execCtx.Logger.Error("Step failed", logFields...)
 
 		return result, err
 	}

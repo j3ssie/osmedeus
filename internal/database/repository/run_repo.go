@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/j3ssie/osmedeus/v5/internal/database"
 	"github.com/uptrace/bun"
@@ -152,4 +153,37 @@ func (r *RunRepository) GetWithArtifacts(ctx context.Context, id string) (*datab
 		return nil, err
 	}
 	return scan, nil
+}
+
+// ListQueued lists runs that are queued and not yet started
+func (r *RunRepository) ListQueued(ctx context.Context) ([]*database.Run, error) {
+	var runs []*database.Run
+	err := r.db.NewSelect().
+		Model(&runs).
+		Where("is_queued = ?", true).
+		Where("status = ?", "queued").
+		Order("created_at ASC").
+		Scan(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return runs, nil
+}
+
+// ClaimQueuedRun atomically claims a queued run (WHERE status='queued')
+func (r *RunRepository) ClaimQueuedRun(ctx context.Context, runID int64) (bool, error) {
+	now := time.Now()
+	result, err := r.db.NewUpdate().
+		Model((*database.Run)(nil)).
+		Set("status = ?", "running").
+		Set("started_at = ?", now).
+		Set("updated_at = ?", now).
+		Where("id = ?", runID).
+		Where("status = ?", "queued").
+		Exec(ctx)
+	if err != nil {
+		return false, err
+	}
+	rows, _ := result.RowsAffected()
+	return rows > 0, nil
 }

@@ -238,6 +238,18 @@ func (e *ForeachExecutor) renderSecondaryTemplates(step *core.Step, execCtx *cor
 	return cloned
 }
 
+// ForeachIterationError wraps a step execution error with context about the
+// failing foreach iteration (input value, rendered command, captured output).
+type ForeachIterationError struct {
+	Inner           error
+	InputValue      string // Loop variable value that failed
+	RenderedCommand string // Fully rendered command
+	Output          string // stdout+stderr from failed step
+}
+
+func (e *ForeachIterationError) Error() string { return e.Inner.Error() }
+func (e *ForeachIterationError) Unwrap() error { return e.Inner }
+
 // workItem represents a single item to process in the worker pool
 type workItem struct {
 	index int
@@ -342,6 +354,20 @@ func (e *ForeachExecutor) executeWithWorkerPool(ctx context.Context, step *core.
 					output = stepResult.Output
 				}
 
+				// Wrap error with foreach iteration context
+				if err != nil {
+					renderedCmd := getInnerStepCommand(innerStep)
+					if rendered, renderErr := e.templateEngine.Render(renderedCmd, childCtx.GetVariables()); renderErr == nil {
+						renderedCmd = rendered
+					}
+					err = &ForeachIterationError{
+						Inner:           err,
+						InputValue:      loopValue,
+						RenderedCommand: renderedCmd,
+						Output:          output,
+					}
+				}
+
 				results <- workResult{index: work.index, output: output, err: err}
 			}
 		}()
@@ -433,6 +459,8 @@ func (e *ForeachExecutor) executeWithWorkerPoolStreaming(ctx context.Context, st
 	var producerErr error
 	var writeErr error
 	var writeErrMu sync.Mutex
+	var firstErr error
+	var firstErrMu sync.Mutex
 
 	// Start fixed worker pool
 	for i := 0; i < threads; i++ {
@@ -466,7 +494,29 @@ func (e *ForeachExecutor) executeWithWorkerPoolStreaming(ctx context.Context, st
 				innerStep := e.renderSecondaryTemplates(step.Step, childCtx)
 
 				// Execute inner step
-				stepResult, _ := e.dispatcher.Dispatch(ctx, innerStep, childCtx)
+				stepResult, dispatchErr := e.dispatcher.Dispatch(ctx, innerStep, childCtx)
+
+				// Track first error with foreach iteration context
+				if dispatchErr != nil {
+					firstErrMu.Lock()
+					if firstErr == nil {
+						renderedCmd := getInnerStepCommand(innerStep)
+						if rendered, renderErr := e.templateEngine.Render(renderedCmd, childCtx.GetVariables()); renderErr == nil {
+							renderedCmd = rendered
+						}
+						var output string
+						if stepResult != nil {
+							output = stepResult.Output
+						}
+						firstErr = &ForeachIterationError{
+							Inner:           dispatchErr,
+							InputValue:      loopValue,
+							RenderedCommand: renderedCmd,
+							Output:          output,
+						}
+					}
+					firstErrMu.Unlock()
+				}
 
 				// Stream output directly to file (no memory collection)
 				if stepResult != nil && stepResult.Output != "" {
@@ -517,12 +567,15 @@ func (e *ForeachExecutor) executeWithWorkerPoolStreaming(ctx context.Context, st
 
 	<-done
 
-	// Check for errors
+	// Check for errors (priority: producer > write > dispatch)
 	if producerErr != nil {
 		return nil, producerErr
 	}
 	if writeErr != nil {
 		return nil, fmt.Errorf("streaming write error: %w", writeErr)
+	}
+	if firstErr != nil {
+		return nil, firstErr
 	}
 
 	// Return empty slice since results were streamed

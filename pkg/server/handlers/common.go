@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -48,6 +49,9 @@ type CreateRunRequest struct {
 	Repeat          bool   `json:"repeat,omitempty"`           // Repeat run after completion
 	RepeatWaitTime  string `json:"repeat_wait_time,omitempty"` // Wait time between repeats (e.g., 30s, 20m, 10h, 1d)
 	HeuristicsCheck string `json:"heuristics_check,omitempty"` // Heuristics check level: none, basic, advanced
+
+	// Validation
+	SkipValidation bool `json:"skip_validation,omitempty"` // Skip input validation for dangerous shell characters
 }
 
 // CreateScheduleRequest represents a schedule creation request
@@ -141,6 +145,62 @@ func readTargetsFromFile(filePath string) ([]string, error) {
 		}
 	}
 	return result, scanner.Err()
+}
+
+// dangerousChars contains shell metacharacters that could enable command injection
+const dangerousChars = " ;'\"|&`$(){}[]"
+
+// containsDangerousChars checks if a string contains any dangerous shell metacharacters
+func containsDangerousChars(s string) bool {
+	return strings.ContainsAny(s, dangerousChars)
+}
+
+// validateCreateRunInput validates all string fields in a CreateRunRequest for dangerous characters.
+// Returns an error describing which field failed and what character was found.
+func validateCreateRunInput(req *CreateRunRequest) error {
+	type fieldCheck struct {
+		name  string
+		value string
+	}
+
+	fields := []fieldCheck{
+		{"target", req.Target},
+		{"target_file", req.TargetFile},
+		{"flow", req.Flow},
+		{"module", req.Module},
+		{"ssh_host", req.SSHHost},
+		{"docker_image", req.DockerImage},
+		{"repeat_wait_time", req.RepeatWaitTime},
+	}
+
+	for _, f := range fields {
+		if f.value == "" {
+			continue
+		}
+		for _, ch := range f.value {
+			if strings.ContainsRune(dangerousChars, ch) {
+				return fmt.Errorf("field %q contains forbidden character %q", f.name, string(ch))
+			}
+		}
+	}
+
+	for i, t := range req.Targets {
+		for _, ch := range t {
+			if strings.ContainsRune(dangerousChars, ch) {
+				return fmt.Errorf("targets[%d] contains forbidden character %q", i, string(ch))
+			}
+		}
+	}
+
+	for k, v := range req.Params {
+		for _, ch := range v {
+			if strings.ContainsRune(dangerousChars, ch) {
+				return fmt.Errorf("params[%q] contains forbidden character %q", k, string(ch))
+			}
+		}
+	}
+
+	return nil
 }
 
 // deduplicateTargets removes duplicates while preserving order

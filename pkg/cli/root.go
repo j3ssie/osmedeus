@@ -315,6 +315,7 @@ func init() {
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(evalCmd)
 	rootCmd.AddCommand(clientCmd)
+	rootCmd.AddCommand(uninstallCmd)
 }
 
 // installRequiredBinaries installs all required binaries from the registry.

@@ -17,18 +17,20 @@ const (
 
 // Task represents a distributed scan task
 type Task struct {
-	ID           string                 `json:"id"`
-	ScanID       string                 `json:"scan_id,omitempty"`
-	WorkflowName string                 `json:"workflow_name"`
-	WorkflowKind string                 `json:"workflow_kind"` // "module" or "flow"
-	Target       string                 `json:"target"`
-	Params       map[string]interface{} `json:"params,omitempty"`
-	Status       TaskStatus             `json:"status"`
-	WorkerID     string                 `json:"worker_id,omitempty"`
-	CreatedAt    time.Time              `json:"created_at"`
-	StartedAt    *time.Time             `json:"started_at,omitempty"`
-	CompletedAt  *time.Time             `json:"completed_at,omitempty"`
-	Error        string                 `json:"error,omitempty"`
+	ID            string                 `json:"id"`
+	ScanID        string                 `json:"scan_id,omitempty"`
+	WorkflowName  string                 `json:"workflow_name"`
+	WorkflowKind  string                 `json:"workflow_kind"` // "module" or "flow"
+	Target        string                 `json:"target"`
+	Params        map[string]interface{} `json:"params,omitempty"`
+	Status        TaskStatus             `json:"status"`
+	WorkerID      string                 `json:"worker_id,omitempty"`
+	InputIsFile   bool                   `json:"input_is_file,omitempty"`
+	InputFilePath string                 `json:"input_file_path,omitempty"`
+	CreatedAt     time.Time              `json:"created_at"`
+	StartedAt     *time.Time             `json:"started_at,omitempty"`
+	CompletedAt   *time.Time             `json:"completed_at,omitempty"`
+	Error         string                 `json:"error,omitempty"`
 }
 
 // TaskResult represents the result of a completed task

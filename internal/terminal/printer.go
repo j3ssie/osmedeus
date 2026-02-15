@@ -178,6 +178,36 @@ func (p *Printer) StepFailedWithCommand(stepName, typeSymbol string, err error, 
 	}
 }
 
+// ForeachFailedDetail prints enriched error details for a failed foreach iteration.
+// Always shows the failing input value and rendered command.
+// When showOutput is true, also shows the captured stderr/stdout.
+func (p *Printer) ForeachFailedDetail(inputValue, renderedCommand, output string, showOutput bool) {
+	if IsCIMode() {
+		printJSONL(map[string]interface{}{
+			"type":           "foreach_failed_detail",
+			"failed_input":   inputValue,
+			"failed_command": renderedCommand,
+			"output":         output,
+		})
+		return
+	}
+	if inputValue != "" {
+		_, _ = fmt.Fprintf(os.Stdout, "  %s %s\n", Gray("failed on input:"), Yellow(inputValue))
+	}
+	if renderedCommand != "" {
+		_, _ = fmt.Fprintf(os.Stdout, "  %s %s\n", Gray("failed command:"), Red(renderedCommand))
+	}
+	if showOutput && output != "" {
+		_, _ = fmt.Fprintf(os.Stdout, "  %s\n", Gray("[stderr]"))
+		lines := strings.Split(strings.TrimSpace(output), "\n")
+		for _, line := range lines {
+			if strings.TrimSpace(line) != "" {
+				_, _ = fmt.Fprintf(os.Stdout, "    %s\n", Red(line))
+			}
+		}
+	}
+}
+
 // StepSkippedWithCommand prints step skipped with type symbol
 func (p *Printer) StepSkippedWithCommand(stepName, typeSymbol string) {
 	if IsCIMode() {

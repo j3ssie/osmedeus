@@ -287,6 +287,11 @@ func Migrate(ctx context.Context) error {
 		return err
 	}
 
+	// Add queue metadata columns to runs table if they don't exist
+	if err := addRunsQueueColumns(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -298,6 +303,7 @@ func createRunIndexes(ctx context.Context) error {
 		"CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status)",
 		"CREATE INDEX IF NOT EXISTS idx_runs_workflow_name ON runs(workflow_name)",
 		"CREATE INDEX IF NOT EXISTS idx_runs_target ON runs(target)",
+		"CREATE INDEX IF NOT EXISTS idx_runs_is_queued ON runs(is_queued)",
 	}
 
 	for _, idx := range indexes {
@@ -451,6 +457,28 @@ func addAssetCDNColumns(ctx context.Context) error {
 				continue
 			}
 			return fmt.Errorf("failed to add CDN column: %w", err)
+		}
+	}
+	return nil
+}
+
+// addRunsQueueColumns adds queue metadata columns to runs table for existing databases
+func addRunsQueueColumns(ctx context.Context) error {
+	columns := []string{
+		"ALTER TABLE runs ADD COLUMN is_queued BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE runs ADD COLUMN input_is_file BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE runs ADD COLUMN input_file_path TEXT DEFAULT ''",
+	}
+	for _, ddl := range columns {
+		_, err := db.ExecContext(ctx, ddl)
+		if err != nil {
+			errStr := strings.ToLower(err.Error())
+			if strings.Contains(errStr, "duplicate column") ||
+				strings.Contains(errStr, "already exists") ||
+				strings.Contains(errStr, "sqlstate 42701") {
+				continue
+			}
+			return fmt.Errorf("failed to add queue column: %w", err)
 		}
 	}
 	return nil

@@ -64,6 +64,8 @@ var (
 	emptyTarget          bool
 	progressBar          bool
 	disableWorkflowState bool
+	queueRun             bool
+	queueRunProcess      bool
 
 	// Chunk mode flags
 	chunkSize    int
@@ -72,7 +74,9 @@ var (
 	chunkThreads int
 
 	// Validation flags
-	skipValidation bool
+	skipValidation    bool
+	convertToFile     bool
+	convertFileToLine bool
 
 	// Server registration flag
 	serverURL string
@@ -133,11 +137,19 @@ func init() {
 	// Validation flags
 	runCmd.Flags().BoolVar(&skipValidation, "skip-validation", false, "skip target type validation from dependencies.variables")
 
+	// Target conversion flags
+	runCmd.Flags().BoolVar(&convertToFile, "convert-to-file", false, "write all targets into a temp file and use the file path as the single target")
+	runCmd.Flags().BoolVar(&convertFileToLine, "convert-file-to-line", false, "read a file target and expand each line as a separate target")
+
 	// Server registration flag
 	runCmd.Flags().StringVar(&serverURL, "server-url", "", "Server URL for cron trigger registration (e.g., http://localhost:8002)")
 
 	// Run priority flag (for server submission mode)
 	runCmd.Flags().StringVar(&runPriority, "run-priority", "", "Run priority: low, normal, high, critical (requires --server-url to submit to server)")
+
+	// Queue flags
+	runCmd.Flags().BoolVar(&queueRun, "queue", false, "queue the run for later processing instead of executing immediately")
+	runCmd.Flags().BoolVar(&queueRunProcess, "queue-run", false, "process queued tasks (alias for 'osmedeus worker queue run')")
 }
 
 // captureExplicitFlags records which CLI flags were explicitly set by the user
@@ -305,10 +317,16 @@ func handleTargetTypeMismatchError(err error) bool {
 		fmt.Println()
 		fmt.Printf("%s %s\n", terminal.Red("✘"), terminal.BoldRed("Target type mismatch"))
 		fmt.Printf("  Supplied: %s\n", ttmErr.Supplied)
+		if ttmErr.DetectedType != "" {
+			fmt.Printf("  Detected type: %s\n", ttmErr.DetectedType)
+		}
 		fmt.Printf("  %s %s\n", terminal.HiBlue("Required Params:"), ttmErr.ExpectedType)
 		fmt.Println()
-		fmt.Printf("  %s %s\n", terminal.Yellow("💡"), terminal.HiBlue("\"Target\" in Required Params is supplied via -t flag (e.g., -t example.com) or each line from -T list-of-targets.txt"))
-		fmt.Printf("  %s %s\n", terminal.Yellow("💡"), terminal.Yellow("Hint: Use --skip-validation to bypass this check"))
+		info := terminal.Cyan(terminal.SymbolInfo)
+		fmt.Printf("  %s %s\n", info, terminal.HiBlue("\"Target\" in Required Params is supplied via -t flag (e.g., -t example.com) or each line from -T list-of-targets.txt"))
+		fmt.Printf("  %s %s\n", info, terminal.Yellow("Hint: Use --skip-validation to bypass this check"))
+		fmt.Printf("  %s %s\n", info, terminal.Yellow("Hint: Use --convert-to-file to write targets into a temp file and use the file path as the target"))
+		fmt.Printf("  %s %s\n", info, terminal.Yellow("Hint: Use --convert-file-to-line to read a file target and expand each line as a separate target"))
 		fmt.Println()
 		return true
 	}
@@ -402,6 +420,13 @@ func runRun(cmd *cobra.Command, args []string) error {
 	// This helps when users haven't reloaded their shell after installation
 	ensureExternalBinariesInPath(cfg)
 
+	// Handle --queue-run mode (alias for 'osmedeus worker queue run')
+	if queueRunProcess {
+		queueConcurrency = concurrency
+		queueRedisURL = redisURLRun
+		return runWorkerQueueRun(cmd, args)
+	}
+
 	// Collect all targets from flags, file, and stdin
 	log.Debug("Collecting targets",
 		zap.Strings("flag_targets", targets),
@@ -492,6 +517,11 @@ func runRun(cmd *cobra.Command, args []string) error {
 	// Handle distributed run mode
 	if distributedRun {
 		return runDistributedRun(cfg, allTargets, printer)
+	}
+
+	// Handle queue mode
+	if queueRun {
+		return runQueuedRun(cfg, allTargets, printer)
 	}
 
 	// Handle server submission mode (--run-priority with --server-url)
@@ -1149,7 +1179,35 @@ func collectTargets() ([]string, error) {
 	}
 
 	// Deduplicate and filter empty lines
-	return deduplicateTargets(allTargets), nil
+	allTargets = deduplicateTargets(allTargets)
+
+	// --convert-file-to-line: expand file targets into individual lines
+	if convertFileToLine {
+		var expanded []string
+		for _, t := range allTargets {
+			if info, err := os.Stat(t); err == nil && !info.IsDir() {
+				lines, err := fileio.ReadLinesFiltered(t)
+				if err != nil {
+					return nil, fmt.Errorf("failed to read file target %s: %w", t, err)
+				}
+				expanded = append(expanded, lines...)
+			} else {
+				expanded = append(expanded, t)
+			}
+		}
+		allTargets = deduplicateTargets(expanded)
+	}
+
+	// --convert-to-file: write all targets into a temp file and return the file path
+	if convertToFile && len(allTargets) > 0 {
+		tmpFile := filepath.Join(os.TempDir(), fmt.Sprintf("osm-input-%s.txt", uuid.New().String()[:8]))
+		if err := os.WriteFile(tmpFile, []byte(strings.Join(allTargets, "\n")+"\n"), 0644); err != nil {
+			return nil, fmt.Errorf("failed to write temp target file: %w", err)
+		}
+		allTargets = []string{tmpFile}
+	}
+
+	return allTargets, nil
 }
 
 // readTargetsFromFile reads targets from a file, one per line.
@@ -1938,6 +1996,152 @@ func registerCronTriggersWithServer(ctx context.Context, workflow *core.Workflow
 
 	if registered > 0 && !silent {
 		printer.Info("Registered %d cron trigger(s) with server at %s", registered, url)
+	}
+}
+
+// runQueuedRun creates queued run records in the database (and optionally pushes to Redis)
+func runQueuedRun(cfg *config.Config, allTargets []string, printer *terminal.Printer) error {
+	// Determine workflow name and kind
+	workflowName := flowName
+	workflowKind := "flow"
+	if workflowName == "" && len(moduleNames) > 0 {
+		workflowName = moduleNames[0]
+		workflowKind = "module"
+	}
+
+	if workflowName == "" {
+		return fmt.Errorf("workflow name required (use -f or -m)")
+	}
+
+	// Parse additional params
+	params := make(map[string]interface{})
+	for _, flag := range paramFlags {
+		parts := strings.SplitN(flag, "=", 2)
+		if len(parts) == 2 {
+			params[parts[0]] = parts[1]
+		}
+	}
+
+	return queueRuns(context.Background(), cfg, workflowName, workflowKind, allTargets, targetFile, params, printer)
+}
+
+// queueRuns is the shared helper that creates queued run records in the database.
+// Both runQueuedRun (from --queue flag) and workerQueueNewCmd call this.
+func queueRuns(ctx context.Context, cfg *config.Config, workflowName, workflowKind string,
+	allTargets []string, targetFilePath string, params map[string]interface{},
+	printer *terminal.Printer) error {
+
+	log := logger.Get()
+
+	// Connect to database and migrate
+	_, err := database.Connect(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+	if err := database.Migrate(ctx); err != nil {
+		return fmt.Errorf("failed to migrate database: %w", err)
+	}
+
+	printer.Section("Queuing Tasks")
+
+	runGroupID := uuid.New().String()
+	var queuedCount int
+
+	for _, target := range allTargets {
+		// Detect if the target is a file
+		inputIsFile := false
+		inputFilePath := ""
+
+		if targetFilePath != "" {
+			inputIsFile = true
+			absPath, err := filepath.Abs(targetFilePath)
+			if err == nil {
+				inputFilePath = absPath
+			} else {
+				inputFilePath = targetFilePath
+			}
+		} else {
+			// Check if the target itself is a file path
+			info, err := os.Stat(target)
+			if err == nil && info.Mode().IsRegular() {
+				inputIsFile = true
+				absPath, err := filepath.Abs(target)
+				if err == nil {
+					inputFilePath = absPath
+				} else {
+					inputFilePath = target
+				}
+			}
+		}
+
+		runUUID := uuid.New().String()
+		run := &database.Run{
+			RunUUID:       runUUID,
+			WorkflowName:  workflowName,
+			WorkflowKind:  workflowKind,
+			Target:        target,
+			Params:        params,
+			Status:        "queued",
+			TriggerType:   "cli",
+			RunGroupID:    runGroupID,
+			RunPriority:   "high",
+			RunMode:       "queue",
+			IsQueued:      true,
+			InputIsFile:   inputIsFile,
+			InputFilePath: inputFilePath,
+		}
+
+		if err := database.CreateRun(ctx, run); err != nil {
+			printer.Error("Failed to queue run for %s: %s", target, err)
+			continue
+		}
+
+		queuedCount++
+		if inputIsFile {
+			printer.Success("Queued: %s (file: %s) [%s]", terminal.Green(target), terminal.Yellow(inputFilePath), terminal.Gray(runUUID[:8]))
+		} else {
+			printer.Success("Queued: %s [%s]", terminal.Green(target), terminal.Gray(runUUID[:8]))
+		}
+
+		// Best-effort push to Redis if configured
+		pushQueuedRunToRedis(ctx, cfg, run, printer, log)
+	}
+
+	fmt.Println()
+	printer.Info("Queued %s task(s) (group: %s)", terminal.Cyan(fmt.Sprintf("%d", queuedCount)), terminal.Gray(runGroupID[:8]))
+	printer.Info("Use '%s' to view queued tasks", terminal.Cyan("osmedeus worker queue list"))
+	printer.Info("Use '%s' to process queued tasks", terminal.Cyan("osmedeus worker queue run"))
+
+	return nil
+}
+
+// pushQueuedRunToRedis pushes a queued run to Redis as a distributed task (best-effort).
+func pushQueuedRunToRedis(ctx context.Context, cfg *config.Config, run *database.Run, printer *terminal.Printer, log *zap.Logger) {
+	if !cfg.IsRedisConfigured() {
+		return
+	}
+
+	client, err := distributed.NewClientFromConfig(cfg)
+	if err != nil {
+		log.Debug("Redis not available for queue push", zap.Error(err))
+		return
+	}
+	defer client.Close()
+
+	if err := client.Ping(ctx); err != nil {
+		log.Debug("Redis ping failed for queue push", zap.Error(err))
+		return
+	}
+
+	task := distributed.NewTask(uuid.NewString()[:8], run.WorkflowName, run.WorkflowKind, run.Target, run.Params)
+	task.ScanID = run.RunUUID
+	task.InputIsFile = run.InputIsFile
+	task.InputFilePath = run.InputFilePath
+
+	if err := client.PushTask(ctx, task); err != nil {
+		printer.Warning("Failed to push to Redis queue (DB record created): %s", err)
+	} else {
+		log.Debug("Pushed queued run to Redis", zap.String("run_uuid", run.RunUUID))
 	}
 }
 

@@ -118,7 +118,7 @@ func getOutboundIP() string {
 	if err != nil {
 		return ""
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	addr := conn.LocalAddr().(*net.UDPAddr)
 	return addr.IP.String()
 }
@@ -135,7 +135,7 @@ func fetchPublicIP() string {
 	if err != nil {
 		return ""
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return ""
@@ -290,6 +290,18 @@ func (w *Worker) executeTask(ctx context.Context, task *Task) *TaskResult {
 		CompletedAt: time.Now(),
 	}
 
+	// If task uses a file input, ensure the file exists locally
+	if task.InputIsFile && task.InputFilePath != "" {
+		if _, err := os.Stat(task.InputFilePath); os.IsNotExist(err) {
+			w.printer.Warning("Input file %s not found locally, attempting rsync from master", task.InputFilePath)
+			if syncErr := w.syncFileFromMaster(ctx, task.InputFilePath); syncErr != nil {
+				result.Status = TaskStatusFailed
+				result.Error = fmt.Sprintf("input file not available: %v", syncErr)
+				return result
+			}
+		}
+	}
+
 	// Load workflow
 	workflow, err := w.loader.LoadWorkflow(task.WorkflowName)
 	if err != nil {
@@ -423,6 +435,35 @@ func (w *Worker) GetID() string {
 // GetClient returns the Redis client
 func (w *Worker) GetClient() *Client {
 	return w.client
+}
+
+// syncFileFromMaster attempts to sync a file from the master node via the data queue.
+// It sends a sync request and waits briefly, but file availability is best-effort.
+func (w *Worker) syncFileFromMaster(ctx context.Context, filePath string) error {
+	// Send a sync request to the master via the execute queue
+	req := buildExecuteRequest("sync", filePath, "", filePath, "", "master", "")
+	if err := w.client.PushData(ctx, KeyDataExecute, "execute", req, w.ID); err != nil {
+		return fmt.Errorf("failed to send sync request: %w", err)
+	}
+
+	// Wait a short time for the sync to complete
+	syncCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-syncCtx.Done():
+			return fmt.Errorf("timeout waiting for file sync of %s", filePath)
+		case <-ticker.C:
+			if _, err := os.Stat(filePath); err == nil {
+				w.printer.Success("File %s synced successfully", filePath)
+				return nil
+			}
+		}
+	}
 }
 
 // =============================================================================

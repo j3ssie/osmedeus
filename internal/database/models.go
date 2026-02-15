@@ -41,8 +41,13 @@ type Run struct {
 
 	// Priority and mode
 	RunPriority  string `bun:"run_priority,notnull,default:'high'" json:"run_priority"` // low, normal, high, critical
-	RunMode      string `bun:"run_mode,notnull,default:'local'" json:"run_mode"`        // local, distributed, cloud
+	RunMode      string `bun:"run_mode,notnull,default:'local'" json:"run_mode"`        // local, queue, distributed, cloud
 	HooksEnabled bool   `bun:"hooks_enabled,default:false" json:"hooks_enabled"`
+
+	// Queue metadata
+	IsQueued      bool   `bun:"is_queued,default:false" json:"is_queued"`
+	InputIsFile   bool   `bun:"input_is_file,default:false" json:"input_is_file"`
+	InputFilePath string `bun:"input_file_path" json:"input_file_path,omitempty"`
 
 	// Relations
 	Steps     []*StepResult `bun:"rel:has-many,join:id=run_id" json:"steps,omitempty"`
