@@ -235,6 +235,11 @@ type Asset struct {
 	RawResponse          string   `bun:"raw_response" json:"raw_response,omitempty"`
 	ScreenshotBase64Data string   `bun:"screenshot_base64_data" json:"screenshot_base64_data,omitempty"`
 
+	// CDN/WAF classification
+	IsCDN   bool `bun:"is_cdn" json:"is_cdn,omitempty"`
+	IsCloud bool `bun:"is_cloud" json:"is_cloud,omitempty"`
+	IsWAF   bool `bun:"is_waf" json:"is_waf,omitempty"`
+
 	// for repository/file assets
 	Language    string `bun:"language" json:"language,omitempty"`
 	Size        int64  `bun:"size" json:"size,omitempty"`

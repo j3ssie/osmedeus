@@ -748,15 +748,24 @@ func (vf *vmFunc) bash(call goja.FunctionCall) goja.Value {
 	return vf.execCmd(call)
 }
 
-// findPythonBin returns "python3" if available, otherwise "python".
-func findPythonBin() string {
-	if _, err := exec.LookPath("python3"); err == nil {
-		return "python3"
-	}
-	return "python"
+// pythonRunner holds the detected Python binary and whether it's uv.
+type pythonRunner struct {
+	bin  string // "uv", "python3", or "python"
+	isUV bool
 }
 
-// execPython runs inline Python code via `python3 -c '<code>'`.
+// findPythonRunner returns the preferred Python runner: uv → python3 → python.
+func findPythonRunner() pythonRunner {
+	if _, err := exec.LookPath("uv"); err == nil {
+		return pythonRunner{bin: "uv", isUV: true}
+	}
+	if _, err := exec.LookPath("python3"); err == nil {
+		return pythonRunner{bin: "python3"}
+	}
+	return pythonRunner{bin: "python"}
+}
+
+// execPython runs inline Python code. Prefers `uv run -` (stdin), falls back to `python3 -c`.
 // Usage: exec_python(code) -> string
 func (vf *vmFunc) execPython(call goja.FunctionCall) goja.Value {
 	code := call.Argument(0).String()
@@ -767,13 +776,19 @@ func (vf *vmFunc) execPython(call goja.FunctionCall) goja.Value {
 		return vf.vm.ToValue("")
 	}
 
-	pythonBin := findPythonBin()
+	runner := findPythonRunner()
 	// @NOTE: This is intentional - exec_python() is a utility function exposed to workflow
 	// definitions for executing Python code. Input comes from trusted workflow YAML files.
-	cmd := exec.Command(pythonBin, "-c", code)
+	var cmd *exec.Cmd
+	if runner.isUV {
+		cmd = exec.Command("uv", "run", "-")
+		cmd.Stdin = strings.NewReader(code)
+	} else {
+		cmd = exec.Command(runner.bin, "-c", code)
+	}
 	output, err := cmd.Output()
 	if err != nil {
-		logger.Get().Warn("execPython: command failed", zap.String("python", pythonBin), zap.Error(err))
+		logger.Get().Warn("execPython: command failed", zap.String("runner", runner.bin), zap.Error(err))
 		return vf.vm.ToValue("")
 	}
 
@@ -781,7 +796,7 @@ func (vf *vmFunc) execPython(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(strings.TrimSpace(string(output)))
 }
 
-// execPythonFile runs a Python file via `python3 <path>`.
+// execPythonFile runs a Python file. Prefers `uv run <path>`, falls back to `python3 <path>`.
 // Usage: exec_python_file(path) -> string
 func (vf *vmFunc) execPythonFile(call goja.FunctionCall) goja.Value {
 	path := call.Argument(0).String()
@@ -792,17 +807,90 @@ func (vf *vmFunc) execPythonFile(call goja.FunctionCall) goja.Value {
 		return vf.vm.ToValue("")
 	}
 
-	pythonBin := findPythonBin()
+	runner := findPythonRunner()
 	// @NOTE: This is intentional - exec_python_file() is a utility function exposed to workflow
 	// definitions for executing Python files. Input comes from trusted workflow YAML files.
-	cmd := exec.Command(pythonBin, path)
+	var cmd *exec.Cmd
+	if runner.isUV {
+		cmd = exec.Command("uv", "run", path)
+	} else {
+		cmd = exec.Command(runner.bin, path)
+	}
 	output, err := cmd.Output()
 	if err != nil {
-		logger.Get().Warn("execPythonFile: command failed", zap.String("python", pythonBin), zap.String("path", path), zap.Error(err))
+		logger.Get().Warn("execPythonFile: command failed", zap.String("runner", runner.bin), zap.String("path", path), zap.Error(err))
 		return vf.vm.ToValue("")
 	}
 
 	logger.Get().Debug(terminal.HiGreen("execPythonFile")+" result", zap.String("path", path), zap.Int("outputLength", len(output)))
+	return vf.vm.ToValue(strings.TrimSpace(string(output)))
+}
+
+// findBunBin returns "bun" if available in PATH, empty string otherwise.
+func findBunBin() string {
+	if _, err := exec.LookPath("bun"); err == nil {
+		return "bun"
+	}
+	return ""
+}
+
+// execTypeScript runs inline TypeScript code via `bun -e '<code>'`.
+// Usage: exec_ts(code) -> string
+func (vf *vmFunc) execTypeScript(call goja.FunctionCall) goja.Value {
+	code := call.Argument(0).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("execTypeScript"), zap.Int("codeLength", len(code)))
+
+	if code == "undefined" || code == "" {
+		logger.Get().Warn("execTypeScript: empty code provided")
+		return vf.vm.ToValue("")
+	}
+
+	bunBin := findBunBin()
+	if bunBin == "" {
+		logger.Get().Warn("execTypeScript: bun not found in PATH")
+		return vf.vm.ToValue("")
+	}
+
+	// @NOTE: This is intentional - exec_ts() is a utility function exposed to workflow
+	// definitions for executing TypeScript code. Input comes from trusted workflow YAML files.
+	cmd := exec.Command(bunBin, "-e", code)
+	output, err := cmd.Output()
+	if err != nil {
+		logger.Get().Warn("execTypeScript: command failed", zap.Error(err))
+		return vf.vm.ToValue("")
+	}
+
+	logger.Get().Debug(terminal.HiGreen("execTypeScript")+" result", zap.Int("outputLength", len(output)))
+	return vf.vm.ToValue(strings.TrimSpace(string(output)))
+}
+
+// execTypeScriptFile runs a TypeScript file via `bun run <path>`.
+// Usage: exec_ts_file(path) -> string
+func (vf *vmFunc) execTypeScriptFile(call goja.FunctionCall) goja.Value {
+	path := call.Argument(0).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("execTypeScriptFile"), zap.String("path", path))
+
+	if path == "undefined" || path == "" {
+		logger.Get().Warn("execTypeScriptFile: empty path provided")
+		return vf.vm.ToValue("")
+	}
+
+	bunBin := findBunBin()
+	if bunBin == "" {
+		logger.Get().Warn("execTypeScriptFile: bun not found in PATH")
+		return vf.vm.ToValue("")
+	}
+
+	// @NOTE: This is intentional - exec_ts_file() is a utility function exposed to workflow
+	// definitions for executing TypeScript files. Input comes from trusted workflow YAML files.
+	cmd := exec.Command(bunBin, "run", path)
+	output, err := cmd.Output()
+	if err != nil {
+		logger.Get().Warn("execTypeScriptFile: command failed", zap.String("path", path), zap.Error(err))
+		return vf.vm.ToValue("")
+	}
+
+	logger.Get().Debug(terminal.HiGreen("execTypeScriptFile")+" result", zap.String("path", path), zap.Int("outputLength", len(output)))
 	return vf.vm.ToValue(strings.TrimSpace(string(output)))
 }
 

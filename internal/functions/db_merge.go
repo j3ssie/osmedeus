@@ -26,6 +26,11 @@ func mergeInt64(existing, incoming int64) int64 {
 	return existing
 }
 
+// mergeBool returns true if either value is true (once true, stays true).
+func mergeBool(existing, incoming bool) bool {
+	return existing || incoming
+}
+
 // mergeStringSlice returns incoming if non-nil and non-empty, otherwise existing.
 func mergeStringSlice(existing, incoming []string) []string {
 	if len(incoming) > 0 {
@@ -73,6 +78,11 @@ func mergeAssetFields(existing, incoming *database.Asset) {
 	incoming.RawJsonData = mergeString(existing.RawJsonData, incoming.RawJsonData)
 	incoming.RawResponse = mergeString(existing.RawResponse, incoming.RawResponse)
 	incoming.ScreenshotBase64Data = mergeString(existing.ScreenshotBase64Data, incoming.ScreenshotBase64Data)
+
+	// CDN/WAF classification
+	incoming.IsCDN = mergeBool(existing.IsCDN, incoming.IsCDN)
+	incoming.IsCloud = mergeBool(existing.IsCloud, incoming.IsCloud)
+	incoming.IsWAF = mergeBool(existing.IsWAF, incoming.IsWAF)
 
 	// Repository/file assets
 	incoming.Language = mergeString(existing.Language, incoming.Language)

@@ -124,6 +124,9 @@ type Asset struct {
 	HostIP      string    `json:"host_ip,omitempty"`
 	TechStack   []string  `json:"tech_stack,omitempty"`
 	ContentType string    `json:"content_type,omitempty"`
+	IsCDN       bool      `json:"is_cdn,omitempty"`
+	IsCloud     bool      `json:"is_cloud,omitempty"`
+	IsWAF       bool      `json:"is_waf,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }

@@ -282,6 +282,11 @@ func Migrate(ctx context.Context) error {
 		return err
 	}
 
+	// Add CDN/WAF classification columns to assets table if they don't exist
+	if err := addAssetCDNColumns(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -425,6 +430,28 @@ func addAssetExternalURLColumn(ctx context.Context) error {
 			return nil
 		}
 		return fmt.Errorf("failed to add external_url column: %w", err)
+	}
+	return nil
+}
+
+// addAssetCDNColumns adds CDN/WAF classification columns to assets table for existing databases
+func addAssetCDNColumns(ctx context.Context) error {
+	columns := []string{
+		"ALTER TABLE assets ADD COLUMN is_cdn BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE assets ADD COLUMN is_cloud BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE assets ADD COLUMN is_waf BOOLEAN DEFAULT FALSE",
+	}
+	for _, ddl := range columns {
+		_, err := db.ExecContext(ctx, ddl)
+		if err != nil {
+			errStr := strings.ToLower(err.Error())
+			if strings.Contains(errStr, "duplicate column") ||
+				strings.Contains(errStr, "already exists") ||
+				strings.Contains(errStr, "sqlstate 42701") {
+				continue
+			}
+			return fmt.Errorf("failed to add CDN column: %w", err)
+		}
 	}
 	return nil
 }

@@ -135,19 +135,19 @@ For more information about the architecture, refer to the [Architecture Document
 
 The high-level ambitious plan for the project, in order:
 
-|  #  | Step                                                                          | Status |
-| :-: | ----------------------------------------------------------------------------- | :----: |
-|  1  | Osmedeus Engine reforged with a next-generation architecture                  |   ✅   |
-|  2  | Flexible workflows and step types                                             |   ✅   |
-|  3  | Event-driven architectural model and the different trigger event categories   |   ✅   |
-|  4  | Beautiful UI for visualize results and workflow diagram                       |   ✅   |
-|  5  | Rewriting the workflow to adapt to new architecture and syntax                |   ✅   |
-|  6  | Testing more utility functions like notifications                             |   ✅   |
-|  7  | SAST integration with SARIF parsing (Semgrep, Trivy, etc.)                    |   ✅   |
-|  8  | Generate diff reports showing new/removed/unchanged assets between runs.      |   ❌   |
-|  9  | Adding step type from cloud provider that can be run via serverless           |   ❌   |
-|  N  | Fancy features (to be discussed later)                                        |   ❌   |
-
+|  #  | Step                                                                        |  Status |
+| :-: | --------------------------------------------------------------------------- |  :----: |
+|  1  | Osmedeus Engine reforged with a next-generation architecture                |    ✅   |
+|  2  | Flexible workflows and step types                                           |    ✅   |
+|  3  | Event-driven architectural model and the different trigger event categories |    ✅   |
+|  4  | Beautiful UI for visualize results and workflow diagram                     |    ✅   |
+|  5  | Rewriting the workflow to adapt to new architecture and syntax              |    ✅   |
+|  6  | Testing more utility functions like notifications                           |    ✅   |
+|  7  | SAST integration with SARIF parsing (Semgrep, Trivy, etc.)                  |    ✅   |
+|  8  | Cloud integration, which supports running the scan on the cloud provider.   |    ❌   |
+|  9  | Generate diff reports showing new/removed/unchanged assets between runs.    |    ❌   |
+|  10 | Adding step type from cloud provider that can be run via serverless         |    ❌   |
+|  N  | Fancy features (to be discussed later)                                      |    ❌   |
 ## Documentation
 
 | Topic                | Link                                                                                                     |
@@ -164,7 +164,9 @@ The high-level ambitious plan for the project, in order:
 
 ## Disclaimer
 
-Osmedeus is designed to execute arbitrary code and commands from user supplied input via CLI, API, and workflow definitions. This flexibility is intentional and central to how the engine operates see [Security Warning](https://docs.osmedeus.org/others/security-warning) page for more details.
+**Osmedeus** is designed to execute arbitrary code and commands from user supplied input via CLI, API, and workflow definitions. This flexibility is intentional and central to how the engine operates.
+
+Please refer to the [Security Warning](https://docs.osmedeus.org/others/security-warning) page for more information on how to stay safe.
 
 **Think twice before you:**
 - Run workflows downloaded from untrusted sources

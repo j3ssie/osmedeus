@@ -791,6 +791,71 @@ func TestExecPythonFile(t *testing.T) {
 	})
 }
 
+func TestExecTypeScript(t *testing.T) {
+	bunBin := findBunBin()
+	if bunBin == "" {
+		t.Skip("bun not found in PATH, skipping TypeScript tests")
+	}
+
+	runtime := NewOttoRuntime()
+
+	t.Run("simple console.log", func(t *testing.T) {
+		result, err := runtime.Execute(`exec_ts("console.log('hello')")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "hello", result)
+	})
+
+	t.Run("multiline code", func(t *testing.T) {
+		result, err := runtime.Execute(`exec_ts("const x = 2 + 3;\nconsole.log(x)")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "5", result)
+	})
+
+	t.Run("empty code returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`exec_ts("")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("invalid code returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`exec_ts("process.exit(1)")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+}
+
+func TestExecTypeScriptFile(t *testing.T) {
+	bunBin := findBunBin()
+	if bunBin == "" {
+		t.Skip("bun not found in PATH, skipping TypeScript file tests")
+	}
+
+	runtime := NewOttoRuntime()
+
+	t.Run("run temp ts file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		tsFile := filepath.Join(tmpDir, "test.ts")
+		err := os.WriteFile(tsFile, []byte("console.log('from file')"), 0644)
+		require.NoError(t, err)
+
+		result, err := runtime.Execute(`exec_ts_file("`+tsFile+`")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "from file", result)
+	})
+
+	t.Run("empty path returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`exec_ts_file("")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("nonexistent file returns empty string", func(t *testing.T) {
+		result, err := runtime.Execute(`exec_ts_file("/tmp/nonexistent_ts_file_12345.ts")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+}
+
 func TestMoveFile(t *testing.T) {
 	runtime := NewOttoRuntime()
 

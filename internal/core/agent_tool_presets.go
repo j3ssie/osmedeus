@@ -230,13 +230,39 @@ var PresetToolRegistry = map[string]PresetToolDef{
 		},
 	},
 	"exec_python_file": {
-		Description: "Run a Python file and return stdout (prefers python3)",
+		Description: "Run a Python file and return stdout (prefers uv, then python3)",
 		Parameters: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
 				"path": map[string]interface{}{
 					"type":        "string",
 					"description": "Path to the Python file to execute",
+				},
+			},
+			"required": []string{"path"},
+		},
+	},
+	"exec_ts": {
+		Description: "Run inline TypeScript code via bun and return stdout",
+		Parameters: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"code": map[string]interface{}{
+					"type":        "string",
+					"description": "TypeScript code to execute",
+				},
+			},
+			"required": []string{"code"},
+		},
+	},
+	"exec_ts_file": {
+		Description: "Run a TypeScript file via bun and return stdout",
+		Parameters: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"path": map[string]interface{}{
+					"type":        "string",
+					"description": "Path to the TypeScript file to execute",
 				},
 			},
 			"required": []string{"path"},

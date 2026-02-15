@@ -973,6 +973,10 @@ func buildPresetCallExpr(funcName string, args map[string]interface{}) string {
 		return fmt.Sprintf("exec_python(%s)", jsQuote(getStringArg(args, "code")))
 	case "exec_python_file":
 		return fmt.Sprintf("exec_python_file(%s)", jsQuote(getStringArg(args, "path")))
+	case "exec_ts":
+		return fmt.Sprintf("exec_ts(%s)", jsQuote(getStringArg(args, "code")))
+	case "exec_ts_file":
+		return fmt.Sprintf("exec_ts_file(%s)", jsQuote(getStringArg(args, "path")))
 	case "run_module":
 		return fmt.Sprintf("run_module(%s, %s, %s)", jsQuote(getStringArg(args, "module")), jsQuote(getStringArg(args, "target")), jsQuote(getStringArg(args, "params")))
 	case "run_flow":

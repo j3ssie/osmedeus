@@ -113,8 +113,10 @@ const (
 	FnRunFlow        = "run_flow"         // run_flow(flow, target, params?) -> string (run osmedeus flow)
 	FnRunOnMaster    = "run_on_master"    // run_on_master(action, ...args) -> bool (execute on master node)
 	FnRunOnWorker    = "run_on_worker"    // run_on_worker(scope, action, ...args) -> bool (execute on worker nodes)
-	FnExecPython     = "exec_python"      // exec_python(code) -> string (run inline Python, prefer python3)
-	FnExecPythonFile = "exec_python_file" // exec_python_file(path) -> string (run Python file, prefer python3)
+	FnExecPython     = "exec_python"      // exec_python(code) -> string (run inline Python, prefer uv → python3 → python)
+	FnExecPythonFile = "exec_python_file" // exec_python_file(path) -> string (run Python file, prefer uv → python3 → python)
+	FnExecTS         = "exec_ts"          // exec_ts(code) -> string (run inline TypeScript via bun)
+	FnExecTSFile     = "exec_ts_file"     // exec_ts_file(path) -> string (run TypeScript file via bun)
 )
 
 // Logging Functions - Log messages with level prefixes
@@ -439,6 +441,8 @@ func AllFunctions() []string {
 		FnRunOnWorker,
 		FnExecPython,
 		FnExecPythonFile,
+		FnExecTS,
+		FnExecTSFile,
 
 		// Logging Functions
 		FnLogDebug,
@@ -785,8 +789,10 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnPickValid, "pick_valid(v1, v2, ..., v10)", "Return first valid value from up to 10 arguments", "any", "pick_valid('', '', 'hello', 'world')"},
 			{FnRunModule, "run_module(module, target, params?)", "Run osmedeus module as subprocess, optional comma-separated key=value params", "string", "run_module('subdomain', 'example.com', 'threads=10,deep=true')"},
 			{FnRunFlow, "run_flow(flow, target, params?)", "Run osmedeus flow as subprocess, optional comma-separated key=value params", "string", "run_flow('general', 'example.com')"},
-			{FnExecPython, "exec_python(code)", "Run inline Python code via python3 -c (falls back to python)", "string", "exec_python('print(2+2)')"},
-			{FnExecPythonFile, "exec_python_file(path)", "Run a Python file via python3 (falls back to python)", "string", "exec_python_file('/tmp/script.py')"},
+			{FnExecPython, "exec_python(code)", "Run inline Python code (prefers uv, falls back to python3/python)", "string", "exec_python('print(2+2)')"},
+			{FnExecPythonFile, "exec_python_file(path)", "Run a Python file (prefers uv, falls back to python3/python)", "string", "exec_python_file('/tmp/script.py')"},
+			{FnExecTS, "exec_ts(code)", "Run inline TypeScript code via bun -e", "string", "exec_ts('console.log(2+2)')"},
+			{FnExecTSFile, "exec_ts_file(path)", "Run a TypeScript file via bun run", "string", "exec_ts_file('/tmp/script.ts')"},
 		},
 		CategoryLogging: {
 			{FnLogDebug, "log_debug(message)", "Log debug message with [DEBUG] prefix", "void", "log_debug('Processing target')"},

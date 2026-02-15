@@ -218,6 +218,11 @@ func unmarshalAssetJSON(rawJSON []byte, asset *database.Asset) error {
 				}
 			}
 		}
+		// CDN/WAF classification (OR into existing values)
+		isCDN, isCloud, isWAF := database.DetectCDNFlags(raw)
+		asset.IsCDN = asset.IsCDN || isCDN
+		asset.IsCloud = asset.IsCloud || isCloud
+		asset.IsWAF = asset.IsWAF || isWAF
 	}
 	return nil
 }
@@ -2139,6 +2144,9 @@ func hasAssetChanged(existing, new *database.Asset) bool {
 		existing.TLS != new.TLS ||
 		existing.Words != new.Words ||
 		existing.Lines != new.Lines ||
+		existing.IsCDN != new.IsCDN ||
+		existing.IsCloud != new.IsCloud ||
+		existing.IsWAF != new.IsWAF ||
 		!slicesEqual(existing.Technologies, new.Technologies)
 }
 
@@ -2259,6 +2267,9 @@ func mapJSONToAsset(data map[string]interface{}, workspace, rawLine string) data
 	if v, ok := data["cdn_name"].(string); ok && v != "" {
 		asset.Remarks = append(asset.Remarks, v)
 	}
+
+	// CDN/WAF classification
+	asset.IsCDN, asset.IsCloud, asset.IsWAF = database.DetectCDNFlags(data)
 
 	// Prefer URL over raw IP for asset_value (more descriptive identifier)
 	if asset.AssetValue != "" && asset.URL != "" && net.ParseIP(asset.AssetValue) != nil {
@@ -2497,6 +2508,11 @@ func (vf *vmFunc) dbImportCustomAsset(call goja.FunctionCall) goja.Value {
 			if ws, ok := rawData["webserver"].(string); ok && ws != "" {
 				asset.Remarks = append(asset.Remarks, ws)
 			}
+			// CDN/WAF classification (OR into existing values)
+			isCDN, isCloud, isWAF := database.DetectCDNFlags(rawData)
+			asset.IsCDN = asset.IsCDN || isCDN
+			asset.IsCloud = asset.IsCloud || isCloud
+			asset.IsWAF = asset.IsWAF || isWAF
 		}
 
 		// Apply optional defaults when the JSONL line has no value

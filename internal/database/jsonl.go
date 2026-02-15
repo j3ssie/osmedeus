@@ -151,6 +151,9 @@ func (i *JSONLImporter) insertAssetBatch(ctx context.Context, assets []*Asset) (
 		Set("blob_content = CASE WHEN EXCLUDED.blob_content != '' THEN EXCLUDED.blob_content ELSE assets.blob_content END").
 		Set("raw_data = CASE WHEN EXCLUDED.raw_data != '' THEN EXCLUDED.raw_data ELSE assets.raw_data END").
 		Set("asset_type = CASE WHEN EXCLUDED.asset_type != '' THEN EXCLUDED.asset_type ELSE assets.asset_type END").
+		Set("is_cdn = CASE WHEN EXCLUDED.is_cdn OR assets.is_cdn THEN TRUE ELSE FALSE END").
+		Set("is_cloud = CASE WHEN EXCLUDED.is_cloud OR assets.is_cloud THEN TRUE ELSE FALSE END").
+		Set("is_waf = CASE WHEN EXCLUDED.is_waf OR assets.is_waf THEN TRUE ELSE FALSE END").
 		Set("updated_at = EXCLUDED.updated_at").
 		Exec(ctx)
 
@@ -160,6 +163,56 @@ func (i *JSONLImporter) insertAssetBatch(ctx context.Context, assets []*Asset) (
 
 	rowsAffected, _ := res.RowsAffected()
 	return int(rowsAffected), nil
+}
+
+// cloudProviderPatterns are substrings used to detect cloud-hosted CDNs.
+var cloudProviderPatterns = []string{
+	"aws", "amazon", "cloudfront",
+	"google", "gcp", "cloud cdn",
+	"azure", "microsoft",
+	"akamai", "fastly",
+	"oracle",
+	"alibaba", "aliyun",
+	"tencent",
+	"digitalocean",
+}
+
+// DetectCDNFlags derives is_cdn, is_cloud, and is_waf booleans from raw httpx JSON data.
+//
+// Rules:
+//   - is_cdn  = "cdn" is true OR "cdn_name" is non-empty
+//   - is_cloud = cdn_name matches a cloud provider pattern
+//   - is_waf  = "cdn_type" equals "waf"
+func DetectCDNFlags(raw map[string]interface{}) (isCDN, isCloud, isWAF bool) {
+	// Check "cdn" boolean field
+	if v, ok := raw["cdn"].(bool); ok && v {
+		isCDN = true
+	}
+
+	// Check "cdn_name" string field
+	cdnName := ""
+	if v, ok := raw["cdn_name"].(string); ok && v != "" {
+		cdnName = v
+		isCDN = true
+	}
+
+	// Cloud detection from cdn_name
+	if cdnName != "" {
+		lower := strings.ToLower(cdnName)
+		for _, pattern := range cloudProviderPatterns {
+			if strings.Contains(lower, pattern) {
+				isCloud = true
+				break
+			}
+		}
+	}
+
+	// WAF detection from cdn_type
+	if v, ok := raw["cdn_type"].(string); ok && strings.EqualFold(v, "waf") {
+		isWAF = true
+	}
+
+	return
 }
 
 // ParseAssetLine parses a single JSONL line into an Asset
@@ -266,6 +319,9 @@ func ParseAssetLine(line []byte, defaultWorkspace, source string) (*Asset, error
 	if v, ok := raw["asset_type"].(string); ok {
 		asset.AssetType = v
 	}
+
+	// CDN/WAF classification
+	asset.IsCDN, asset.IsCloud, asset.IsWAF = DetectCDNFlags(raw)
 
 	// Validate required fields
 	if asset.AssetValue == "" {
