@@ -115,7 +115,7 @@ For more CLI usage and example commands, refer to the [CLI Reference](https://do
 
 ```plaintext
 ┌───────────────────────────────────────────────────────────────────────────┐
-│                        OSMEDEUS WORKFLOW ENGINE                           │
+│                   Osmedeus Orchestration Engine                           │
 ├───────────────────────────────────────────────────────────────────────────┤
 │  ENTRY POINTS                                                             │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────────┐                │
@@ -129,7 +129,7 @@ For more CLI usage and example commands, refer to the [CLI Reference](https://do
 │  │                          │                                          │  │
 │  │  Step Executors: bash | function | parallel | foreach | remote-bash │  │
 │  │                  http | llm | agent | SARIF/SAST integration        │  │
-│  │  Hooks: pre_scan_steps → [main steps] → post_scan_steps            │  │
+│  │  Hooks: pre_scan_steps → [main steps] → post_scan_steps             │  │
 │  │                          │                                          │  │
 │  │  Runners: HostRunner | DockerRunner | SSHRunner                     │  │
 │  │  Queue: DB + Redis polling → dedup → concurrent execution           │  │
@@ -174,7 +174,7 @@ The high-level ambitious plan for the project, in order:
 
 **Osmedeus** is designed to execute arbitrary code and commands from user supplied input via CLI, API, and workflow definitions. This flexibility is intentional and central to how the engine operates.
 
-Please refer to the [Security Warning](https://docs.osmedeus.org/others/security-warning) page for more information on how to stay safe.
+Please refer to the [⚠️ Security Warning](https://docs.osmedeus.org/others/security-warning) page for more information on how to stay safe.
 
 **Think twice before you:**
 - Run workflows downloaded from untrusted sources
