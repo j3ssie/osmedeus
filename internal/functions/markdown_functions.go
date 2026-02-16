@@ -672,6 +672,140 @@ func (vf *vmFunc) jsonlFilter(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(true)
 }
 
+func (vf *vmFunc) jsonlRenameKey(call goja.FunctionCall) goja.Value {
+	logger.Get().Debug("Calling jsonlRenameKey")
+
+	if len(call.Arguments) < 3 {
+		logger.Get().Warn("jsonlRenameKey: requires 3 arguments (source, dest, mappings)")
+		return vf.vm.ToValue(false)
+	}
+
+	source := call.Argument(0).String()
+	dest := call.Argument(1).String()
+	mappingsRaw := call.Argument(2).String()
+
+	if source == "undefined" || source == "" || dest == "undefined" || dest == "" || mappingsRaw == "undefined" || mappingsRaw == "" {
+		logger.Get().Warn("jsonlRenameKey: empty source, dest, or mappings")
+		return vf.vm.ToValue(false)
+	}
+
+	// Parse mappings: "old1:new1,old2:new2"
+	type keyMapping struct {
+		oldKey string
+		newKey string
+	}
+	var mappings []keyMapping
+	for _, pair := range strings.Split(mappingsRaw, ",") {
+		pair = strings.TrimSpace(pair)
+		if pair == "" {
+			continue
+		}
+		parts := strings.SplitN(pair, ":", 2)
+		if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" || strings.TrimSpace(parts[1]) == "" {
+			logger.Get().Warn("jsonlRenameKey: invalid mapping pair", zap.String("pair", pair))
+			continue
+		}
+		mappings = append(mappings, keyMapping{oldKey: strings.TrimSpace(parts[0]), newKey: strings.TrimSpace(parts[1])})
+	}
+
+	if len(mappings) == 0 {
+		logger.Get().Warn("jsonlRenameKey: no valid mappings found", zap.String("mappings", mappingsRaw))
+		return vf.vm.ToValue(false)
+	}
+
+	logger.Get().Debug("jsonlRenameKey arguments",
+		zap.String("source", source), zap.String("dest", dest), zap.Int("mappings", len(mappings)))
+
+	f, err := os.Open(source)
+	if err != nil {
+		logger.Get().Warn("jsonlRenameKey: failed to open source", zap.String("source", source), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+	defer func() { _ = f.Close() }()
+
+	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+		logger.Get().Warn("jsonlRenameKey: failed to create destination directory", zap.String("dest", dest), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	out, err := os.Create(dest)
+	if err != nil {
+		logger.Get().Warn("jsonlRenameKey: failed to create destination file", zap.String("dest", dest), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+	defer func() { _ = out.Close() }()
+
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
+
+	writer := bufio.NewWriterSize(out, 256*1024)
+	defer func() { _ = writer.Flush() }()
+
+	lineCount := 0
+	outCount := 0
+	var p fastjson.Parser
+	var arena fastjson.Arena
+
+	for scanner.Scan() {
+		raw := strings.TrimSpace(scanner.Text())
+		if raw == "" {
+			continue
+		}
+		lineCount++
+
+		v, err := p.Parse(raw)
+		if err != nil {
+			continue
+		}
+
+		obj := v.GetObject()
+		if obj == nil {
+			continue
+		}
+
+		arena.Reset()
+		result := arena.NewObject()
+
+		// Copy all keys, renaming where a mapping exists
+		// Build a lookup map for old->new
+		renameMap := make(map[string]string, len(mappings))
+		for _, m := range mappings {
+			renameMap[m.oldKey] = m.newKey
+		}
+
+		obj.Visit(func(key []byte, val *fastjson.Value) {
+			k := string(key)
+			if newKey, ok := renameMap[k]; ok {
+				result.Set(newKey, val)
+			} else {
+				result.Set(k, val)
+			}
+		})
+
+		if _, err := writer.Write(result.MarshalTo(nil)); err != nil {
+			logger.Get().Warn("jsonlRenameKey: failed writing output", zap.Error(err))
+			return vf.vm.ToValue(false)
+		}
+		if err := writer.WriteByte('\n'); err != nil {
+			logger.Get().Warn("jsonlRenameKey: failed writing newline", zap.Error(err))
+			return vf.vm.ToValue(false)
+		}
+		outCount++
+	}
+
+	if err := scanner.Err(); err != nil {
+		logger.Get().Warn("jsonlRenameKey: failed reading source", zap.String("source", source), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+	if err := writer.Flush(); err != nil {
+		logger.Get().Warn("jsonlRenameKey: failed flushing output", zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	logger.Get().Debug("jsonlRenameKey completed", zap.Int("lines", lineCount), zap.Int("written", outCount))
+	return vf.vm.ToValue(true)
+}
+
 func (vf *vmFunc) jsonlUnique(call goja.FunctionCall) goja.Value {
 	logger.Get().Debug("Calling jsonlUnique")
 

@@ -708,3 +708,152 @@ func TestJSONLUnique(t *testing.T) {
 		require.Len(t, lines, 1)
 	})
 }
+
+func TestJSONLRenameKey(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("renames single key", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		source := filepath.Join(tmpDir, "in.jsonl")
+		dest := filepath.Join(tmpDir, "out.jsonl")
+
+		content := `{"host":"example.com","status":200}` + "\n" +
+			`{"host":"test.com","status":404}` + "\n"
+		err := os.WriteFile(source, []byte(content), 0644)
+		require.NoError(t, err)
+
+		result, err := runtime.Execute(
+			`jsonl_rename_key("`+source+`", "`+dest+`", "host:domain")`,
+			nil,
+		)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+
+		out, err := os.ReadFile(dest)
+		require.NoError(t, err)
+		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+		require.Len(t, lines, 2)
+		assert.Contains(t, lines[0], `"domain"`)
+		assert.NotContains(t, lines[0], `"host"`)
+		assert.Contains(t, lines[0], `"status"`)
+	})
+
+	t.Run("renames multiple keys", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		source := filepath.Join(tmpDir, "in.jsonl")
+		dest := filepath.Join(tmpDir, "out.jsonl")
+
+		content := `{"host":"example.com","status":200,"words":50}` + "\n"
+		err := os.WriteFile(source, []byte(content), 0644)
+		require.NoError(t, err)
+
+		result, err := runtime.Execute(
+			`jsonl_rename_key("`+source+`", "`+dest+`", "host:domain,status:status_code")`,
+			nil,
+		)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+
+		out, err := os.ReadFile(dest)
+		require.NoError(t, err)
+		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+		require.Len(t, lines, 1)
+		assert.Contains(t, lines[0], `"domain"`)
+		assert.Contains(t, lines[0], `"status_code"`)
+		assert.Contains(t, lines[0], `"words"`)
+		assert.NotContains(t, lines[0], `"host"`)
+		assert.NotContains(t, lines[0], `"status":`)
+	})
+
+	t.Run("preserves keys without mappings", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		source := filepath.Join(tmpDir, "in.jsonl")
+		dest := filepath.Join(tmpDir, "out.jsonl")
+
+		content := `{"a":1,"b":2,"c":3}` + "\n"
+		err := os.WriteFile(source, []byte(content), 0644)
+		require.NoError(t, err)
+
+		result, err := runtime.Execute(
+			`jsonl_rename_key("`+source+`", "`+dest+`", "a:x")`,
+			nil,
+		)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+
+		out, err := os.ReadFile(dest)
+		require.NoError(t, err)
+		assert.Contains(t, string(out), `"x"`)
+		assert.Contains(t, string(out), `"b"`)
+		assert.Contains(t, string(out), `"c"`)
+		assert.NotContains(t, string(out), `"a"`)
+	})
+
+	t.Run("skips invalid JSON lines", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		source := filepath.Join(tmpDir, "in.jsonl")
+		dest := filepath.Join(tmpDir, "out.jsonl")
+
+		content := `{"host":"a.com"}` + "\n" +
+			"not json\n" +
+			`{"host":"b.com"}` + "\n"
+		err := os.WriteFile(source, []byte(content), 0644)
+		require.NoError(t, err)
+
+		result, err := runtime.Execute(
+			`jsonl_rename_key("`+source+`", "`+dest+`", "host:domain")`,
+			nil,
+		)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+
+		out, err := os.ReadFile(dest)
+		require.NoError(t, err)
+		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+		require.Len(t, lines, 2)
+	})
+
+	t.Run("empty mappings returns false", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		source := filepath.Join(tmpDir, "in.jsonl")
+		dest := filepath.Join(tmpDir, "out.jsonl")
+
+		err := os.WriteFile(source, []byte(`{"a":1}`+"\n"), 0644)
+		require.NoError(t, err)
+
+		result, err := runtime.Execute(
+			`jsonl_rename_key("`+source+`", "`+dest+`", "")`,
+			nil,
+		)
+		require.NoError(t, err)
+		assert.Equal(t, false, result)
+	})
+
+	t.Run("missing arguments returns false", func(t *testing.T) {
+		result, err := runtime.Execute(
+			`jsonl_rename_key("source", "dest")`,
+			nil,
+		)
+		require.NoError(t, err)
+		assert.Equal(t, false, result)
+	})
+
+	t.Run("creates output directory if not exists", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		source := filepath.Join(tmpDir, "in.jsonl")
+		dest := filepath.Join(tmpDir, "nested", "dir", "out.jsonl")
+
+		err := os.WriteFile(source, []byte(`{"a":1}`+"\n"), 0644)
+		require.NoError(t, err)
+
+		result, err := runtime.Execute(
+			`jsonl_rename_key("`+source+`", "`+dest+`", "a:b")`,
+			nil,
+		)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+
+		_, err = os.Stat(dest)
+		assert.NoError(t, err)
+	})
+}

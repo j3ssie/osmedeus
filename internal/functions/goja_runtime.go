@@ -226,6 +226,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnCSVToJSONL, vf.csvToJSONL)
 	_ = vm.Set(FnJSONLUnique, vf.jsonlUnique)
 	_ = vm.Set(FnJSONLFilter, vf.jsonlFilter)
+	_ = vm.Set(FnJSONLRenameKey, vf.jsonlRenameKey)
 
 	// URL processing functions
 	_ = vm.Set(FnInterestingUrls, vf.interestingUrls)

@@ -435,11 +435,11 @@ func runFunctionList(cmd *cobra.Command, args []string) error {
 	}
 
 	headers := []string{"Category", "Function", "Description", "Returns"}
-	if globalWidth > 0 {
-		printMarkdownTableWithWidth(headers, rows, globalWidth)
-	} else {
-		printMarkdownTable(headers, rows)
+	width := globalWidth
+	if width <= 0 {
+		width = 65
 	}
+	printMarkdownTableWithWidth(headers, rows, width)
 	return nil
 }
 

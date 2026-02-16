@@ -276,11 +276,12 @@ const (
 
 // Output Functions - Save content to files
 const (
-	FnSaveContent = "save_content" // save_content(content, path) -> bool
-	FnJSONLToCSV  = "jsonl_to_csv"
-	FnCSVToJSONL  = "csv_to_jsonl"
-	FnJSONLUnique = "jsonl_unique"
-	FnJSONLFilter = "jsonl_filter"
+	FnSaveContent    = "save_content" // save_content(content, path) -> bool
+	FnJSONLToCSV     = "jsonl_to_csv"
+	FnCSVToJSONL     = "csv_to_jsonl"
+	FnJSONLUnique    = "jsonl_unique"
+	FnJSONLFilter    = "jsonl_filter"
+	FnJSONLRenameKey = "jsonl_rename_key"
 )
 
 // URL Processing Functions - URL deduplication, filtering, and parsing
@@ -559,6 +560,7 @@ func AllFunctions() []string {
 		FnCSVToJSONL,
 		FnJSONLUnique,
 		FnJSONLFilter,
+		FnJSONLRenameKey,
 
 		// URL Processing Functions
 		FnInterestingUrls,
@@ -927,6 +929,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnRunNmap, "run_nmap(target, flags?, output?)", "Run nmap scan and auto-convert to JSONL (XML → JSONL)", "string", "run_nmap('192.168.1.0/24', '-sV -p-', '{{Output}}/scan.jsonl')"},
 			{FnJSONLUnique, "jsonl_unique(source, dest, fields)", "Deduplicate JSONL by hashing selected fields", "bool", "jsonl_unique('{{Output}}/httpx.jsonl', '{{Output}}/httpx.unique.jsonl', ['status','words','lines'])"},
 			{FnJSONLFilter, "jsonl_filter(source, dest, fields)", "Filter JSONL to selected fields (comma or array)", "bool", "jsonl_filter('{{Output}}/httpx.jsonl', '{{Output}}/httpx.filtered.jsonl', 'host,status,hash.body_sha256')"},
+			{FnJSONLRenameKey, "jsonl_rename_key(source, dest, mappings)", "Rename keys in JSONL (mappings: 'old1:new1,old2:new2')", "bool", "jsonl_rename_key('{{Output}}/httpx.jsonl', '{{Output}}/httpx.renamed.jsonl', 'host:domain,status:status_code')"},
 		},
 		CategoryURLProcessing: {
 			{FnInterestingUrls, "interesting_urls(src, dest, json_field?)", "Deduplicate URLs by hostname+path+params, filter static files and noise patterns", "bool", "interesting_urls('{{Output}}/all-urls.txt', '{{Output}}/interesting-urls.txt', 'url')"},

@@ -29,7 +29,6 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/minio/minio-go/v7 v7.0.97
-	github.com/olekukonko/tablewriter v0.0.5
 	github.com/orivej/go-nix v0.0.0-20180830055821-dae45d921a44
 	github.com/pkg/sftp v1.13.9
 	github.com/prometheus/client_golang v1.23.2

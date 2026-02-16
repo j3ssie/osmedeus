@@ -32,7 +32,6 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -1489,21 +1488,15 @@ func printResultSummary(result *core.WorkflowResult) {
 	if len(result.Steps) > 0 {
 		fmt.Println()
 		fmt.Println(terminal.ResultSymbol() + " " + terminal.Bold("Step Results:"))
-		table := terminal.NewTable(os.Stdout, []string{"Status", "Step", "Duration"})
-		table.SetColumnAlignment([]int{
-			tablewriter.ALIGN_LEFT,   // Status
-			tablewriter.ALIGN_LEFT,   // Step
-			tablewriter.ALIGN_CENTER, // Duration - center align for better visual alignment
-		})
-
+		var rows [][]string
 		for _, step := range result.Steps {
-			table.Append([]string{
+			rows = append(rows, []string{
 				terminal.PaddedStepSymbol(string(step.Status)),
 				step.StepName,
 				formatDuration(step.Duration),
 			})
 		}
-		table.Render()
+		printMarkdownTable([]string{"Status", "Step", "Duration"}, rows)
 	}
 
 	if len(result.Artifacts) > 0 {
