@@ -170,6 +170,34 @@ func (r *RunRepository) ListQueued(ctx context.Context) ([]*database.Run, error)
 	return runs, nil
 }
 
+// ListWebhookRuns returns all runs that have a webhook UUID set
+func (r *RunRepository) ListWebhookRuns(ctx context.Context) ([]*database.Run, error) {
+	var runs []*database.Run
+	err := r.db.NewSelect().
+		Model(&runs).
+		Where("webhook_uuid != ''").
+		Order("created_at DESC").
+		Scan(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return runs, nil
+}
+
+// GetByWebhookUUID returns a run by its webhook UUID
+func (r *RunRepository) GetByWebhookUUID(ctx context.Context, webhookUUID string) (*database.Run, error) {
+	run := new(database.Run)
+	err := r.db.NewSelect().
+		Model(run).
+		Where("webhook_uuid = ?", webhookUUID).
+		Limit(1).
+		Scan(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return run, nil
+}
+
 // ClaimQueuedRun atomically claims a queued run (WHERE status='queued')
 func (r *RunRepository) ClaimQueuedRun(ctx context.Context, runID int64) (bool, error) {
 	now := time.Now()

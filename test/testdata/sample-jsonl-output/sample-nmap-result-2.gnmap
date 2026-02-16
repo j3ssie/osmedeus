@@ -1,0 +1,4 @@
+# Nmap 7.98 scan initiated Sun Feb 15 21:01:20 2026 as: nmap -oA 31.57.112.121_result -p- -sV -sC -T4 -Pn 31.57.112.121
+Host: 31.57.112.121 ()	Status: Up
+Host: 31.57.112.121 ()	Ports: 222/open/tcp//ssh//OpenSSH 10.0 (protocol 2.0)/, 2222/open/tcp//ssh//OpenSSH 9.6p1 Ubuntu 3ubuntu13 (Ubuntu Linux; protocol 2.0)/, 3000/open/tcp//http//Golang net|http server/, 3001/open/tcp//nessus?///, 3306/open/tcp//mysql//MariaDB 11.7.2/, 9955/filtered/tcp//alljoyn-stm///, 10128/filtered/tcp//bmc-perf-sd///, 10135/filtered/tcp/////, 13794/filtered/tcp/////, 18894/filtered/tcp/////, 24622/filtered/tcp/////, 34869/filtered/tcp/////, 36655/filtered/tcp/////, 39807/filtered/tcp/////, 40135/filtered/tcp/////, 46466/filtered/tcp/////, 49666/filtered/tcp/////, 51437/filtered/tcp/////, 56244/filtered/tcp/////, 58295/filtered/tcp/////	Ignored State: closed (65515)
+# Nmap done at Sun Feb 15 21:41:58 2026 -- 1 IP address (1 host up) scanned in 2438.40 seconds

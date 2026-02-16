@@ -2644,6 +2644,221 @@ func (vf *vmFunc) dbImportVuln(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(true)
 }
 
+// dbImportPortAssets imports port scan data from JSONL into assets table
+// JSONL format: {"asset_value":"IP","host_ip":"IP","open_ports":["80/tcp"],"ports":{...}}
+// Sets asset_type="ip" and source="portscan" by default
+// Usage: db_import_port_assets(workspace, file_path, source?) -> map with stats {new, updated, unchanged, errors, total}
+func (vf *vmFunc) dbImportPortAssets(call goja.FunctionCall) goja.Value {
+	logger.Get().Debug("Calling " + terminal.HiGreen("dbImportPortAssets"))
+
+	// 1. Parse arguments
+	if len(call.Arguments) < 2 {
+		logger.Get().Warn("db_import_port_assets requires at least 2 arguments: workspace, file_path")
+		return vf.errorValue("insufficient arguments")
+	}
+
+	workspace := call.Argument(0).String()
+	filePath := call.Argument(1).String()
+
+	// Optional source override (default: "portscan")
+	defaultSource := "portscan"
+	if len(call.Arguments) >= 3 && call.Argument(2).String() != "" {
+		defaultSource = call.Argument(2).String()
+	}
+
+	// 2. Validate inputs
+	if workspace == "" || workspace == "undefined" {
+		logger.Get().Warn("db_import_port_assets: workspace cannot be empty")
+		return vf.errorValue("workspace cannot be empty")
+	}
+
+	if filePath == "" || filePath == "undefined" {
+		logger.Get().Warn("db_import_port_assets: file_path cannot be empty")
+		return vf.errorValue("file_path cannot be empty")
+	}
+
+	// 3. Connect to database
+	db := database.GetDB()
+	if db == nil {
+		logger.Get().Error("db_import_port_assets: database not connected")
+		return vf.errorValue("database not connected")
+	}
+
+	// 4. Open JSONL file
+	file, err := os.Open(filePath)
+	if err != nil {
+		logger.Get().Warn("db_import_port_assets: failed to open file", zap.String("path", filePath), zap.Error(err))
+		return vf.errorValue(fmt.Sprintf("failed to open file: %v", err))
+	}
+	defer func() { _ = file.Close() }()
+
+	ctx := context.Background()
+	stats := database.ImportStats{}
+	total := 0
+
+	// 5. Create scanner with large buffer for port data
+	scanner := bufio.NewScanner(file)
+	buf := make([]byte, 0, 10*1024*1024) // 10MB buffer
+	scanner.Buffer(buf, 10*1024*1024)
+
+	now := time.Now()
+
+	// 6. Process each JSONL line
+	for scanner.Scan() {
+		total++
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		// 7. Parse JSON line
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(line), &data); err != nil {
+			logger.Get().Warn("db_import_port_assets: failed to parse JSON line",
+				zap.Int("line", total),
+				zap.Error(err))
+			stats.Errors++
+			continue
+		}
+
+		// 8. Build Asset from port scan data
+		asset := database.Asset{
+			Workspace:  workspace,
+			AssetType:  "ip", // Force IP type for port scans
+			Source:     defaultSource,
+			LastSeenAt: now,
+		}
+
+		// Map fields from JSON
+		if v, ok := data["asset_value"].(string); ok && v != "" {
+			asset.AssetValue = v
+		}
+		if v, ok := data["host_ip"].(string); ok && v != "" {
+			asset.HostIP = v
+		}
+
+		// Skip if no asset_value
+		if asset.AssetValue == "" {
+			logger.Get().Warn("db_import_port_assets: missing asset_value",
+				zap.Int("line", total))
+			stats.Errors++
+			continue
+		}
+
+		// 9. Extract open_ports array
+		if openPortsRaw, ok := data["open_ports"]; ok {
+			switch v := openPortsRaw.(type) {
+			case []interface{}:
+				for _, port := range v {
+					if portStr, ok := port.(string); ok {
+						asset.OpenPorts = append(asset.OpenPorts, portStr)
+					}
+				}
+			}
+		}
+
+		// 10. Serialize ports map to JSON string for PortJsonData
+		if portsData, ok := data["ports"]; ok {
+			portsJSON, err := json.Marshal(portsData)
+			if err != nil {
+				logger.Get().Warn("db_import_port_assets: failed to marshal ports",
+					zap.String("asset", asset.AssetValue),
+					zap.Error(err))
+			} else {
+				asset.PortJsonData = string(portsJSON)
+			}
+		}
+
+		// 11. Check if asset exists (match by workspace + asset_value)
+		var existing database.Asset
+		selectErr := db.NewSelect().Model(&existing).
+			Where("workspace = ?", workspace).
+			Where("asset_value = ?", asset.AssetValue).
+			Limit(1).
+			Scan(ctx)
+
+		if selectErr != nil {
+			// 12. Insert new asset
+			asset.CreatedAt = now
+			asset.UpdatedAt = now
+
+			_, insertErr := db.NewInsert().Model(&asset).Exec(ctx)
+			if insertErr != nil {
+				logger.Get().Warn("db_import_port_assets: failed to insert",
+					zap.String("asset", asset.AssetValue),
+					zap.Error(insertErr))
+				stats.Errors++
+				continue
+			}
+
+			stats.New++
+			logger.Get().Debug("db_import_port_assets: inserted new asset",
+				zap.String("asset", asset.AssetValue),
+				zap.Int("ports", len(asset.OpenPorts)))
+		} else {
+			// 13. Merge and update existing asset
+			mergePortAssetFields(&existing, &asset)
+			asset.UpdatedAt = now
+
+			// Check if port data changed
+			if hasPortAssetChanged(&existing, &asset) {
+				_, updateErr := db.NewUpdate().Model(&asset).
+					Column("host_ip", "open_ports", "port_json_data", "source", "last_seen_at", "updated_at").
+					Where("id = ?", existing.ID).
+					Exec(ctx)
+
+				if updateErr != nil {
+					logger.Get().Warn("db_import_port_assets: failed to update",
+						zap.String("asset", asset.AssetValue),
+						zap.Error(updateErr))
+					stats.Errors++
+					continue
+				}
+
+				stats.Updated++
+				logger.Get().Debug("db_import_port_assets: updated asset",
+					zap.String("asset", asset.AssetValue),
+					zap.Int("ports", len(asset.OpenPorts)))
+			} else {
+				// Only update last_seen_at
+				_, updateErr := db.NewUpdate().Model((*database.Asset)(nil)).
+					Set("last_seen_at = ?", now).
+					Where("id = ?", existing.ID).
+					Exec(ctx)
+
+				if updateErr != nil {
+					stats.Errors++
+					continue
+				}
+
+				stats.Unchanged++
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		logger.Get().Error("db_import_port_assets: scanner error", zap.Error(err))
+		return vf.errorValue(fmt.Sprintf("scanner error: %v", err))
+	}
+
+	// 14. Return statistics
+	logger.Get().Info("db_import_port_assets: import completed",
+		zap.String("workspace", workspace),
+		zap.Int("new", stats.New),
+		zap.Int("updated", stats.Updated),
+		zap.Int("unchanged", stats.Unchanged),
+		zap.Int("errors", stats.Errors),
+		zap.Int("total", total))
+
+	return vf.vm.ToValue(map[string]interface{}{
+		"new":       stats.New,
+		"updated":   stats.Updated,
+		"unchanged": stats.Unchanged,
+		"errors":    stats.Errors,
+		"total":     total,
+	})
+}
+
 // dbImportVulnFromFile imports vulnerabilities from a JSONL file (nuclei format)
 // Usage: db_import_vuln_from_file(workspace, file_path) -> map with stats {new, updated, unchanged, errors, total}
 func (vf *vmFunc) dbImportVulnFromFile(call goja.FunctionCall) goja.Value {

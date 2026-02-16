@@ -66,6 +66,8 @@ var (
 	disableWorkflowState bool
 	queueRun             bool
 	queueRunProcess      bool
+	webhookRun           bool
+	webhookAuthKey       string
 
 	// Chunk mode flags
 	chunkSize    int
@@ -150,6 +152,10 @@ func init() {
 	// Queue flags
 	runCmd.Flags().BoolVar(&queueRun, "queue", false, "queue the run for later processing instead of executing immediately")
 	runCmd.Flags().BoolVar(&queueRunProcess, "queue-run", false, "process queued tasks (alias for 'osmedeus worker queue run')")
+
+	// Webhook flags
+	runCmd.Flags().BoolVar(&webhookRun, "as-webhook", false, "register a webhook trigger for this run instead of executing immediately")
+	runCmd.Flags().StringVar(&webhookAuthKey, "webhook-auth-key", "", "optional authentication key for the webhook trigger")
 }
 
 // captureExplicitFlags records which CLI flags were explicitly set by the user
@@ -517,6 +523,11 @@ func runRun(cmd *cobra.Command, args []string) error {
 	// Handle distributed run mode
 	if distributedRun {
 		return runDistributedRun(cfg, allTargets, printer)
+	}
+
+	// Handle webhook registration mode
+	if webhookRun {
+		return runWebhookRun(cfg, allTargets, printer)
 	}
 
 	// Handle queue mode
@@ -2000,6 +2011,88 @@ func registerCronTriggersWithServer(ctx context.Context, workflow *core.Workflow
 }
 
 // runQueuedRun creates queued run records in the database (and optionally pushes to Redis)
+func runWebhookRun(cfg *config.Config, allTargets []string, printer *terminal.Printer) error {
+	// Determine workflow name and kind
+	workflowName := flowName
+	workflowKind := "flow"
+	if workflowName == "" && len(moduleNames) > 0 {
+		workflowName = moduleNames[0]
+		workflowKind = "module"
+	}
+
+	if workflowName == "" {
+		return fmt.Errorf("workflow name required (use -f or -m)")
+	}
+
+	// Parse additional params
+	params := make(map[string]interface{})
+	for _, flag := range paramFlags {
+		parts := strings.SplitN(flag, "=", 2)
+		if len(parts) == 2 {
+			params[parts[0]] = parts[1]
+		}
+	}
+
+	ctx := context.Background()
+
+	// Connect to database and migrate
+	_, err := database.Connect(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+	if err := database.Migrate(ctx); err != nil {
+		return fmt.Errorf("failed to migrate database: %w", err)
+	}
+
+	printer.Section("Registering Webhook Triggers")
+
+	for _, target := range allTargets {
+		webhookUUID := uuid.New().String()
+		runUUID := uuid.New().String()
+
+		run := &database.Run{
+			RunUUID:        runUUID,
+			WorkflowName:   workflowName,
+			WorkflowKind:   workflowKind,
+			Target:         target,
+			Params:         params,
+			Status:         "webhook",
+			TriggerType:    "webhook",
+			RunMode:        "webhook",
+			RunPriority:    "high",
+			WebhookUUID:    webhookUUID,
+			WebhookAuthKey: webhookAuthKey,
+		}
+
+		if err := database.CreateRun(ctx, run); err != nil {
+			printer.Error("Failed to register webhook for %s: %s", target, err)
+			continue
+		}
+
+		// Build webhook URL
+		webhookPath := fmt.Sprintf("/osm/api/webhook-runs/%s/trigger", webhookUUID)
+		if webhookAuthKey != "" {
+			webhookPath += fmt.Sprintf("?key=%s", webhookAuthKey)
+		}
+
+		printer.Success("Webhook registered: %s -> %s",
+			terminal.Green(target),
+			terminal.Yellow(workflowName))
+		printer.Info("  UUID: %s", terminal.Cyan(webhookUUID))
+		printer.Info("  Path: %s", terminal.Cyan(webhookPath))
+		if webhookAuthKey != "" {
+			printer.Info("  Auth: %s", terminal.Yellow("key="+webhookAuthKey))
+		}
+	}
+
+	fmt.Println()
+	printer.SecurityWarning("Webhook URLs allow unauthenticated scan triggering.")
+	printer.Info("Ensure 'enable_trigger_via_webhook: true' is set in osm-settings.yaml")
+	printer.Info("Use '%s' to list registered webhooks", terminal.Cyan("osmedeus worker webhooks"))
+
+	return nil
+}
+
 func runQueuedRun(cfg *config.Config, allTargets []string, printer *terminal.Printer) error {
 	// Determine workflow name and kind
 	workflowName := flowName

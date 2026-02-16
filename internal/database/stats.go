@@ -2,6 +2,8 @@ package database
 
 import (
 	"context"
+	"fmt"
+	"sort"
 
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
 	"github.com/uptrace/bun"
@@ -194,4 +196,85 @@ func getScheduleStats(ctx context.Context, db *bun.DB) (ScheduleStats, error) {
 		Total:   result.Total,
 		Enabled: result.Enabled,
 	}, nil
+}
+
+// AssetStatsData contains unique lists of asset metadata
+type AssetStatsData struct {
+	Technologies []string `json:"technologies"`
+	Sources      []string `json:"sources"`
+	Remarks      []string `json:"remarks"`
+	AssetTypes   []string `json:"asset_types"`
+}
+
+// GetAssetStats retrieves unique values for technologies, sources, remarks, and asset_types
+// with optional workspace filtering
+func GetAssetStats(ctx context.Context, workspace string) (*AssetStatsData, error) {
+	db := GetDB()
+
+	// Fetch all assets (optionally filtered by workspace)
+	var assets []Asset
+	query := db.NewSelect().
+		Model(&assets).
+		Column("tech", "source", "remarks", "asset_type")
+
+	if workspace != "" {
+		query = query.Where("workspace = ?", workspace)
+	}
+
+	err := query.Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch assets: %w", err)
+	}
+
+	// Deduplicate in Go (simpler than DB-specific JSON functions)
+	techSet := make(map[string]bool)
+	sourceSet := make(map[string]bool)
+	remarkSet := make(map[string]bool)
+	assetTypeSet := make(map[string]bool)
+
+	for _, asset := range assets {
+		// Technologies (JSON array)
+		for _, tech := range asset.Technologies {
+			if tech != "" {
+				techSet[tech] = true
+			}
+		}
+
+		// Source (string)
+		if asset.Source != "" {
+			sourceSet[asset.Source] = true
+		}
+
+		// Remarks (JSON array)
+		for _, remark := range asset.Remarks {
+			if remark != "" {
+				remarkSet[remark] = true
+			}
+		}
+
+		// AssetType (string)
+		if asset.AssetType != "" {
+			assetTypeSet[asset.AssetType] = true
+		}
+	}
+
+	// Convert maps to sorted slices
+	result := &AssetStatsData{
+		Technologies: mapKeysToSortedSlice(techSet),
+		Sources:      mapKeysToSortedSlice(sourceSet),
+		Remarks:      mapKeysToSortedSlice(remarkSet),
+		AssetTypes:   mapKeysToSortedSlice(assetTypeSet),
+	}
+
+	return result, nil
+}
+
+// mapKeysToSortedSlice converts map keys to sorted string slice
+func mapKeysToSortedSlice(m map[string]bool) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }

@@ -1,4 +1,4 @@
-.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-docker test-ssh test-distributed distributed-e2e-up distributed-e2e-run distributed-e2e-down test-canary-all test-canary-repo test-canary-domain test-canary-ip test-canary-general canary-up canary-down test-all test-summary test-ci clean install install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release run-github-action docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
+.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-e2e-cloud test-cloud test-docker test-ssh test-distributed distributed-e2e-up distributed-e2e-run distributed-e2e-down test-canary-all test-canary-repo test-canary-domain test-canary-ip test-canary-general canary-up canary-down test-all test-summary test-ci clean install install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release run-github-action docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
 
 # Go parameters
 GOCMD=go
@@ -217,6 +217,16 @@ test-e2e-nix: build install-gotestsum
 test-e2e-install: build install-gotestsum
 	@echo "$(PREFIX) Running install E2E tests..."
 	$(TESTCMD) $(TESTFLAGS) -run TestInstall ./test/e2e/...
+
+# Cloud E2E tests (cloud CLI commands and workflow)
+test-e2e-cloud: build install-gotestsum
+	@echo "$(PREFIX) Running cloud E2E tests..."
+	$(TESTCMD) $(TESTFLAGS) -run TestCloud ./test/e2e/...
+
+# Cloud integration tests (internal cloud package tests)
+test-cloud: install-gotestsum
+	@echo "$(PREFIX) Running cloud integration tests..."
+	$(TESTCMD) $(TESTFLAGS) ./test/integration/cloud_integration_test.go
 
 # ── Canary tests (real scans inside Docker toolbox, requires Docker) ──────────
 

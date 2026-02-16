@@ -287,8 +287,18 @@ func Migrate(ctx context.Context) error {
 		return err
 	}
 
+	// Add port tracking columns to assets table if they don't exist
+	if err := addAssetPortColumns(ctx); err != nil {
+		return err
+	}
+
 	// Add queue metadata columns to runs table if they don't exist
 	if err := addRunsQueueColumns(ctx); err != nil {
+		return err
+	}
+
+	// Add webhook columns to runs table if they don't exist
+	if err := addRunsWebhookColumns(ctx); err != nil {
 		return err
 	}
 
@@ -304,6 +314,7 @@ func createRunIndexes(ctx context.Context) error {
 		"CREATE INDEX IF NOT EXISTS idx_runs_workflow_name ON runs(workflow_name)",
 		"CREATE INDEX IF NOT EXISTS idx_runs_target ON runs(target)",
 		"CREATE INDEX IF NOT EXISTS idx_runs_is_queued ON runs(is_queued)",
+		"CREATE INDEX IF NOT EXISTS idx_runs_webhook_uuid ON runs(webhook_uuid)",
 	}
 
 	for _, idx := range indexes {
@@ -462,6 +473,27 @@ func addAssetCDNColumns(ctx context.Context) error {
 	return nil
 }
 
+// addAssetPortColumns adds port tracking columns to assets table for existing databases
+func addAssetPortColumns(ctx context.Context) error {
+	columns := []string{
+		"ALTER TABLE assets ADD COLUMN open_ports TEXT DEFAULT '[]'",
+		"ALTER TABLE assets ADD COLUMN port_json_data TEXT DEFAULT ''",
+	}
+	for _, ddl := range columns {
+		_, err := db.ExecContext(ctx, ddl)
+		if err != nil {
+			errStr := strings.ToLower(err.Error())
+			if strings.Contains(errStr, "duplicate column") ||
+				strings.Contains(errStr, "already exists") ||
+				strings.Contains(errStr, "sqlstate 42701") {
+				continue
+			}
+			return fmt.Errorf("failed to add port column: %w", err)
+		}
+	}
+	return nil
+}
+
 // addRunsQueueColumns adds queue metadata columns to runs table for existing databases
 func addRunsQueueColumns(ctx context.Context) error {
 	columns := []string{
@@ -479,6 +511,27 @@ func addRunsQueueColumns(ctx context.Context) error {
 				continue
 			}
 			return fmt.Errorf("failed to add queue column: %w", err)
+		}
+	}
+	return nil
+}
+
+// addRunsWebhookColumns adds webhook columns to runs table for existing databases
+func addRunsWebhookColumns(ctx context.Context) error {
+	columns := []string{
+		"ALTER TABLE runs ADD COLUMN webhook_uuid TEXT DEFAULT ''",
+		"ALTER TABLE runs ADD COLUMN webhook_auth_key TEXT DEFAULT ''",
+	}
+	for _, ddl := range columns {
+		_, err := db.ExecContext(ctx, ddl)
+		if err != nil {
+			errStr := strings.ToLower(err.Error())
+			if strings.Contains(errStr, "duplicate column") ||
+				strings.Contains(errStr, "already exists") ||
+				strings.Contains(errStr, "sqlstate 42701") {
+				continue
+			}
+			return fmt.Errorf("failed to add webhook column: %w", err)
 		}
 	}
 	return nil

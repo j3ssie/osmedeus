@@ -2,7 +2,7 @@
 # Multi-stage build: compile from source, then create minimal runtime image
 
 # ── Stage 1: build from source ──────────────────────────────────────────────
-FROM golang:1.25-bookworm AS builder
+FROM golang:1.26-bookworm AS builder
 
 ARG BUILD_TIME
 ARG COMMIT_HASH

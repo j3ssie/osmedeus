@@ -3,7 +3,7 @@
 # ensuring canary tests exercise the CURRENT source code, not the last release.
 
 # ── Stage 1: build from source ──────────────────────────────────────────────
-FROM golang:1.25-bookworm AS builder
+FROM golang:1.26-bookworm AS builder
 
 WORKDIR /src
 COPY go.mod go.sum ./

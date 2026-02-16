@@ -128,6 +128,12 @@ server:
   enabled_auth_api: false
   auth_api_key: ""  # Set a secure random key when enabled
 
+  # Enable webhook trigger endpoints for runs
+  # When enabled, runs registered with --as-webhook can be triggered via
+  # GET/POST /osm/api/webhook-runs/<uuid>/trigger without authentication
+  # WARNING: Only enable this if you understand the security implications
+  enable_trigger_via_webhook: false
+
 # =============================================================================
 # Scan Tactic Configuration
 # =============================================================================
@@ -386,6 +392,22 @@ storage:
 #   use_ssl: false
 #   path_style: true
 #   enabled: true
+
+# =============================================================================
+# Cloud Infrastructure Configuration (Optional)
+# =============================================================================
+# Ephemeral cloud infrastructure for distributed workflow execution
+# Uses Pulumi (Go SDK) with local state - no Pulumi Cloud account needed
+cloud:
+  # Path to cloud infrastructure state and metadata
+  cloud_path: "{{base_folder}}/cloud"
+
+  # Path to cloud provider configuration file (YAML)
+  # Contains credentials, provider settings, cost limits, etc.
+  cloud_settings: "{{base_folder}}/cloud/cloud-settings.yaml"
+
+  # Enable cloud execution features
+  enabled: false
 
 # =============================================================================
 # LLM Configuration (Optional)

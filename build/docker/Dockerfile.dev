@@ -1,7 +1,7 @@
 # Osmedeus Production Dockerfile
 # Ubuntu/Debian-based image with essential tools for security scanning
 
-FROM golang:1.25-bookworm
+FROM golang:1.26-bookworm
 
 WORKDIR /app
 

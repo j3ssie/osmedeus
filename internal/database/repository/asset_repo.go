@@ -299,6 +299,8 @@ func (r *AssetRepository) Upsert(ctx context.Context, asset *database.Asset) err
 		Set("loc = CASE WHEN EXCLUDED.loc != 0 THEN EXCLUDED.loc ELSE assets.loc END").
 		Set("blob_content = CASE WHEN EXCLUDED.blob_content != '' THEN EXCLUDED.blob_content ELSE assets.blob_content END").
 		Set("raw_data = CASE WHEN EXCLUDED.raw_data != '' THEN EXCLUDED.raw_data ELSE assets.raw_data END").
+		Set("open_ports = CASE WHEN EXCLUDED.open_ports IS NOT NULL AND EXCLUDED.open_ports != '[]' AND EXCLUDED.open_ports != 'null' THEN EXCLUDED.open_ports ELSE assets.open_ports END").
+		Set("port_json_data = CASE WHEN EXCLUDED.port_json_data != '' THEN EXCLUDED.port_json_data ELSE assets.port_json_data END").
 		Set("is_cdn = CASE WHEN EXCLUDED.is_cdn OR assets.is_cdn THEN TRUE ELSE FALSE END").
 		Set("is_cloud = CASE WHEN EXCLUDED.is_cloud OR assets.is_cloud THEN TRUE ELSE FALSE END").
 		Set("is_waf = CASE WHEN EXCLUDED.is_waf OR assets.is_waf THEN TRUE ELSE FALSE END").
@@ -333,6 +335,8 @@ func (r *AssetRepository) BulkUpsert(ctx context.Context, assets []*database.Ass
 		Set("loc = CASE WHEN EXCLUDED.loc != 0 THEN EXCLUDED.loc ELSE assets.loc END").
 		Set("blob_content = CASE WHEN EXCLUDED.blob_content != '' THEN EXCLUDED.blob_content ELSE assets.blob_content END").
 		Set("raw_data = CASE WHEN EXCLUDED.raw_data != '' THEN EXCLUDED.raw_data ELSE assets.raw_data END").
+		Set("open_ports = CASE WHEN EXCLUDED.open_ports IS NOT NULL AND EXCLUDED.open_ports != '[]' AND EXCLUDED.open_ports != 'null' THEN EXCLUDED.open_ports ELSE assets.open_ports END").
+		Set("port_json_data = CASE WHEN EXCLUDED.port_json_data != '' THEN EXCLUDED.port_json_data ELSE assets.port_json_data END").
 		Set("is_cdn = CASE WHEN EXCLUDED.is_cdn OR assets.is_cdn THEN TRUE ELSE FALSE END").
 		Set("is_cloud = CASE WHEN EXCLUDED.is_cloud OR assets.is_cloud THEN TRUE ELSE FALSE END").
 		Set("is_waf = CASE WHEN EXCLUDED.is_waf OR assets.is_waf THEN TRUE ELSE FALSE END").

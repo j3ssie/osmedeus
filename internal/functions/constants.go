@@ -239,6 +239,15 @@ const (
 	FnRsyncToWorker  = "rsync_to_worker"  // rsync_to_worker(identifier, ip, src, dest) -> bool
 )
 
+// Tmux Functions - Manage tmux sessions from workflows
+const (
+	FnTmuxRun     = "tmux_run"     // tmux_run(command, session_name?) -> string (session name or "")
+	FnTmuxCapture = "tmux_capture" // tmux_capture(session_name) -> string (pane content or ""); pass "all" to capture all sessions
+	FnTmuxSend    = "tmux_send"    // tmux_send(session_name, command) -> bool
+	FnTmuxKill    = "tmux_kill"    // tmux_kill(session_name) -> bool
+	FnTmuxList    = "tmux_list"    // tmux_list() -> []string (all session names)
+)
+
 // LLM Functions - Invoke LLM from workflows
 const (
 	FnLLMInvoke        = "llm_invoke"        // llm_invoke(message) -> string (simple direct message)
@@ -345,6 +354,11 @@ const (
 	// SARIF import functions
 	FnDBImportSARIF          = "db_import_sarif"           // db_import_sarif(workspace, file_path) -> map (stats)
 	FnConvertSARIFToMarkdown = "convert_sarif_to_markdown" // convert_sarif_to_markdown(input_path, output_path) -> bool
+
+	// Nmap/Port import functions
+	FnNmapToJSONL        = "nmap_to_jsonl"         // nmap_to_jsonl(input_path, output_path) -> bool
+	FnRunNmap            = "run_nmap"              // run_nmap(target, flags?, output?) -> string
+	FnDBImportPortAssets = "db_import_port_assets" // db_import_port_assets(workspace, file_path, source?) -> map (stats)
 
 	// Diff functions - asset and vulnerability change tracking
 	FnDBAssetDiff       = "db_asset_diff"         // db_asset_diff(workspace) -> string (JSONL)
@@ -609,6 +623,11 @@ func AllFunctions() []string {
 		FnDBImportSARIF,
 		FnConvertSARIFToMarkdown,
 
+		// Nmap/Port import functions
+		FnNmapToJSONL,
+		FnRunNmap,
+		FnDBImportPortAssets,
+
 		// Diff functions
 		FnDBAssetDiff,
 		FnDBVulnDiff,
@@ -636,6 +655,13 @@ func AllFunctions() []string {
 		FnSyncFromMaster,
 		FnSyncFromWorker,
 		FnRsyncToWorker,
+
+		// Tmux functions
+		FnTmuxRun,
+		FnTmuxCapture,
+		FnTmuxSend,
+		FnTmuxKill,
+		FnTmuxList,
 	}
 }
 
@@ -677,6 +703,7 @@ const (
 	CategoryTypeDetection   = "type_detection"
 	CategoryLLM             = "llm"
 	CategorySSH             = "ssh"
+	CategoryTmux            = "tmux"
 	CategoryDistributed     = "distributed"
 )
 
@@ -717,6 +744,7 @@ func CategoryOrder() []CategoryInfo {
 		{CategoryEnvironment, "Environment Functions", "Environment"},
 		{CategoryTypeDetection, "Type Detection Functions", "Type Detection"},
 		{CategorySSH, "SSH Functions", "SSH"},
+		{CategoryTmux, "Tmux Functions", "Tmux"},
 		{CategoryDistributed, "Distributed Functions", "Distributed"},
 	}
 }
@@ -890,6 +918,8 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnSaveContent, "save_content(content, path)", "Save string content to file", "bool", "save_content('hello', '{{Output}}/greeting.txt')"},
 			{FnJSONLToCSV, "jsonl_to_csv(source, dest)", "Convert JSONL file to CSV", "bool", "jsonl_to_csv('{{Output}}/assets.jsonl', '{{Output}}/assets.csv')"},
 			{FnCSVToJSONL, "csv_to_jsonl(source, dest)", "Convert CSV file to JSONL", "bool", "csv_to_jsonl('{{Output}}/assets.csv', '{{Output}}/assets.jsonl')"},
+			{FnNmapToJSONL, "nmap_to_jsonl(input_path, output_path)", "Convert nmap output (XML or grepable) to JSONL for database import", "bool", "nmap_to_jsonl('{{Output}}/scan.xml', '{{Output}}/scan.jsonl')"},
+			{FnRunNmap, "run_nmap(target, flags?, output?)", "Run nmap scan and auto-convert to JSONL (XML → JSONL)", "string", "run_nmap('192.168.1.0/24', '-sV -p-', '{{Output}}/scan.jsonl')"},
 			{FnJSONLUnique, "jsonl_unique(source, dest, fields)", "Deduplicate JSONL by hashing selected fields", "bool", "jsonl_unique('{{Output}}/httpx.jsonl', '{{Output}}/httpx.unique.jsonl', ['status','words','lines'])"},
 			{FnJSONLFilter, "jsonl_filter(source, dest, fields)", "Filter JSONL to selected fields (comma or array)", "bool", "jsonl_filter('{{Output}}/httpx.jsonl', '{{Output}}/httpx.filtered.jsonl', 'host,status,hash.body_sha256')"},
 		},
@@ -952,6 +982,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnDBImportDNSAsset, "db_import_dns_asset(workspace, file_path)", "Import DNS records from zone-style file (domain TYPE value per line), groups by domain", "int", "db_import_dns_asset('{{Workspace}}', '{{Output}}/dns-records.txt')"},
 			{FnDBImportCustomAsset, "db_import_custom_asset(workspace, file_path, [asset_type], [source])", "Import assets from JSONL file with direct field mapping; optional asset_type/source defaults apply when line has no value", "map", "db_import_custom_asset('{{Workspace}}', '{{Output}}/custom-assets.jsonl', 'subdomain', 'recon')"},
 			{FnDBImportSARIF, "db_import_sarif(workspace, file_path)", "Import vulnerabilities from SARIF file (Semgrep, Trivy, etc.)", "map", "db_import_sarif('{{Workspace}}', '{{Output}}/semgrep.sarif')"},
+			{FnDBImportPortAssets, "db_import_port_assets(workspace, file_path, [source])", "Import port scan data from JSONL (nmap_to_jsonl output) with asset_type=ip and source=portscan", "map", "db_import_port_assets('{{Workspace}}', '{{Output}}/nmap-scan.jsonl')"},
 			{FnDBAssetDiff, "db_asset_diff(workspace)", "Get asset diff as JSONL string", "string", "db_asset_diff('{{Workspace}}')"},
 			{FnDBVulnDiff, "db_vuln_diff(workspace)", "Get vulnerability diff as JSONL string", "string", "db_vuln_diff('{{Workspace}}')"},
 			{FnDBAssetDiffToFile, "db_asset_diff_to_file(workspace, dest)", "Write asset diff to JSONL file", "bool", "db_asset_diff_to_file('{{Workspace}}', '{{Output}}/asset-diff.jsonl')"},
@@ -976,6 +1007,13 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnSyncFromMaster, "sync_from_master(src, dest)", "Request master to rsync file/folder to this worker via SSH", "bool", "sync_from_master('/opt/osmedeus/base/wordlists', '{{BaseFolder}}/wordlists')"},
 			{FnSyncFromWorker, "sync_from_worker(identifier, ip, src, dest)", "Pull file/folder from a worker via rsync over SSH", "bool", "sync_from_worker('worker-1', '10.0.0.2', '/opt/output/results.txt', '/tmp/results.txt')"},
 			{FnRsyncToWorker, "rsync_to_worker(identifier, ip, src, dest)", "Push file/folder to a worker via rsync over SSH", "bool", "rsync_to_worker('worker-1', '10.0.0.2', '/tmp/data.txt', '/opt/data.txt')"},
+		},
+		CategoryTmux: {
+			{FnTmuxRun, "tmux_run(command, session_name?)", "Create detached tmux session running command, auto-generates bosm-<random8> name if omitted", "string", "tmux_run('sleep 30')"},
+			{FnTmuxCapture, "tmux_capture(session_name)", "Capture current pane output from tmux session; pass 'all' to capture all sessions", "string", "tmux_capture('bosm-abc12345')"},
+			{FnTmuxSend, "tmux_send(session_name, command)", "Send command (keystrokes + Enter) to existing tmux session", "bool", "tmux_send('bosm-abc12345', 'ls -la')"},
+			{FnTmuxKill, "tmux_kill(session_name)", "Kill (destroy) a tmux session", "bool", "tmux_kill('bosm-abc12345')"},
+			{FnTmuxList, "tmux_list()", "List all tmux session names", "[]string", "tmux_list()"},
 		},
 		CategoryDistributed: {
 			{FnRunOnMaster, "run_on_master(action, ...args)", "Execute on master: 'func' runs JS expression, 'run' submits workflow, 'bash' runs shell command", "bool", "run_on_master('bash', 'nmap -sV target.com')"},

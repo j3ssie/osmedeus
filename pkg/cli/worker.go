@@ -93,7 +93,7 @@ var workerJoinCmd = &cobra.Command{
 // workerStatusCmd shows worker status
 var workerStatusCmd = &cobra.Command{
 	Use:     "status",
-	Aliases: []string{"ls"},
+	Aliases: []string{"ls", "list"},
 	Short:   "Show worker pool status",
 	Long:    UsageWorkerStatus(),
 	RunE: func(cmd *cobra.Command, args []string) error {

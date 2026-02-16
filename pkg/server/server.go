@@ -259,6 +259,12 @@ func (s *Server) setupRoutes() {
 	// Logout - always accessible (clears session cookie)
 	api.Post("/logout", handlers.Logout())
 
+	// Webhook trigger endpoint (no auth - uses webhook UUID + optional key)
+	if s.config.Server.EnableTriggerViaWebhook {
+		api.Get("/webhook-runs/:uuid/trigger", handlers.TriggerWebhookRun(s.config))
+		api.Post("/webhook-runs/:uuid/trigger", handlers.TriggerWebhookRun(s.config))
+	}
+
 	// Apply auth middleware conditionally
 	if !s.options.NoAuth {
 		if s.config.Server.EnabledAuthAPI {
@@ -268,6 +274,9 @@ func (s *Server) setupRoutes() {
 			api.Use(middleware.JWTAuth(s.config))
 		}
 	}
+
+	// Webhook management (authenticated)
+	api.Get("/webhook-runs/list", handlers.ListWebhookRuns(s.config))
 
 	// Workflows
 	api.Get("/workflows", handlers.ListWorkflowsVerbose(s.config))
@@ -328,6 +337,7 @@ func (s *Server) setupRoutes() {
 
 	// Stats
 	api.Get("/stats", handlers.GetSystemStats(s.config))
+	api.Get("/asset-stats", handlers.GetAssetStats(s.config))
 
 	// Install - registry info and installation endpoints
 	api.Get("/registry-info", handlers.GetRegistryInfo(s.config))

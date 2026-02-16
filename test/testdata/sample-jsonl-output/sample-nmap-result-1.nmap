@@ -1,0 +1,136 @@
+# Nmap 7.98 scan initiated Sun Feb 15 21:00:57 2026 as: nmap -oA 111.14.221.174_result -p- -sV -sC -T4 -Pn 111.14.221.174
+Warning: 111.14.221.174 giving up on port because retransmission cap hit (6).
+Nmap scan report for 111.14.221.174
+Host is up (0.33s latency).
+Not shown: 65508 closed tcp ports (reset)
+PORT      STATE    SERVICE        VERSION
+69/tcp    filtered tftp
+80/tcp    filtered http
+111/tcp   open     rpcbind        2-4 (RPC #100000)
+| rpcinfo: 
+|   program version    port/proto  service
+|   100003  3,4         2049/tcp   nfs
+|   100003  3,4         2049/tcp6  nfs
+|   100005  3          34165/tcp6  mountd
+|   100005  3          34679/udp6  mountd
+|   100021  1,3,4      34393/tcp   nlockmgr
+|   100021  1,3,4      39435/tcp6  nlockmgr
+|   100021  1,3,4      46233/udp   nlockmgr
+|   100021  1,3,4      51466/udp6  nlockmgr
+|   100024  1          35695/tcp6  status
+|   100024  1          36177/tcp   status
+|   100024  1          47153/udp6  status
+|   100024  1          53578/udp   status
+|   100227  3           2049/tcp   nfs_acl
+|_  100227  3           2049/tcp6  nfs_acl
+135/tcp   filtered msrpc
+138/tcp   filtered netbios-dgm
+139/tcp   filtered netbios-ssn
+443/tcp   filtered https
+445/tcp   filtered microsoft-ds
+593/tcp   filtered http-rpc-epmap
+2049/tcp  open     nfs_acl        3 (RPC #100227)
+3000/tcp  open     http           Golang net/http server
+|_http-title: Gitea: Git with a cup of tea
+| fingerprint-strings: 
+|   GenericLines, Help, RTSPRequest: 
+|     HTTP/1.1 400 Bad Request
+|     Content-Type: text/plain; charset=utf-8
+|     Connection: close
+|     Request
+|   GetRequest: 
+|     HTTP/1.0 200 OK
+|     Cache-Control: max-age=0, private, must-revalidate, no-transform
+|     Content-Type: text/html; charset=utf-8
+|     Set-Cookie: i_like_gitea=f6ee962032839bd7; Path=/; HttpOnly; SameSite=Lax
+|     Set-Cookie: _csrf=3DzXQ9_cbFl8M2b1TxS0TA-qNSM6MTc3MTE2ODQyNzc2NTQ4NDM2Nw; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax
+|     X-Frame-Options: SAMEORIGIN
+|     Date: Sun, 15 Feb 2026 15:13:47 GMT
+|     <!DOCTYPE html>
+|     <html lang="en-US" data-theme="gitea-auto">
+|     <head>
+|     <meta name="viewport" content="width=device-width, initial-scale=1">
+|     <title>Gitea: Git with a cup of tea</title>
+|     <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiR2l0ZWE6IEdpdCB3aXRoIGEgY3VwIG9mIHRlYSIsInNob3J0X25hbWUiOiJHaXRlYTogR2l0IHdpdGggYSBjdXAgb2YgdGVhIiwic3RhcnRfdXJsIjoiaHR0cDovLzExMS4xNC4yMjEuMTc0OjMwMDAvIiwiaWNvbnMiOlt7InNyYyI6Imh0dHA6Ly8xMTEuMTQuMjIxLjE3NDozMDAwL2Fzc2V0cy9pbWcvbG9nby5wbmciLCJ0eXBlIjoiaW1hZ2UvcG
+|   HTTPOptions: 
+|     HTTP/1.0 405 Method Not Allowed
+|     Allow: HEAD
+|     Allow: GET
+|     Cache-Control: max-age=0, private, must-revalidate, no-transform
+|     Set-Cookie: i_like_gitea=44bd575f3a4647f1; Path=/; HttpOnly; SameSite=Lax
+|     Set-Cookie: _csrf=6xqx39xSFDSCGkTiAnnRZrt1-tM6MTc3MTE2ODQzMDE0Njk0NjMzNw; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax
+|     X-Frame-Options: SAMEORIGIN
+|     Date: Sun, 15 Feb 2026 15:13:50 GMT
+|_    Content-Length: 0
+3142/tcp  open     http           Debian Apt-Cacher NG httpd 3.7.4
+|_http-title: Not Found or APT Reconfiguration required
+4444/tcp  filtered krb524
+5554/tcp  filtered sgi-esphttp
+5800/tcp  filtered vnc-http
+5900/tcp  filtered vnc
+8080/tcp  filtered http-proxy
+9462/tcp  filtered unknown
+9995/tcp  filtered palace-4
+27561/tcp filtered unknown
+34393/tcp open     nlockmgr       1-4 (RPC #100021)
+36177/tcp open     status         1 (RPC #100024)
+47295/tcp open     mountd         1-3 (RPC #100005)
+50022/tcp open     ssh            OpenSSH 8.9p1 Ubuntu 3ubuntu0.13 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   256 59:03:f6:e0:49:b6:66:b3:18:10:25:79:a6:a4:d1:0d (ECDSA)
+|_  256 91:ea:10:ce:02:63:e4:24:e9:5f:4c:73:2f:6b:b0:dd (ED25519)
+50080/tcp open     http           Apache httpd 2.4.52
+| http-ls: Volume /
+|   maxfiles limit reached (10)
+| SIZE  TIME              FILENAME
+| 93M   2026-01-29 08:25  5.4.300.tar.gz
+| 1.3K  2025-12-23 03:10  9999-015-add-uart2.patch
+| 1.0M  2026-01-06 07:43  ImmortalWrt.mtd1.bin
+| 512K  2026-01-06 07:43  ImmortalWrt.mtd2.bin
+| 1.0M  2026-01-06 07:43  ImmortalWrt.mtd3.bin
+| 1.0M  2026-01-06 07:43  ImmortalWrt.mtd4.bin
+| 2.0M  2026-01-06 07:43  ImmortalWrt.mtd5.bin
+| 111M  2026-01-06 07:43  ImmortalWrt.mtd6.bin
+| 224M  2026-01-26 08:38  aoneos-1.0.0-r0+33335-d6e9bc31b3-layerscape-armv8_64b-fsl_ls1043a-ag104a-squashfs-sdcard.img
+| 222K  2026-01-27 07:09  bl2.img
+|_
+|_http-title: Index of /
+|_http-server-header: Apache/2.4.52 (Ubuntu)
+53827/tcp open     mountd         1-3 (RPC #100005)
+54049/tcp open     mountd         1-3 (RPC #100005)
+1 service unrecognized despite returning data. If you know the service/version, please submit the following fingerprint at https://nmap.org/cgi-bin/submit.cgi?new-service :
+SF-Port3000-TCP:V=7.98%I=7%D=2/15%Time=6991E2AB%P=arm-apple-darwin25.2.0%r
+SF:(GenericLines,67,"HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Type:\x
+SF:20text/plain;\x20charset=utf-8\r\nConnection:\x20close\r\n\r\n400\x20Ba
+SF:d\x20Request")%r(GetRequest,35B6,"HTTP/1\.0\x20200\x20OK\r\nCache-Contr
+SF:ol:\x20max-age=0,\x20private,\x20must-revalidate,\x20no-transform\r\nCo
+SF:ntent-Type:\x20text/html;\x20charset=utf-8\r\nSet-Cookie:\x20i_like_git
+SF:ea=f6ee962032839bd7;\x20Path=/;\x20HttpOnly;\x20SameSite=Lax\r\nSet-Coo
+SF:kie:\x20_csrf=3DzXQ9_cbFl8M2b1TxS0TA-qNSM6MTc3MTE2ODQyNzc2NTQ4NDM2Nw;\x
+SF:20Path=/;\x20Max-Age=86400;\x20HttpOnly;\x20SameSite=Lax\r\nX-Frame-Opt
+SF:ions:\x20SAMEORIGIN\r\nDate:\x20Sun,\x2015\x20Feb\x202026\x2015:13:47\x
+SF:20GMT\r\n\r\n<!DOCTYPE\x20html>\n<html\x20lang=\"en-US\"\x20data-theme=
+SF:\"gitea-auto\">\n<head>\n\t<meta\x20name=\"viewport\"\x20content=\"widt
+SF:h=device-width,\x20initial-scale=1\">\n\t<title>Gitea:\x20Git\x20with\x
+SF:20a\x20cup\x20of\x20tea</title>\n\t<link\x20rel=\"manifest\"\x20href=\"
+SF:data:application/json;base64,eyJuYW1lIjoiR2l0ZWE6IEdpdCB3aXRoIGEgY3VwIG
+SF:9mIHRlYSIsInNob3J0X25hbWUiOiJHaXRlYTogR2l0IHdpdGggYSBjdXAgb2YgdGVhIiwic
+SF:3RhcnRfdXJsIjoiaHR0cDovLzExMS4xNC4yMjEuMTc0OjMwMDAvIiwiaWNvbnMiOlt7InNy
+SF:YyI6Imh0dHA6Ly8xMTEuMTQuMjIxLjE3NDozMDAwL2Fzc2V0cy9pbWcvbG9nby5wbmciLCJ
+SF:0eXBlIjoiaW1hZ2UvcG")%r(Help,67,"HTTP/1\.1\x20400\x20Bad\x20Request\r\n
+SF:Content-Type:\x20text/plain;\x20charset=utf-8\r\nConnection:\x20close\r
+SF:\n\r\n400\x20Bad\x20Request")%r(HTTPOptions,197,"HTTP/1\.0\x20405\x20Me
+SF:thod\x20Not\x20Allowed\r\nAllow:\x20HEAD\r\nAllow:\x20GET\r\nCache-Cont
+SF:rol:\x20max-age=0,\x20private,\x20must-revalidate,\x20no-transform\r\nS
+SF:et-Cookie:\x20i_like_gitea=44bd575f3a4647f1;\x20Path=/;\x20HttpOnly;\x2
+SF:0SameSite=Lax\r\nSet-Cookie:\x20_csrf=6xqx39xSFDSCGkTiAnnRZrt1-tM6MTc3M
+SF:TE2ODQzMDE0Njk0NjMzNw;\x20Path=/;\x20Max-Age=86400;\x20HttpOnly;\x20Sam
+SF:eSite=Lax\r\nX-Frame-Options:\x20SAMEORIGIN\r\nDate:\x20Sun,\x2015\x20F
+SF:eb\x202026\x2015:13:50\x20GMT\r\nContent-Length:\x200\r\n\r\n")%r(RTSPR
+SF:equest,67,"HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Type:\x20text/
+SF:plain;\x20charset=utf-8\r\nConnection:\x20close\r\n\r\n400\x20Bad\x20Re
+SF:quest");
+Service Info: Host: 127.0.1.1; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Sun Feb 15 22:14:32 2026 -- 1 IP address (1 host up) scanned in 4414.96 seconds

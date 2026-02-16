@@ -1,0 +1,437 @@
+# Nmap 7.98 scan initiated Sun Feb 15 23:30:33 2026 as: nmap -oA top-500-ports --top-ports 500 -sV -sC -T4 -Pn 31.57.112.121/28
+Warning: 31.57.112.118 giving up on port because retransmission cap hit (6).
+Warning: 31.57.112.121 giving up on port because retransmission cap hit (6).
+Nmap scan report for 31.57.112.112
+Host is up.
+All 500 scanned ports on 31.57.112.112 are in ignored states.
+Not shown: 500 filtered tcp ports (no-response)
+
+Nmap scan report for 31.57.112.113
+Host is up (0.25s latency).
+Not shown: 492 filtered tcp ports (no-response)
+PORT     STATE SERVICE       VERSION
+80/tcp   open  http          Apache httpd 2.4.58 ((Win64) OpenSSL/3.1.3 PHP/8.2.12)
+| http-title: Welcome to XAMPP
+|_Requested resource was http://31.57.112.113/dashboard/
+|_http-server-header: Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+443/tcp  open  ssl/http      Apache httpd 2.4.58 ((Win64) OpenSSL/3.1.3 PHP/8.2.12)
+| tls-alpn: 
+|_  http/1.1
+|_http-server-header: Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12
+| http-title: Welcome to XAMPP
+|_Requested resource was https://31.57.112.113/dashboard/
+|_ssl-date: TLS randomness does not represent time
+| ssl-cert: Subject: commonName=localhost
+| Not valid before: 2009-11-10T23:48:47
+|_Not valid after:  2019-11-08T23:48:47
+445/tcp  open  microsoft-ds?
+3306/tcp open  mysql         MariaDB 10.3.23 or earlier (unauthorized)
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+| rdp-ntlm-info: 
+|   Target_Name: WIN-BQAJQ4EUT6G
+|   NetBIOS_Domain_Name: WIN-BQAJQ4EUT6G
+|   NetBIOS_Computer_Name: WIN-BQAJQ4EUT6G
+|   DNS_Domain_Name: WIN-BQAJQ4EUT6G
+|   DNS_Computer_Name: WIN-BQAJQ4EUT6G
+|   Product_Version: 10.0.20348
+|_  System_Time: 2026-02-15T16:36:10+00:00
+5985/tcp open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+|_http-title: Not Found
+|_http-server-header: Microsoft-HTTPAPI/2.0
+Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+|_smb2-time: Protocol negotiation failed (SMB2)
+| smb2-security-mode: 
+|   3.1.1: 
+|_    Message signing enabled but not required
+
+Nmap scan report for 31.57.112.114
+Host is up.
+All 500 scanned ports on 31.57.112.114 are in ignored states.
+Not shown: 500 filtered tcp ports (no-response)
+
+Nmap scan report for 31.57.112.115
+Host is up.
+All 500 scanned ports on 31.57.112.115 are in ignored states.
+Not shown: 500 filtered tcp ports (no-response)
+
+Nmap scan report for 31.57.112.116
+Host is up.
+All 500 scanned ports on 31.57.112.116 are in ignored states.
+Not shown: 500 filtered tcp ports (no-response)
+
+Nmap scan report for 31.57.112.117
+Host is up (0.26s latency).
+Not shown: 496 filtered tcp ports (no-response)
+PORT     STATE SERVICE       VERSION
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+445/tcp  open  microsoft-ds?
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+| rdp-ntlm-info: 
+|   Target_Name: WIN-BQAJQ4EUT6G
+|   NetBIOS_Domain_Name: WIN-BQAJQ4EUT6G
+|   NetBIOS_Computer_Name: WIN-BQAJQ4EUT6G
+|   DNS_Domain_Name: WIN-BQAJQ4EUT6G
+|   DNS_Computer_Name: WIN-BQAJQ4EUT6G
+|   Product_Version: 10.0.20348
+|_  System_Time: 2026-02-15T16:36:02+00:00
+Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+| smb2-time: 
+|   date: 2026-02-15T16:36:43
+|_  start_date: N/A
+| smb2-security-mode: 
+|   3.1.1: 
+|_    Message signing enabled but not required
+
+Nmap scan report for 31.57.112.118
+Host is up (0.25s latency).
+Not shown: 495 closed tcp ports (reset)
+PORT     STATE    SERVICE  VERSION
+22/tcp   open     ssh      OpenSSH 9.6p1 Ubuntu 3ubuntu13.14 (Ubuntu Linux; protocol 2.0)
+80/tcp   open     http     nginx 1.24.0 (Ubuntu)
+|_http-title: Cimi Service Menu
+|_http-server-header: nginx/1.24.0 (Ubuntu)
+443/tcp  open     ssl/http nginx 1.24.0 (Ubuntu)
+|_http-server-header: nginx/1.24.0 (Ubuntu)
+|_ssl-date: TLS randomness does not represent time
+|_http-title: Cimi Service Menu
+| ssl-cert: Subject: commonName=cimiservice.xeniaserver.com
+| Subject Alternative Name: DNS:cimiservice.xeniaserver.com
+| Not valid before: 2026-01-25T21:15:11
+|_Not valid after:  2026-04-25T21:15:10
+1234/tcp filtered hotline
+3005/tcp filtered deslogin
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+Nmap scan report for 31.57.112.119
+Host is up.
+All 500 scanned ports on 31.57.112.119 are in ignored states.
+Not shown: 500 filtered tcp ports (no-response)
+
+Nmap scan report for 31.57.112.120
+Host is up.
+All 500 scanned ports on 31.57.112.120 are in ignored states.
+Not shown: 500 filtered tcp ports (no-response)
+
+Nmap scan report for 31.57.112.121
+Host is up (0.27s latency).
+Not shown: 492 closed tcp ports (reset)
+PORT     STATE    SERVICE VERSION
+119/tcp  filtered nntp
+222/tcp  open     ssh     OpenSSH 10.0 (protocol 2.0)
+2030/tcp filtered device2
+2222/tcp open     ssh     OpenSSH 9.6p1 Ubuntu 3ubuntu13 (Ubuntu Linux; protocol 2.0)
+3000/tcp filtered ppp
+3001/tcp open     nessus?
+| fingerprint-strings: 
+|   DNSStatusRequestTCP, DNSVersionBindReqTCP, Help, Kerberos, NCP, RPCCheck, SMBProgNeg, SSLSessionReq, TLSSessionReq, TerminalServerCookie, X11Probe: 
+|     HTTP/1.1 400 Bad Request
+|     Connection: close
+|   FourOhFourRequest: 
+|     HTTP/1.1 200 OK
+|     X-Frame-Options: SAMEORIGIN
+|     Content-Type: text/html; charset=utf-8
+|     Content-Length: 2444
+|     ETag: W/"98c-FhzvEKLeodsfrD7qu22S6HNDA/4"
+|     Date: Sun, 15 Feb 2026 16:35:48 GMT
+|     Connection: close
+|     <!DOCTYPE html>
+|     <html lang="en">
+|     <head>
+|     <meta charset="UTF-8" />
+|     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+|     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+|     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+|     <link rel="manifest" href="/manifest.json" />
+|     <meta name="theme-color" id="theme-color" content="" />
+|     <meta name="description" content="Uptime Kuma monitoring tool" />
+|     <title>Uptime Kuma</title>
+|     <style> .noscript-message {
+|     font-size: 20px;
+|     text-align: center;
+|     padding: 10px;
+|     max-width: 500px;
+|     marg
+|   GetRequest: 
+|     HTTP/1.1 302 Found
+|     X-Frame-Options: SAMEORIGIN
+|     Location: /dashboard
+|     Vary: Accept
+|     Content-Type: text/plain; charset=utf-8
+|     Content-Length: 32
+|     Date: Sun, 15 Feb 2026 16:35:40 GMT
+|     Connection: close
+|     Found. Redirecting to /dashboard
+|   HTTPOptions: 
+|     HTTP/1.1 200 OK
+|     X-Frame-Options: SAMEORIGIN
+|     Vary: Accept-Encoding
+|     Allow: GET,HEAD
+|     Content-Type: text/html; charset=utf-8
+|     Content-Length: 8
+|     ETag: W/"8-ZRAf8oNBS3Bjb/SU2GYZCmbtmXg"
+|     Date: Sun, 15 Feb 2026 16:35:42 GMT
+|     Connection: close
+|     GET,HEAD
+|   RTSPRequest: 
+|     HTTP/1.1 200 OK
+|     X-Frame-Options: SAMEORIGIN
+|     Vary: Accept-Encoding
+|     Allow: GET,HEAD
+|     Content-Type: text/html; charset=utf-8
+|     Content-Length: 8
+|     ETag: W/"8-ZRAf8oNBS3Bjb/SU2GYZCmbtmXg"
+|     Date: Sun, 15 Feb 2026 16:35:43 GMT
+|     Connection: close
+|_    GET,HEAD
+3306/tcp open     mysql   MariaDB 11.7.2
+|_ssl-date: TLS randomness does not represent time
+| mysql-info: 
+|   Protocol: 10
+|   Version: 11.7.2-MariaDB-ubu2404
+|   Thread ID: 46419
+|   Capabilities flags: 65534
+|   Some Capabilities: Speaks41ProtocolNew, IgnoreSpaceBeforeParenthesis, Support41Auth, Speaks41ProtocolOld, SupportsTransactions, SupportsCompression, IgnoreSigpipes, SwitchToSSLAfterHandshake, DontAllowDatabaseTableColumn, InteractiveClient, FoundRows, LongColumnFlag, SupportsLoadDataLocal, ConnectWithDatabase, ODBCClient, SupportsMultipleStatments, SupportsAuthPlugins, SupportsMultipleResults
+|   Status: Autocommit
+|   Salt: iJs)ka(>Bo)xH<3+~Y$C
+|_  Auth Plugin Name: mysql_native_password
+| ssl-cert: Subject: commonName=MariaDB Server
+| Not valid before: 2026-02-02T07:01:37
+|_Not valid after:  2036-01-31T07:01:37
+5985/tcp filtered wsman
+1 service unrecognized despite returning data. If you know the service/version, please submit the following fingerprint at https://nmap.org/cgi-bin/submit.cgi?new-service :
+SF-Port3001-TCP:V=7.98%I=7%D=2/15%Time=6991F5D2%P=arm-apple-darwin25.2.0%r
+SF:(NCP,2F,"HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n
+SF:\r\n")%r(GetRequest,EC,"HTTP/1\.1\x20302\x20Found\r\nX-Frame-Options:\x
+SF:20SAMEORIGIN\r\nLocation:\x20/dashboard\r\nVary:\x20Accept\r\nContent-T
+SF:ype:\x20text/plain;\x20charset=utf-8\r\nContent-Length:\x2032\r\nDate:\
+SF:x20Sun,\x2015\x20Feb\x202026\x2016:35:40\x20GMT\r\nConnection:\x20close
+SF:\r\n\r\nFound\.\x20Redirecting\x20to\x20/dashboard")%r(HTTPOptions,FC,"
+SF:HTTP/1\.1\x20200\x20OK\r\nX-Frame-Options:\x20SAMEORIGIN\r\nVary:\x20Ac
+SF:cept-Encoding\r\nAllow:\x20GET,HEAD\r\nContent-Type:\x20text/html;\x20c
+SF:harset=utf-8\r\nContent-Length:\x208\r\nETag:\x20W/\"8-ZRAf8oNBS3Bjb/SU
+SF:2GYZCmbtmXg\"\r\nDate:\x20Sun,\x2015\x20Feb\x202026\x2016:35:42\x20GMT\
+SF:r\nConnection:\x20close\r\n\r\nGET,HEAD")%r(RTSPRequest,FC,"HTTP/1\.1\x
+SF:20200\x20OK\r\nX-Frame-Options:\x20SAMEORIGIN\r\nVary:\x20Accept-Encodi
+SF:ng\r\nAllow:\x20GET,HEAD\r\nContent-Type:\x20text/html;\x20charset=utf-
+SF:8\r\nContent-Length:\x208\r\nETag:\x20W/\"8-ZRAf8oNBS3Bjb/SU2GYZCmbtmXg
+SF:\"\r\nDate:\x20Sun,\x2015\x20Feb\x202026\x2016:35:43\x20GMT\r\nConnecti
+SF:on:\x20close\r\n\r\nGET,HEAD")%r(RPCCheck,2F,"HTTP/1\.1\x20400\x20Bad\x
+SF:20Request\r\nConnection:\x20close\r\n\r\n")%r(DNSVersionBindReqTCP,2F,"
+SF:HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n")%r(
+SF:DNSStatusRequestTCP,2F,"HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnectio
+SF:n:\x20close\r\n\r\n")%r(Help,2F,"HTTP/1\.1\x20400\x20Bad\x20Request\r\n
+SF:Connection:\x20close\r\n\r\n")%r(SSLSessionReq,2F,"HTTP/1\.1\x20400\x20
+SF:Bad\x20Request\r\nConnection:\x20close\r\n\r\n")%r(TerminalServerCookie
+SF:,2F,"HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n
+SF:")%r(TLSSessionReq,2F,"HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection
+SF::\x20close\r\n\r\n")%r(Kerberos,2F,"HTTP/1\.1\x20400\x20Bad\x20Request\
+SF:r\nConnection:\x20close\r\n\r\n")%r(SMBProgNeg,2F,"HTTP/1\.1\x20400\x20
+SF:Bad\x20Request\r\nConnection:\x20close\r\n\r\n")%r(X11Probe,2F,"HTTP/1\
+SF:.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n")%r(FourOhF
+SF:ourRequest,A5D,"HTTP/1\.1\x20200\x20OK\r\nX-Frame-Options:\x20SAMEORIGI
+SF:N\r\nContent-Type:\x20text/html;\x20charset=utf-8\r\nContent-Length:\x2
+SF:02444\r\nETag:\x20W/\"98c-FhzvEKLeodsfrD7qu22S6HNDA/4\"\r\nDate:\x20Sun
+SF:,\x2015\x20Feb\x202026\x2016:35:48\x20GMT\r\nConnection:\x20close\r\n\r
+SF:\n<!DOCTYPE\x20html>\n<html\x20lang=\"en\">\n<head>\n\x20\x20\x20\x20<m
+SF:eta\x20charset=\"UTF-8\"\x20/>\n\x20\x20\x20\x20<meta\x20name=\"viewpor
+SF:t\"\x20content=\"width=device-width,\x20initial-scale=1\.0,\x20viewport
+SF:-fit=cover\"\x20/>\n\x20\x20\x20\x20<link\x20rel=\"apple-touch-icon\"\x
+SF:20sizes=\"180x180\"\x20href=\"/apple-touch-icon\.png\">\n\x20\x20\x20\x
+SF:20<link\x20rel=\"icon\"\x20type=\"image/svg\+xml\"\x20href=\"/icon\.svg
+SF:\"\x20/>\n\x20\x20\x20\x20<link\x20rel=\"manifest\"\x20href=\"/manifest
+SF:\.json\"\x20/>\n\x20\x20\x20\x20<meta\x20name=\"theme-color\"\x20id=\"t
+SF:heme-color\"\x20content=\"\"\x20/>\n\x20\x20\x20\x20<meta\x20name=\"des
+SF:cription\"\x20content=\"Uptime\x20Kuma\x20monitoring\x20tool\"\x20/>\n\
+SF:x20\x20\x20\x20<title>Uptime\x20Kuma</title>\n\x20\x20\x20\x20<style>\x
+SF:20\x20\x20\x20\x20\x20\x20\x20\.noscript-message\x20{\n\x20\x20\x20\x20
+SF:\x20\x20\x20\x20\x20\x20\x20\x20font-size:\x2020px;\n\x20\x20\x20\x20\x
+SF:20\x20\x20\x20\x20\x20\x20\x20text-align:\x20center;\n\x20\x20\x20\x20\
+SF:x20\x20\x20\x20\x20\x20\x20\x20padding:\x2010px;\n\x20\x20\x20\x20\x20\
+SF:x20\x20\x20\x20\x20\x20\x20max-width:\x20500px;\n\x20\x20\x20\x20\x20\x
+SF:20\x20\x20\x20\x20\x20\x20marg");
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+Nmap scan report for 31.57.112.122
+Host is up (0.26s latency).
+Not shown: 495 filtered tcp ports (no-response)
+PORT     STATE SERVICE       VERSION
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+445/tcp  open  microsoft-ds?
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+| rdp-ntlm-info: 
+|   Target_Name: WIN-BQAJQ4EUT6G
+|   NetBIOS_Domain_Name: WIN-BQAJQ4EUT6G
+|   NetBIOS_Computer_Name: WIN-BQAJQ4EUT6G
+|   DNS_Domain_Name: WIN-BQAJQ4EUT6G
+|   DNS_Computer_Name: WIN-BQAJQ4EUT6G
+|   Product_Version: 10.0.20348
+|_  System_Time: 2026-02-15T16:36:31+00:00
+5985/tcp open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+|_http-title: Not Found
+|_http-server-header: Microsoft-HTTPAPI/2.0
+Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+| smb2-security-mode: 
+|   3.1.1: 
+|_    Message signing enabled but not required
+| smb2-time: 
+|   date: 2026-02-15T16:36:46
+|_  start_date: N/A
+
+Nmap scan report for 31.57.112.123
+Host is up (0.25s latency).
+Not shown: 492 filtered tcp ports (no-response)
+PORT     STATE SERVICE       VERSION
+80/tcp   open  http          Apache httpd 2.4.58 ((Win64) OpenSSL/3.1.3 PHP/8.2.12)
+|_http-server-header: Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12
+| http-methods: 
+|_  Potentially risky methods: TRACE
+|_http-title: Horizon Craft Reborn
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+443/tcp  open  ssl/http      Apache httpd 2.4.58 ((Win64) OpenSSL/3.1.3 PHP/8.2.12)
+|_http-server-header: Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12
+| tls-alpn: 
+|_  http/1.1
+|_http-title: Horizon Craft Reborn
+| http-methods: 
+|_  Potentially risky methods: TRACE
+|_ssl-date: TLS randomness does not represent time
+| ssl-cert: Subject: commonName=localhost
+| Not valid before: 2009-11-10T23:48:47
+|_Not valid after:  2019-11-08T23:48:47
+445/tcp  open  microsoft-ds?
+3306/tcp open  mysql         MariaDB 10.3.23 or earlier (unauthorized)
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+| rdp-ntlm-info: 
+|   Target_Name: WIN-BQAJQ4EUT6G
+|   NetBIOS_Domain_Name: WIN-BQAJQ4EUT6G
+|   NetBIOS_Computer_Name: WIN-BQAJQ4EUT6G
+|   DNS_Domain_Name: WIN-BQAJQ4EUT6G
+|   DNS_Computer_Name: WIN-BQAJQ4EUT6G
+|   Product_Version: 10.0.20348
+|_  System_Time: 2026-02-15T16:36:23+00:00
+5985/tcp open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+|_http-server-header: Microsoft-HTTPAPI/2.0
+|_http-title: Not Found
+Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+| smb2-security-mode: 
+|   3.1.1: 
+|_    Message signing enabled but not required
+| smb2-time: 
+|   date: 2026-02-15T16:36:52
+|_  start_date: N/A
+
+Nmap scan report for 31.57.112.124
+Host is up (0.26s latency).
+Not shown: 496 filtered tcp ports (no-response)
+PORT     STATE SERVICE       VERSION
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+445/tcp  open  microsoft-ds?
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+| rdp-ntlm-info: 
+|   Target_Name: WIN-RMRH4O8G0UA
+|   NetBIOS_Domain_Name: WIN-RMRH4O8G0UA
+|   NetBIOS_Computer_Name: WIN-RMRH4O8G0UA
+|   DNS_Domain_Name: WIN-RMRH4O8G0UA
+|   DNS_Computer_Name: WIN-RMRH4O8G0UA
+|   Product_Version: 10.0.17763
+|_  System_Time: 2026-02-15T16:36:20+00:00
+Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+| smb2-time: 
+|   date: 2026-02-15T16:36:56
+|_  start_date: N/A
+| smb2-security-mode: 
+|   3.1.1: 
+|_    Message signing enabled but not required
+
+Nmap scan report for 31.57.112.125
+Host is up (0.25s latency).
+Not shown: 493 filtered tcp ports (no-response)
+PORT     STATE SERVICE       VERSION
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+445/tcp  open  microsoft-ds?
+3306/tcp open  mysql         MariaDB 10.3.23 or earlier (unauthorized)
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+| rdp-ntlm-info: 
+|   Target_Name: WIN-BQAJQ4EUT6G
+|   NetBIOS_Domain_Name: WIN-BQAJQ4EUT6G
+|   NetBIOS_Computer_Name: WIN-BQAJQ4EUT6G
+|   DNS_Domain_Name: WIN-BQAJQ4EUT6G
+|   DNS_Computer_Name: WIN-BQAJQ4EUT6G
+|   Product_Version: 10.0.20348
+|_  System_Time: 2026-02-15T16:36:28+00:00
+5357/tcp open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+|_http-server-header: Microsoft-HTTPAPI/2.0
+|_http-title: Service Unavailable
+5985/tcp open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+|_http-server-header: Microsoft-HTTPAPI/2.0
+|_http-title: Not Found
+Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+| smb2-security-mode: 
+|   3.1.1: 
+|_    Message signing enabled but not required
+| smb2-time: 
+|   date: 2026-02-15T16:37:03
+|_  start_date: N/A
+|_clock-skew: mean: -1s, deviation: 0s, median: -1s
+
+Nmap scan report for 31.57.112.126
+Host is up.
+All 500 scanned ports on 31.57.112.126 are in ignored states.
+Not shown: 500 filtered tcp ports (no-response)
+
+Nmap scan report for 31.57.112.127
+Host is up (0.25s latency).
+Not shown: 495 filtered tcp ports (no-response)
+PORT     STATE SERVICE       VERSION
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+445/tcp  open  microsoft-ds?
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+| rdp-ntlm-info: 
+|   Target_Name: WIN-BQAJQ4EUT6G
+|   NetBIOS_Domain_Name: WIN-BQAJQ4EUT6G
+|   NetBIOS_Computer_Name: WIN-BQAJQ4EUT6G
+|   DNS_Domain_Name: WIN-BQAJQ4EUT6G
+|   DNS_Computer_Name: WIN-BQAJQ4EUT6G
+|   Product_Version: 10.0.20348
+|_  System_Time: 2026-02-15T16:36:21+00:00
+5985/tcp open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+|_http-title: Not Found
+|_http-server-header: Microsoft-HTTPAPI/2.0
+Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+| smb2-security-mode: 
+|   3.1.1: 
+|_    Message signing enabled but not required
+| smb2-time: 
+|   date: 2026-02-15T16:37:07
+|_  start_date: N/A
+
+Post-scan script results:
+| clock-skew: 
+|   0s: 
+|     31.57.112.127
+|     31.57.112.125
+|_    31.57.112.124
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Sun Feb 15 23:47:11 2026 -- 16 IP addresses (16 hosts up) scanned in 998.16 seconds

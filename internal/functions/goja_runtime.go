@@ -294,6 +294,11 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnDBImportSARIF, vf.dbImportSARIF)
 	_ = vm.Set(FnConvertSARIFToMarkdown, vf.convertSARIFToMarkdown)
 
+	// Nmap/Port import functions
+	_ = vm.Set(FnNmapToJSONL, vf.nmapToJSONL)
+	_ = vm.Set(FnRunNmap, vf.runNmap)
+	_ = vm.Set(FnDBImportPortAssets, vf.dbImportPortAssets)
+
 	// Database diff functions
 	_ = vm.Set(FnDBAssetDiff, vf.dbAssetDiff)
 	_ = vm.Set(FnDBVulnDiff, vf.dbVulnDiff)
@@ -321,6 +326,13 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnSyncFromMaster, vf.syncFromMaster)
 	_ = vm.Set(FnSyncFromWorker, vf.syncFromWorker)
 	_ = vm.Set(FnRsyncToWorker, vf.rsyncToWorker)
+
+	// Tmux functions
+	_ = vm.Set(FnTmuxRun, vf.tmuxRun)
+	_ = vm.Set(FnTmuxCapture, vf.tmuxCapture)
+	_ = vm.Set(FnTmuxSend, vf.tmuxSend)
+	_ = vm.Set(FnTmuxKill, vf.tmuxKill)
+	_ = vm.Set(FnTmuxList, vf.tmuxList)
 
 	// Console for debugging
 	_ = vm.Set("console", map[string]interface{}{

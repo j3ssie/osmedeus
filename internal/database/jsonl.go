@@ -7,6 +7,7 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/json"
 	"io"
 	"net"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -151,6 +152,8 @@ func (i *JSONLImporter) insertAssetBatch(ctx context.Context, assets []*Asset) (
 		Set("blob_content = CASE WHEN EXCLUDED.blob_content != '' THEN EXCLUDED.blob_content ELSE assets.blob_content END").
 		Set("raw_data = CASE WHEN EXCLUDED.raw_data != '' THEN EXCLUDED.raw_data ELSE assets.raw_data END").
 		Set("asset_type = CASE WHEN EXCLUDED.asset_type != '' THEN EXCLUDED.asset_type ELSE assets.asset_type END").
+		Set("open_ports = CASE WHEN EXCLUDED.open_ports IS NOT NULL AND EXCLUDED.open_ports != '[]' AND EXCLUDED.open_ports != 'null' THEN EXCLUDED.open_ports ELSE assets.open_ports END").
+		Set("port_json_data = CASE WHEN EXCLUDED.port_json_data != '' THEN EXCLUDED.port_json_data ELSE assets.port_json_data END").
 		Set("is_cdn = CASE WHEN EXCLUDED.is_cdn OR assets.is_cdn THEN TRUE ELSE FALSE END").
 		Set("is_cloud = CASE WHEN EXCLUDED.is_cloud OR assets.is_cloud THEN TRUE ELSE FALSE END").
 		Set("is_waf = CASE WHEN EXCLUDED.is_waf OR assets.is_waf THEN TRUE ELSE FALSE END").
@@ -290,6 +293,14 @@ func ParseAssetLine(line []byte, defaultWorkspace, source string) (*Asset, error
 		asset.TLS = v
 	}
 
+	// Port data
+	if v, ok := raw["open_ports"].([]interface{}); ok {
+		asset.OpenPorts = interfaceSliceToStringSlice(v)
+	}
+	if v, ok := raw["port_json_data"].(string); ok {
+		asset.PortJsonData = v
+	}
+
 	// Metadata
 	if v, ok := raw["tech"].([]interface{}); ok {
 		asset.Technologies = interfaceSliceToStringSlice(v)
@@ -322,6 +333,24 @@ func ParseAssetLine(line []byte, defaultWorkspace, source string) (*Asset, error
 
 	// CDN/WAF classification
 	asset.IsCDN, asset.IsCloud, asset.IsWAF = DetectCDNFlags(raw)
+
+	// Extract port from URL if this is an HTTP asset
+	if asset.URL != "" && (asset.Scheme == "http" || asset.Scheme == "https" || strings.HasPrefix(asset.URL, "http")) {
+		portStr := extractPortFromURL(asset.URL)
+		if portStr != "" {
+			// Append to open_ports if not already present
+			found := false
+			for _, existing := range asset.OpenPorts {
+				if strings.HasPrefix(existing, portStr) || strings.HasPrefix(existing, strings.Split(portStr, "/")[0]+"/") {
+					found = true
+					break
+				}
+			}
+			if !found {
+				asset.OpenPorts = append(asset.OpenPorts, portStr)
+			}
+		}
+	}
 
 	// Validate required fields
 	if asset.AssetValue == "" {
@@ -467,4 +496,44 @@ func ClassifyAssetType(assetValue string) string {
 	}
 
 	return "unknown"
+}
+
+// extractPortFromURL extracts port and protocol from URL and returns formatted port string
+// Examples:
+//
+//	"https://example.com:3306" -> "3306/https"
+//	"http://example.com" -> "80/http"
+//	"https://example.com" -> "443/https"
+func extractPortFromURL(urlStr string) string {
+	if urlStr == "" {
+		return ""
+	}
+
+	// Parse URL
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return ""
+	}
+
+	scheme := strings.ToLower(u.Scheme)
+	port := u.Port()
+
+	// If explicit port, use it
+	if port != "" {
+		return fmt.Sprintf("%s/%s", port, scheme)
+	}
+
+	// Use default ports
+	switch scheme {
+	case "http":
+		return "80/http"
+	case "https":
+		return "443/https"
+	case "ftp":
+		return "21/ftp"
+	case "ftps":
+		return "990/ftps"
+	default:
+		return ""
+	}
 }

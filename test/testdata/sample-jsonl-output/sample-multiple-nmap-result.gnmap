@@ -1,0 +1,34 @@
+# Nmap 7.98 scan initiated Sun Feb 15 23:30:33 2026 as: nmap -oA top-500-ports --top-ports 500 -sV -sC -T4 -Pn 31.57.112.121/28
+Host: 31.57.112.112 ()	Status: Up
+Host: 31.57.112.112 ()	Ports: 	Ignored State: filtered (500)
+Host: 31.57.112.113 ()	Status: Up
+Host: 31.57.112.113 ()	Ports: 80/open/tcp//http//Apache httpd 2.4.58 ((Win64) OpenSSL|3.1.3 PHP|8.2.12)/, 135/open/tcp//msrpc//Microsoft Windows RPC/, 139/open/tcp//netbios-ssn//Microsoft Windows netbios-ssn/, 443/open/tcp//ssl|http//Apache httpd 2.4.58 ((Win64) OpenSSL|3.1.3 PHP|8.2.12)/, 445/open/tcp//microsoft-ds?///, 3306/open/tcp//mysql//MariaDB 10.3.23 or earlier (unauthorized)/, 3389/open/tcp//ms-wbt-server//Microsoft Terminal Services/, 5985/open/tcp//http//Microsoft HTTPAPI httpd 2.0 (SSDP|UPnP)/	Ignored State: filtered (492)
+Host: 31.57.112.114 ()	Status: Up
+Host: 31.57.112.114 ()	Ports: 	Ignored State: filtered (500)
+Host: 31.57.112.115 ()	Status: Up
+Host: 31.57.112.115 ()	Ports: 	Ignored State: filtered (500)
+Host: 31.57.112.116 ()	Status: Up
+Host: 31.57.112.116 ()	Ports: 	Ignored State: filtered (500)
+Host: 31.57.112.117 ()	Status: Up
+Host: 31.57.112.117 ()	Ports: 135/open/tcp//msrpc//Microsoft Windows RPC/, 139/open/tcp//netbios-ssn//Microsoft Windows netbios-ssn/, 445/open/tcp//microsoft-ds?///, 3389/open/tcp//ms-wbt-server//Microsoft Terminal Services/	Ignored State: filtered (496)
+Host: 31.57.112.118 ()	Status: Up
+Host: 31.57.112.118 ()	Ports: 22/open/tcp//ssh//OpenSSH 9.6p1 Ubuntu 3ubuntu13.14 (Ubuntu Linux; protocol 2.0)/, 80/open/tcp//http//nginx 1.24.0 (Ubuntu)/, 443/open/tcp//ssl|http//nginx 1.24.0 (Ubuntu)/, 1234/filtered/tcp//hotline///, 3005/filtered/tcp//deslogin///	Ignored State: closed (495)
+Host: 31.57.112.119 ()	Status: Up
+Host: 31.57.112.119 ()	Ports: 	Ignored State: filtered (500)
+Host: 31.57.112.120 ()	Status: Up
+Host: 31.57.112.120 ()	Ports: 	Ignored State: filtered (500)
+Host: 31.57.112.121 ()	Status: Up
+Host: 31.57.112.121 ()	Ports: 119/filtered/tcp//nntp///, 222/open/tcp//ssh//OpenSSH 10.0 (protocol 2.0)/, 2030/filtered/tcp//device2///, 2222/open/tcp//ssh//OpenSSH 9.6p1 Ubuntu 3ubuntu13 (Ubuntu Linux; protocol 2.0)/, 3000/filtered/tcp//ppp///, 3001/open/tcp//nessus?///, 3306/open/tcp//mysql//MariaDB 11.7.2/, 5985/filtered/tcp//wsman///	Ignored State: closed (492)
+Host: 31.57.112.122 ()	Status: Up
+Host: 31.57.112.122 ()	Ports: 135/open/tcp//msrpc//Microsoft Windows RPC/, 139/open/tcp//netbios-ssn//Microsoft Windows netbios-ssn/, 445/open/tcp//microsoft-ds?///, 3389/open/tcp//ms-wbt-server//Microsoft Terminal Services/, 5985/open/tcp//http//Microsoft HTTPAPI httpd 2.0 (SSDP|UPnP)/	Ignored State: filtered (495)
+Host: 31.57.112.123 ()	Status: Up
+Host: 31.57.112.123 ()	Ports: 80/open/tcp//http//Apache httpd 2.4.58 ((Win64) OpenSSL|3.1.3 PHP|8.2.12)/, 135/open/tcp//msrpc//Microsoft Windows RPC/, 139/open/tcp//netbios-ssn//Microsoft Windows netbios-ssn/, 443/open/tcp//ssl|http//Apache httpd 2.4.58 ((Win64) OpenSSL|3.1.3 PHP|8.2.12)/, 445/open/tcp//microsoft-ds?///, 3306/open/tcp//mysql//MariaDB 10.3.23 or earlier (unauthorized)/, 3389/open/tcp//ms-wbt-server//Microsoft Terminal Services/, 5985/open/tcp//http//Microsoft HTTPAPI httpd 2.0 (SSDP|UPnP)/	Ignored State: filtered (492)
+Host: 31.57.112.124 ()	Status: Up
+Host: 31.57.112.124 ()	Ports: 135/open/tcp//msrpc//Microsoft Windows RPC/, 139/open/tcp//netbios-ssn//Microsoft Windows netbios-ssn/, 445/open/tcp//microsoft-ds?///, 3389/open/tcp//ms-wbt-server//Microsoft Terminal Services/	Ignored State: filtered (496)
+Host: 31.57.112.125 ()	Status: Up
+Host: 31.57.112.125 ()	Ports: 135/open/tcp//msrpc//Microsoft Windows RPC/, 139/open/tcp//netbios-ssn//Microsoft Windows netbios-ssn/, 445/open/tcp//microsoft-ds?///, 3306/open/tcp//mysql//MariaDB 10.3.23 or earlier (unauthorized)/, 3389/open/tcp//ms-wbt-server//Microsoft Terminal Services/, 5357/open/tcp//http//Microsoft HTTPAPI httpd 2.0 (SSDP|UPnP)/, 5985/open/tcp//http//Microsoft HTTPAPI httpd 2.0 (SSDP|UPnP)/	Ignored State: filtered (493)
+Host: 31.57.112.126 ()	Status: Up
+Host: 31.57.112.126 ()	Ports: 	Ignored State: filtered (500)
+Host: 31.57.112.127 ()	Status: Up
+Host: 31.57.112.127 ()	Ports: 135/open/tcp//msrpc//Microsoft Windows RPC/, 139/open/tcp//netbios-ssn//Microsoft Windows netbios-ssn/, 445/open/tcp//microsoft-ds?///, 3389/open/tcp//ms-wbt-server//Microsoft Terminal Services/, 5985/open/tcp//http//Microsoft HTTPAPI httpd 2.0 (SSDP|UPnP)/	Ignored State: filtered (495)
+# Nmap done at Sun Feb 15 23:47:11 2026 -- 16 IP addresses (16 hosts up) scanned in 998.16 seconds

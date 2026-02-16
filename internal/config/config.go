@@ -142,6 +142,11 @@ server:
   enabled_auth_api: true
   auth_api_key: ""
 
+  # Enable webhook trigger endpoints for runs
+  # When enabled, runs registered with --as-webhook can be triggered via
+  # GET/POST /osm/api/webhook-runs/<uuid>/trigger without authentication
+  enable_trigger_via_webhook: false
+
 # =============================================================================
 # Scan Tactic Configuration
 # =============================================================================
@@ -285,6 +290,22 @@ storage:
   enabled: false
 
 # =============================================================================
+# Cloud Infrastructure Configuration (Optional)
+# =============================================================================
+# Ephemeral cloud infrastructure for distributed workflow execution
+# Uses Pulumi (Go SDK) with local state - no Pulumi Cloud account needed
+cloud:
+  # Path to cloud infrastructure state and metadata
+  cloud_path: "{{base_folder}}/cloud"
+
+  # Path to cloud provider configuration file (YAML)
+  # Contains credentials, provider settings, cost limits, etc.
+  cloud_settings: "{{base_folder}}/cloud/cloud-settings.yaml"
+
+  # Enable cloud execution features
+  enabled: false
+
+# =============================================================================
 # LLM Configuration (Optional)
 # =============================================================================
 # Large Language Model settings for AI-powered features
@@ -395,6 +416,7 @@ type Config struct {
 	Notification NotificationConfig `yaml:"notification"`
 	Storage      StorageConfig      `yaml:"storage"`
 	LLM          LLMConfig          `yaml:"llm_config"`
+	Cloud        CloudConfig        `yaml:"cloud"`
 
 	// Runtime paths (resolved from templates)
 	BinariesPath                string `yaml:"-"`
@@ -437,18 +459,19 @@ type DatabaseConfig struct {
 
 // ServerConfig holds API server settings
 type ServerConfig struct {
-	Host               string            `yaml:"host"`
-	Port               int               `yaml:"port"`
-	UIPath             string            `yaml:"ui_path"`                        // Path to serve static UI files
-	WorkspacePrefixKey string            `yaml:"workspace_prefix_key"`           // Random prefix for workspace static files (16 chars)
-	SimpleUserMapKey   map[string]string `yaml:"simple_user_map_key"`            // Map of username:password for authentication
-	JWT                JWTConfig         `yaml:"jwt"`                            // JWT settings
-	License            string            `yaml:"license"`                        // License type shown in ServerHeader and /server-info
-	EnabledAuthAPI     bool              `yaml:"enabled_auth_api"`               // Enable API key authentication (default: false)
-	AuthAPIKey         string            `yaml:"auth_api_key"`                   // API key for x-osm-api-key header authentication
-	EnableMetrics      *bool             `yaml:"enable_metrics,omitempty"`       // Enable Prometheus metrics endpoint (default: true)
-	CORSAllowedOrigins string            `yaml:"cors_allowed_origins,omitempty"` // CORS allowed origins (default: "*")
-	EventReceiverURL   string            `yaml:"event_receiver_url,omitempty"`   // URL for event receiver (auto-resolved from host:port if empty)
+	Host                    string            `yaml:"host"`
+	Port                    int               `yaml:"port"`
+	UIPath                  string            `yaml:"ui_path"`                        // Path to serve static UI files
+	WorkspacePrefixKey      string            `yaml:"workspace_prefix_key"`           // Random prefix for workspace static files (16 chars)
+	SimpleUserMapKey        map[string]string `yaml:"simple_user_map_key"`            // Map of username:password for authentication
+	JWT                     JWTConfig         `yaml:"jwt"`                            // JWT settings
+	License                 string            `yaml:"license"`                        // License type shown in ServerHeader and /server-info
+	EnabledAuthAPI          bool              `yaml:"enabled_auth_api"`               // Enable API key authentication (default: false)
+	AuthAPIKey              string            `yaml:"auth_api_key"`                   // API key for x-osm-api-key header authentication
+	EnableMetrics           *bool             `yaml:"enable_metrics,omitempty"`       // Enable Prometheus metrics endpoint (default: true)
+	CORSAllowedOrigins      string            `yaml:"cors_allowed_origins,omitempty"` // CORS allowed origins (default: "*")
+	EventReceiverURL        string            `yaml:"event_receiver_url,omitempty"`   // URL for event receiver (auto-resolved from host:port if empty)
+	EnableTriggerViaWebhook bool              `yaml:"enable_trigger_via_webhook"`     // Enable webhook trigger endpoints (default: false)
 }
 
 // IsMetricsEnabled returns true if the metrics endpoint should be enabled.
@@ -759,6 +782,13 @@ type LLMConfig struct {
 	// Internal fields for provider rotation (not serialized)
 	currentIndex int        // Current provider index
 	mu           sync.Mutex // Mutex for thread-safe rotation
+}
+
+// CloudConfig holds cloud infrastructure configuration
+type CloudConfig struct {
+	CloudPath     string `yaml:"cloud_path"`     // {{base_folder}}/cloud
+	CloudSettings string `yaml:"cloud_settings"` // {{base_folder}}/cloud/cloud-settings.yaml
+	Enabled       bool   `yaml:"enabled"`        // Enable cloud infrastructure features
 }
 
 // Load loads configuration from the specified base folder

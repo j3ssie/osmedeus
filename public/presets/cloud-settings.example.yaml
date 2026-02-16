@@ -1,0 +1,153 @@
+# Cloud Infrastructure Configuration Example
+# Save this as: ~/osmedeus-base/cloud/cloud-settings.yaml
+
+# =============================================================================
+# Cloud Provider Credentials
+# =============================================================================
+# Use ${ENV_VAR} syntax to reference environment variables
+providers:
+  # AWS Configuration
+  aws:
+    access_key_id: "${AWS_ACCESS_KEY_ID}"
+    secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
+    region: "us-east-1"
+    instance_type: "t3.medium"
+    ami: ""  # Leave empty to use default Ubuntu AMI
+    use_spot: false
+
+  # Google Cloud Platform Configuration
+  gcp:
+    project_id: "${GCP_PROJECT_ID}"
+    credentials_file: "${GCP_CREDENTIALS_FILE}"
+    region: "us-central1"
+    zone: "us-central1-a"
+    machine_type: "n1-standard-2"
+    image_family: "ubuntu-2204-lts"
+    use_preemptible: false
+
+  # DigitalOcean Configuration
+  digitalocean:
+    token: "${DIGITALOCEAN_TOKEN}"
+    region: "nyc1"
+    size: "s-2vcpu-4gb"  # $15/month = $0.02232/hour
+    image: "ubuntu-22-04-x64"
+    snapshot_id: ""  # Optional: Use custom snapshot with pre-installed tools
+    ssh_key_id: ""
+    ssh_key_fingerprint: ""
+
+  # Linode Configuration
+  linode:
+    token: "${LINODE_TOKEN}"
+    region: "us-east"
+    type: "g6-standard-2"
+    image: "linode/ubuntu22.04"
+    ssh_public_key: ""
+
+  # Azure Configuration
+  azure:
+    subscription_id: "${AZURE_SUBSCRIPTION_ID}"
+    tenant_id: "${AZURE_TENANT_ID}"
+    client_id: "${AZURE_CLIENT_ID}"
+    client_secret: "${AZURE_CLIENT_SECRET}"
+    location: "eastus"
+    vm_size: "Standard_B2s"
+    image_reference: "Canonical:UbuntuServer:22.04-LTS:latest"
+
+# =============================================================================
+# Default Settings
+# =============================================================================
+defaults:
+  # Default cloud provider to use
+  provider: "digitalocean"
+
+  # Execution mode: "vm" or "serverless" (serverless not yet implemented)
+  mode: "vm"
+
+  # Default number of instances to create
+  max_instances: 10
+
+  # Use spot/preemptible instances (cheaper but can be terminated)
+  use_spot: false
+
+  # Maximum time to wait for infrastructure creation
+  timeout: "30m"
+
+  # Automatically destroy infrastructure if creation fails
+  cleanup_on_failure: true
+
+# =============================================================================
+# Cost Limits
+# =============================================================================
+# Prevent accidental overspending
+limits:
+  # Maximum hourly cost (USD) - blocks provisioning if exceeded
+  max_hourly_spend: 10.0
+
+  # Maximum total cost (USD) - terminates infrastructure if exceeded
+  max_total_spend: 100.0
+
+  # Maximum number of instances across all providers
+  max_instances: 20
+
+# =============================================================================
+# State Storage
+# =============================================================================
+state:
+  # Backend type (only "local" supported currently)
+  backend: "local"
+
+  # Path to store Pulumi state and infrastructure metadata
+  path: "{{base_folder}}/cloud-state"
+
+# =============================================================================
+# SSH Configuration
+# =============================================================================
+# For accessing workers to collect results
+ssh:
+  # Path to private key file
+  private_key_path: "~/.ssh/id_rsa"
+
+  # Or provide key content directly (base64 encoded)
+  private_key_content: ""
+
+  # Path to public key file (for worker access)
+  public_key_path: "~/.ssh/id_rsa.pub"
+
+  # Or provide public key content directly
+  public_key_content: ""
+
+  # SSH username (default: root for most cloud VMs)
+  user: "root"
+
+# =============================================================================
+# Worker Setup Commands
+# =============================================================================
+# Additional commands to run on worker boot (after osmedeus installation)
+setup:
+  commands:
+    - "# Install additional tools"
+    - "# apt-get update && apt-get install -y <tool>"
+    - "# Configure worker-specific settings"
+
+# =============================================================================
+# Usage Examples
+# =============================================================================
+# Set a config value:
+#   osmedeus cloud config set defaults.provider digitalocean
+#   osmedeus cloud config set providers.digitalocean.token ${DIGITALOCEAN_TOKEN}
+#   osmedeus cloud config set limits.max_hourly_spend 5.0
+#
+# Show current config:
+#   osmedeus cloud config show
+#
+# Create infrastructure:
+#   osmedeus cloud create --instances 5
+#
+# List active infrastructure:
+#   osmedeus cloud list
+#
+# Run workflow on cloud workers:
+#   osmedeus cloud run -f general -t example.com --instances 3
+#
+# Destroy infrastructure:
+#   osmedeus cloud destroy

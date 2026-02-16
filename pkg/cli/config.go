@@ -824,6 +824,14 @@ func getCategoryColor(key string) func(string) string {
 		return terminal.Teal
 	case strings.HasPrefix(key, "llm_config."):
 		return terminal.HiBlue
+	case strings.HasPrefix(key, "cloud."),
+		strings.HasPrefix(key, "providers."),
+		strings.HasPrefix(key, "defaults."),
+		strings.HasPrefix(key, "limits."),
+		strings.HasPrefix(key, "state."),
+		strings.HasPrefix(key, "ssh."),
+		strings.HasPrefix(key, "setup."):
+		return terminal.HiCyan
 	default:
 		return terminal.White
 	}

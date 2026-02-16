@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///opt/homebrew/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.98 scan initiated Sun Feb 15 21:00:57 2026 as: nmap -oA 111.14.221.174_result -p- -sV -sC -T4 -Pn 111.14.221.174 -->
+<nmaprun scanner="nmap" args="nmap -oA 111.14.221.174_result -p- -sV -sC -T4 -Pn 111.14.221.174" start="1771164057" startstr="Sun Feb 15 21:00:57 2026" version="7.98" xmloutputversion="1.05">
+<scaninfo type="syn" protocol="tcp" numservices="65535" services="1-65535"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<host starttime="1771164062" endtime="1771168472"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="111.14.221.174" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="closed" count="65508">
+<extrareasons reason="reset" count="65508" proto="tcp" ports="1-68,70-79,81-110,112-134,136-137,140-442,444,446-592,594-2048,2050-2999,3001-3141,3143-4443,4445-5553,5555-5799,5801-5899,5901-8079,8081-9461,9463-9994,9996-27560,27562-34392,34394-36176,36178-47294,47296-50021,50023-50079,50081-53826,53828-54048,54050-65535"/>
+</extraports>
+<port protocol="tcp" portid="69"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="tftp" method="table" conf="3"/></port>
+<port protocol="tcp" portid="80"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http" method="table" conf="3"/></port>
+<port protocol="tcp" portid="111"><state state="open" reason="syn-ack" reason_ttl="48"/><service name="rpcbind" version="2-4" extrainfo="RPC #100000" method="probed" conf="10"/><script id="rpcinfo" output="&#xa;  program version    port/proto  service&#xa;  100003  3,4         2049/tcp   nfs&#xa;  100003  3,4         2049/tcp6  nfs&#xa;  100005  3          34165/tcp6  mountd&#xa;  100005  3          34679/udp6  mountd&#xa;  100021  1,3,4      34393/tcp   nlockmgr&#xa;  100021  1,3,4      39435/tcp6  nlockmgr&#xa;  100021  1,3,4      46233/udp   nlockmgr&#xa;  100021  1,3,4      51466/udp6  nlockmgr&#xa;  100024  1          35695/tcp6  status&#xa;  100024  1          36177/tcp   status&#xa;  100024  1          47153/udp6  status&#xa;  100024  1          53578/udp   status&#xa;  100227  3           2049/tcp   nfs_acl&#xa;  100227  3           2049/tcp6  nfs_acl&#xa;"><table key="100005">
+<table key="tcp6">
+<elem key="owner">superuser</elem>
+<elem key="addr">::</elem>
+<table key="version">
+<elem>3</elem>
+</table>
+<elem key="port">34165</elem>
+</table>
+<table key="udp6">
+<elem key="owner">superuser</elem>
+<elem key="addr">::</elem>
+<table key="version">
+<elem>3</elem>
+</table>
+<elem key="port">34679</elem>
+</table>
+</table>
+<table key="100024">
+<table key="tcp">
+<elem key="owner">115</elem>
+<elem key="addr">0.0.0.0</elem>
+<table key="version">
+<elem>1</elem>
+</table>
+<elem key="port">36177</elem>
+</table>
+<table key="tcp6">
+<elem key="owner">115</elem>
+<elem key="addr">::</elem>
+<table key="version">
+<elem>1</elem>
+</table>
+<elem key="port">35695</elem>
+</table>
+<table key="udp">
+<elem key="owner">115</elem>
+<elem key="addr">0.0.0.0</elem>
+<table key="version">
+<elem>1</elem>
+</table>
+<elem key="port">53578</elem>
+</table>
+<table key="udp6">
+<elem key="owner">115</elem>
+<elem key="addr">::</elem>
+<table key="version">
+<elem>1</elem>
+</table>
+<elem key="port">47153</elem>
+</table>
+</table>
+<table key="100227">
+<table key="tcp">
+<elem key="owner">superuser</elem>
+<elem key="addr">0.0.0.0</elem>
+<table key="version">
+<elem>3</elem>
+</table>
+<elem key="port">2049</elem>
+</table>
+<table key="tcp6">
+<elem key="owner">superuser</elem>
+<elem key="addr">::</elem>
+<table key="version">
+<elem>3</elem>
+</table>
+<elem key="port">2049</elem>
+</table>
+</table>
+<table key="100021">
+<table key="tcp">
+<elem key="owner">superuser</elem>
+<elem key="addr">0.0.0.0</elem>
+<table key="version">
+<elem>1</elem>
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="port">34393</elem>
+</table>
+<table key="tcp6">
+<elem key="owner">superuser</elem>
+<elem key="addr">::</elem>
+<table key="version">
+<elem>1</elem>
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="port">39435</elem>
+</table>
+<table key="udp">
+<elem key="owner">superuser</elem>
+<elem key="addr">0.0.0.0</elem>
+<table key="version">
+<elem>1</elem>
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="port">46233</elem>
+</table>
+<table key="udp6">
+<elem key="owner">superuser</elem>
+<elem key="addr">::</elem>
+<table key="version">
+<elem>1</elem>
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="port">51466</elem>
+</table>
+</table>
+<table key="100003">
+<table key="tcp">
+<elem key="owner">superuser</elem>
+<elem key="addr">0.0.0.0</elem>
+<table key="version">
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="port">2049</elem>
+</table>
+<table key="tcp6">
+<elem key="owner">superuser</elem>
+<elem key="addr">::</elem>
+<table key="version">
+<elem>3</elem>
+<elem>4</elem>
+</table>
+<elem key="port">2049</elem>
+</table>
+</table>
+</script></port>
+<port protocol="tcp" portid="135"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="msrpc" method="table" conf="3"/></port>
+<port protocol="tcp" portid="138"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-dgm" method="table" conf="3"/></port>
+<port protocol="tcp" portid="139"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="netbios-ssn" method="table" conf="3"/></port>
+<port protocol="tcp" portid="443"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="https" method="table" conf="3"/></port>
+<port protocol="tcp" portid="445"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="microsoft-ds" method="table" conf="3"/></port>
+<port protocol="tcp" portid="593"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-rpc-epmap" method="table" conf="3"/></port>
+<port protocol="tcp" portid="2049"><state state="open" reason="syn-ack" reason_ttl="47"/><service name="nfs_acl" version="3" extrainfo="RPC #100227" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3000"><state state="open" reason="syn-ack" reason_ttl="48"/><service name="http" product="Golang net/http server" servicefp="SF-Port3000-TCP:V=7.98%I=7%D=2/15%Time=6991E2AB%P=arm-apple-darwin25.2.0%r(GenericLines,67,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Type:\x20text/plain;\x20charset=utf-8\r\nConnection:\x20close\r\n\r\n400\x20Bad\x20Request&quot;)%r(GetRequest,35B6,&quot;HTTP/1\.0\x20200\x20OK\r\nCache-Control:\x20max-age=0,\x20private,\x20must-revalidate,\x20no-transform\r\nContent-Type:\x20text/html;\x20charset=utf-8\r\nSet-Cookie:\x20i_like_gitea=f6ee962032839bd7;\x20Path=/;\x20HttpOnly;\x20SameSite=Lax\r\nSet-Cookie:\x20_csrf=3DzXQ9_cbFl8M2b1TxS0TA-qNSM6MTc3MTE2ODQyNzc2NTQ4NDM2Nw;\x20Path=/;\x20Max-Age=86400;\x20HttpOnly;\x20SameSite=Lax\r\nX-Frame-Options:\x20SAMEORIGIN\r\nDate:\x20Sun,\x2015\x20Feb\x202026\x2015:13:47\x20GMT\r\n\r\n&lt;!DOCTYPE\x20html&gt;\n&lt;html\x20lang=\&quot;en-US\&quot;\x20data-theme=\&quot;gitea-auto\&quot;&gt;\n&lt;head&gt;\n\t&lt;meta\x20name=\&quot;viewport\&quot;\x20content=\&quot;width=device-width,\x20initial-scale=1\&quot;&gt;\n\t&lt;title&gt;Gitea:\x20Git\x20with\x20a\x20cup\x20of\x20tea&lt;/title&gt;\n\t&lt;link\x20rel=\&quot;manifest\&quot;\x20href=\&quot;data:application/json;base64,eyJuYW1lIjoiR2l0ZWE6IEdpdCB3aXRoIGEgY3VwIG9mIHRlYSIsInNob3J0X25hbWUiOiJHaXRlYTogR2l0IHdpdGggYSBjdXAgb2YgdGVhIiwic3RhcnRfdXJsIjoiaHR0cDovLzExMS4xNC4yMjEuMTc0OjMwMDAvIiwiaWNvbnMiOlt7InNyYyI6Imh0dHA6Ly8xMTEuMTQuMjIxLjE3NDozMDAwL2Fzc2V0cy9pbWcvbG9nby5wbmciLCJ0eXBlIjoiaW1hZ2UvcG&quot;)%r(Help,67,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Type:\x20text/plain;\x20charset=utf-8\r\nConnection:\x20close\r\n\r\n400\x20Bad\x20Request&quot;)%r(HTTPOptions,197,&quot;HTTP/1\.0\x20405\x20Method\x20Not\x20Allowed\r\nAllow:\x20HEAD\r\nAllow:\x20GET\r\nCache-Control:\x20max-age=0,\x20private,\x20must-revalidate,\x20no-transform\r\nSet-Cookie:\x20i_like_gitea=44bd575f3a4647f1;\x20Path=/;\x20HttpOnly;\x20SameSite=Lax\r\nSet-Cookie:\x20_csrf=6xqx39xSFDSCGkTiAnnRZrt1-tM6MTc3MTE2ODQzMDE0Njk0NjMzNw;\x20Path=/;\x20Max-Age=86400;\x20HttpOnly;\x20SameSite=Lax\r\nX-Frame-Options:\x20SAMEORIGIN\r\nDate:\x20Sun,\x2015\x20Feb\x202026\x2015:13:50\x20GMT\r\nContent-Length:\x200\r\n\r\n&quot;)%r(RTSPRequest,67,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nContent-Type:\x20text/plain;\x20charset=utf-8\r\nConnection:\x20close\r\n\r\n400\x20Bad\x20Request&quot;);" method="probed" conf="10"><cpe>cpe:/a:golang:go</cpe></service><script id="http-title" output="Gitea: Git with a cup of tea"><elem key="title">Gitea: Git with a cup of tea</elem>
+</script><script id="fingerprint-strings" output="&#xa;  GenericLines, Help, RTSPRequest: &#xa;    HTTP/1.1 400 Bad Request&#xa;    Content-Type: text/plain; charset=utf-8&#xa;    Connection: close&#xa;    Request&#xa;  GetRequest: &#xa;    HTTP/1.0 200 OK&#xa;    Cache-Control: max-age=0, private, must-revalidate, no-transform&#xa;    Content-Type: text/html; charset=utf-8&#xa;    Set-Cookie: i_like_gitea=f6ee962032839bd7; Path=/; HttpOnly; SameSite=Lax&#xa;    Set-Cookie: _csrf=3DzXQ9_cbFl8M2b1TxS0TA-qNSM6MTc3MTE2ODQyNzc2NTQ4NDM2Nw; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    Date: Sun, 15 Feb 2026 15:13:47 GMT&#xa;    &lt;!DOCTYPE html&gt;&#xa;    &lt;html lang=&quot;en-US&quot; data-theme=&quot;gitea-auto&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;&#xa;    &lt;title&gt;Gitea: Git with a cup of tea&lt;/title&gt;&#xa;    &lt;link rel=&quot;manifest&quot; href=&quot;data:application/json;base64,eyJuYW1lIjoiR2l0ZWE6IEdpdCB3aXRoIGEgY3VwIG9mIHRlYSIsInNob3J0X25hbWUiOiJHaXRlYTogR2l0IHdpdGggYSBjdXAgb2YgdGVhIiwic3RhcnRfdXJsIjoiaHR0cDovLzExMS4xNC4yMjEuMTc0OjMwMDAvIiwiaWNvbnMiOlt7InNyYyI6Imh0dHA6Ly8xMTEuMTQuMjIxLjE3NDozMDAwL2Fzc2V0cy9pbWcvbG9nby5wbmciLCJ0eXBlIjoiaW1hZ2UvcG&#xa;  HTTPOptions: &#xa;    HTTP/1.0 405 Method Not Allowed&#xa;    Allow: HEAD&#xa;    Allow: GET&#xa;    Cache-Control: max-age=0, private, must-revalidate, no-transform&#xa;    Set-Cookie: i_like_gitea=44bd575f3a4647f1; Path=/; HttpOnly; SameSite=Lax&#xa;    Set-Cookie: _csrf=6xqx39xSFDSCGkTiAnnRZrt1-tM6MTc3MTE2ODQzMDE0Njk0NjMzNw; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    Date: Sun, 15 Feb 2026 15:13:50 GMT&#xa;    Content-Length: 0"><elem key="GenericLines, Help, RTSPRequest">&#xa;    HTTP/1.1 400 Bad Request&#xa;    Content-Type: text/plain; charset=utf-8&#xa;    Connection: close&#xa;    Request</elem>
+<elem key="GetRequest">&#xa;    HTTP/1.0 200 OK&#xa;    Cache-Control: max-age=0, private, must-revalidate, no-transform&#xa;    Content-Type: text/html; charset=utf-8&#xa;    Set-Cookie: i_like_gitea=f6ee962032839bd7; Path=/; HttpOnly; SameSite=Lax&#xa;    Set-Cookie: _csrf=3DzXQ9_cbFl8M2b1TxS0TA-qNSM6MTc3MTE2ODQyNzc2NTQ4NDM2Nw; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    Date: Sun, 15 Feb 2026 15:13:47 GMT&#xa;    &lt;!DOCTYPE html&gt;&#xa;    &lt;html lang=&quot;en-US&quot; data-theme=&quot;gitea-auto&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;&#xa;    &lt;title&gt;Gitea: Git with a cup of tea&lt;/title&gt;&#xa;    &lt;link rel=&quot;manifest&quot; href=&quot;data:application/json;base64,eyJuYW1lIjoiR2l0ZWE6IEdpdCB3aXRoIGEgY3VwIG9mIHRlYSIsInNob3J0X25hbWUiOiJHaXRlYTogR2l0IHdpdGggYSBjdXAgb2YgdGVhIiwic3RhcnRfdXJsIjoiaHR0cDovLzExMS4xNC4yMjEuMTc0OjMwMDAvIiwiaWNvbnMiOlt7InNyYyI6Imh0dHA6Ly8xMTEuMTQuMjIxLjE3NDozMDAwL2Fzc2V0cy9pbWcvbG9nby5wbmciLCJ0eXBlIjoiaW1hZ2UvcG</elem>
+<elem key="HTTPOptions">&#xa;    HTTP/1.0 405 Method Not Allowed&#xa;    Allow: HEAD&#xa;    Allow: GET&#xa;    Cache-Control: max-age=0, private, must-revalidate, no-transform&#xa;    Set-Cookie: i_like_gitea=44bd575f3a4647f1; Path=/; HttpOnly; SameSite=Lax&#xa;    Set-Cookie: _csrf=6xqx39xSFDSCGkTiAnnRZrt1-tM6MTc3MTE2ODQzMDE0Njk0NjMzNw; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    Date: Sun, 15 Feb 2026 15:13:50 GMT&#xa;    Content-Length: 0</elem>
+</script></port>
+<port protocol="tcp" portid="3142"><state state="open" reason="syn-ack" reason_ttl="48"/><service name="http" product="Debian Apt-Cacher NG httpd" version="3.7.4" method="probed" conf="10"><cpe>cpe:/a:debian:apt-cacher:3.7.4</cpe></service><script id="http-title" output="Not Found or APT Reconfiguration required"><elem key="title">Not Found or APT Reconfiguration required</elem>
+</script></port>
+<port protocol="tcp" portid="4444"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="krb524" method="table" conf="3"/></port>
+<port protocol="tcp" portid="5554"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="sgi-esphttp" method="table" conf="3"/></port>
+<port protocol="tcp" portid="5800"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc-http" method="table" conf="3"/></port>
+<port protocol="tcp" portid="5900"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="vnc" method="table" conf="3"/></port>
+<port protocol="tcp" portid="8080"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="http-proxy" method="table" conf="3"/></port>
+<port protocol="tcp" portid="9462"><state state="filtered" reason="no-response" reason_ttl="0"/></port>
+<port protocol="tcp" portid="9995"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="palace-4" method="table" conf="3"/></port>
+<port protocol="tcp" portid="27561"><state state="filtered" reason="no-response" reason_ttl="0"/></port>
+<port protocol="tcp" portid="34393"><state state="open" reason="syn-ack" reason_ttl="48"/><service name="nlockmgr" version="1-4" extrainfo="RPC #100021" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="36177"><state state="open" reason="syn-ack" reason_ttl="48"/><service name="status" version="1" extrainfo="RPC #100024" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="47295"><state state="open" reason="syn-ack" reason_ttl="47"/><service name="mountd" version="1-3" extrainfo="RPC #100005" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="50022"><state state="open" reason="syn-ack" reason_ttl="48"/><service name="ssh" product="OpenSSH" version="8.9p1 Ubuntu 3ubuntu0.13" extrainfo="Ubuntu Linux; protocol 2.0" ostype="Linux" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:8.9p1</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service><script id="ssh-hostkey" output="&#xa;  256 59:03:f6:e0:49:b6:66:b3:18:10:25:79:a6:a4:d1:0d (ECDSA)&#xa;  256 91:ea:10:ce:02:63:e4:24:e9:5f:4c:73:2f:6b:b0:dd (ED25519)"><table>
+<elem key="fingerprint">5903f6e049b666b318102579a6a4d10d</elem>
+<elem key="key">AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBGGrJ+ru8xvSw8lo1VNtYtciLm3dgtX5TL3Wl8vahw3cSvVuDBoT4+KsiulTx6fd4OCFqtNZ3Ye5pw2Wj5p3qxE=</elem>
+<elem key="bits">256</elem>
+<elem key="type">ecdsa-sha2-nistp256</elem>
+</table>
+<table>
+<elem key="fingerprint">91ea10ce0263e424e95f4c732f6bb0dd</elem>
+<elem key="key">AAAAC3NzaC1lZDI1NTE5AAAAIHwo8JFt8iaxVi5BKZz+FjhxrKiyH5a2Tn6qVaou8Sn8</elem>
+<elem key="bits">256</elem>
+<elem key="type">ssh-ed25519</elem>
+</table>
+</script></port>
+<port protocol="tcp" portid="50080"><state state="open" reason="syn-ack" reason_ttl="48"/><service name="http" product="Apache httpd" version="2.4.52" hostname="127.0.1.1" method="probed" conf="10"><cpe>cpe:/a:apache:http_server:2.4.52</cpe></service><script id="http-ls" output="Volume /&#xa;  maxfiles limit reached (10)&#xa;SIZE  TIME              FILENAME&#xa;93M   2026-01-29 08:25  5.4.300.tar.gz&#xa;1.3K  2025-12-23 03:10  9999-015-add-uart2.patch&#xa;1.0M  2026-01-06 07:43  ImmortalWrt.mtd1.bin&#xa;512K  2026-01-06 07:43  ImmortalWrt.mtd2.bin&#xa;1.0M  2026-01-06 07:43  ImmortalWrt.mtd3.bin&#xa;1.0M  2026-01-06 07:43  ImmortalWrt.mtd4.bin&#xa;2.0M  2026-01-06 07:43  ImmortalWrt.mtd5.bin&#xa;111M  2026-01-06 07:43  ImmortalWrt.mtd6.bin&#xa;224M  2026-01-26 08:38  aoneos-1.0.0-r0+33335-d6e9bc31b3-layerscape-armv8_64b-fsl_ls1043a-ag104a-squashfs-sdcard.img&#xa;222K  2026-01-27 07:09  bl2.img&#xa;&#xa;"><table key="volumes">
+<table>
+<elem key="volume">/</elem>
+<table key="info">
+<elem>maxfiles limit reached (10)</elem>
+</table>
+<table key="files">
+<table>
+<elem key="filename">5.4.300.tar.gz</elem>
+<elem key="time">2026-01-29 08:25</elem>
+<elem key="size">93M</elem>
+</table>
+<table>
+<elem key="filename">9999-015-add-uart2.patch</elem>
+<elem key="time">2025-12-23 03:10</elem>
+<elem key="size">1.3K</elem>
+</table>
+<table>
+<elem key="filename">ImmortalWrt.mtd1.bin</elem>
+<elem key="time">2026-01-06 07:43</elem>
+<elem key="size">1.0M</elem>
+</table>
+<table>
+<elem key="filename">ImmortalWrt.mtd2.bin</elem>
+<elem key="time">2026-01-06 07:43</elem>
+<elem key="size">512K</elem>
+</table>
+<table>
+<elem key="filename">ImmortalWrt.mtd3.bin</elem>
+<elem key="time">2026-01-06 07:43</elem>
+<elem key="size">1.0M</elem>
+</table>
+<table>
+<elem key="filename">ImmortalWrt.mtd4.bin</elem>
+<elem key="time">2026-01-06 07:43</elem>
+<elem key="size">1.0M</elem>
+</table>
+<table>
+<elem key="filename">ImmortalWrt.mtd5.bin</elem>
+<elem key="time">2026-01-06 07:43</elem>
+<elem key="size">2.0M</elem>
+</table>
+<table>
+<elem key="filename">ImmortalWrt.mtd6.bin</elem>
+<elem key="time">2026-01-06 07:43</elem>
+<elem key="size">111M</elem>
+</table>
+<table>
+<elem key="filename">aoneos-1.0.0-r0+33335-d6e9bc31b3-layerscape-armv8_64b-fsl_ls1043a-ag104a-squashfs-sdcard.img</elem>
+<elem key="time">2026-01-26 08:38</elem>
+<elem key="size">224M</elem>
+</table>
+<table>
+<elem key="filename">bl2.img</elem>
+<elem key="time">2026-01-27 07:09</elem>
+<elem key="size">222K</elem>
+</table>
+</table>
+</table>
+</table>
+<table key="total">
+<elem key="bytes">452752296</elem>
+<elem key="files">10</elem>
+</table>
+</script><script id="http-title" output="Index of /"><elem key="title">Index of /</elem>
+</script><script id="http-server-header" output="Apache/2.4.52 (Ubuntu)"><elem>Apache/2.4.52 (Ubuntu)</elem>
+</script></port>
+<port protocol="tcp" portid="53827"><state state="open" reason="syn-ack" reason_ttl="47"/><service name="mountd" version="1-3" extrainfo="RPC #100005" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="54049"><state state="open" reason="syn-ack" reason_ttl="47"/><service name="mountd" version="1-3" extrainfo="RPC #100005" method="probed" conf="10"/></port>
+</ports>
+<times srtt="326431" rttvar="28844" to="441807"/>
+</host>
+<runstats><finished time="1771168472" timestr="Sun Feb 15 22:14:32 2026" summary="Nmap done at Sun Feb 15 22:14:32 2026; 1 IP address (1 host up) scanned in 4414.96 seconds" elapsed="4414.96" exit="success"/><hosts up="1" down="0" total="1"/>
+</runstats>
+</nmaprun>

@@ -212,7 +212,7 @@ func UsageFunction() string {
   osmedeus func e 'log_info("Hello World")'
 
   ` + terminal.Green("# Use with target variable") + `
-  osmedeus func e 'fileExists("{{target}}")' ` + terminal.Yellow("-t") + ` /tmp/test.txt
+  osmedeus func e 'file_exists("{{target}}")' ` + terminal.Yellow("-t") + ` /tmp/test.txt
 
   ` + terminal.Green("# Print markdown file with syntax highlighting") + `
   osmedeus func e 'print_markdown_from_file("README.md")'
@@ -221,14 +221,14 @@ func UsageFunction() string {
   osmedeus func e 'var x = trim("  test  "); log_info(x); x'
 
   ` + terminal.Green("# Make HTTP request") + `
-  osmedeus func e 'httpRequest("https://api.example.com", "GET", {}, "")'
+  osmedeus func e 'http_request("https://api.example.com", "GET", {}, "")'
 
   ` + terminal.Green("# With custom params") + `
   osmedeus func e 'log_info("{{host}}:{{port}}")' ` + terminal.Yellow("--params") + ` 'host=localhost' ` + terminal.Yellow("--params") + ` 'port=8080'
 
   ` + terminal.Green("# Use -f flag for shell path autocompletion on file arguments") + `
   osmedeus func e ` + terminal.Yellow("-f") + ` trim "  hello world  "
-  osmedeus func e ` + terminal.Yellow("-f") + ` fileExists /tmp
+  osmedeus func e ` + terminal.Yellow("-f") + ` file_exists /tmp
   osmedeus func e ` + terminal.Yellow("-t") + ` example.com ` + terminal.Yellow("-f") + ` log_info "Processing {{target}}"
 
   ` + terminal.Green("# Query database with SQL") + `
@@ -270,17 +270,17 @@ func UsageFunctionEval() string {
 
 
   ` + terminal.Green("# Sort a file using Unix sort") + `
-  osmedeus func e 'sortUnix("/tmp/input.txt", "/tmp/sorted.txt")'
+  osmedeus func e 'sort_unix("/tmp/input.txt", "/tmp/sorted.txt")'
 
   ` + terminal.Green("# Make HTTP request") + `
-  osmedeus func e 'httpRequest("https://api.example.com", "GET", {}, "")'
+  osmedeus func e 'http_request("https://api.example.com", "GET", {}, "")'
 
   ` + terminal.Green("# With custom params") + `
   osmedeus func e 'log_info("{{host}}:{{port}}")' ` + terminal.Yellow("--params") + ` 'host=localhost' ` + terminal.Yellow("--params") + ` 'port=8080'
 
   ` + terminal.Green("# Use -f flag for shell path autocompletion on file arguments") + `
   osmedeus func e ` + terminal.Yellow("-f") + ` trim "  hello world  "
-  osmedeus func e ` + terminal.Yellow("-f") + ` fileExists /tmp
+  osmedeus func e ` + terminal.Yellow("-f") + ` file_exists /tmp
   osmedeus func e ` + terminal.Yellow("-t") + ` example.com ` + terminal.Yellow("-f") + ` log_info "Processing {{target}}"
 
   ` + terminal.Green("# Query database - get vulnerability counts by severity") + `
@@ -306,7 +306,7 @@ func UsageFunctionEval() string {
   osmedeus func e ` + terminal.Yellow("--function-file") + ` check.js ` + terminal.Yellow("-T") + ` targets.txt
 
   ` + terminal.Green("# With concurrency") + `
-  osmedeus func e 'httpGet("https://" + target)' ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("-c") + ` 10
+  osmedeus func e 'http_get("https://" + target)' ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("-c") + ` 10
 
   ` + terminal.Green("# Combined with params") + `
   osmedeus func e 'log_info(prefix + target)' ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--params") + ` 'prefix=test_' ` + terminal.Yellow("-c") + ` 5
@@ -852,10 +852,10 @@ func UsageAllExamples() string {
   osmedeus func e 'save_content("data", "/tmp/out.txt")'
 
   ` + terminal.Green("# Make HTTP request") + `
-  osmedeus func e 'httpRequest("https://api.example.com", "GET", {}, "")'
+  osmedeus func e 'http_request("https://api.example.com", "GET", {}, "")'
 
   ` + terminal.Green("# Sort file using Unix sort") + `
-  osmedeus func e 'sortUnix("/tmp/input.txt", "/tmp/sorted.txt")'
+  osmedeus func e 'sort_unix("/tmp/input.txt", "/tmp/sorted.txt")'
 
   ` + terminal.Green("# Read from stdin") + `
   echo 'log_info("hello")' | osmedeus func e -
@@ -1248,7 +1248,7 @@ func UsageClientExec() string {
   osmedeus client exec 'log_info("Hello from remote")'
 
   ` + terminal.Green("# With target variable") + `
-  osmedeus client exec ` + terminal.Yellow("-t") + ` example.com 'fileExists("{{target}}/output.txt")'
+  osmedeus client exec ` + terminal.Yellow("-t") + ` example.com 'file_exists("{{target}}/output.txt")'
 
   ` + terminal.Green("# Using --script flag") + `
   osmedeus client exec ` + terminal.Yellow("-s") + ` 'trim("  hello  ")'

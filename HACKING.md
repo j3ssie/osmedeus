@@ -18,6 +18,12 @@ This document describes the technical architecture and development practices for
 - [Workflow Linter](#workflow-linter)
 - [Database Layer](#database-layer)
 - [SARIF Integration](#sarif-integration)
+- [Workflow Hooks](#workflow-hooks)
+- [Queue System](#queue-system)
+- [Nmap Integration](#nmap-integration)
+- [Tmux Session Management](#tmux-session-management)
+- [SSH & Distributed Sync](#ssh--distributed-sync)
+- [Webhook Triggers](#webhook-triggers)
 - [Testing](#testing)
 - [Canary Testing](#canary-testing)
 - [Adding New Features](#adding-new-features)
@@ -34,6 +40,7 @@ osmedeus/
 │   ├── console/            # Console output capture
 │   ├── core/               # Core types (Workflow, Step, Trigger, etc.)
 │   ├── database/           # SQLite/PostgreSQL via Bun ORM
+│   ├── cloud/              # Cloud infrastructure provisioning (DO, AWS, GCP, Linode, Azure)
 │   ├── distributed/        # Distributed execution (master/worker, worker ID: wosm-<uuid8>)
 │   ├── executor/           # Workflow execution engine
 │   ├── fileio/             # High-performance file I/O (mmap)
@@ -792,7 +799,9 @@ _ = vm.Set("my_new_function", vf.myNewFunction)
 const FnMyNewFunction = "my_new_function"
 ```
 
-Notable utility functions include `exec_python(code)` and `exec_python_file(path)` for running Python code, and `run_module(module, target, params)` / `run_flow(flow, target, params)` for launching osmedeus workflows as subprocesses.
+Notable utility functions include `exec_python(code)` and `exec_python_file(path)` for running Python code, `exec_ts(code)` and `exec_ts_file(path)` for running TypeScript via `bun`, and `run_module(module, target, params)` / `run_flow(flow, target, params)` for launching osmedeus workflows as subprocesses.
+
+The `skip(message?)` function aborts remaining steps in the current module. In a flow, execution continues to the next module. It raises `ErrSkipModule` (defined in `internal/functions/constants.go`).
 
 ### Output and Control Functions
 
@@ -1254,6 +1263,10 @@ type Run struct {
     CompletedSteps int
     RunPriority    string    // "low", "normal", "high", "critical"
     RunMode        string    // "local", "distributed", "cloud"
+    HooksEnabled   bool      // true if workflow has hooks
+    IsQueued       bool      // true if queued for delayed execution
+    WebhookUUID    string    // UUID for webhook trigger
+    WebhookAuthKey string    // Optional auth key for webhook
     CreatedAt      time.Time
     UpdatedAt      time.Time
 }
@@ -1281,6 +1294,9 @@ type Asset struct {
     Time          string    // Response time
     Remarks       string    // Labels
     Source        string    // Discovery source
+    IsCDN         bool      // Behind CDN (from httpx cdn/cdn_name fields)
+    IsCloud       bool      // CDN name matches cloud provider
+    IsWAF         bool      // cdn_type == "waf" in httpx data
     CreatedAt     time.Time
     UpdatedAt     time.Time
 }
@@ -1440,6 +1456,199 @@ The import function:
 - Location (file:line)
 - Rule ID, title, and description
 
+## Workflow Hooks
+
+Workflows support pre/post execution hooks that run before and after the main steps:
+
+```yaml
+hooks:
+  pre_scan_steps:
+    - name: setup-env
+      type: bash
+      command: mkdir -p {{Output}}/results
+  post_scan_steps:
+    - name: notify
+      type: function
+      function: |
+        generate_event("{{Workspace}}", "scan.completed", "workflow", "status", "done")
+```
+
+### Hook Types
+
+```go
+// internal/core/workflow.go
+
+type WorkflowHooks struct {
+    PreScanSteps  []Step `yaml:"pre_scan_steps,omitempty"`
+    PostScanSteps []Step `yaml:"post_scan_steps,omitempty"`
+}
+```
+
+Pre-scan steps execute before the main workflow steps. Post-scan steps execute after all main steps complete. Both use the same `Step` type as regular workflow steps and support all step types (bash, function, etc.).
+
+The `Hooks` field is tracked on Run records via `HooksEnabled` for metadata purposes.
+
+## Queue System
+
+The queue system enables delayed task execution with dual-source polling from database and Redis:
+
+### Architecture
+
+```
+1. Queue task: osmedeus worker queue new -f <flow> -t <target>
+   └── Creates Run record with is_queued=true, status="queued"
+   └── Optionally pushes to Redis queue
+
+2. Poll & Execute: osmedeus worker queue run
+   ├── DB poller: Checks every 5s for is_queued=true runs
+   ├── Redis poller: BRPOP on task queue (optional)
+   ├── Dedup: Track seen runUUIDs to avoid duplicates
+   ├── Executor: Run workflow, update status
+   └── Concurrency: Configurable parallel workers
+```
+
+### Implementation
+
+```go
+// pkg/cli/worker_queue.go
+
+type QueuePoller struct {
+    config     QueuePollerConfig
+    taskChan   chan *QueuedTask
+    seen       sync.Map  // Deduplication
+}
+
+type QueuedTask struct {
+    RunUUID      string
+    WorkflowName string
+    Target       string
+    Params       map[string]string
+    InputIsFile  bool
+    InputFilePath string
+}
+```
+
+### CLI Commands
+
+```bash
+osmedeus worker queue list                          # List queued tasks
+osmedeus worker queue new -f <flow> -t <target>    # Queue task for later
+osmedeus worker queue new -m <module> -T targets.txt -p key=value
+osmedeus worker queue run --concurrency 5           # Process queued tasks
+```
+
+## Nmap Integration
+
+Functions for nmap port scanning and result processing:
+
+```go
+// internal/functions/nmap_functions.go
+
+// nmap_to_jsonl converts nmap XML or gnmap output to JSONL format
+// Supports .xml, .gnmap, .nmap (auto-detects format)
+// Output: {asset_value, host_ip, asset_type, open_ports, ports}
+func (vf *vmFunc) nmapToJSONL(call goja.FunctionCall) goja.Value
+
+// run_nmap executes nmap and auto-converts results to JSONL
+// Default flags: "-sV -T4"
+func (vf *vmFunc) runNmap(call goja.FunctionCall) goja.Value
+```
+
+Usage in workflows:
+```yaml
+steps:
+  - name: port-scan
+    type: function
+    function: |
+      run_nmap("{{Target}}", "-sV -T4 --top-ports 1000", "{{Output}}/nmap-scan")
+
+  - name: import-ports
+    type: function
+    function: |
+      db_import_port_assets("{{Workspace}}", "{{Output}}/nmap-scan.jsonl")
+```
+
+The `db_import_port_assets(workspace, file_path, source?)` function imports JSONL output from `nmap_to_jsonl` into the database with `asset_type=ip`.
+
+## Tmux Session Management
+
+Functions for managing long-running background processes via tmux:
+
+```go
+// internal/functions/tmux_functions.go
+
+tmux_run(command, session_name?)  // Create detached session (auto-name: bosm-<random8>)
+tmux_capture(session_name)        // Capture pane output ("all" for all sessions)
+tmux_send(session_name, command)  // Send keystrokes + Enter
+tmux_kill(session_name)           // Destroy session
+tmux_list()                       // List active session names
+```
+
+Usage in workflows:
+```yaml
+steps:
+  - name: start-background-scan
+    type: function
+    function: |
+      tmux_run("nmap -sV {{Target}}", "scan-session")
+
+  - name: check-output
+    type: function
+    function: |
+      tmux_capture("scan-session")
+```
+
+## SSH & Distributed Sync
+
+Functions for remote execution and file synchronization across distributed workers:
+
+```go
+// internal/functions/ssh_functions.go
+
+ssh_exec(host, command, user?, key_path?, password?, port?)    // Remote command (pooled connection)
+ssh_rsync(host, src, dest, user?, key_path?, password?, port?) // Copy via rsync+SSH
+sync_from_master(src, dest)                                     // Pull from master (local cp fallback)
+sync_from_worker(identifier, ip, src, dest)                    // Pull from specific worker
+rsync_to_worker(identifier, ip, src, dest)                     // Push to specific worker
+```
+
+### Execute Hooks Pattern
+
+Distributed coordination uses a hooks pattern to avoid circular imports:
+
+```go
+// internal/functions/execute_hooks.go
+
+type ExecuteHooks struct {
+    SendExecuteRequest func(ctx, action, expr, ...) error
+    ShouldUseRedis     func() bool
+    ResolveWorkerSSH   func(ctx, identifier) (*WorkerSSHInfo, error)
+}
+
+RegisterExecuteHooks(hooks *ExecuteHooks)    // Register at startup
+UnregisterExecuteHooks()                     // Cleanup
+```
+
+The distributed package registers hooks at startup, allowing SSH/sync functions to coordinate across workers without importing the distributed package directly.
+
+## Webhook Triggers
+
+API endpoints for triggering workflow runs via webhooks:
+
+```go
+// pkg/server/handlers/webhook_runs.go
+
+GET  /osm/api/webhook-runs                    // List webhook-enabled runs (authenticated)
+GET  /osm/api/webhook-runs/{uuid}/trigger     // Trigger via GET (unauthenticated)
+POST /osm/api/webhook-runs/{uuid}/trigger     // Trigger with overrides (unauthenticated)
+```
+
+Runs with `webhook_uuid` set serve as templates. The trigger endpoint is unauthenticated by default, with optional `?key=<auth_key>` protection. POST body can override `target`, `flow`, or `module`.
+
+New database fields on Run model:
+- `webhook_uuid` - UUID v4 identifier for webhook
+- `webhook_auth_key` - Optional authentication key
+
 ## Testing
 
 ### Test Structure
@@ -1465,7 +1674,11 @@ test/e2e/                                # E2E CLI tests
 ├── ssh_test.go                          # SSH runner e2e tests (module & step level)
 ├── api_test.go                          # API endpoint e2e tests (all routes)
 ├── agent_test.go                        # Agent step e2e tests
-└── canary_test.go                       # Canary tests (real-world scans in Docker)
+├── canary_test.go                       # Canary tests (real-world scans in Docker)
+├── cloud_test.go                        # Cloud CLI e2e tests
+├── db_clean_test.go                     # Database cleanup e2e tests
+├── hooks_test.go                        # Workflow hooks e2e tests
+└── worker_test.go                       # Worker management e2e tests
 ```
 
 ### Running Tests
@@ -1853,6 +2066,25 @@ osmedeus func list event  # Filter by category
 - `--repeat` - Repeat scan after completion
 - `--repeat-wait-time` - Wait time between repeats (e.g., `30m`, `1h`, `1d`)
 - `-m` can be specified multiple times to run modules in sequence
+- `-x, --exclude <module>` - Exclude module(s) from flow execution (exact match, repeatable)
+- `-X, --fuzzy-exclude <substr>` - Exclude modules whose name contains substring (repeatable)
+
+### Worker Management Commands
+
+```bash
+# Worker status and management
+osmedeus worker status                              # Show registered workers
+osmedeus worker status --columns id,alias,ip,status # Custom columns
+osmedeus worker status -s "query"                   # Search/filter workers
+osmedeus worker eval -e '<expr>'                    # Evaluate with distributed hooks
+osmedeus worker set <id-or-alias> <field> <value>   # Update worker metadata
+
+# Queue system for delayed execution
+osmedeus worker queue list                          # List queued tasks
+osmedeus worker queue new -f <flow> -t <target>    # Queue a task
+osmedeus worker queue new -m <module> -T targets.txt -p key=value
+osmedeus worker queue run --concurrency 5           # Process queued tasks
+```
 
 ### Debugging Tips
 

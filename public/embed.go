@@ -35,3 +35,8 @@ func GetRegistryMetadata() ([]byte, error) {
 func GetFlakeNix() ([]byte, error) {
 	return EmbedFS.ReadFile("presets/flake.nix")
 }
+
+// GetCloudConfigExample returns the embedded cloud-settings.example.yaml content
+func GetCloudConfigExample() ([]byte, error) {
+	return EmbedFS.ReadFile("presets/cloud-settings.example.yaml")
+}

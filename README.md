@@ -36,6 +36,16 @@ Built for both beginners and experts, it delivers powerful, composable automatio
 - **SAST Integration** - SARIF parsing for Semgrep, Trivy, Kingfisher, Bearer with database import and markdown reporting
 - **Language Detection** - Auto-detect dominant programming language of source repositories (26+ languages)
 - **Preset Installation** - Reproducible deployments from curated preset repositories
+- **Workflow Hooks** - Pre/post scan steps via `hooks` field for setup and cleanup
+- **Queue System** - Delayed task execution with database and Redis polling, configurable concurrency
+- **Nmap Integration** - Port scanning with automatic XML/gnmap to JSONL conversion and database import
+- **Tmux Sessions** - Background process management via tmux (create, capture, send, kill sessions)
+- **SSH & Sync** - Remote execution and file synchronization across distributed workers
+- **TypeScript Execution** - Run inline TypeScript or TS files via Bun runtime
+- **Webhook Triggers** - Trigger workflow runs via unauthenticated webhook URLs
+- **CDN/WAF Classification** - Automatic asset classification from httpx data (CDN, cloud, WAF)
+- **Module Exclusion** - Exclude modules from flows by exact name or fuzzy substring matching
+- **Cloud Infrastructure** - Provision and manage cloud instances across multiple providers
 
 See [Documentation Page](https://docs.osmedeus.org/) for more details.
 
@@ -88,6 +98,18 @@ osmedeus install base --preset
 osmedeus install base --preset --keep-setting   # preserve existing osm-settings.yaml
 osmedeus install workflow --preset
 
+# Exclude modules from flow execution
+osmedeus run -f general -t example.com -x portscan
+osmedeus run -f general -t example.com -X vuln    # Fuzzy exclude by substring
+
+# Worker queue system
+osmedeus worker queue new -f general -t example.com   # Queue for later
+osmedeus worker queue run --concurrency 5              # Process queue
+
+# Worker management
+osmedeus worker status                          # Show workers
+osmedeus worker eval -e 'ssh_exec("host", "whoami")'  # Eval with distributed hooks
+
 # Show all usage examples
 osmedeus --usage-example
 ```
@@ -123,8 +145,10 @@ For more CLI usage and example commands, refer to the [CLI Reference](https://do
 │  │                          │                                          │  │
 │  │  Step Executors: bash | function | parallel | foreach | remote-bash │  │
 │  │                  http | llm | agent | SARIF/SAST integration        │  │
+│  │  Hooks: pre_scan_steps → [main steps] → post_scan_steps            │  │
 │  │                          │                                          │  │
 │  │  Runners: HostRunner | DockerRunner | SSHRunner                     │  │
+│  │  Queue: DB + Redis polling → dedup → concurrent execution           │  │
 │  └─────────────────────────────────────────────────────────────────────┘  │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
@@ -144,7 +168,7 @@ The high-level ambitious plan for the project, in order:
 |  5  | Rewriting the workflow to adapt to new architecture and syntax              |    ✅   |
 |  6  | Testing more utility functions like notifications                           |    ✅   |
 |  7  | SAST integration with SARIF parsing (Semgrep, Trivy, etc.)                  |    ✅   |
-|  8  | Cloud integration, which supports running the scan on the cloud provider.   |    ❌   |
+|  8  | Cloud integration, which supports running the scan on the cloud provider.   |    🚧   |
 |  9  | Generate diff reports showing new/removed/unchanged assets between runs.    |    ❌   |
 |  10 | Adding step type from cloud provider that can be run via serverless         |    ❌   |
 |  N  | Fancy features (to be discussed later)                                      |    ❌   |

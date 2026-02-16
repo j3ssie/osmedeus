@@ -15,6 +15,8 @@ make test-integration   # Integration tests (requires Docker)
 make test-e2e           # E2E CLI tests (requires binary build)
 make test-e2e-ssh       # SSH E2E tests (module & step level SSH runner)
 make test-e2e-api       # API E2E tests (all endpoints with Redis + seeded DB)
+make test-e2e-cloud     # Cloud E2E tests (cloud CLI commands)
+make test-cloud         # Cloud integration tests (internal cloud package)
 make test-distributed   # Distributed run e2e tests (requires Docker for Redis)
 make test-docker        # Docker runner tests
 make test-ssh           # SSH runner unit tests (starts test SSH container)
@@ -83,6 +85,7 @@ Runner (internal/runner) - executes commands via: HostRunner, DockerRunner, SSHR
 | `internal/installer` | Binary installation (direct-fetch and Nix modes) |
 | `internal/state` | Run state export for debugging and sharing |
 | `internal/updater` | Self-update functionality via GitHub releases |
+| `internal/cloud` | Cloud infrastructure provisioning (DigitalOcean, AWS, GCP, Linode, Azure) |
 
 ### Key Types
 
@@ -119,7 +122,7 @@ Use `goto: _end` to terminate workflow.
 
 - `{{Variable}}` - standard template variables (Target, Output, threads, etc.)
 - `[[variable]]` - foreach loop variables (to avoid conflicts)
-- Functions evaluated via Goja JS runtime: `file_exists()`, `file_length()`, `trim()`, `exec_python()`, `detect_language()`, `extract_to()`, `db_import_sarif()`, etc.
+- Functions evaluated via Goja JS runtime: `file_exists()`, `file_length()`, `trim()`, `exec_python()`, `exec_ts()`, `detect_language()`, `extract_to()`, `db_import_sarif()`, `nmap_to_jsonl()`, `tmux_run()`, `ssh_exec()`, `skip()`, etc.
 
 ### Platform Variables
 
@@ -148,7 +151,7 @@ Key YAML fields:
 - `on_tool_start` / `on_tool_end` - JS hook expressions for tool call tracing
 - `parallel_tool_calls` - Enable/disable parallel tool execution (default: true)
 
-Preset tools: `bash`, `read_file`, `read_lines`, `file_exists`, `file_length`, `append_file`, `save_content`, `glob`, `grep_string`, `grep_regex`, `http_get`, `http_request`, `jq`, `exec_python`, `exec_python_file`, `run_module`, `run_flow`
+Preset tools: `bash`, `read_file`, `read_lines`, `file_exists`, `file_length`, `append_file`, `save_content`, `glob`, `grep_string`, `grep_regex`, `http_get`, `http_request`, `jq`, `exec_python`, `exec_python_file`, `exec_ts`, `exec_ts_file`, `run_module`, `run_flow`
 
 Available exports: `agent_content`, `agent_history`, `agent_iterations`, `agent_total_tokens`, `agent_prompt_tokens`, `agent_completion_tokens`, `agent_tool_results`, `agent_plan`, `agent_goal_results`
 
@@ -210,6 +213,14 @@ osmedeus snapshot export <workspace>             # Export workspace as ZIP
 osmedeus snapshot import <source>                # Import from file or URL
 osmedeus snapshot list                           # List available snapshots
 osmedeus run -m <module> -t <target> -G          # Run with progress bar (shorthand)
+osmedeus run -f <flow> -t <target> -x <module>   # Exclude module(s) from flow
+osmedeus run -f <flow> -t <target> -X <substr>   # Fuzzy-exclude modules by substring
+osmedeus worker status                           # Show registered workers
+osmedeus worker eval -e '<expr>'                 # Evaluate function with distributed hooks
+osmedeus worker set <id> <field> <value>         # Update worker metadata
+osmedeus worker queue list                       # List queued tasks
+osmedeus worker queue new -f <flow> -t <target>  # Queue task for delayed execution
+osmedeus worker queue run --concurrency 5        # Process queued tasks
 ```
 
 ### Event Trigger Input Syntax
@@ -250,6 +261,103 @@ REST API documentation with curl examples is in `docs/api/`. Key endpoint catego
 - **LLM**: OpenAI-compatible chat completions and embeddings
 - **Install**: Binary registry and installation management
 
+## Cloud Documentation
+
+Cloud infrastructure enables distributed security scanning across multiple providers (DigitalOcean, AWS, GCP, Linode, Azure):
+
+- **Usage Examples**: `docs/cloud-usage-examples.md` - Comprehensive examples with copy-paste commands for all cloud operations
+- **Quick Reference**: `docs/cloud-quick-reference.md` - Fast lookup for common commands and configurations
+- **Cheatsheet**: `docs/cloud-cheatsheet.md` - Single-page printable reference card
+- **Architecture**: `docs/cloud-usage-guide.md` - Cloud feature architecture and design
+- **Test Documentation**: `test/e2e/CLOUD_TESTS_README.md` - Cloud test coverage and patterns
+- **Config Template**: `public/presets/cloud-settings.example.yaml` - Full configuration example
+
+Key cloud commands:
+```bash
+osmedeus cloud config set <key> <value>     # Configure cloud provider
+osmedeus cloud create --instances N          # Provision infrastructure
+osmedeus cloud list                          # List active infrastructure
+osmedeus cloud run -f <flow> -t <target> --instances N  # Run distributed workflow
+osmedeus cloud destroy <id>                  # Destroy infrastructure
+```
+
+## Workflow Hooks
+
+Workflows support pre/post execution hooks via the `hooks` field:
+```yaml
+hooks:
+  pre_scan_steps:
+    - name: setup
+      type: bash
+      command: echo "Starting scan"
+  post_scan_steps:
+    - name: cleanup
+      type: bash
+      command: echo "Scan complete"
+```
+Hooks are defined using `WorkflowHooks` in `internal/core/workflow.go`. Pre-scan steps run before the main steps, post-scan steps run after completion.
+
+## Queue System
+
+Delayed task execution via database and Redis queues:
+- `osmedeus worker queue new -f <flow> -t <target>` - Queue a task (creates Run with `is_queued=true`)
+- `osmedeus worker queue run --concurrency N` - Process queued tasks with configurable parallelism
+- Dual-source polling: database (every 5s) + Redis BRPOP (optional)
+- Deduplication via runUUID tracking
+- Implementation in `pkg/cli/worker_queue.go`
+
+## Nmap Integration
+
+Utility functions for nmap port scanning and result processing:
+- `nmap_to_jsonl(input_path, output_path)` - Convert nmap XML/gnmap to JSONL format
+- `run_nmap(target, flags?, output?)` - Execute nmap and auto-convert results to JSONL
+- `db_import_port_assets(workspace, file_path, source?)` - Import port scan JSONL into database
+
+## Tmux Session Management
+
+Functions for managing long-running background processes:
+- `tmux_run(command, session_name?)` - Create detached tmux session (auto-generates `bosm-<random8>` name)
+- `tmux_capture(session_name)` - Capture pane output (pass `"all"` for all sessions)
+- `tmux_send(session_name, command)` - Send keystrokes to session
+- `tmux_kill(session_name)` / `tmux_list()` - Kill session / list all sessions
+
+## SSH & Distributed Sync Functions
+
+Functions for remote execution and file synchronization:
+- `ssh_exec(host, command, user?, key_path?, password?, port?)` - Execute command via SSH (pooled connections)
+- `ssh_rsync(host, src, dest, user?, key_path?, password?, port?)` - Copy files via rsync+SSH
+- `sync_from_master(src, dest)` - Pull files from master node (falls back to local cp)
+- `sync_from_worker(identifier, ip, src, dest)` / `rsync_to_worker(...)` - Sync with specific workers
+
+## TypeScript Execution
+
+- `exec_ts(code)` - Run inline TypeScript code via `bun -e`
+- `exec_ts_file(path)` - Run a TypeScript file via `bun run`
+
+## Skip Module Control
+
+- `skip(message?)` - Abort remaining steps in current module; flow continues to next module
+- Raises `ErrSkipModule` / `SkipModuleError` (defined in `internal/functions/constants.go`)
+
+## Module Exclusion
+
+- `-x, --exclude <module>` - Exclude module(s) from flow execution (exact match, repeatable)
+- `-X, --fuzzy-exclude <substr>` - Exclude modules whose name contains substring (repeatable)
+
+## Webhook Triggers
+
+API endpoints for triggering runs via webhooks:
+- `GET /osm/api/webhook-runs` - List webhook-enabled runs
+- `GET|POST /osm/api/webhook-runs/{uuid}/trigger` - Trigger run via webhook UUID (unauthenticated)
+- Runs store `webhook_uuid` and optional `webhook_auth_key` for authentication
+
+## CDN/WAF Asset Classification
+
+Assets now include CDN/WAF classification fields derived from httpx JSON data:
+- `is_cdn` - Asset is behind a CDN (`cdn=true` or `cdn_name` non-empty in httpx)
+- `is_cloud` - CDN name matches a cloud provider (AWS, GCP, Azure, etc.)
+- `is_waf` - `cdn_type` equals "waf" in httpx data
+
 ## Adding New Features
 
 **New Step Type**: Add constant in `core/types.go`, create executor implementing `StepExecutor` interface in `internal/executor/`, register in `PluginRegistry` via `dispatcher.go`
@@ -274,6 +382,9 @@ REST API documentation with curl examples is in `docs/api/`. Key endpoint catego
 - **Write Coordinator**: Batches database writes (step results, progress, artifacts) reducing I/O by ~70%
 - **Install Base Backup**: `InstallBase()` automatically backs up `osm-settings.yaml` to `backup-osm-settings.yaml`; `--keep-setting` flag restores the previous settings after installation
 - **Worker Identity**: Worker IDs use `wosm-<uuid8>` format; default alias is `wosm-<public-ip>` or `wosm-<local-ip>` when no `--alias` is provided
+- **Execute Hooks**: Distributed coordination via `RegisterExecuteHooks()` in `internal/functions/execute_hooks.go` - avoids circular imports between functions and distributed packages
+- **Queue System**: Dual-source polling (DB + Redis) with deduplication and configurable concurrency in `pkg/cli/worker_queue.go`
+- **Command Fallback**: `internal/executor/cmd_fallback.go` handles timeout prefix stripping and custom binary path prepending
 
 ## SARIF Integration
 
@@ -282,6 +393,8 @@ Utility functions for parsing SARIF (Static Analysis Results Interchange Format)
 - `convert_sarif_to_markdown(input_path, output_path)` - Convert SARIF to readable markdown tables
 - `detect_language(path)` - Detect dominant programming language of a source folder (26+ languages)
 - `extract_to(source, dest)` - Auto-detect archive format (.zip, .tar.gz, .tar.bz2, .tar.xz, .tgz) and extract
+- `nmap_to_jsonl(input, output)` - Convert nmap XML/gnmap to JSONL
+- `db_import_port_assets(workspace, file_path, source?)` - Import nmap JSONL into database as IP assets
 
 ## Performance Optimizations
 

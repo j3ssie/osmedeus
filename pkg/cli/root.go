@@ -17,6 +17,7 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/installer"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
+	"github.com/j3ssie/osmedeus/v5/public"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -306,6 +307,7 @@ func init() {
 	rootCmd.AddCommand(workflowCmd)
 	rootCmd.AddCommand(functionCmd)
 	rootCmd.AddCommand(workerCmd)
+	rootCmd.AddCommand(cloudCmd)
 	rootCmd.AddCommand(healthCmd)
 	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(dbCmd)
@@ -650,6 +652,25 @@ func runFirstTimeSetup(baseFolder string, cfg *config.Config) error {
 	// Ensure config exists after InstallBase (which may have removed the base folder)
 	if err := config.EnsureConfigExists(baseFolder); err != nil {
 		printer.Warning("Failed to create config: %s", err)
+	}
+
+	// Setup cloud configuration folder and example file
+	cloudFolder := filepath.Join(baseFolder, "cloud")
+	cloudConfigPath := filepath.Join(cloudFolder, "cloud-settings.yaml")
+	if err := os.MkdirAll(cloudFolder, 0755); err != nil {
+		printer.Warning("Failed to create cloud folder: %s", err)
+	} else {
+		// Copy cloud-settings.example.yaml to cloud folder if it doesn't exist
+		if _, err := os.Stat(cloudConfigPath); os.IsNotExist(err) {
+			cloudConfigExample, err := public.GetCloudConfigExample()
+			if err == nil {
+				if err := os.WriteFile(cloudConfigPath, cloudConfigExample, 0644); err != nil {
+					printer.Warning("Failed to create cloud config: %s", err)
+				} else {
+					printer.Success("Cloud config created at: %s", terminal.Cyan(cloudConfigPath))
+				}
+			}
+		}
 	}
 
 	reloaded, err := config.Load(baseFolder)

@@ -49,6 +49,10 @@ type Run struct {
 	InputIsFile   bool   `bun:"input_is_file,default:false" json:"input_is_file"`
 	InputFilePath string `bun:"input_file_path" json:"input_file_path,omitempty"`
 
+	// Webhook trigger
+	WebhookUUID    string `bun:"webhook_uuid" json:"webhook_uuid,omitempty"`
+	WebhookAuthKey string `bun:"webhook_auth_key" json:"webhook_auth_key,omitempty"`
+
 	// Relations
 	Steps     []*StepResult `bun:"rel:has-many,join:id=run_id" json:"steps,omitempty"`
 	Artifacts []*Artifact   `bun:"rel:has-many,join:id=run_id" json:"artifacts,omitempty"`
@@ -228,15 +232,18 @@ type Asset struct {
 	HostIP     string   `bun:"host_ip" json:"host_ip,omitempty"`
 	DnsRecords []string `bun:"dns_records,type:json" json:"dns_records,omitempty"`
 	TLS        string   `bun:"tls" json:"tls,omitempty"`
+	// Open ports in "port/protocol|version" format, e.g., "80/tcp", "443/tcp"
+	OpenPorts    []string `bun:"open_ports,type:json" json:"open_ports,omitempty"`
+	PortJsonData string   `bun:"port_json_data" json:"port_json_data,omitempty"`
 
 	// Metadata
-	// asset type can be "http", "dns", "url", "subdomain", "ip", "repository", "file", "link", "content", "archive"
+	// asset type can be "http", "dns", "url", "subdomain", "ip", "repository", "file", "link", "content", "archive", "port", "other"
 	AssetType            string   `bun:"asset_type" json:"asset_type,omitempty"`
 	Technologies         []string `bun:"technologies,type:json" json:"tech,omitempty"`
 	ResponseTime         string   `bun:"response_time" json:"time,omitempty"`
 	Remarks              []string `bun:"remarks,type:json" json:"remarks,omitempty"`
 	Source               string   `bun:"source" json:"source,omitempty"`               // e.g., "httpx", "nuclei"
-	RawJsonData          string   `bun:"raw_json_data" json:"raw_json_data,omitempty"` // Original JSON
+	RawJsonData          string   `bun:"raw_json_data" json:"raw_json_data,omitempty"` // Original httpx JSON
 	RawResponse          string   `bun:"raw_response" json:"raw_response,omitempty"`
 	ScreenshotBase64Data string   `bun:"screenshot_base64_data" json:"screenshot_base64_data,omitempty"`
 

@@ -117,3 +117,62 @@ func mergeVulnFields(existing, incoming *database.Vulnerability) {
 	incoming.DetailHTTPResponse = mergeString(existing.DetailHTTPResponse, incoming.DetailHTTPResponse)
 	incoming.RawVulnJSON = mergeString(existing.RawVulnJSON, incoming.RawVulnJSON)
 }
+
+// mergePortAssetFields merges port-specific fields from incoming to existing
+func mergePortAssetFields(existing, incoming *database.Asset) {
+	// Preserve identity fields
+	incoming.ID = existing.ID
+	incoming.CreatedAt = existing.CreatedAt
+	incoming.Workspace = existing.Workspace
+	incoming.AssetValue = existing.AssetValue
+
+	// Merge simple fields (non-zero incoming wins)
+	if incoming.HostIP == "" {
+		incoming.HostIP = existing.HostIP
+	}
+	if incoming.Source == "" {
+		incoming.Source = existing.Source
+	}
+
+	// Keep existing OpenPorts if incoming is empty
+	if len(incoming.OpenPorts) == 0 {
+		incoming.OpenPorts = existing.OpenPorts
+	}
+
+	// Keep existing PortJsonData if incoming is empty
+	if incoming.PortJsonData == "" {
+		incoming.PortJsonData = existing.PortJsonData
+	}
+}
+
+// hasPortAssetChanged checks if port-related fields changed
+func hasPortAssetChanged(existing, new *database.Asset) bool {
+	// Check if HostIP changed
+	if existing.HostIP != new.HostIP {
+		return true
+	}
+
+	// Check if PortJsonData changed
+	if existing.PortJsonData != new.PortJsonData {
+		return true
+	}
+
+	// Check if OpenPorts array changed
+	if len(existing.OpenPorts) != len(new.OpenPorts) {
+		return true
+	}
+
+	// Deep compare OpenPorts
+	existingPortsSet := make(map[string]bool)
+	for _, p := range existing.OpenPorts {
+		existingPortsSet[p] = true
+	}
+
+	for _, p := range new.OpenPorts {
+		if !existingPortsSet[p] {
+			return true
+		}
+	}
+
+	return false
+}

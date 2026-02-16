@@ -1,0 +1,509 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///opt/homebrew/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.98 scan initiated Sun Feb 15 23:30:33 2026 as: nmap -oA top-500-ports -&#45;top-ports 500 -sV -sC -T4 -Pn 31.57.112.121/28 -->
+<nmaprun scanner="nmap" args="nmap -oA top-500-ports -&#45;top-ports 500 -sV -sC -T4 -Pn 31.57.112.121/28" start="1771173033" startstr="Sun Feb 15 23:30:33 2026" version="7.98" xmloutputversion="1.05">
+<scaninfo type="syn" protocol="tcp" numservices="500" services="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,119,135,139,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,443-445,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3306,3323,3325,3333,3351,3367,3389,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5985-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.112" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="500">
+<extrareasons reason="no-response" count="500" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,119,135,139,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,443-445,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3306,3323,3325,3333,3351,3367,3389,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5985-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+</ports>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.113" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="492">
+<extrareasons reason="no-response" count="492" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79,81-83,85,88,90,100,106,110-111,113,119,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,444,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3323,3325,3333,3351,3367,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5986-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="http" product="Apache httpd" version="2.4.58" extrainfo="(Win64) OpenSSL/3.1.3 PHP/8.2.12" method="probed" conf="10"><cpe>cpe:/a:apache:http_server:2.4.58</cpe></service><script id="http-title" output="Welcome to XAMPP&#xa;Requested resource was http://31.57.112.113/dashboard/"><elem key="title">Welcome to XAMPP</elem>
+<elem key="redirect_url">http://31.57.112.113/dashboard/</elem>
+</script><script id="http-server-header" output="Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12"><elem>Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12</elem>
+</script></port>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="msrpc" product="Microsoft Windows RPC" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="netbios-ssn" product="Microsoft Windows netbios-ssn" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="http" product="Apache httpd" version="2.4.58" extrainfo="(Win64) OpenSSL/3.1.3 PHP/8.2.12" tunnel="ssl" method="probed" conf="10"><cpe>cpe:/a:apache:http_server:2.4.58</cpe></service><script id="tls-alpn" output="&#xa;  http/1.1"><elem>http/1.1</elem>
+</script><script id="http-server-header" output="Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12"><elem>Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12</elem>
+</script><script id="http-title" output="Welcome to XAMPP&#xa;Requested resource was https://31.57.112.113/dashboard/"><elem key="title">Welcome to XAMPP</elem>
+<elem key="redirect_url">https://31.57.112.113/dashboard/</elem>
+</script><script id="ssl-date" output="TLS randomness does not represent time"></script><script id="ssl-cert" output="Subject: commonName=localhost&#xa;Not valid before: 2009-11-10T23:48:47&#xa;Not valid after:  2019-11-08T23:48:47"><table key="subject">
+<elem key="commonName">localhost</elem>
+</table>
+<table key="issuer">
+<elem key="commonName">localhost</elem>
+</table>
+<table key="pubkey">
+<elem key="type">rsa</elem>
+<elem key="bits">1024</elem>
+<elem key="modulus">C125D327E3ECAD0D836A6DE75F9A751023E2909DA063958F1D419A58D59C638C5B73869079CCC3D6A389B875BC1E947C7C6EE3ADE8275C0BC60C6AF90F32FEB3C47A1023042B2928D4AAF9B32F6610F8A7C1CD60C46B2857E3673BF79ECD4822DC38EA4813803A4097570C4735463D71629AEE539D630E677A28C9A434FF19ED</elem>
+<elem key="exponent">65537</elem>
+</table>
+<elem key="sig_algo">sha1WithRSAEncryption</elem>
+<table key="validity">
+<elem key="notBefore">2009-11-10T23:48:47</elem>
+<elem key="notAfter">2019-11-08T23:48:47</elem>
+</table>
+<elem key="md5">a0a44cc99e84b26f9e639f9ed229dee0</elem>
+<elem key="sha1">b0238c547a905bfa119c4e8baccaeacf36491ff6</elem>
+<elem key="sha256">016973380c0f1df00bd9593ed8d5efa3706cd6df7993f6141272b80522acdd23</elem>
+<elem key="pem">-&#45;&#45;&#45;&#45;BEGIN CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;MIIBnzCCAQgCCQC1x1LJh4G1AzANBgkqhkiG9w0BAQUFADAUMRIwEAYDVQQDEwls&#xa;b2NhbGhvc3QwHhcNMDkxMTEwMjM0ODQ3WhcNMTkxMTA4MjM0ODQ3WjAUMRIwEAYD&#xa;VQQDEwlsb2NhbGhvc3QwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMEl0yfj&#xa;7K0Ng2pt51+adRAj4pCdoGOVjx1BmljVnGOMW3OGkHnMw9ajibh1vB6UfHxu463o&#xa;J1wLxgxq+Q8y/rPEehAjBCspKNSq+bMvZhD4p8HNYMRrKFfjZzv3ns1IItw46kgT&#xa;gDpAl1cMRzVGPXFimu5TnWMOZ3ooyaQ0/xntAgMBAAEwDQYJKoZIhvcNAQEFBQAD&#xa;gYEAavHzSWz5umhfb/MnBMa5DL2VNzS+9whmmpsDGEG+uR0kM1W2GQIdVHHJTyFd&#xa;aHXzgVJBQcWTwhp84nvHSiQTDBSaT6cQNQpvag/TaED/SEQpm0VqDFwpfFYuufBL&#xa;vVNbLkKxbK2XwUvu0RxoLdBMC/89HqrZ0ppiONuQ+X2MtxE=&#xa;-&#45;&#45;&#45;&#45;END CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;</elem>
+</script></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="microsoft-ds" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3306"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="mysql" product="MariaDB" version="10.3.23 or earlier" extrainfo="unauthorized" method="probed" conf="10"><cpe>cpe:/a:mariadb:mariadb</cpe></service></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="ms-wbt-server" product="Microsoft Terminal Services" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="rdp-ntlm-info" output="&#xa;  Target_Name: WIN-BQAJQ4EUT6G&#xa;  NetBIOS_Domain_Name: WIN-BQAJQ4EUT6G&#xa;  NetBIOS_Computer_Name: WIN-BQAJQ4EUT6G&#xa;  DNS_Domain_Name: WIN-BQAJQ4EUT6G&#xa;  DNS_Computer_Name: WIN-BQAJQ4EUT6G&#xa;  Product_Version: 10.0.20348&#xa;  System_Time: 2026-02-15T16:36:10+00:00"><elem key="Target_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="NetBIOS_Domain_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="NetBIOS_Computer_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="DNS_Domain_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="DNS_Computer_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="Product_Version">10.0.20348</elem>
+<elem key="System_Time">2026-02-15T16:36:10+00:00</elem>
+</script></port>
+<port protocol="tcp" portid="5985"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="http" product="Microsoft HTTPAPI httpd" version="2.0" extrainfo="SSDP/UPnP" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="http-title" output="Not Found"><elem key="title">Not Found</elem>
+</script><script id="http-server-header" output="Microsoft-HTTPAPI/2.0"><elem>Microsoft-HTTPAPI/2.0</elem>
+</script></port>
+</ports>
+<hostscript><script id="smb2-time" output="Protocol negotiation failed (SMB2)"/><script id="smb2-security-mode" output="&#xa;  3.1.1: &#xa;    Message signing enabled but not required"><table key="3.1.1">
+<elem>Message signing enabled but not required</elem>
+</table>
+</script></hostscript><times srtt="250632" rttvar="22840" to="341992"/>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.114" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="500">
+<extrareasons reason="no-response" count="500" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,119,135,139,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,443-445,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3306,3323,3325,3333,3351,3367,3389,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5985-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+</ports>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.115" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="500">
+<extrareasons reason="no-response" count="500" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,119,135,139,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,443-445,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3306,3323,3325,3333,3351,3367,3389,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5985-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+</ports>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.116" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="500">
+<extrareasons reason="no-response" count="500" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,119,135,139,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,443-445,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3306,3323,3325,3333,3351,3367,3389,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5985-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+</ports>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.117" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="496">
+<extrareasons reason="no-response" count="496" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,119,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,443-444,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3306,3323,3325,3333,3351,3367,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5985-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="msrpc" product="Microsoft Windows RPC" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="netbios-ssn" product="Microsoft Windows netbios-ssn" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="microsoft-ds" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="ms-wbt-server" product="Microsoft Terminal Services" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="rdp-ntlm-info" output="&#xa;  Target_Name: WIN-BQAJQ4EUT6G&#xa;  NetBIOS_Domain_Name: WIN-BQAJQ4EUT6G&#xa;  NetBIOS_Computer_Name: WIN-BQAJQ4EUT6G&#xa;  DNS_Domain_Name: WIN-BQAJQ4EUT6G&#xa;  DNS_Computer_Name: WIN-BQAJQ4EUT6G&#xa;  Product_Version: 10.0.20348&#xa;  System_Time: 2026-02-15T16:36:02+00:00"><elem key="Target_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="NetBIOS_Domain_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="NetBIOS_Computer_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="DNS_Domain_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="DNS_Computer_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="Product_Version">10.0.20348</elem>
+<elem key="System_Time">2026-02-15T16:36:02+00:00</elem>
+</script></port>
+</ports>
+<hostscript><script id="smb2-time" output="&#xa;  date: 2026-02-15T16:36:43&#xa;  start_date: N/A"><elem key="date">2026-02-15T16:36:43</elem>
+<elem key="start_date">N/A</elem>
+</script><script id="smb2-security-mode" output="&#xa;  3.1.1: &#xa;    Message signing enabled but not required"><table key="3.1.1">
+<elem>Message signing enabled but not required</elem>
+</table>
+</script></hostscript><times srtt="256352" rttvar="27117" to="364820"/>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.118" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="closed" count="495">
+<extrareasons reason="reset" count="495" proto="tcp" ports="1,3-4,6-7,9,13,17,19-21,23-26,30,33,37,42,49,53,79,81-83,85,88,90,100,106,110-111,113,119,135,139,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,444-445,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3306,3323,3325,3333,3351,3367,3389,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5985-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack" reason_ttl="54"/><service name="ssh" product="OpenSSH" version="9.6p1 Ubuntu 3ubuntu13.14" extrainfo="Ubuntu Linux; protocol 2.0" ostype="Linux" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:9.6p1</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service></port>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="53"/><service name="http" product="nginx" version="1.24.0" extrainfo="Ubuntu" ostype="Linux" method="probed" conf="10"><cpe>cpe:/a:igor_sysoev:nginx:1.24.0</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service><script id="http-title" output="Cimi Service Menu"><elem key="title">Cimi Service Menu</elem>
+</script><script id="http-server-header" output="nginx/1.24.0 (Ubuntu)"><elem>nginx/1.24.0 (Ubuntu)</elem>
+</script></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="53"/><service name="http" product="nginx" version="1.24.0" extrainfo="Ubuntu" ostype="Linux" tunnel="ssl" method="probed" conf="10"><cpe>cpe:/a:igor_sysoev:nginx:1.24.0</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service><script id="http-server-header" output="nginx/1.24.0 (Ubuntu)"><elem>nginx/1.24.0 (Ubuntu)</elem>
+</script><script id="ssl-date" output="TLS randomness does not represent time"></script><script id="http-title" output="Cimi Service Menu"><elem key="title">Cimi Service Menu</elem>
+</script><script id="ssl-cert" output="Subject: commonName=cimiservice.xeniaserver.com&#xa;Subject Alternative Name: DNS:cimiservice.xeniaserver.com&#xa;Not valid before: 2026-01-25T21:15:11&#xa;Not valid after:  2026-04-25T21:15:10"><table key="subject">
+<elem key="commonName">cimiservice.xeniaserver.com</elem>
+</table>
+<table key="issuer">
+<elem key="commonName">E8</elem>
+<elem key="countryName">US</elem>
+<elem key="organizationName">Let&apos;s Encrypt</elem>
+</table>
+<table key="pubkey">
+<elem key="type">ec</elem>
+<elem key="bits">256</elem>
+<table key="ecdhparams">
+<table key="curve_params">
+<elem key="ec_curve_type">namedcurve</elem>
+<elem key="curve">prime256v1</elem>
+</table>
+</table>
+</table>
+<table key="extensions">
+<table>
+<elem key="name">X509v3 Key Usage</elem>
+<elem key="value">Digital Signature</elem>
+<elem key="critical">true</elem>
+</table>
+<table>
+<elem key="name">X509v3 Extended Key Usage</elem>
+<elem key="value">TLS Web Server Authentication, TLS Web Client Authentication</elem>
+</table>
+<table>
+<elem key="name">X509v3 Basic Constraints</elem>
+<elem key="value">CA:FALSE</elem>
+<elem key="critical">true</elem>
+</table>
+<table>
+<elem key="name">X509v3 Subject Key Identifier</elem>
+<elem key="value">A2:49:6E:A6:37:57:DE:3A:49:75:68:47:61:EB:C8:8D:13:20:6C:3F</elem>
+</table>
+<table>
+<elem key="name">X509v3 Authority Key Identifier</elem>
+<elem key="value">8F:0D:13:A2:F6:2E:7E:D1:50:6C:33:18:38:5D:59:8E:23:72:91:CA</elem>
+</table>
+<table>
+<elem key="name">Authority Information Access</elem>
+<elem key="value">CA Issuers - URI:http://e8.i.lencr.org/</elem>
+</table>
+<table>
+<elem key="name">X509v3 Subject Alternative Name</elem>
+<elem key="value">DNS:cimiservice.xeniaserver.com</elem>
+</table>
+<table>
+<elem key="name">X509v3 Certificate Policies</elem>
+<elem key="value">Policy: 2.23.140.1.2.1</elem>
+</table>
+<table>
+<elem key="name">X509v3 CRL Distribution Points</elem>
+<elem key="value">Full Name:&#xa;  URI:http://e8.c.lencr.org/126.crl&#xa;</elem>
+</table>
+<table>
+<elem key="name">CT Precertificate SCTs</elem>
+<elem key="value">Signed Certificate Timestamp:&#xa;    Version   : v1 (0x0)&#xa;    Log ID    : 49:9C:9B:69:DE:1D:7C:EC:FC:36:DE:CD:87:64:A6:B8:&#xa;                5B:AF:0A:87:80:19:D1:55:52:FB:E9:EB:29:DD:F8:C3&#xa;    Timestamp : Jan 25 22:13:41.764 2026 GMT&#xa;    Extensions: none&#xa;    Signature : ecdsa-with-SHA256&#xa;                30:45:02:20:1A:AC:AD:EE:EF:51:9F:34:6B:D1:E6:FC:&#xa;                34:7A:A7:D7:D6:49:79:2D:B3:A1:CC:17:7E:CA:6C:77:&#xa;                7A:12:A6:E6:02:21:00:B7:2F:91:F0:E4:1F:CF:58:CA:&#xa;                B0:52:4F:EA:11:12:24:17:DA:66:FF:C4:95:56:9F:C6:&#xa;                08:D8:53:9A:BE:9A:8E&#xa;Signed Certificate Timestamp:&#xa;    Version   : v1 (0x0)&#xa;    Log ID    : 16:83:2D:AB:F0:A9:25:0F:0F:F0:3A:A5:45:FF:C8:BF:&#xa;                C8:23:D0:87:4B:F6:04:29:27:F8:E7:1F:33:13:F5:FA&#xa;    Timestamp : Jan 25 22:13:41.790 2026 GMT&#xa;    Extensions: none&#xa;    Signature : ecdsa-with-SHA256&#xa;                30:46:02:21:00:9B:F3:75:87:65:33:32:56:8D:73:62:&#xa;                84:3C:70:6F:16:E9:13:22:AA:C5:B1:38:F1:F8:B8:33:&#xa;                91:A8:10:FC:72:02:21:00:83:31:3D:B4:30:0E:AE:CB:&#xa;                44:0C:B8:56:DE:16:A0:C8:C4:D5:1A:DA:BD:7E:C0:C5:&#xa;                77:EB:1B:5C:57:CF:B9:B9</elem>
+</table>
+</table>
+<elem key="sig_algo">ecdsa-with-SHA384</elem>
+<table key="validity">
+<elem key="notBefore">2026-01-25T21:15:11</elem>
+<elem key="notAfter">2026-04-25T21:15:10</elem>
+</table>
+<elem key="md5">77df5b70e0b7edf87787a004a10cd66d</elem>
+<elem key="sha1">64e820c84f54a0e8db88cddb82fdcd9201fce843</elem>
+<elem key="sha256">61ae5b5a4f654a42dbf5adf36dac1f3784285bd120b1c0559189febb1c900f8d</elem>
+<elem key="pem">-&#45;&#45;&#45;&#45;BEGIN CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;MIIDpjCCAyugAwIBAgISBe1VDRmwZQzqaVDCrgmPl0J9MAoGCCqGSM49BAMDMDIx&#xa;CzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQswCQYDVQQDEwJF&#xa;ODAeFw0yNjAxMjUyMTE1MTFaFw0yNjA0MjUyMTE1MTBaMCYxJDAiBgNVBAMTG2Np&#xa;bWlzZXJ2aWNlLnhlbmlhc2VydmVyLmNvbTBZMBMGByqGSM49AgEGCCqGSM49AwEH&#xa;A0IABCn/0jPz7lCp05FxOpNL7Qa7McR0h92jD7soBarSkvz3k9uAp7lz2CTE5y88&#xa;85NVB77L76BtpsS/EugG6QJeVcKjggIrMIICJzAOBgNVHQ8BAf8EBAMCB4AwHQYD&#xa;VR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMAwGA1UdEwEB/wQCMAAwHQYDVR0O&#xa;BBYEFKJJbqY3V946SXVoR2HryI0TIGw/MB8GA1UdIwQYMBaAFI8NE6L2Ln7RUGwz&#xa;GDhdWY4jcpHKMDIGCCsGAQUFBwEBBCYwJDAiBggrBgEFBQcwAoYWaHR0cDovL2U4&#xa;LmkubGVuY3Iub3JnLzAmBgNVHREEHzAdghtjaW1pc2VydmljZS54ZW5pYXNlcnZl&#xa;ci5jb20wEwYDVR0gBAwwCjAIBgZngQwBAgEwLgYDVR0fBCcwJTAjoCGgH4YdaHR0&#xa;cDovL2U4LmMubGVuY3Iub3JnLzEyNi5jcmwwggEFBgorBgEEAdZ5AgQCBIH2BIHz&#xa;APEAdgBJnJtp3h187Pw23s2HZKa4W68Kh4AZ0VVS++nrKd34wwAAAZv3OFEEAAAE&#xa;AwBHMEUCIBqsre7vUZ80a9Hm/DR6p9fWSXkts6HMF37KbHd6EqbmAiEAty+R8OQf&#xa;z1jKsFJP6hESJBfaZv/ElVafxgjYU5q+mo4AdwAWgy2r8KklDw/wOqVF/8i/yCPQ&#xa;h0v2BCkn+OcfMxP1+gAAAZv3OFEeAAAEAwBIMEYCIQCb83WHZTMyVo1zYoQ8cG8W&#xa;6RMiqsWxOPH4uDORqBD8cgIhAIMxPbQwDq7LRAy4Vt4WoMjE1RravX7AxXfrG1xX&#xa;z7m5MAoGCCqGSM49BAMDA2kAMGYCMQDJuEpmPhMi+tjOElDTGb4WG1ttbwp0R8GG&#xa;pkbglX42m2yDbgHoKjYTfB6y1IzoCQcCMQD5/d4icxEoYXTMZfljAn9EWtrLLvD2&#xa;FlU8aA6GM37TYK0qVjz0OKMUmVAWG7ST9SA=&#xa;-&#45;&#45;&#45;&#45;END CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;</elem>
+</script></port>
+<port protocol="tcp" portid="1234"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="hotline" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3005"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="deslogin" method="table" conf="3"/></port>
+</ports>
+<times srtt="249380" rttvar="27511" to="359424"/>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.119" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="500">
+<extrareasons reason="no-response" count="500" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,119,135,139,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,443-445,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3306,3323,3325,3333,3351,3367,3389,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5985-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+</ports>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.120" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="500">
+<extrareasons reason="no-response" count="500" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,119,135,139,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,443-445,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3306,3323,3325,3333,3351,3367,3389,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5985-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+</ports>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.121" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="closed" count="492">
+<extrareasons reason="reset" count="492" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,135,139,143-144,146,161,163,179,199,211,254-255,264,280,306,311,340,366,389,407,427,443-445,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3323,3325,3333,3351,3367,3389,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5986-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+<port protocol="tcp" portid="119"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="nntp" method="table" conf="3"/></port>
+<port protocol="tcp" portid="222"><state state="open" reason="syn-ack" reason_ttl="52"/><service name="ssh" product="OpenSSH" version="10.0" extrainfo="protocol 2.0" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:10.0</cpe></service></port>
+<port protocol="tcp" portid="2030"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="device2" method="table" conf="3"/></port>
+<port protocol="tcp" portid="2222"><state state="open" reason="syn-ack" reason_ttl="53"/><service name="ssh" product="OpenSSH" version="9.6p1 Ubuntu 3ubuntu13" extrainfo="Ubuntu Linux; protocol 2.0" ostype="Linux" method="probed" conf="10"><cpe>cpe:/a:openbsd:openssh:9.6p1</cpe><cpe>cpe:/o:linux:linux_kernel</cpe></service></port>
+<port protocol="tcp" portid="3000"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="ppp" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3001"><state state="open" reason="syn-ack" reason_ttl="53"/><service name="nessus" servicefp="SF-Port3001-TCP:V=7.98%I=7%D=2/15%Time=6991F5D2%P=arm-apple-darwin25.2.0%r(NCP,2F,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n&quot;)%r(GetRequest,EC,&quot;HTTP/1\.1\x20302\x20Found\r\nX-Frame-Options:\x20SAMEORIGIN\r\nLocation:\x20/dashboard\r\nVary:\x20Accept\r\nContent-Type:\x20text/plain;\x20charset=utf-8\r\nContent-Length:\x2032\r\nDate:\x20Sun,\x2015\x20Feb\x202026\x2016:35:40\x20GMT\r\nConnection:\x20close\r\n\r\nFound\.\x20Redirecting\x20to\x20/dashboard&quot;)%r(HTTPOptions,FC,&quot;HTTP/1\.1\x20200\x20OK\r\nX-Frame-Options:\x20SAMEORIGIN\r\nVary:\x20Accept-Encoding\r\nAllow:\x20GET,HEAD\r\nContent-Type:\x20text/html;\x20charset=utf-8\r\nContent-Length:\x208\r\nETag:\x20W/\&quot;8-ZRAf8oNBS3Bjb/SU2GYZCmbtmXg\&quot;\r\nDate:\x20Sun,\x2015\x20Feb\x202026\x2016:35:42\x20GMT\r\nConnection:\x20close\r\n\r\nGET,HEAD&quot;)%r(RTSPRequest,FC,&quot;HTTP/1\.1\x20200\x20OK\r\nX-Frame-Options:\x20SAMEORIGIN\r\nVary:\x20Accept-Encoding\r\nAllow:\x20GET,HEAD\r\nContent-Type:\x20text/html;\x20charset=utf-8\r\nContent-Length:\x208\r\nETag:\x20W/\&quot;8-ZRAf8oNBS3Bjb/SU2GYZCmbtmXg\&quot;\r\nDate:\x20Sun,\x2015\x20Feb\x202026\x2016:35:43\x20GMT\r\nConnection:\x20close\r\n\r\nGET,HEAD&quot;)%r(RPCCheck,2F,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n&quot;)%r(DNSVersionBindReqTCP,2F,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n&quot;)%r(DNSStatusRequestTCP,2F,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n&quot;)%r(Help,2F,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n&quot;)%r(SSLSessionReq,2F,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n&quot;)%r(TerminalServerCookie,2F,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n&quot;)%r(TLSSessionReq,2F,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n&quot;)%r(Kerberos,2F,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n&quot;)%r(SMBProgNeg,2F,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n&quot;)%r(X11Probe,2F,&quot;HTTP/1\.1\x20400\x20Bad\x20Request\r\nConnection:\x20close\r\n\r\n&quot;)%r(FourOhFourRequest,A5D,&quot;HTTP/1\.1\x20200\x20OK\r\nX-Frame-Options:\x20SAMEORIGIN\r\nContent-Type:\x20text/html;\x20charset=utf-8\r\nContent-Length:\x202444\r\nETag:\x20W/\&quot;98c-FhzvEKLeodsfrD7qu22S6HNDA/4\&quot;\r\nDate:\x20Sun,\x2015\x20Feb\x202026\x2016:35:48\x20GMT\r\nConnection:\x20close\r\n\r\n&lt;!DOCTYPE\x20html&gt;\n&lt;html\x20lang=\&quot;en\&quot;&gt;\n&lt;head&gt;\n\x20\x20\x20\x20&lt;meta\x20charset=\&quot;UTF-8\&quot;\x20/&gt;\n\x20\x20\x20\x20&lt;meta\x20name=\&quot;viewport\&quot;\x20content=\&quot;width=device-width,\x20initial-scale=1\.0,\x20viewport-fit=cover\&quot;\x20/&gt;\n\x20\x20\x20\x20&lt;link\x20rel=\&quot;apple-touch-icon\&quot;\x20sizes=\&quot;180x180\&quot;\x20href=\&quot;/apple-touch-icon\.png\&quot;&gt;\n\x20\x20\x20\x20&lt;link\x20rel=\&quot;icon\&quot;\x20type=\&quot;image/svg\+xml\&quot;\x20href=\&quot;/icon\.svg\&quot;\x20/&gt;\n\x20\x20\x20\x20&lt;link\x20rel=\&quot;manifest\&quot;\x20href=\&quot;/manifest\.json\&quot;\x20/&gt;\n\x20\x20\x20\x20&lt;meta\x20name=\&quot;theme-color\&quot;\x20id=\&quot;theme-color\&quot;\x20content=\&quot;\&quot;\x20/&gt;\n\x20\x20\x20\x20&lt;meta\x20name=\&quot;description\&quot;\x20content=\&quot;Uptime\x20Kuma\x20monitoring\x20tool\&quot;\x20/&gt;\n\x20\x20\x20\x20&lt;title&gt;Uptime\x20Kuma&lt;/title&gt;\n\x20\x20\x20\x20&lt;style&gt;\x20\x20\x20\x20\x20\x20\x20\x20\.noscript-message\x20{\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20font-size:\x2020px;\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20text-align:\x20center;\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20padding:\x2010px;\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20max-width:\x20500px;\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20marg&quot;);" method="table" conf="3"/><script id="fingerprint-strings" output="&#xa;  DNSStatusRequestTCP, DNSVersionBindReqTCP, Help, Kerberos, NCP, RPCCheck, SMBProgNeg, SSLSessionReq, TLSSessionReq, TerminalServerCookie, X11Probe: &#xa;    HTTP/1.1 400 Bad Request&#xa;    Connection: close&#xa;  FourOhFourRequest: &#xa;    HTTP/1.1 200 OK&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    Content-Type: text/html; charset=utf-8&#xa;    Content-Length: 2444&#xa;    ETag: W/&quot;98c-FhzvEKLeodsfrD7qu22S6HNDA/4&quot;&#xa;    Date: Sun, 15 Feb 2026 16:35:48 GMT&#xa;    Connection: close&#xa;    &lt;!DOCTYPE html&gt;&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;UTF-8&quot; /&gt;&#xa;    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0, viewport-fit=cover&quot; /&gt;&#xa;    &lt;link rel=&quot;apple-touch-icon&quot; sizes=&quot;180x180&quot; href=&quot;/apple-touch-icon.png&quot;&gt;&#xa;    &lt;link rel=&quot;icon&quot; type=&quot;image/svg+xml&quot; href=&quot;/icon.svg&quot; /&gt;&#xa;    &lt;link rel=&quot;manifest&quot; href=&quot;/manifest.json&quot; /&gt;&#xa;    &lt;meta name=&quot;theme-color&quot; id=&quot;theme-color&quot; content=&quot;&quot; /&gt;&#xa;    &lt;meta name=&quot;description&quot; content=&quot;Uptime Kuma monitoring tool&quot; /&gt;&#xa;    &lt;title&gt;Uptime Kuma&lt;/title&gt;&#xa;    &lt;style&gt; .noscript-message {&#xa;    font-size: 20px;&#xa;    text-align: center;&#xa;    padding: 10px;&#xa;    max-width: 500px;&#xa;    marg&#xa;  GetRequest: &#xa;    HTTP/1.1 302 Found&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    Location: /dashboard&#xa;    Vary: Accept&#xa;    Content-Type: text/plain; charset=utf-8&#xa;    Content-Length: 32&#xa;    Date: Sun, 15 Feb 2026 16:35:40 GMT&#xa;    Connection: close&#xa;    Found. Redirecting to /dashboard&#xa;  HTTPOptions: &#xa;    HTTP/1.1 200 OK&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    Vary: Accept-Encoding&#xa;    Allow: GET,HEAD&#xa;    Content-Type: text/html; charset=utf-8&#xa;    Content-Length: 8&#xa;    ETag: W/&quot;8-ZRAf8oNBS3Bjb/SU2GYZCmbtmXg&quot;&#xa;    Date: Sun, 15 Feb 2026 16:35:42 GMT&#xa;    Connection: close&#xa;    GET,HEAD&#xa;  RTSPRequest: &#xa;    HTTP/1.1 200 OK&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    Vary: Accept-Encoding&#xa;    Allow: GET,HEAD&#xa;    Content-Type: text/html; charset=utf-8&#xa;    Content-Length: 8&#xa;    ETag: W/&quot;8-ZRAf8oNBS3Bjb/SU2GYZCmbtmXg&quot;&#xa;    Date: Sun, 15 Feb 2026 16:35:43 GMT&#xa;    Connection: close&#xa;    GET,HEAD"><elem key="DNSStatusRequestTCP, DNSVersionBindReqTCP, Help, Kerberos, NCP, RPCCheck, SMBProgNeg, SSLSessionReq, TLSSessionReq, TerminalServerCookie, X11Probe">&#xa;    HTTP/1.1 400 Bad Request&#xa;    Connection: close</elem>
+<elem key="FourOhFourRequest">&#xa;    HTTP/1.1 200 OK&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    Content-Type: text/html; charset=utf-8&#xa;    Content-Length: 2444&#xa;    ETag: W/&quot;98c-FhzvEKLeodsfrD7qu22S6HNDA/4&quot;&#xa;    Date: Sun, 15 Feb 2026 16:35:48 GMT&#xa;    Connection: close&#xa;    &lt;!DOCTYPE html&gt;&#xa;    &lt;html lang=&quot;en&quot;&gt;&#xa;    &lt;head&gt;&#xa;    &lt;meta charset=&quot;UTF-8&quot; /&gt;&#xa;    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0, viewport-fit=cover&quot; /&gt;&#xa;    &lt;link rel=&quot;apple-touch-icon&quot; sizes=&quot;180x180&quot; href=&quot;/apple-touch-icon.png&quot;&gt;&#xa;    &lt;link rel=&quot;icon&quot; type=&quot;image/svg+xml&quot; href=&quot;/icon.svg&quot; /&gt;&#xa;    &lt;link rel=&quot;manifest&quot; href=&quot;/manifest.json&quot; /&gt;&#xa;    &lt;meta name=&quot;theme-color&quot; id=&quot;theme-color&quot; content=&quot;&quot; /&gt;&#xa;    &lt;meta name=&quot;description&quot; content=&quot;Uptime Kuma monitoring tool&quot; /&gt;&#xa;    &lt;title&gt;Uptime Kuma&lt;/title&gt;&#xa;    &lt;style&gt; .noscript-message {&#xa;    font-size: 20px;&#xa;    text-align: center;&#xa;    padding: 10px;&#xa;    max-width: 500px;&#xa;    marg</elem>
+<elem key="GetRequest">&#xa;    HTTP/1.1 302 Found&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    Location: /dashboard&#xa;    Vary: Accept&#xa;    Content-Type: text/plain; charset=utf-8&#xa;    Content-Length: 32&#xa;    Date: Sun, 15 Feb 2026 16:35:40 GMT&#xa;    Connection: close&#xa;    Found. Redirecting to /dashboard</elem>
+<elem key="HTTPOptions">&#xa;    HTTP/1.1 200 OK&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    Vary: Accept-Encoding&#xa;    Allow: GET,HEAD&#xa;    Content-Type: text/html; charset=utf-8&#xa;    Content-Length: 8&#xa;    ETag: W/&quot;8-ZRAf8oNBS3Bjb/SU2GYZCmbtmXg&quot;&#xa;    Date: Sun, 15 Feb 2026 16:35:42 GMT&#xa;    Connection: close&#xa;    GET,HEAD</elem>
+<elem key="RTSPRequest">&#xa;    HTTP/1.1 200 OK&#xa;    X-Frame-Options: SAMEORIGIN&#xa;    Vary: Accept-Encoding&#xa;    Allow: GET,HEAD&#xa;    Content-Type: text/html; charset=utf-8&#xa;    Content-Length: 8&#xa;    ETag: W/&quot;8-ZRAf8oNBS3Bjb/SU2GYZCmbtmXg&quot;&#xa;    Date: Sun, 15 Feb 2026 16:35:43 GMT&#xa;    Connection: close&#xa;    GET,HEAD</elem>
+</script></port>
+<port protocol="tcp" portid="3306"><state state="open" reason="syn-ack" reason_ttl="53"/><service name="mysql" product="MariaDB" version="11.7.2" method="probed" conf="10"><cpe>cpe:/a:mariadb:mariadb:11.7.2</cpe></service><script id="ssl-date" output="TLS randomness does not represent time"></script><script id="mysql-info" output="&#xa;  Protocol: 10&#xa;  Version: 11.7.2-MariaDB-ubu2404&#xa;  Thread ID: 46419&#xa;  Capabilities flags: 65534&#xa;  Some Capabilities: Speaks41ProtocolNew, IgnoreSpaceBeforeParenthesis, Support41Auth, Speaks41ProtocolOld, SupportsTransactions, SupportsCompression, IgnoreSigpipes, SwitchToSSLAfterHandshake, DontAllowDatabaseTableColumn, InteractiveClient, FoundRows, LongColumnFlag, SupportsLoadDataLocal, ConnectWithDatabase, ODBCClient, SupportsMultipleStatments, SupportsAuthPlugins, SupportsMultipleResults&#xa;  Status: Autocommit&#xa;  Salt: iJs)ka(&gt;Bo)xH&lt;3+~Y$C&#xa;  Auth Plugin Name: mysql_native_password"><elem key="Protocol">10</elem>
+<elem key="Version">11.7.2-MariaDB-ubu2404</elem>
+<elem key="Thread ID">46419</elem>
+<elem key="Capabilities flags">65534</elem>
+<table key="Some Capabilities">
+<elem>Speaks41ProtocolNew</elem>
+<elem>IgnoreSpaceBeforeParenthesis</elem>
+<elem>Support41Auth</elem>
+<elem>Speaks41ProtocolOld</elem>
+<elem>SupportsTransactions</elem>
+<elem>SupportsCompression</elem>
+<elem>IgnoreSigpipes</elem>
+<elem>SwitchToSSLAfterHandshake</elem>
+<elem>DontAllowDatabaseTableColumn</elem>
+<elem>InteractiveClient</elem>
+<elem>FoundRows</elem>
+<elem>LongColumnFlag</elem>
+<elem>SupportsLoadDataLocal</elem>
+<elem>ConnectWithDatabase</elem>
+<elem>ODBCClient</elem>
+<elem>SupportsMultipleStatments</elem>
+<elem>SupportsAuthPlugins</elem>
+<elem>SupportsMultipleResults</elem>
+</table>
+<elem key="Status">Autocommit</elem>
+<elem key="Salt">iJs)ka(&gt;Bo)xH&lt;3+~Y$C</elem>
+<elem key="Auth Plugin Name">mysql_native_password</elem>
+</script><script id="ssl-cert" output="Subject: commonName=MariaDB Server&#xa;Not valid before: 2026-02-02T07:01:37&#xa;Not valid after:  2036-01-31T07:01:37"><table key="subject">
+<elem key="commonName">MariaDB Server</elem>
+</table>
+<table key="issuer">
+<elem key="commonName">MariaDB Server</elem>
+</table>
+<table key="pubkey">
+<elem key="type">rsa</elem>
+<elem key="bits">4096</elem>
+<elem key="modulus">ABDE780691E2A1BEAF2EBA9A054CB8B1B5F1C6B4C02D077D8778346958AFC713E5B2DBF45E2778B1DE4231C3711BEC1BC370FBE808387F3E73526D7FA175F612E49338C8D2575C8B1577D383915AC492AEC5B24C31B923B42A88870663BEF14F68B644336988C3639E941BCDBB013453748DBDBF4491206E1480486268F4EB7242D92E0060984A365B58E083047B11AE468F7B7C0333F42853DDCC40EAB6BFE9924D4EE1E6E63BA5FA6459A949FA728387E0EC8BBB79D6451C2DCC28049E3C22373066C598593595F14DF700C5C9C89C92387E7779A31646CE458F0D8DC28D572BC796020DD10A98F82722DAFA57269FB6D1401A5320FBD1E0E0678415EAA93EFDD0029B32F1FB0F6183722C0E6B80ACE6F60FE0C97645435007AEACCB505A12855C3F9327C5537959DED6CFDE40AFD51126AC25181BD14179AA512A8100A9D3624238AF6427373E6403FAA9B8C460F501F788DB241353342C236CC44DE0FE078FB39DF71924E93625904C8E370EB9D92202F6EFA76B77E09CA6D86EAEA0C5367B80C796D81D5D8E26C3E4DAA2FA7A76C73CF2AC429E6A374303418AA2D5805F0A72AB1E6EE8C7FB63F670967A9BABA7669E1D14C49C5CB5C6A01CB707BF1E098F783DC02C1BA8D5103DA0427DD6C48BC5DC946BD2D4F892A8399DC20C456754039AA79D3E7DED2720C2B63833310E9548E7F0FE2FE4D5A3F44E9E9881BDA387</elem>
+<elem key="exponent">65537</elem>
+</table>
+<elem key="sig_algo">sha256WithRSAEncryption</elem>
+<table key="validity">
+<elem key="notBefore">2026-02-02T07:01:37</elem>
+<elem key="notAfter">2036-01-31T07:01:37</elem>
+</table>
+<elem key="md5">156569315418642394e40a11d09ace69</elem>
+<elem key="sha1">cd9b018e2b8beb7985fffd26b282c50b2d8e1bb0</elem>
+<elem key="sha256">ea08dd3ceb17ef414309f65741a1296dd3747e8347beab40ff89e8da2c0b3b8b</elem>
+<elem key="pem">-&#45;&#45;&#45;&#45;BEGIN CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;MIIEqzCCApOgAwIBAgIBADANBgkqhkiG9w0BAQsFADAZMRcwFQYDVQQDDA5NYXJp&#xa;YURCIFNlcnZlcjAeFw0yNjAyMDIwNzAxMzdaFw0zNjAxMzEwNzAxMzdaMBkxFzAV&#xa;BgNVBAMMDk1hcmlhREIgU2VydmVyMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIIC&#xa;CgKCAgEAq954BpHiob6vLrqaBUy4sbXxxrTALQd9h3g0aVivxxPlstv0Xid4sd5C&#xa;McNxG+wbw3D76Ag4fz5zUm1/oXX2EuSTOMjSV1yLFXfTg5FaxJKuxbJMMbkjtCqI&#xa;hwZjvvFPaLZEM2mIw2OelBvNuwE0U3SNvb9EkSBuFIBIYmj063JC2S4AYJhKNltY&#xa;4IMEexGuRo97fAMz9ChT3cxA6ra/6ZJNTuHm5jul+mRZqUn6coOH4OyLu3nWRRwt&#xa;zCgEnjwiNzBmxZhZNZXxTfcAxcnInJI4fnd5oxZGzkWPDY3CjVcrx5YCDdEKmPgn&#xa;Itr6VyafttFAGlMg+9Hg4GeEFeqpPv3QApsy8fsPYYNyLA5rgKzm9g/gyXZFQ1AH&#xa;rqzLUFoShVw/kyfFU3lZ3tbP3kCv1REmrCUYG9FBeapRKoEAqdNiQjivZCc3PmQD&#xa;+qm4xGD1AfeI2yQTUzQsI2zETeD+B4+znfcZJOk2JZBMjjcOudkiAvbvp2t34Jym&#xa;2G6uoMU2e4DHltgdXY4mw+Taovp6dsc88qxCnmo3QwNBiqLVgF8KcqsebujH+2P2&#xa;cJZ6m6unZp4dFMScXLXGoBy3B78eCY94PcAsG6jVED2gQn3WxIvF3JRr0tT4kqg5&#xa;ncIMRWdUA5qnnT597ScgwrY4MzEOlUjn8P4v5NWj9E6emIG9o4cCAwEAATANBgkq&#xa;hkiG9w0BAQsFAAOCAgEAk7yDyn2/g00lAGu9a0OqxnFpvQ5nxMzSaDiZy+QauMId&#xa;3a0PQyGAOXJ5oirEJbZwhiHkt+yf24AG00Ff24+Z0aLuWrxQJLrmnud+kjJVXwjn&#xa;C+JwzZ0atf9z/QXg9DIpAl/XwZNT8fZ7agZgFaYEysfL0vlQf5+ZhUNA/BS+8Dgo&#xa;tDrPEiaoB/6VdhAFrLhco4wPgJSzuuDt1t2LdjAVg/KPQYVhKEhJy1bKmL2SRl8/&#xa;iTyKaRXWzb4QB1GY2aH/cmT9FVoFD8BiZ8ZLwP7ShbMSqpufK3fijGJEqW2HDCl5&#xa;JRCcT9J3pu6xhElD5CPnt6J8S4h69UQrhNONKJkkc3aTZcTTmlDCmWrP78GYQbhe&#xa;l9dvW8vda4AbfsCp+X1FBxWlfmvohqOAfeLGq/auJKOTpGKGsiXFxlr88KCy016g&#xa;f1Zfsflgq6485QeU9spUkhKquNwQRmw+V9oYzsQwhlFIK9VC+rPD3C7ZI0ypHuA0&#xa;rY+oZ+Mo5qT11YQqAh4x3t49tXCbaU6Mo6dxPSeGnsIZHedpWmemn/cemCbQQAom&#xa;JawjUYeqzfc851FfY9KEAnFYlZ1T9GxoxV0PRWD1D9HcEkJEGoR7EPNEZ+Vh5973&#xa;s+e5jajZff3mkeIMJkQhbwsriBbZ+5s89O6zlUh2mrekKYqUYmQ8ACiHWCkltVQ=&#xa;-&#45;&#45;&#45;&#45;END CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;</elem>
+</script></port>
+<port protocol="tcp" portid="5985"><state state="filtered" reason="no-response" reason_ttl="0"/><service name="wsman" method="table" conf="3"/></port>
+</ports>
+<times srtt="274472" rttvar="60207" to="515300"/>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.122" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="495">
+<extrareasons reason="no-response" count="495" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,119,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,443-444,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3306,3323,3325,3333,3351,3367,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5986-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="msrpc" product="Microsoft Windows RPC" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="netbios-ssn" product="Microsoft Windows netbios-ssn" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="microsoft-ds" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="ms-wbt-server" product="Microsoft Terminal Services" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="rdp-ntlm-info" output="&#xa;  Target_Name: WIN-BQAJQ4EUT6G&#xa;  NetBIOS_Domain_Name: WIN-BQAJQ4EUT6G&#xa;  NetBIOS_Computer_Name: WIN-BQAJQ4EUT6G&#xa;  DNS_Domain_Name: WIN-BQAJQ4EUT6G&#xa;  DNS_Computer_Name: WIN-BQAJQ4EUT6G&#xa;  Product_Version: 10.0.20348&#xa;  System_Time: 2026-02-15T16:36:31+00:00"><elem key="Target_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="NetBIOS_Domain_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="NetBIOS_Computer_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="DNS_Domain_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="DNS_Computer_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="Product_Version">10.0.20348</elem>
+<elem key="System_Time">2026-02-15T16:36:31+00:00</elem>
+</script></port>
+<port protocol="tcp" portid="5985"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="http" product="Microsoft HTTPAPI httpd" version="2.0" extrainfo="SSDP/UPnP" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="http-title" output="Not Found"><elem key="title">Not Found</elem>
+</script><script id="http-server-header" output="Microsoft-HTTPAPI/2.0"><elem>Microsoft-HTTPAPI/2.0</elem>
+</script></port>
+</ports>
+<hostscript><script id="smb2-security-mode" output="&#xa;  3.1.1: &#xa;    Message signing enabled but not required"><table key="3.1.1">
+<elem>Message signing enabled but not required</elem>
+</table>
+</script><script id="smb2-time" output="&#xa;  date: 2026-02-15T16:36:46&#xa;  start_date: N/A"><elem key="date">2026-02-15T16:36:46</elem>
+<elem key="start_date">N/A</elem>
+</script></hostscript><times srtt="257488" rttvar="35301" to="398692"/>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.123" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="492">
+<extrareasons reason="no-response" count="492" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79,81-83,85,88,90,100,106,110-111,113,119,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,444,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3323,3325,3333,3351,3367,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5986-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="http" product="Apache httpd" version="2.4.58" extrainfo="(Win64) OpenSSL/3.1.3 PHP/8.2.12" method="probed" conf="10"><cpe>cpe:/a:apache:http_server:2.4.58</cpe></service><script id="http-server-header" output="Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12"><elem>Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12</elem>
+</script><script id="http-methods" output="&#xa;  Potentially risky methods: TRACE"><table key="Potentially risky methods">
+<elem>TRACE</elem>
+</table>
+</script><script id="http-title" output="Horizon Craft Reborn"><elem key="title">Horizon Craft Reborn</elem>
+</script></port>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="msrpc" product="Microsoft Windows RPC" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="netbios-ssn" product="Microsoft Windows netbios-ssn" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="http" product="Apache httpd" version="2.4.58" extrainfo="(Win64) OpenSSL/3.1.3 PHP/8.2.12" tunnel="ssl" method="probed" conf="10"><cpe>cpe:/a:apache:http_server:2.4.58</cpe></service><script id="http-server-header" output="Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12"><elem>Apache/2.4.58 (Win64) OpenSSL/3.1.3 PHP/8.2.12</elem>
+</script><script id="tls-alpn" output="&#xa;  http/1.1"><elem>http/1.1</elem>
+</script><script id="http-title" output="Horizon Craft Reborn"><elem key="title">Horizon Craft Reborn</elem>
+</script><script id="http-methods" output="&#xa;  Potentially risky methods: TRACE"><table key="Potentially risky methods">
+<elem>TRACE</elem>
+</table>
+</script><script id="ssl-date" output="TLS randomness does not represent time"></script><script id="ssl-cert" output="Subject: commonName=localhost&#xa;Not valid before: 2009-11-10T23:48:47&#xa;Not valid after:  2019-11-08T23:48:47"><table key="subject">
+<elem key="commonName">localhost</elem>
+</table>
+<table key="issuer">
+<elem key="commonName">localhost</elem>
+</table>
+<table key="pubkey">
+<elem key="type">rsa</elem>
+<elem key="bits">1024</elem>
+<elem key="modulus">C125D327E3ECAD0D836A6DE75F9A751023E2909DA063958F1D419A58D59C638C5B73869079CCC3D6A389B875BC1E947C7C6EE3ADE8275C0BC60C6AF90F32FEB3C47A1023042B2928D4AAF9B32F6610F8A7C1CD60C46B2857E3673BF79ECD4822DC38EA4813803A4097570C4735463D71629AEE539D630E677A28C9A434FF19ED</elem>
+<elem key="exponent">65537</elem>
+</table>
+<elem key="sig_algo">sha1WithRSAEncryption</elem>
+<table key="validity">
+<elem key="notBefore">2009-11-10T23:48:47</elem>
+<elem key="notAfter">2019-11-08T23:48:47</elem>
+</table>
+<elem key="md5">a0a44cc99e84b26f9e639f9ed229dee0</elem>
+<elem key="sha1">b0238c547a905bfa119c4e8baccaeacf36491ff6</elem>
+<elem key="sha256">016973380c0f1df00bd9593ed8d5efa3706cd6df7993f6141272b80522acdd23</elem>
+<elem key="pem">-&#45;&#45;&#45;&#45;BEGIN CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;MIIBnzCCAQgCCQC1x1LJh4G1AzANBgkqhkiG9w0BAQUFADAUMRIwEAYDVQQDEwls&#xa;b2NhbGhvc3QwHhcNMDkxMTEwMjM0ODQ3WhcNMTkxMTA4MjM0ODQ3WjAUMRIwEAYD&#xa;VQQDEwlsb2NhbGhvc3QwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMEl0yfj&#xa;7K0Ng2pt51+adRAj4pCdoGOVjx1BmljVnGOMW3OGkHnMw9ajibh1vB6UfHxu463o&#xa;J1wLxgxq+Q8y/rPEehAjBCspKNSq+bMvZhD4p8HNYMRrKFfjZzv3ns1IItw46kgT&#xa;gDpAl1cMRzVGPXFimu5TnWMOZ3ooyaQ0/xntAgMBAAEwDQYJKoZIhvcNAQEFBQAD&#xa;gYEAavHzSWz5umhfb/MnBMa5DL2VNzS+9whmmpsDGEG+uR0kM1W2GQIdVHHJTyFd&#xa;aHXzgVJBQcWTwhp84nvHSiQTDBSaT6cQNQpvag/TaED/SEQpm0VqDFwpfFYuufBL&#xa;vVNbLkKxbK2XwUvu0RxoLdBMC/89HqrZ0ppiONuQ+X2MtxE=&#xa;-&#45;&#45;&#45;&#45;END CERTIFICATE-&#45;&#45;&#45;&#45;&#xa;</elem>
+</script></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="microsoft-ds" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3306"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="mysql" product="MariaDB" version="10.3.23 or earlier" extrainfo="unauthorized" method="probed" conf="10"><cpe>cpe:/a:mariadb:mariadb</cpe></service></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="ms-wbt-server" product="Microsoft Terminal Services" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="rdp-ntlm-info" output="&#xa;  Target_Name: WIN-BQAJQ4EUT6G&#xa;  NetBIOS_Domain_Name: WIN-BQAJQ4EUT6G&#xa;  NetBIOS_Computer_Name: WIN-BQAJQ4EUT6G&#xa;  DNS_Domain_Name: WIN-BQAJQ4EUT6G&#xa;  DNS_Computer_Name: WIN-BQAJQ4EUT6G&#xa;  Product_Version: 10.0.20348&#xa;  System_Time: 2026-02-15T16:36:23+00:00"><elem key="Target_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="NetBIOS_Domain_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="NetBIOS_Computer_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="DNS_Domain_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="DNS_Computer_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="Product_Version">10.0.20348</elem>
+<elem key="System_Time">2026-02-15T16:36:23+00:00</elem>
+</script></port>
+<port protocol="tcp" portid="5985"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="http" product="Microsoft HTTPAPI httpd" version="2.0" extrainfo="SSDP/UPnP" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="http-server-header" output="Microsoft-HTTPAPI/2.0"><elem>Microsoft-HTTPAPI/2.0</elem>
+</script><script id="http-title" output="Not Found"><elem key="title">Not Found</elem>
+</script></port>
+</ports>
+<hostscript><script id="smb2-security-mode" output="&#xa;  3.1.1: &#xa;    Message signing enabled but not required"><table key="3.1.1">
+<elem>Message signing enabled but not required</elem>
+</table>
+</script><script id="smb2-time" output="&#xa;  date: 2026-02-15T16:36:52&#xa;  start_date: N/A"><elem key="date">2026-02-15T16:36:52</elem>
+<elem key="start_date">N/A</elem>
+</script></hostscript><times srtt="246130" rttvar="23291" to="339294"/>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.124" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="496">
+<extrareasons reason="no-response" count="496" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,119,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,443-444,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3306,3323,3325,3333,3351,3367,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5985-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="msrpc" product="Microsoft Windows RPC" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="netbios-ssn" product="Microsoft Windows netbios-ssn" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="microsoft-ds" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="ms-wbt-server" product="Microsoft Terminal Services" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="rdp-ntlm-info" output="&#xa;  Target_Name: WIN-RMRH4O8G0UA&#xa;  NetBIOS_Domain_Name: WIN-RMRH4O8G0UA&#xa;  NetBIOS_Computer_Name: WIN-RMRH4O8G0UA&#xa;  DNS_Domain_Name: WIN-RMRH4O8G0UA&#xa;  DNS_Computer_Name: WIN-RMRH4O8G0UA&#xa;  Product_Version: 10.0.17763&#xa;  System_Time: 2026-02-15T16:36:20+00:00"><elem key="Target_Name">WIN-RMRH4O8G0UA</elem>
+<elem key="NetBIOS_Domain_Name">WIN-RMRH4O8G0UA</elem>
+<elem key="NetBIOS_Computer_Name">WIN-RMRH4O8G0UA</elem>
+<elem key="DNS_Domain_Name">WIN-RMRH4O8G0UA</elem>
+<elem key="DNS_Computer_Name">WIN-RMRH4O8G0UA</elem>
+<elem key="Product_Version">10.0.17763</elem>
+<elem key="System_Time">2026-02-15T16:36:20+00:00</elem>
+</script></port>
+</ports>
+<hostscript><script id="smb2-time" output="&#xa;  date: 2026-02-15T16:36:56&#xa;  start_date: N/A"><elem key="date">2026-02-15T16:36:56</elem>
+<elem key="start_date">N/A</elem>
+</script><script id="smb2-security-mode" output="&#xa;  3.1.1: &#xa;    Message signing enabled but not required"><table key="3.1.1">
+<elem>Message signing enabled but not required</elem>
+</table>
+</script></hostscript><times srtt="264993" rttvar="48785" to="460133"/>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.125" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="493">
+<extrareasons reason="no-response" count="493" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,119,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,443-444,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3323,3325,3333,3351,3367,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5986-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="msrpc" product="Microsoft Windows RPC" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="netbios-ssn" product="Microsoft Windows netbios-ssn" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="microsoft-ds" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3306"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="mysql" product="MariaDB" version="10.3.23 or earlier" extrainfo="unauthorized" method="probed" conf="10"><cpe>cpe:/a:mariadb:mariadb</cpe></service></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="ms-wbt-server" product="Microsoft Terminal Services" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="rdp-ntlm-info" output="&#xa;  Target_Name: WIN-BQAJQ4EUT6G&#xa;  NetBIOS_Domain_Name: WIN-BQAJQ4EUT6G&#xa;  NetBIOS_Computer_Name: WIN-BQAJQ4EUT6G&#xa;  DNS_Domain_Name: WIN-BQAJQ4EUT6G&#xa;  DNS_Computer_Name: WIN-BQAJQ4EUT6G&#xa;  Product_Version: 10.0.20348&#xa;  System_Time: 2026-02-15T16:36:28+00:00"><elem key="Target_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="NetBIOS_Domain_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="NetBIOS_Computer_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="DNS_Domain_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="DNS_Computer_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="Product_Version">10.0.20348</elem>
+<elem key="System_Time">2026-02-15T16:36:28+00:00</elem>
+</script></port>
+<port protocol="tcp" portid="5357"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="http" product="Microsoft HTTPAPI httpd" version="2.0" extrainfo="SSDP/UPnP" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="http-server-header" output="Microsoft-HTTPAPI/2.0"><elem>Microsoft-HTTPAPI/2.0</elem>
+</script><script id="http-title" output="Service Unavailable"><elem key="title">Service Unavailable</elem>
+</script></port>
+<port protocol="tcp" portid="5985"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="http" product="Microsoft HTTPAPI httpd" version="2.0" extrainfo="SSDP/UPnP" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="http-server-header" output="Microsoft-HTTPAPI/2.0"><elem>Microsoft-HTTPAPI/2.0</elem>
+</script><script id="http-title" output="Not Found"><elem key="title">Not Found</elem>
+</script></port>
+</ports>
+<hostscript><script id="smb2-security-mode" output="&#xa;  3.1.1: &#xa;    Message signing enabled but not required"><table key="3.1.1">
+<elem>Message signing enabled but not required</elem>
+</table>
+</script><script id="smb2-time" output="&#xa;  date: 2026-02-15T16:37:03&#xa;  start_date: N/A"><elem key="date">2026-02-15T16:37:03</elem>
+<elem key="start_date">N/A</elem>
+</script><script id="clock-skew" output="mean: -1s, deviation: 0s, median: -1s"><elem key="median">-1</elem>
+<elem key="count">2</elem>
+<elem key="stddev">0</elem>
+<elem key="mean">-1</elem>
+</script></hostscript><times srtt="251920" rttvar="31140" to="376480"/>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.126" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="500">
+<extrareasons reason="no-response" count="500" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,119,135,139,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,443-445,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3306,3323,3325,3333,3351,3367,3389,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5985-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+</ports>
+</host>
+<host starttime="1771173037" endtime="1771174031"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="31.57.112.127" addrtype="ipv4"/>
+<hostnames>
+</hostnames>
+<ports><extraports state="filtered" count="495">
+<extrareasons reason="no-response" count="495" proto="tcp" ports="1,3-4,6-7,9,13,17,19-26,30,33,37,42,49,53,79-83,85,88,90,100,106,110-111,113,119,143-144,146,161,163,179,199,211,222,254-255,264,280,306,311,340,366,389,407,427,443-444,464-465,497,500,512-515,541,543-544,548,554,563,587,593,625,631,636,646,648,705,711,787,800,808,873,880,888,900-902,912,987,990,992-993,995,999-1000,1002,1022-1075,1077-1083,1085-1086,1088,1093-1094,1096-1100,1104,1106-1108,1110-1111,1148,1169,1218,1234,1248,1272,1310-1311,1352,1433,1494,1500-1501,1503,1521,1666,1687,1700,1717-1718,1720,1723,1755,1761,1783,1801,1840,1863-1864,1900,1935,1947,1998,2000-2010,2030,2049,2065,2100,2103,2105,2107,2119,2121,2135,2144,2160-2161,2190,2222,2260,2301,2381,2383,2399,2401,2492,2500,2525,2601-2602,2604-2605,2607,2701-2702,2717-2718,2809,2811,2869,2875,2967,3000-3001,3005,3017,3031,3052,3071,3128,3211,3260,3268-3269,3283,3300-3301,3306,3323,3325,3333,3351,3367,3404,3476,3551,3580,3659,3689-3690,3703,3766,3784,3801,3827,3986,3998,4000-4003,4045,4126,4129,4242,4443-4444,4449,4662,4899,5000-5004,5009,5030,5050-5051,5060,5100-5102,5120,5190,5214,5222,5225-5226,5269,5357,5414,5431-5432,5500,5550,5555,5566,5631,5633,5666,5679,5718,5800-5801,5810,5825,5877,5900-5902,5910-5911,5925,5959-5962,5986-5989,6000-6002,6004-6005,6059,6101,6112,6123,6129,6156,6389,6543,6580,6646,6666-6667,6788-6789,6881,6901,6969,7000-7001,7019,7070,7100,7106,7200,7625,7627,7741,7777-7778,7911,7937-7938,8000-8002,8007-8010,8021,8031,8080-8089,8181,8192-8194,8222,8291,8333,8400,8402,8443,8600,8649,8651-8652,8701,8873,8888,8899,9000-9001,9009,9050,9071,9090,9100-9102,9207,9415,9535,9593-9595,9876,9999-10001,10010,10243,12000,12345,13782-13783,14238,15000,16992-16993,20005,20828,23502,27000,32768-32775,33354,35500,42510,45100,49152-49157,49999-50001,51103,52822,52869,55555,55600,64623,64680,65000,65389"/>
+</extraports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="msrpc" product="Microsoft Windows RPC" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="netbios-ssn" product="Microsoft Windows netbios-ssn" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="microsoft-ds" method="table" conf="3"/></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack" reason_ttl="118"/><service name="ms-wbt-server" product="Microsoft Terminal Services" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="rdp-ntlm-info" output="&#xa;  Target_Name: WIN-BQAJQ4EUT6G&#xa;  NetBIOS_Domain_Name: WIN-BQAJQ4EUT6G&#xa;  NetBIOS_Computer_Name: WIN-BQAJQ4EUT6G&#xa;  DNS_Domain_Name: WIN-BQAJQ4EUT6G&#xa;  DNS_Computer_Name: WIN-BQAJQ4EUT6G&#xa;  Product_Version: 10.0.20348&#xa;  System_Time: 2026-02-15T16:36:21+00:00"><elem key="Target_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="NetBIOS_Domain_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="NetBIOS_Computer_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="DNS_Domain_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="DNS_Computer_Name">WIN-BQAJQ4EUT6G</elem>
+<elem key="Product_Version">10.0.20348</elem>
+<elem key="System_Time">2026-02-15T16:36:21+00:00</elem>
+</script></port>
+<port protocol="tcp" portid="5985"><state state="open" reason="syn-ack" reason_ttl="117"/><service name="http" product="Microsoft HTTPAPI httpd" version="2.0" extrainfo="SSDP/UPnP" ostype="Windows" method="probed" conf="10"><cpe>cpe:/o:microsoft:windows</cpe></service><script id="http-title" output="Not Found"><elem key="title">Not Found</elem>
+</script><script id="http-server-header" output="Microsoft-HTTPAPI/2.0"><elem>Microsoft-HTTPAPI/2.0</elem>
+</script></port>
+</ports>
+<hostscript><script id="smb2-security-mode" output="&#xa;  3.1.1: &#xa;    Message signing enabled but not required"><table key="3.1.1">
+<elem>Message signing enabled but not required</elem>
+</table>
+</script><script id="smb2-time" output="&#xa;  date: 2026-02-15T16:37:07&#xa;  start_date: N/A"><elem key="date">2026-02-15T16:37:07</elem>
+<elem key="start_date">N/A</elem>
+</script></hostscript><times srtt="246880" rttvar="37195" to="395660"/>
+</host>
+<postscript><script id="clock-skew" output="&#xa;  0s: &#xa;    31.57.112.127&#xa;    31.57.112.125&#xa;    31.57.112.124"><table key="0s">
+<elem>31.57.112.127</elem>
+<elem>31.57.112.125</elem>
+<elem>31.57.112.124</elem>
+</table>
+</script></postscript><runstats><finished time="1771174031" timestr="Sun Feb 15 23:47:11 2026" summary="Nmap done at Sun Feb 15 23:47:11 2026; 16 IP addresses (16 hosts up) scanned in 998.16 seconds" elapsed="998.16" exit="success"/><hosts up="16" down="0" total="16"/>
+</runstats>
+</nmaprun>
