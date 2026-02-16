@@ -20,32 +20,16 @@
 
 Built for both beginners and experts, it delivers powerful, composable automation without sacrificing the integrity and safety of your infrastructure.
 
-## Features
+## Key Features
 
-- **Declarative YAML Workflows** - Define reconnaissance pipelines using simple, readable YAML syntax
-- **Multiple Runners** - Execute on local host, Docker containers, or remote machines via SSH
-- **Event-Driven Triggers** - Cron scheduling, file watching, and event-based workflow triggers with deduplication and filter functions
-- **Template Engine** - Powerful variable interpolation with built-in and custom variables
-- **Utility Functions** - Rich function library with event generation, bulk processing, and JSON operations
-- **REST API Server** - Manage, trigger, and cancel workflows programmatically
-- **Distributed Execution** - Scale with Redis-based master-worker pattern for parallel scanning (workers identified as `wosm-<uuid8>`)
-- **Notifications** - Telegram bot and webhook integrations
-- **Cloud Storage** - S3-compatible storage for artifact management
-- **LLM Integration** - AI-powered workflow steps with chat completions, embeddings, and agentic tool-calling loops
-- **Agent Step Type** - Agentic LLM execution with tool calling, sub-agents, and memory management
-- **SAST Integration** - SARIF parsing for Semgrep, Trivy, Kingfisher, Bearer with database import and markdown reporting
-- **Language Detection** - Auto-detect dominant programming language of source repositories (26+ languages)
-- **Preset Installation** - Reproducible deployments from curated preset repositories
-- **Workflow Hooks** - Pre/post scan steps via `hooks` field for setup and cleanup
-- **Queue System** - Delayed task execution with database and Redis polling, configurable concurrency
-- **Nmap Integration** - Port scanning with automatic XML/gnmap to JSONL conversion and database import
-- **Tmux Sessions** - Background process management via tmux (create, capture, send, kill sessions)
-- **SSH & Sync** - Remote execution and file synchronization across distributed workers
-- **TypeScript Execution** - Run inline TypeScript or TS files via Bun runtime
-- **Webhook Triggers** - Trigger workflow runs via unauthenticated webhook URLs
-- **CDN/WAF Classification** - Automatic asset classification from httpx data (CDN, cloud, WAF)
-- **Module Exclusion** - Exclude modules from flows by exact name or fuzzy substring matching
-- **Cloud Infrastructure** - Provision and manage cloud instances across multiple providers
+- **Declarative YAML Workflows** - Define pipelines with hooks, decision routing, module exclusion, and conditional branching across multiple runners (host, Docker, SSH)
+- **Distributed Execution** - Redis-based master-worker pattern with queue system, webhook triggers, and file sync across workers
+- **Rich Function Library** - 80+ utility functions including nmap integration, tmux sessions, SSH execution, TypeScript/Python scripting, SARIF parsing, and CDN/WAF classification
+- **Event-Driven Scheduling** - Cron, file-watch, and event triggers with filtering, deduplication, and delayed task queues
+- **Agentic LLM Steps** - Tool-calling agent loops with sub-agent orchestration, memory management, and structured output
+- **Cloud Infrastructure** - Provision and run scans across DigitalOcean, AWS, GCP, Linode, and Azure with cost controls and automatic cleanup
+- **Rich CLI Interface** - Interactive database queries, bulk function evaluation, workflow linting, progress bars, and comprehensive usage examples
+- **REST API & Web UI** - Full API server with webhook triggers, database queries, and embedded dashboard for visualization
 
 See [Documentation Page](https://docs.osmedeus.org/) for more details.
 
