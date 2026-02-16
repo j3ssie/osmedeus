@@ -117,6 +117,7 @@ const (
 	FnExecPythonFile = "exec_python_file" // exec_python_file(path) -> string (run Python file, prefer uv → python3 → python)
 	FnExecTS         = "exec_ts"          // exec_ts(code) -> string (run inline TypeScript via bun)
 	FnExecTSFile     = "exec_ts_file"     // exec_ts_file(path) -> string (run TypeScript file via bun)
+	FnSudoAuth       = "sudo_auth"        // sudo_auth(password?, keepalive?) -> bool (authenticate sudo and optionally keep credentials alive)
 )
 
 // Logging Functions - Log messages with level prefixes
@@ -287,6 +288,7 @@ const (
 	FnInterestingUrls = "interesting_urls" // interesting_urls(src, dest, json_field?) -> bool
 	FnGetParentURL    = "get_parent_url"   // get_parent_url(url) -> string (strips last path component)
 	FnParseURL        = "parse_url"        // parse_url(url, format) -> string (format directives like unfurl)
+	FnParseURLFile    = "parse_url_file"   // parse_url_file(input, format, output) -> bool (apply parse_url to each line)
 	FnQueryReplace    = "query_replace"    // query_replace(url, value, mode?) -> string (replace all query param values)
 	FnPathReplace     = "path_replace"     // path_replace(url, value, position?) -> string (replace path segment at position)
 )
@@ -457,6 +459,7 @@ func AllFunctions() []string {
 		FnExecPythonFile,
 		FnExecTS,
 		FnExecTSFile,
+		FnSudoAuth,
 
 		// Logging Functions
 		FnLogDebug,
@@ -561,6 +564,7 @@ func AllFunctions() []string {
 		FnInterestingUrls,
 		FnGetParentURL,
 		FnParseURL,
+		FnParseURLFile,
 		FnQueryReplace,
 		FnPathReplace,
 
@@ -821,6 +825,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnExecPythonFile, "exec_python_file(path)", "Run a Python file (prefers uv, falls back to python3/python)", "string", "exec_python_file('/tmp/script.py')"},
 			{FnExecTS, "exec_ts(code)", "Run inline TypeScript code via bun -e", "string", "exec_ts('console.log(2+2)')"},
 			{FnExecTSFile, "exec_ts_file(path)", "Run a TypeScript file via bun run", "string", "exec_ts_file('/tmp/script.ts')"},
+			{FnSudoAuth, "sudo_auth(password?, keepalive?)", "Authenticate sudo and optionally keep credentials alive", "bool", "sudo_auth('', true)"},
 		},
 		CategoryLogging: {
 			{FnLogDebug, "log_debug(message)", "Log debug message with [DEBUG] prefix", "void", "log_debug('Processing target')"},
@@ -872,8 +877,8 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnSendWebhookEvent, "send_webhook_event(eventType, data)", "Send event to all webhooks", "bool", "send_webhook_event('scan_complete', {target: '{{Target}}'})"},
 		},
 		CategoryEventGeneration: {
-			{FnGenerateEvent, "generate_event(workspace, topic, source, data_type, data)", "Generate structured event with metadata", "bool", "generate_event('{{Workspace}}', 'discovery', 'subdomain-scan', 'domain', 'api.example.com')"},
-			{FnGenerateEventFromFile, "generate_event_from_file(workspace, topic, source, data_type, path)", "Generate events from file (one per line)", "int", "generate_event_from_file('{{Workspace}}', 'discovery', 'amass', 'subdomain', '{{Output}}/subdomains.txt')"},
+			{FnGenerateEvent, "generate_event(workspace, topic, source, data_type, data)", "Generate structured event with metadata", "bool", "generate_event('{{TargetSpace}}', 'discovery', 'subdomain-scan', 'domain', 'api.example.com')"},
+			{FnGenerateEventFromFile, "generate_event_from_file(workspace, topic, source, data_type, path)", "Generate events from file (one per line)", "int", "generate_event_from_file('{{TargetSpace}}', 'discovery', 'amass', 'subdomain', '{{Output}}/subdomains.txt')"},
 		},
 		CategoryCDNStorage: {
 			{FnCdnUpload, "cdn_upload(localPath, remotePath)", "Upload file to cloud storage", "bool", "cdn_upload('{{Output}}/report.zip', 'scans/{{Target}}/report.zip')"},
@@ -926,7 +931,8 @@ func FunctionRegistry() map[string][]FunctionInfo {
 		CategoryURLProcessing: {
 			{FnInterestingUrls, "interesting_urls(src, dest, json_field?)", "Deduplicate URLs by hostname+path+params, filter static files and noise patterns", "bool", "interesting_urls('{{Output}}/all-urls.txt', '{{Output}}/interesting-urls.txt', 'url')"},
 			{FnGetParentURL, "get_parent_url(url)", "Strip last path component and return parent directory URL", "string", "get_parent_url('https://example.com/path/file.php')"},
-			{FnParseURL, "parse_url(url, format)", "Format URL using directives: %s(scheme) %d(domain) %S(subdomain) %r(root) %t(tld) %P(port) %p(path) %e(ext) %q(query) %f(fragment) %a(authority)", "string", "parse_url('https://sub.example.com/path', '%S.%r')"},
+			{FnParseURL, "parse_url(url, format)", "Format URL with directives: %s %d %S %r %t %P %p %e %q %f %a (like unfurl)", "string", "parse_url('https://sub.example.com/path', '%s://%d%p')"},
+			{FnParseURLFile, "parse_url_file(input, format, output)", "Apply parse_url format to each line of input file and write results to output", "bool", "parse_url_file('{{Output}}/urls.txt', '%%d', '{{Output}}/domains.txt')"},
 			{FnQueryReplace, "query_replace(url, value, mode?)", "Replace all query param values; mode: 'replace' (default) or 'append'", "string", "query_replace('https://example.com?a=1&b=2', 'test')"},
 			{FnPathReplace, "path_replace(url, value, position?)", "Replace path segment at position (1-indexed); 0 replaces all", "string", "path_replace('https://example.com/a/b/c', 'new', 2)"},
 		},
@@ -942,12 +948,12 @@ func FunctionRegistry() map[string][]FunctionInfo {
 		CategoryDatabase: {
 			{FnDBRegisterArtifact, "register_artifact(path, type?)", "Register file as scan artifact", "bool", "register_artifact('{{Output}}/nuclei.json', 'nuclei')"},
 			{FnStoreArtifact, "store_artifact(path)", "Store file as run artifact for current workspace", "bool", "store_artifact('{{Output}}/report.md')"},
-			{FnDBUpdate, "db_update(table, key, field, value)", "Update database field", "bool", "db_update('workspaces', '{{Workspace}}', 'status', 'completed')"},
-			{FnDBImportAsset, "db_import_asset(workspace, json)", "Import asset from JSON (upsert)", "bool", "db_import_asset('{{Workspace}}', '{\"asset_value\":\"sub.example.com\"}')"},
-			{FnDBQuickImportAsset, "db_quick_import_asset(workspace, asset_value, asset_type?)", "Quick import asset without JSON, creates db.new.asset event for new assets", "bool", "db_quick_import_asset('{{Workspace}}', 'sub.example.com', 'domain')"},
-			{FnDBRawInsertAsset, "db_raw_insert_asset(workspace, json)", "Insert asset from JSON (pure insert)", "int", "db_raw_insert_asset('{{Workspace}}', '{\"asset_value\":\"api.example.com\"}')"},
-			{FnDBPartialImportAsset, "db_partial_import_asset(workspace, asset_type, asset_value)", "Import asset with only workspace/type/value (no JSON)", "bool", "db_partial_import_asset('{{Workspace}}', 'domain', 'sub.example.com')"},
-			{FnDBPartialImportAssetFile, "db_partial_import_asset_file(workspace, asset_type, file_path)", "Import assets from file line-by-line with type", "int", "db_partial_import_asset_file('{{Workspace}}', 'domain', '{{Output}}/subdomains.txt')"},
+			{FnDBUpdate, "db_update(table, key, field, value)", "Update database field", "bool", "db_update('workspaces', '{{TargetSpace}}', 'status', 'completed')"},
+			{FnDBImportAsset, "db_import_asset(workspace, json)", "Import asset from JSON (upsert)", "bool", "db_import_asset('{{TargetSpace}}', '{\"asset_value\":\"sub.example.com\"}')"},
+			{FnDBQuickImportAsset, "db_quick_import_asset(workspace, asset_value, asset_type?)", "Quick import asset without JSON, creates db.new.asset event for new assets", "bool", "db_quick_import_asset('{{TargetSpace}}', 'sub.example.com', 'domain')"},
+			{FnDBRawInsertAsset, "db_raw_insert_asset(workspace, json)", "Insert asset from JSON (pure insert)", "int", "db_raw_insert_asset('{{TargetSpace}}', '{\"asset_value\":\"api.example.com\"}')"},
+			{FnDBPartialImportAsset, "db_partial_import_asset(workspace, asset_type, asset_value)", "Import asset with only workspace/type/value (no JSON)", "bool", "db_partial_import_asset('{{TargetSpace}}', 'domain', 'sub.example.com')"},
+			{FnDBPartialImportAssetFile, "db_partial_import_asset_file(workspace, asset_type, file_path)", "Import assets from file line-by-line with type", "int", "db_partial_import_asset_file('{{TargetSpace}}', 'domain', '{{Output}}/subdomains.txt')"},
 			{FnDBTotalURLs, "db_total_urls(path)", "Count lines, update workspace URLs", "int", "db_total_urls('{{Output}}/urls.txt')"},
 			{FnDBTotalSubdomains, "db_total_subdomains(path)", "Count lines, update workspace subdomains", "int", "db_total_subdomains('{{Output}}/subdomains.txt')"},
 			{FnDBTotalAssets, "db_total_assets(path)", "Count lines, update workspace assets", "int", "db_total_assets('{{Output}}/assets.txt')"},
@@ -961,10 +967,10 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnDBTotalContent, "db_total_content(path)", "Count lines, update workspace content (+=, 0 to reset)", "int", "db_total_content('{{Output}}/content.txt')"},
 			{FnDBTotalArchive, "db_total_archive(path)", "Count lines, update workspace archive (+=, 0 to reset)", "int", "db_total_archive('{{Output}}/archive.txt')"},
 			{FnRuntimeExport, "runtime_export()", "Export scan+workspace to run-state.json", "bool", "runtime_export()"},
-			{FnDBSelectAssets, "db_select_assets(workspace, format)", "Select assets (markdown/jsonl)", "string", "db_select_assets('{{Workspace}}', 'markdown')"},
-			{FnDBSelectAssetsFiltered, "db_select_assets_filtered(workspace, status_code, asset_type, format)", "Select assets with filters", "string", "db_select_assets_filtered('{{Workspace}}', '200', 'subdomain', 'jsonl')"},
-			{FnDBSelectVulnerabilities, "db_select_vulnerabilities(workspace, format)", "Select vulnerabilities (markdown/jsonl)", "string", "db_select_vulnerabilities('{{Workspace}}', 'markdown')"},
-			{FnDBSelectVulnerabilitiesFiltered, "db_select_vulnerabilities_filtered(workspace, severity, asset_value, format)", "Select vulns with filters", "string", "db_select_vulnerabilities_filtered('{{Workspace}}', 'critical', '', 'jsonl')"},
+			{FnDBSelectAssets, "db_select_assets(workspace, format)", "Select assets (markdown/jsonl)", "string", "db_select_assets('{{TargetSpace}}', 'markdown')"},
+			{FnDBSelectAssetsFiltered, "db_select_assets_filtered(workspace, status_code, asset_type, format)", "Select assets with filters", "string", "db_select_assets_filtered('{{TargetSpace}}', '200', 'subdomain', 'jsonl')"},
+			{FnDBSelectVulnerabilities, "db_select_vulnerabilities(workspace, format)", "Select vulnerabilities (markdown/jsonl)", "string", "db_select_vulnerabilities('{{TargetSpace}}', 'markdown')"},
+			{FnDBSelectVulnerabilitiesFiltered, "db_select_vulnerabilities_filtered(workspace, severity, asset_value, format)", "Select vulns with filters", "string", "db_select_vulnerabilities_filtered('{{TargetSpace}}', 'critical', '', 'jsonl')"},
 			{FnDBSelect, "db_select(sql_query, format)", "Execute SELECT query (markdown/jsonl)", "string", "db_select('SELECT * FROM assets LIMIT 10', 'markdown')"},
 			{FnDBSelectToFile, "db_select_to_file(sql_query, dest)", "Execute SELECT and write markdown to file", "bool", "db_select_to_file('SELECT * FROM assets', '{{Output}}/assets.md')"},
 			{FnDBSelectToJSONL, "db_select_to_jsonl(sql_query, fields, dest)", "Execute SELECT and write JSONL with specified fields to file", "bool", "db_select_to_jsonl('SELECT * FROM assets', 'asset_value,status_code', '{{Output}}/assets.jsonl')"},
@@ -976,18 +982,18 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnDBSelectVulnHigh, "db_select_vuln_high()", "Get high vuln count from workspace", "int", "db_select_vuln_high()"},
 			{FnDBSelectVulnMedium, "db_select_vuln_medium()", "Get medium vuln count from workspace", "int", "db_select_vuln_medium()"},
 			{FnDBSelectVulnLow, "db_select_vuln_low()", "Get low vuln count from workspace", "int", "db_select_vuln_low()"},
-			{FnDBImportAssetFromFile, "db_import_asset_from_file(workspace, file_path)", "Import assets from JSONL file (httpx format)", "int", "db_import_asset_from_file('{{Workspace}}', '{{Output}}/httpx.jsonl')"},
-			{FnDBImportVuln, "db_import_vuln(workspace, json_data)", "Import single vulnerability from JSON (nuclei format)", "bool", "db_import_vuln('{{Workspace}}', '{\"template-id\":\"...\",\"info\":{\"name\":\"...\",\"severity\":\"high\"}}')"},
-			{FnDBImportVulnFromFile, "db_import_vuln_from_file(workspace, file_path)", "Import vulnerabilities from JSONL file (nuclei format)", "int", "db_import_vuln_from_file('{{Workspace}}', '{{Output}}/nuclei.jsonl')"},
-			{FnDBImportDNSAsset, "db_import_dns_asset(workspace, file_path)", "Import DNS records from zone-style file (domain TYPE value per line), groups by domain", "int", "db_import_dns_asset('{{Workspace}}', '{{Output}}/dns-records.txt')"},
-			{FnDBImportCustomAsset, "db_import_custom_asset(workspace, file_path, [asset_type], [source])", "Import assets from JSONL file with direct field mapping; optional asset_type/source defaults apply when line has no value", "map", "db_import_custom_asset('{{Workspace}}', '{{Output}}/custom-assets.jsonl', 'subdomain', 'recon')"},
-			{FnDBImportSARIF, "db_import_sarif(workspace, file_path)", "Import vulnerabilities from SARIF file (Semgrep, Trivy, etc.)", "map", "db_import_sarif('{{Workspace}}', '{{Output}}/semgrep.sarif')"},
-			{FnDBImportPortAssets, "db_import_port_assets(workspace, file_path, [source])", "Import port scan data from JSONL (nmap_to_jsonl output) with asset_type=ip and source=portscan", "map", "db_import_port_assets('{{Workspace}}', '{{Output}}/nmap-scan.jsonl')"},
-			{FnDBAssetDiff, "db_asset_diff(workspace)", "Get asset diff as JSONL string", "string", "db_asset_diff('{{Workspace}}')"},
-			{FnDBVulnDiff, "db_vuln_diff(workspace)", "Get vulnerability diff as JSONL string", "string", "db_vuln_diff('{{Workspace}}')"},
-			{FnDBAssetDiffToFile, "db_asset_diff_to_file(workspace, dest)", "Write asset diff to JSONL file", "bool", "db_asset_diff_to_file('{{Workspace}}', '{{Output}}/asset-diff.jsonl')"},
-			{FnDBVulnDiffToFile, "db_vuln_diff_to_file(workspace, dest)", "Write vulnerability diff to JSONL file", "bool", "db_vuln_diff_to_file('{{Workspace}}', '{{Output}}/vuln-diff.jsonl')"},
-			{FnDBSelectRuns, "run_status(workspace, format)", "Query run records by workspace. Format: markdown or jsonl", "string", "run_status('{{Workspace}}', 'markdown')"},
+			{FnDBImportAssetFromFile, "db_import_asset_from_file(workspace, file_path)", "Import assets from JSONL file (httpx format)", "int", "db_import_asset_from_file('{{TargetSpace}}', '{{Output}}/httpx.jsonl')"},
+			{FnDBImportVuln, "db_import_vuln(workspace, json_data)", "Import single vulnerability from JSON (nuclei format)", "bool", "db_import_vuln('{{TargetSpace}}', '{\"template-id\":\"...\",\"info\":{\"name\":\"...\",\"severity\":\"high\"}}')"},
+			{FnDBImportVulnFromFile, "db_import_vuln_from_file(workspace, file_path)", "Import vulnerabilities from JSONL file (nuclei format)", "int", "db_import_vuln_from_file('{{TargetSpace}}', '{{Output}}/nuclei.jsonl')"},
+			{FnDBImportDNSAsset, "db_import_dns_asset(workspace, file_path)", "Import DNS records from zone-style file (domain TYPE value per line), groups by domain", "int", "db_import_dns_asset('{{TargetSpace}}', '{{Output}}/dns-records.txt')"},
+			{FnDBImportCustomAsset, "db_import_custom_asset(workspace, file_path, [asset_type], [source])", "Import assets from JSONL file with direct field mapping; optional asset_type/source defaults apply when line has no value", "map", "db_import_custom_asset('{{TargetSpace}}', '{{Output}}/custom-assets.jsonl', 'subdomain', 'recon')"},
+			{FnDBImportSARIF, "db_import_sarif(workspace, file_path)", "Import vulnerabilities from SARIF file (Semgrep, Trivy, etc.)", "map", "db_import_sarif('{{TargetSpace}}', '{{Output}}/semgrep.sarif')"},
+			{FnDBImportPortAssets, "db_import_port_assets(workspace, file_path, [source])", "Import port scan data from JSONL (nmap_to_jsonl output) with asset_type=ip and source=portscan", "map", "db_import_port_assets('{{TargetSpace}}', '{{Output}}/nmap-scan.jsonl')"},
+			{FnDBAssetDiff, "db_asset_diff(workspace)", "Get asset diff as JSONL string", "string", "db_asset_diff('{{TargetSpace}}')"},
+			{FnDBVulnDiff, "db_vuln_diff(workspace)", "Get vulnerability diff as JSONL string", "string", "db_vuln_diff('{{TargetSpace}}')"},
+			{FnDBAssetDiffToFile, "db_asset_diff_to_file(workspace, dest)", "Write asset diff to JSONL file", "bool", "db_asset_diff_to_file('{{TargetSpace}}', '{{Output}}/asset-diff.jsonl')"},
+			{FnDBVulnDiffToFile, "db_vuln_diff_to_file(workspace, dest)", "Write vulnerability diff to JSONL file", "bool", "db_vuln_diff_to_file('{{TargetSpace}}', '{{Output}}/vuln-diff.jsonl')"},
+			{FnDBSelectRuns, "run_status(workspace, format)", "Query run records by workspace. Format: markdown or jsonl", "string", "run_status('{{TargetSpace}}', 'markdown')"},
 			{FnDBSelectRunByUUID, "run_status_by_uuid(uuid, format)", "Query run record by UUID. Format: markdown or jsonl", "string", "run_status_by_uuid('abc-123', 'jsonl')"},
 			{FnDBResetEventLogs, "db_reset_event_logs(workspace?, topic_pattern?)", "Reset processed event logs to unprocessed state with optional filters", "object", "db_reset_event_logs('example.com', 'db.*')"},
 		},

@@ -1,4 +1,4 @@
-.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-e2e-cloud test-cloud test-docker test-ssh test-distributed distributed-e2e-up distributed-e2e-run distributed-e2e-down test-canary-all test-canary-repo test-canary-domain test-canary-ip test-canary-general canary-up canary-down test-all test-summary test-ci clean install install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release run-github-action docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
+.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-e2e-cloud test-sudo test-cloud test-docker test-ssh test-distributed distributed-e2e-up distributed-e2e-run distributed-e2e-down test-canary-all test-canary-repo test-canary-domain test-canary-ip test-canary-general canary-up canary-down test-all test-summary test-ci clean install install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release run-github-action docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
 
 # Go parameters
 GOCMD=go
@@ -222,6 +222,12 @@ test-e2e-install: build install-gotestsum
 test-e2e-cloud: build install-gotestsum
 	@echo "$(PREFIX) Running cloud E2E tests..."
 	$(TESTCMD) $(TESTFLAGS) -run TestCloud ./test/e2e/...
+
+# Sudo-aware tests (requires interactive sudo prompt)
+test-sudo: export OSM_TEST_SUDO=1
+test-sudo: build install-gotestsum
+	@echo "$(PREFIX) Running sudo-aware tests (may prompt for password)..."
+	$(TESTCMD) $(TESTFLAGS) -run TestSudo ./test/e2e/...
 
 # Cloud integration tests (internal cloud package tests)
 test-cloud: install-gotestsum
@@ -456,6 +462,7 @@ help:
 	@echo "    make test-e2e-api     Run API E2E tests (all endpoints, requires Redis)"
 	@echo "    make test-e2e-nix     Run Nix mode E2E tests (requires Docker)"
 	@echo "    make test-e2e-install Run install E2E tests (workflow/base from zip/URL/git)"
+	@echo "    make test-sudo        Run sudo-aware E2E tests (requires sudo prompt)"
 	@echo "    make test-docker      Run Docker runner tests"
 	@echo "    make test-ssh         Run SSH runner unit tests"
 	@echo "    make test-distributed Run distributed scan E2E tests (requires Redis)"

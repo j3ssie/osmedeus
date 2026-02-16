@@ -66,6 +66,7 @@ type Executor struct {
 	disableWorkflowState  bool                       // disable writing workflow YAML to output directory
 	skipWorkspace         bool                       // skip creating workspace/output directory (for empty-target mode)
 	skipValidation        bool                       // skip target type validation from dependencies.variables
+	sudoAware             bool                       // authenticate sudo once and keep credentials alive
 	dbRunUUID             string                     // database run UUID for tracking progress
 	dbRunID               int64                      // database run ID for step result foreign keys
 	onStepCompleted       StepCompletedCallback      // callback after each step completes
@@ -152,6 +153,11 @@ func (e *Executor) SetSkipWorkspace(skip bool) {
 // SetSkipValidation enables or disables target type validation
 func (e *Executor) SetSkipValidation(skip bool) {
 	e.skipValidation = skip
+}
+
+// SetSudoAware enables or disables sudo-aware mode
+func (e *Executor) SetSudoAware(aware bool) {
+	e.sudoAware = aware
 }
 
 // SetProgressBar sets the progress bar for execution display
@@ -971,7 +977,12 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	if err := r.Setup(ctx); err != nil {
 		return nil, fmt.Errorf("runner setup failed: %w", err)
 	}
-	defer func() { _ = r.Cleanup(ctx) }()
+	defer func() {
+		_ = r.Cleanup(ctx)
+		if e.sudoAware {
+			functions.StopSudoKeepalive()
+		}
+	}()
 
 	// Set runner on step dispatcher
 	e.stepDispatcher.SetRunner(r)
@@ -1123,6 +1134,37 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 			result.EndTime = time.Now()
 			metrics.RecordWorkflowEnd(module.Name, string(core.KindModule), string(result.Status), result.EndTime.Sub(result.StartTime).Seconds())
 			return result, result.Error
+		}
+	}
+
+	// Sudo detection: warn or authenticate when non-root runs sudo commands
+	if os.Geteuid() != 0 {
+		hasSudo := scanStepsForSudo(module.Steps)
+		if !hasSudo && module.Hooks != nil {
+			hasSudo = scanStepsForSudo(module.Hooks.PreScanSteps) ||
+				scanStepsForSudo(module.Hooks.PostScanSteps)
+		}
+		if hasSudo {
+			if e.sudoAware {
+				e.printer.Info("Sudo commands detected, authenticating...")
+				if functions.AuthenticateSudo("") {
+					functions.StartSudoKeepalive("")
+				} else {
+					e.printer.Warning("Sudo authentication failed — commands may prompt or fail")
+				}
+			} else {
+				_, _ = fmt.Fprintln(os.Stdout)
+				e.printer.Info(
+					"%s Tip: Workflow contains %s commands but running as non-root user.",
+					terminal.Yellow(terminal.SymbolLightning),
+					terminal.Yellow("sudo"),
+				)
+				e.printer.Info(
+					"  Use %s to authenticate once before execution and keep credentials alive.",
+					terminal.Cyan("--sudo-aware"),
+				)
+				_, _ = fmt.Fprintln(os.Stdout)
+			}
 		}
 	}
 

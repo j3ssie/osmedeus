@@ -397,6 +397,64 @@ func getParentURLImpl(input string) string {
 	return u.String()
 }
 
+// ensureScheme prepends "https://" if the URL has no scheme.
+func ensureScheme(rawURL string) string {
+	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
+		return "https://" + rawURL
+	}
+	return rawURL
+}
+
+// parseURLFile applies parse_url format directives to each line of a file and writes results to an output file.
+// Lines without a scheme get "https://" prepended before parsing.
+// Usage: parse_url_file(input, format, output) -> bool
+func (vf *vmFunc) parseURLFile(call goja.FunctionCall) goja.Value {
+	input := call.Argument(0).String()
+	format := call.Argument(1).String()
+	output := call.Argument(2).String()
+	logger.Get().Debug("Calling "+terminal.HiGreen("parse_url_file"),
+		zap.String("input", input), zap.String("format", format), zap.String("output", output))
+
+	if input == "undefined" || input == "" || format == "undefined" || format == "" || output == "undefined" || output == "" {
+		logger.Get().Warn("parse_url_file: empty input, format, or output provided")
+		return vf.vm.ToValue(false)
+	}
+
+	file, err := os.Open(input)
+	if err != nil {
+		logger.Get().Warn("parse_url_file: failed to open input file", zap.String("input", input), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+	defer func() { _ = file.Close() }()
+
+	var results []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		result := parseURLImpl(line, format)
+		if result != "" {
+			results = append(results, result)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		logger.Get().Warn("parse_url_file: error reading input", zap.String("input", input), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	if err := writeLinesToFile(output, results); err != nil {
+		logger.Get().Warn("parse_url_file: failed to write output", zap.String("output", output), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	logger.Get().Debug(terminal.HiGreen("parse_url_file")+" result",
+		zap.String("input", input), zap.String("output", output),
+		zap.Int("lines", len(results)))
+	return vf.vm.ToValue(true)
+}
+
 // parseURL formats a URL using format directives similar to unfurl.
 // Usage: parse_url(url, format) -> string
 //   - url: the URL to parse
@@ -449,14 +507,28 @@ func (vf *vmFunc) parseURL(call goja.FunctionCall) goja.Value {
 
 // parseURLImpl formats a URL using format directives.
 // This is the implementation that can be tested independently.
+// Bare IPs (1.2.3.4) and CIDRs (1.2.3.4/24) are supported: a scheme is
+// prepended when missing, and CIDR notation is preserved in %d.
 func parseURLImpl(urlStr, format string) string {
+	// Strip scheme (if any) to inspect the raw host portion for CIDR detection
+	raw := strings.TrimPrefix(strings.TrimPrefix(urlStr, "https://"), "http://")
+	_, _, cidrErr := net.ParseCIDR(raw)
+	isCIDR := cidrErr == nil
+
+	// Ensure scheme so url.Parse produces a valid hostname for bare IPs/domains
+	urlStr = ensureScheme(urlStr)
+
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return ""
 	}
 
 	// Extract domain parts
+	// For CIDR input (e.g. 1.2.3.4/24), use the full CIDR as domain
 	domain := u.Hostname()
+	if isCIDR {
+		domain = raw
+	}
 	subdomain, root, tld := extractDomainParts(domain)
 
 	// Extract file extension from path

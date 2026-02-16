@@ -126,6 +126,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnExecPythonFile, vf.execPythonFile)
 	_ = vm.Set(FnExecTS, vf.execTypeScript)
 	_ = vm.Set(FnExecTSFile, vf.execTypeScriptFile)
+	_ = vm.Set(FnSudoAuth, vf.sudoAuth)
 
 	// Logging functions
 	_ = vm.Set(FnLogDebug, vf.logDebug)
@@ -230,6 +231,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnInterestingUrls, vf.interestingUrls)
 	_ = vm.Set(FnGetParentURL, vf.getParentURL)
 	_ = vm.Set(FnParseURL, vf.parseURL)
+	_ = vm.Set(FnParseURLFile, vf.parseURLFile)
 	_ = vm.Set(FnQueryReplace, vf.queryReplace)
 	_ = vm.Set(FnPathReplace, vf.pathReplace)
 

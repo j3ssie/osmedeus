@@ -16,6 +16,7 @@ make test-e2e           # E2E CLI tests (requires binary build)
 make test-e2e-ssh       # SSH E2E tests (module & step level SSH runner)
 make test-e2e-api       # API E2E tests (all endpoints with Redis + seeded DB)
 make test-e2e-cloud     # Cloud E2E tests (cloud CLI commands)
+make test-sudo          # Sudo-aware E2E tests (requires interactive sudo prompt)
 make test-cloud         # Cloud integration tests (internal cloud package)
 make test-distributed   # Distributed run e2e tests (requires Docker for Redis)
 make test-docker        # Docker runner tests

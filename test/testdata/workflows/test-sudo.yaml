@@ -1,0 +1,13 @@
+name: test-sudo
+kind: module
+description: Test workflow with sudo commands for sudo-aware detection
+tags: test,sudo
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: sudo-step
+    type: bash
+    command: sudo echo "running as root for {{target}}"

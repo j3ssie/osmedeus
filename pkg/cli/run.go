@@ -77,6 +77,7 @@ var (
 
 	// Validation flags
 	skipValidation    bool
+	sudoAware         bool
 	convertToFile     bool
 	convertFileToLine bool
 
@@ -138,6 +139,7 @@ func init() {
 
 	// Validation flags
 	runCmd.Flags().BoolVar(&skipValidation, "skip-validation", false, "skip target type validation from dependencies.variables")
+	runCmd.Flags().BoolVar(&sudoAware, "sudo-aware", false, "authenticate sudo once and keep credentials alive during execution")
 
 	// Target conversion flags
 	runCmd.Flags().BoolVar(&convertToFile, "convert-to-file", false, "write all targets into a temp file and use the file path as the single target")
@@ -880,6 +882,7 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 		exec.SetSkipWorkspace(true)
 	}
 	exec.SetSkipValidation(skipValidation)
+	exec.SetSudoAware(sudoAware)
 	exec.SetSpinner(showSpinner)
 	exec.SetVerbose(verbose) // Show actual step output in verbose mode
 	exec.SetSilent(silent)   // Hide step output in silent mode
