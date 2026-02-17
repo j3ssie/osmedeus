@@ -391,26 +391,26 @@ func runWorkerQueueList(cmd *cobra.Command, args []string) error {
 	// Display table
 	printer.Section("Queued Tasks")
 
-	headers := []string{"ID", "UUID", "Workflow", "Target", "Status", "Priority", "IsFile", "Created"}
-	var rows [][]string
+	columns := []string{"id", "uuid", "workflow", "target", "status", "priority", "is_file", "created"}
+	var records []map[string]interface{}
 	for _, r := range runs {
 		isFileStr := ""
 		if r.InputIsFile {
 			isFileStr = "yes"
 		}
-		rows = append(rows, []string{
-			fmt.Sprintf("%d", r.ID),
-			truncateUUID(r.RunUUID),
-			r.WorkflowName,
-			truncateQueueStr(r.Target, 40),
-			colorizeQueueStatus(r.Status),
-			r.RunPriority,
-			isFileStr,
-			r.CreatedAt.Format("2006-01-02 15:04"),
+		records = append(records, map[string]interface{}{
+			"id":       fmt.Sprintf("%d", r.ID),
+			"uuid":     truncateUUID(r.RunUUID),
+			"workflow": r.WorkflowName,
+			"target":   truncateQueueStr(r.Target, 40),
+			"status":   r.Status,
+			"priority": r.RunPriority,
+			"is_file":  isFileStr,
+			"created":  r.CreatedAt.Format("2006-01-02 15:04"),
 		})
 	}
 
-	printMarkdownTable(headers, rows)
+	renderTableWithTablewriter("", records, columns, globalWidth, false, nil)
 	fmt.Println()
 	printer.Info("Total: %d queued task(s)", len(runs))
 	return nil

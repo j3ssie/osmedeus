@@ -49,7 +49,7 @@ func StepSymbol(status string) string {
 		return Gray(SymbolPending)
 	case "running":
 		return Cyan(SymbolRunning)
-	case "success":
+	case "success", "completed":
 		return Green(SymbolSuccess)
 	case "failed":
 		return Red(SymbolFailed)

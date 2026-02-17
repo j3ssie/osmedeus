@@ -133,6 +133,51 @@ curl "http://localhost:8002/osm/api/assets?workspace=example.com&offset=50&limit
 
 ---
 
+## Get Asset Statistics
+
+Get unique values for technologies, sources, remarks, and asset types across all assets.
+
+**Get all asset stats:**
+```bash
+curl http://localhost:8002/osm/api/asset-stats \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Filter by workspace:**
+```bash
+curl "http://localhost:8002/osm/api/asset-stats?workspace=example.com" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "technologies": ["nginx/1.21.0", "nodejs", "php/8.1", "wordpress"],
+    "sources": ["httpx", "nuclei"],
+    "remarks": ["admin-panel", "production"],
+    "asset_types": ["http", "dns", "subdomain"]
+  }
+}
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `workspace` | string | No | Filter stats by workspace name |
+
+**Response Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `technologies` | array | Unique detected technologies across all matching assets |
+| `sources` | array | Unique discovery sources (httpx, nuclei, etc.) |
+| `remarks` | array | Unique custom labels/tags/remarks |
+| `asset_types` | array | Unique asset type classifications (http, dns, subdomain, ip, etc.) |
+
+---
+
 ## List Asset Diff Snapshots
 
 Get a paginated list of stored asset diff snapshots. These snapshots capture changes in assets over time.

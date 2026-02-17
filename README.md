@@ -66,6 +66,11 @@ osmedeus serve
 # List available workflows
 osmedeus workflow list
 
+# Query discovered assets
+osmedeus assets -w example.com                          # List assets for workspace
+osmedeus assets --stats                                 # Show unique technologies, sources, types
+osmedeus assets --source httpx --type web --json        # Filter and output as JSON
+
 # Query database tables
 osmedeus db list --table runs
 osmedeus db list --table event_logs --search "nuclei"

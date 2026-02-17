@@ -2899,7 +2899,7 @@ var tableDisplayColumns = map[string][]string{
 	"runs":            {"run_uuid", "workflow_name", "target", "workspace", "trigger_type", "status", "completed_steps", "total_steps", "started_at"},
 	"step_results":    {"step_name", "step_type", "status", "duration_ms", "command"},
 	"artifacts":       {"name", "artifact_path", "artifact_type", "content_type", "size_bytes", "line_count"},
-	"assets":          {"asset_value", "host_ip", "title", "status_code", "last_seen_at", "url"},
+	"assets":          {"asset_value", "status_code", "title", "tech", "host_ip", "source", "asset_type", "url"},
 	"event_logs":      {"topic", "name", "source", "workspace", "created_at"},
 	"schedules":       {"name", "workflow_name", "workflow_kind", "target", "trigger_type", "schedule", "is_enabled"},
 	"workspaces":      {"name", "data_source", "total_assets", "total_ips", "total_vulns", "risk_score", "last_run"},
@@ -2921,7 +2921,7 @@ var tableAllColumns = map[string][]string{
 		"content_type", "size_bytes", "line_count", "description", "created_at"},
 	"assets": {"id", "workspace", "asset_value", "url", "input", "scheme", "method", "path",
 		"status_code", "content_type", "content_length", "title", "words",
-		"lines", "host_ip", "dns_records", "tls", "asset_type", "technologies",
+		"lines", "host_ip", "dns_records", "tls", "asset_type", "tech",
 		"response_time", "remarks", "language", "size", "loc", "blob_content", "source", "raw_json_data", "raw_response",
 		"screenshot_base64_data", "external_url", "last_seen_at", "created_at", "updated_at"},
 	"event_logs": {"id", "topic", "event_id", "name", "source_type", "source", "data_type", "data",
@@ -3499,6 +3499,7 @@ type CreateScheduleInput struct {
 	EventTopic   string                 // Event topic (for event trigger)
 	WatchPath    string                 // Watch path (for watch trigger)
 	Enabled      bool
+	NextRun      *time.Time // Initial next run time (computed from cron expression)
 }
 
 // UpdateScheduleInput holds input for updating a schedule
@@ -3591,6 +3592,7 @@ func CreateSchedule(ctx context.Context, input CreateScheduleInput) (*Schedule, 
 		EventTopic:   input.EventTopic,
 		WatchPath:    input.WatchPath,
 		IsEnabled:    input.Enabled,
+		NextRun:      input.NextRun,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}

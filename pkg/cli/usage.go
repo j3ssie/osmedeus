@@ -127,6 +127,21 @@ func UsageRun() string {
   ` + terminal.Green("# Process queued tasks with concurrency") + `
   osmedeus run ` + terminal.Yellow("--queue-run") + ` ` + terminal.Yellow("--concurrency") + ` 3
 
+  ` + terminal.Green("# Register a webhook trigger (no execution)") + `
+  osmedeus run ` + terminal.Yellow("--as-webhook") + ` ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-t") + ` example.com
+
+  ` + terminal.Green("# Register a webhook with auth key") + `
+  osmedeus run ` + terminal.Yellow("--as-webhook") + ` ` + terminal.Yellow("--webhook-auth-key") + ` mykey ` + terminal.Yellow("-f") + ` general ` + terminal.Yellow("-t") + ` example.com
+
+  ` + terminal.Green("# Create a cron schedule (daily at 2am)") + `
+  osmedeus run ` + terminal.Yellow("--as-cron") + ` '0 2 * * *' ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-t") + ` example.com
+
+  ` + terminal.Green("# Create a cron schedule (every 6 hours) for a flow") + `
+  osmedeus run ` + terminal.Yellow("--as-cron") + ` '0 */6 * * *' ` + terminal.Yellow("-f") + ` general ` + terminal.Yellow("-t") + ` example.com
+
+  ` + terminal.Green("# Create cron schedules for multiple targets") + `
+  osmedeus run ` + terminal.Yellow("--as-cron") + ` '0 0 * * 1' ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt
+
 ` + docsFooter()
 }
 
@@ -841,6 +856,12 @@ func UsageAllExamples() string {
   ` + terminal.Green("# Split into 4 equal chunks and run chunk 0") + `
   osmedeus run ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-T") + ` targets.txt ` + terminal.Yellow("--chunk-count") + ` 4 ` + terminal.Yellow("--chunk-part") + ` 0
 
+  ` + terminal.Green("# Register a webhook trigger") + `
+  osmedeus run ` + terminal.Yellow("--as-webhook") + ` ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-t") + ` example.com
+
+  ` + terminal.Green("# Create a cron schedule (daily at 2am)") + `
+  osmedeus run ` + terminal.Yellow("--as-cron") + ` '0 2 * * *' ` + terminal.Yellow("-m") + ` recon ` + terminal.Yellow("-t") + ` example.com
+
 ` + terminal.BoldYellow("★ Function Eval (Powerful Scripting)") + `
   ` + terminal.Green("# Print markdown file") + `
   osmedeus func e 'print_markdown_from_file("README.md")'
@@ -1012,6 +1033,11 @@ func UsageFullExample() string {
 ` + terminal.Cyan("  Distributed Mode:") + `
   ` + terminal.Yellow("-D, --distributed-run") + `  Submit run to distributed worker queue
   ` + terminal.Yellow("--redis-url") + `            Redis connection URL for distributed mode
+
+` + terminal.Cyan("  Schedule & Trigger:") + `
+  ` + terminal.Yellow("--as-webhook") + `           Register a webhook trigger instead of executing
+  ` + terminal.Yellow("--webhook-auth-key") + `     Authentication key for the webhook trigger
+  ` + terminal.Yellow("--as-cron") + `              Create a cron schedule instead of executing (e.g., '0 2 * * *')
 
 ` + terminal.BoldYellow("SERVE COMMAND") + ` - Start REST API server
 ` + terminal.Gray("───────────────────────────────────────────────────────────────────") + `
@@ -1284,6 +1310,50 @@ func UsageUninstall() string {
 
   ` + terminal.Green("# Full uninstall including all scan data") + `
   osmedeus uninstall ` + terminal.Yellow("--force") + ` ` + terminal.Yellow("--clean") + `
+
+` + docsFooter()
+}
+
+// UsageAssets returns the Long description for the assets command
+func UsageAssets() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Query and list discovered assets from the database.
+  A shortcut for ` + terminal.Yellow("osmedeus db ls -t assets") + ` with first-class support
+  for fuzzy search, source/type filtering, and asset statistics.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# List all assets (default columns)") + `
+  osmedeus assets
+
+  ` + terminal.Green("# Fuzzy search across asset fields") + `
+  osmedeus assets example.com
+
+  ` + terminal.Green("# Filter by workspace") + `
+  osmedeus assets ` + terminal.Yellow("-w") + ` myworkspace
+
+  ` + terminal.Green("# Filter by source") + `
+  osmedeus assets ` + terminal.Yellow("--source") + ` httpx
+
+  ` + terminal.Green("# Filter by asset type") + `
+  osmedeus assets ` + terminal.Yellow("--type") + ` web
+
+  ` + terminal.Green("# Combined filters") + `
+  osmedeus assets ` + terminal.Yellow("--source") + ` httpx ` + terminal.Yellow("--type") + ` web
+
+  ` + terminal.Green("# Show asset statistics") + `
+  osmedeus assets ` + terminal.Yellow("--stats") + `
+
+  ` + terminal.Green("# Stats filtered by workspace") + `
+  osmedeus assets ` + terminal.Yellow("--stats") + ` ` + terminal.Yellow("-w") + ` myworkspace
+
+  ` + terminal.Green("# With pagination") + `
+  osmedeus assets example.com ` + terminal.Yellow("--limit") + ` 100
+
+  ` + terminal.Green("# JSON output") + `
+  osmedeus assets example.com ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# Custom columns") + `
+  osmedeus assets ` + terminal.Yellow("--columns") + ` "asset_value,url,status_code"
 
 ` + docsFooter()
 }

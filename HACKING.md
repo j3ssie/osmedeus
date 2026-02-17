@@ -2086,6 +2086,33 @@ osmedeus worker queue new -m <module> -T targets.txt -p key=value
 osmedeus worker queue run --concurrency 5           # Process queued tasks
 ```
 
+### Asset Query Commands
+
+```bash
+# List assets (paginated table output)
+osmedeus assets
+osmedeus assets -w example.com                   # Filter by workspace
+osmedeus assets --source httpx                   # Filter by source
+osmedeus assets --type web                       # Filter by asset type
+osmedeus assets "api.example"                    # Search by keyword
+
+# Customize output columns
+osmedeus assets --columns url,title,status_code
+osmedeus assets --exclude-columns raw_json_data,raw_response
+osmedeus assets --all                            # Show all columns including hidden ones
+
+# Pagination
+osmedeus assets --limit 100 --offset 50
+
+# Asset statistics (unique technologies, sources, remarks, types)
+osmedeus assets --stats
+osmedeus assets --stats -w example.com           # Stats for specific workspace
+
+# JSON output (for scripting)
+osmedeus assets --json
+osmedeus assets --stats --json
+```
+
 ### Debugging Tips
 
 - Use `osmedeus --usage-example` to see comprehensive examples for all commands

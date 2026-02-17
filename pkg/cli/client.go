@@ -7,13 +7,11 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"sort"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/charmbracelet/glamour"
 	"github.com/j3ssie/osmedeus/v5/internal/client"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
 	"github.com/spf13/cobra"
@@ -121,7 +119,7 @@ func outputJSON(data interface{}) error {
 	return nil
 }
 
-// printClientTable prints data in a styled markdown table format
+// printClientTable prints data using the same tablewriter renderer as `db ls`
 func printClientTable(tableName string, data interface{}, columns []string, pagination client.Pagination, recordCount int) {
 	printer := terminal.NewPrinter()
 	printer.Info("Table: %s", tableName)
@@ -134,115 +132,7 @@ func printClientTable(tableName string, data interface{}, columns []string, pagi
 	}
 	fmt.Printf("Showing records %d-%d of %d\n\n", startRecord, endRecord, pagination.Total)
 
-	// Format as markdown table
-	tableStr := formatClientMarkdownTable(data, columns, globalWidth)
-
-	// Render with glamour
-	renderer, err := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
-		glamour.WithWordWrap(0),
-	)
-	if err == nil {
-		rendered, renderErr := renderer.Render(tableStr)
-		if renderErr == nil {
-			fmt.Print(rendered)
-		} else {
-			fmt.Println(tableStr)
-		}
-	} else {
-		fmt.Println(tableStr)
-	}
-}
-
-// formatClientMarkdownTable formats records as a markdown table
-func formatClientMarkdownTable(records interface{}, columns []string, maxWidth int) string {
-	// Convert records to []map[string]interface{}
-	jsonBytes, _ := json.Marshal(records)
-	var data []map[string]interface{}
-	if err := json.Unmarshal(jsonBytes, &data); err != nil {
-		return "No records found."
-	}
-
-	if len(data) == 0 {
-		return "No records found."
-	}
-
-	// Use specified columns or extract from first record
-	var headers []string
-	if len(columns) > 0 {
-		headers = columns
-	} else {
-		for key := range data[0] {
-			headers = append(headers, key)
-		}
-		sort.Strings(headers)
-	}
-
-	// Build markdown table
-	var sb strings.Builder
-
-	// Header row
-	sb.WriteString("| ")
-	sb.WriteString(strings.Join(headers, " | "))
-	sb.WriteString(" |\n")
-
-	// Separator row
-	sb.WriteString("|")
-	for range headers {
-		sb.WriteString(" --- |")
-	}
-	sb.WriteString("\n")
-
-	// Data rows
-	for _, row := range data {
-		sb.WriteString("| ")
-		for i, h := range headers {
-			val := formatClientTableValue(row[h], maxWidth, h)
-			if i > 0 {
-				sb.WriteString(" | ")
-			}
-			sb.WriteString(val)
-		}
-		sb.WriteString(" |\n")
-	}
-
-	return sb.String()
-}
-
-// formatClientTableValue converts a value to string for markdown display
-func formatClientTableValue(v interface{}, maxWidth int, columnName string) string {
-	if v == nil {
-		return ""
-	}
-
-	var s string
-	switch val := v.(type) {
-	case string:
-		// Escape pipe characters and newlines
-		s = strings.ReplaceAll(val, "|", "\\|")
-		s = strings.ReplaceAll(s, "\n", " ")
-	case map[string]interface{}, []interface{}:
-		// Compact JSON for complex types
-		b, _ := json.Marshal(val)
-		s = string(b)
-	default:
-		s = fmt.Sprintf("%v", val)
-	}
-
-	// Apply width limit
-	if maxWidth > 0 && len(s) > maxWidth {
-		if maxWidth > 3 {
-			s = s[:maxWidth-3] + "..."
-		} else {
-			s = s[:maxWidth]
-		}
-	}
-
-	// Colorize status column
-	if columnName == "status" {
-		return terminal.ColorizeStatus(s)
-	}
-	return s
+	renderTableWithTablewriter(tableName, data, columns, globalWidth, false, nil)
 }
 
 // validFetchTables lists all valid table names for the fetch command
@@ -256,7 +146,7 @@ var clientTableDefaultColumns = map[string][]string{
 	"runs":            {"run_uuid", "workflow_name", "target", "status", "completed_steps", "total_steps"},
 	"step_results":    {"step_name", "step_type", "status", "duration_ms", "command"},
 	"artifacts":       {"name", "artifact_path", "artifact_type", "size_bytes"},
-	"assets":          {"asset_value", "host_ip", "title", "status_code"},
+	"assets":          {"asset_value", "url", "status_code", "content_length", "title"},
 	"event_logs":      {"topic", "source", "processed", "workspace"},
 	"schedules":       {"name", "workflow_name", "trigger_type", "schedule", "is_enabled"},
 	"workspaces":      {"name", "data_source", "total_assets"},

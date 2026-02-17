@@ -227,6 +227,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/osm/api/asset-stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get unique values for technologies, sources, remarks, and asset types across all assets or filtered by workspace",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Stats"
+                ],
+                "summary": "Get asset statistics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by workspace name",
+                        "name": "workspace",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Asset statistics",
+                        "schema": {
+                            "$ref": "#/definitions/database.AssetStatsData"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to get stats",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/osm/api/assets": {
             "get": {
                 "security": [
@@ -3261,6 +3301,35 @@ const docTemplate = `{
                 }
             }
         },
+        "database.AssetStatsData": {
+            "type": "object",
+            "properties": {
+                "asset_types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "remarks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "technologies": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "database.RunStats": {
             "type": "object",
             "properties": {
@@ -3429,6 +3498,10 @@ const docTemplate = `{
                 },
                 "schedule_enabled": {
                     "description": "Enable scheduled execution",
+                    "type": "boolean"
+                },
+                "skip_validation": {
+                    "description": "Validation",
                     "type": "boolean"
                 },
                 "ssh_host": {

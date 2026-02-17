@@ -181,15 +181,16 @@ type Schedule struct {
 	Params       map[string]interface{} `bun:"params,type:json" json:"params,omitempty"`     // Workflow parameters
 	TriggerName  string                 `bun:"trigger_name,notnull" json:"trigger_name"`
 	TriggerType  string                 `bun:"trigger_type,notnull" json:"trigger_type"`
-	Schedule     string                 `bun:"schedule" json:"schedule,omitempty"`
-	EventTopic   string                 `bun:"event_topic" json:"event_topic,omitempty"`
-	WatchPath    string                 `bun:"watch_path" json:"watch_path,omitempty"`
-	IsEnabled    bool                   `bun:"is_enabled,default:true" json:"is_enabled"`
-	LastRun      *time.Time             `bun:"last_run" json:"last_run,omitempty"`
-	NextRun      *time.Time             `bun:"next_run" json:"next_run,omitempty"`
-	RunCount     int                    `bun:"run_count,default:0" json:"run_count"`
-	CreatedAt    time.Time              `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt    time.Time              `bun:"updated_at,notnull,default:current_timestamp" json:"updated_at"`
+	// Cron expression for time-based schedules, or event topic for event-based triggers
+	Schedule   string     `bun:"schedule" json:"schedule,omitempty"`
+	EventTopic string     `bun:"event_topic" json:"event_topic,omitempty"`
+	WatchPath  string     `bun:"watch_path" json:"watch_path,omitempty"`
+	IsEnabled  bool       `bun:"is_enabled,default:true" json:"is_enabled"`
+	LastRun    *time.Time `bun:"last_run" json:"last_run,omitempty"`
+	NextRun    *time.Time `bun:"next_run" json:"next_run,omitempty"`
+	RunCount   int        `bun:"run_count,default:0" json:"run_count"`
+	CreatedAt  time.Time  `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt  time.Time  `bun:"updated_at,notnull,default:current_timestamp" json:"updated_at"`
 }
 
 // Event topic constants

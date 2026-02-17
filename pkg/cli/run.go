@@ -32,6 +32,7 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
+	"github.com/robfig/cron/v3"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -67,6 +68,7 @@ var (
 	queueRunProcess      bool
 	webhookRun           bool
 	webhookAuthKey       string
+	cronSchedule         string
 
 	// Chunk mode flags
 	chunkSize    int
@@ -157,6 +159,9 @@ func init() {
 	// Webhook flags
 	runCmd.Flags().BoolVar(&webhookRun, "as-webhook", false, "register a webhook trigger for this run instead of executing immediately")
 	runCmd.Flags().StringVar(&webhookAuthKey, "webhook-auth-key", "", "optional authentication key for the webhook trigger")
+
+	// Cron schedule flag
+	runCmd.Flags().StringVar(&cronSchedule, "as-cron", "", "create a cron schedule instead of executing (e.g., '0 2 * * *' for daily at 2am)")
 }
 
 // captureExplicitFlags records which CLI flags were explicitly set by the user
@@ -529,6 +534,11 @@ func runRun(cmd *cobra.Command, args []string) error {
 	// Handle webhook registration mode
 	if webhookRun {
 		return runWebhookRun(cfg, allTargets, printer)
+	}
+
+	// Handle cron schedule creation mode
+	if cronSchedule != "" {
+		return runCronSchedule(cfg, allTargets, printer)
 	}
 
 	// Handle queue mode
@@ -937,6 +947,33 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 		fmt.Printf("  %s baseThreads:    %s\n", terminal.Gray("│"), terminal.Gray(fmt.Sprintf("%d", baseThreads)))
 		fmt.Printf("  %s Today:          %s\n", terminal.Gray("│"), terminal.Gray(time.Now().Format("2006-01-02")))
 		fmt.Println(terminal.Yellow(separator))
+
+		// Show parameter tables in dry-run
+		if workflow.IsFlow() && loader != nil && len(workflow.Modules) > 0 {
+			fmt.Println()
+			fmt.Println("◆ " + terminal.Bold("Module Parameters:"))
+			for _, m := range workflow.Modules {
+				if m.Path == "" {
+					continue
+				}
+				mod, err := loader.LoadWorkflow(m.Path)
+				if err != nil {
+					continue
+				}
+				mToggle, mSpeed, _, _ := core.CategorizeParams(mod.Params)
+				if len(mToggle)+len(mSpeed) == 0 {
+					continue
+				}
+				fmt.Println()
+				fmt.Println("  ◼ " + terminal.Bold(m.Name) + ":")
+				printSpeedControlParams(mSpeed)
+				printToggleParams(mToggle)
+			}
+		} else if len(workflow.Params) > 0 {
+			toggle, speed, _, _ := categorizeParams(workflow.Params)
+			printSpeedControlParams(speed)
+			printToggleParams(toggle)
+		}
 		fmt.Println()
 	}
 
@@ -1485,18 +1522,32 @@ func printResultSummary(result *core.WorkflowResult) {
 	printer.KeyValue("Status", terminal.StatusBadge(string(result.Status)))
 	printer.KeyValue("Duration", formatDuration(result.EndTime.Sub(result.StartTime)))
 
+	if len(result.ModuleResults) > 0 {
+		fmt.Println()
+		fmt.Println(terminal.ResultSymbol() + " " + terminal.Bold("Module Results:"))
+		var rows [][]string
+		for _, mod := range result.ModuleResults {
+			rows = append(rows, []string{
+				terminal.StepSymbol(string(mod.Status)),
+				mod.ModuleName,
+				terminal.Magenta(formatDuration(mod.Duration)),
+			})
+		}
+		printMarkdownTable([]string{terminal.Bold("Status"), terminal.Bold("Module"), terminal.Bold("Duration")}, rows, "clc")
+	}
+
 	if len(result.Steps) > 0 {
 		fmt.Println()
 		fmt.Println(terminal.ResultSymbol() + " " + terminal.Bold("Step Results:"))
 		var rows [][]string
 		for _, step := range result.Steps {
 			rows = append(rows, []string{
-				terminal.PaddedStepSymbol(string(step.Status)),
+				terminal.StepSymbol(string(step.Status)),
 				step.StepName,
-				formatDuration(step.Duration),
+				terminal.Magenta(formatDuration(step.Duration)),
 			})
 		}
-		printMarkdownTable([]string{"Status", "Step", "Duration"}, rows)
+		printMarkdownTable([]string{terminal.Bold("Status"), terminal.Bold("Step"), terminal.Bold("Duration")}, rows, "clc")
 	}
 
 	if len(result.Artifacts) > 0 {
@@ -2085,6 +2136,89 @@ func runWebhookRun(cfg *config.Config, allTargets []string, printer *terminal.Pr
 	printer.SecurityWarning("Webhook URLs allow unauthenticated scan triggering.")
 	printer.Info("Ensure 'enable_trigger_via_webhook: true' is set in osm-settings.yaml")
 	printer.Info("Use '%s' to list registered webhooks", terminal.Cyan("osmedeus worker webhooks"))
+
+	return nil
+}
+
+// runCronSchedule creates cron schedule records in the database instead of executing immediately.
+func runCronSchedule(cfg *config.Config, allTargets []string, printer *terminal.Printer) error {
+	// Determine workflow name and kind
+	workflowName := flowName
+	workflowKind := "flow"
+	if workflowName == "" && len(moduleNames) > 0 {
+		workflowName = moduleNames[0]
+		workflowKind = "module"
+	}
+
+	if workflowName == "" {
+		return fmt.Errorf("workflow name required (use -f or -m)")
+	}
+
+	// Validate cron expression
+	cronParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	schedule, err := cronParser.Parse(cronSchedule)
+	if err != nil {
+		return fmt.Errorf("invalid cron expression %q: %w\n  Examples: '0 2 * * *' (daily 2am), '0 */6 * * *' (every 6h), '0 0 * * 1' (weekly Monday)", cronSchedule, err)
+	}
+
+	// Compute next run time
+	nextRun := schedule.Next(time.Now())
+
+	// Parse additional params
+	params := make(map[string]interface{})
+	for _, flag := range paramFlags {
+		parts := strings.SplitN(flag, "=", 2)
+		if len(parts) == 2 {
+			params[parts[0]] = parts[1]
+		}
+	}
+
+	ctx := context.Background()
+
+	// Connect to database and migrate
+	_, err = database.Connect(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+	if err := database.Migrate(ctx); err != nil {
+		return fmt.Errorf("failed to migrate database: %w", err)
+	}
+
+	printer.Section("Creating Cron Schedules")
+
+	var created int
+	for _, target := range allTargets {
+		scheduleName := fmt.Sprintf("cron-%s-%s", workflowName, sanitizeTargetForWorkspace(target))
+
+		sched, err := database.CreateSchedule(ctx, database.CreateScheduleInput{
+			Name:         scheduleName,
+			WorkflowName: workflowName,
+			WorkflowKind: workflowKind,
+			Target:       target,
+			Params:       params,
+			TriggerType:  "cron",
+			Schedule:     cronSchedule,
+			Enabled:      true,
+			NextRun:      &nextRun,
+		})
+		if err != nil {
+			printer.Error("Failed to create schedule for %s: %s", target, err)
+			continue
+		}
+
+		created++
+		printer.Success("Schedule created: %s -> %s",
+			terminal.Green(target),
+			terminal.Yellow(workflowName))
+		printer.Info("  ID:       %s", terminal.Cyan(sched.ID))
+		printer.Info("  Schedule: %s", terminal.Cyan(cronSchedule))
+		printer.Info("  Next run: %s", terminal.Cyan(nextRun.Format(time.RFC3339)))
+	}
+
+	fmt.Println()
+	printer.Info("Created %d cron schedule(s)", created)
+	printer.Info("Use '%s' to list schedules", terminal.Cyan("osmedeus db ls --table schedules"))
+	printer.Info("Run '%s' to activate the scheduler", terminal.Cyan("osmedeus serve"))
 
 	return nil
 }

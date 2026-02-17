@@ -691,7 +691,13 @@ func formatCellValue(v interface{}, maxLen int) string {
 	switch val := v.(type) {
 	case string:
 		s = val
-	case []interface{}, map[string]interface{}:
+	case []interface{}:
+		parts := make([]string, 0, len(val))
+		for _, item := range val {
+			parts = append(parts, fmt.Sprintf("%v", item))
+		}
+		s = strings.Join(parts, ", ")
+	case map[string]interface{}:
 		b, _ := json.Marshal(val)
 		s = string(b)
 	default:

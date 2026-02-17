@@ -15,8 +15,8 @@ func TestFunction_List(t *testing.T) {
 	require.NoError(t, err)
 
 	log.Info("Asserting stdout contains function categories")
-	assert.Contains(t, stdout, "| File")
-	assert.Contains(t, stdout, "| String")
+	assert.Contains(t, stdout, "File")
+	assert.Contains(t, stdout, "String")
 
 	log.Success("function list displays all function categories")
 }

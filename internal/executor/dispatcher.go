@@ -11,6 +11,7 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/runner"
 	"github.com/j3ssie/osmedeus/v5/internal/template"
+	"github.com/j3ssie/osmedeus/v5/internal/terminal"
 	"go.uber.org/zap"
 )
 
@@ -26,6 +27,7 @@ type StepDispatcher struct {
 	dryRun           bool
 	runner           runner.Runner
 	enableBatch      bool // Enable batch template rendering
+	printer          *terminal.Printer
 	// Keep direct references to executors that need special configuration
 	bashExecutor  *BashExecutor
 	llmExecutor   *LLMExecutor
@@ -41,6 +43,11 @@ func (d *StepDispatcher) SetDryRun(dryRun bool) {
 func (d *StepDispatcher) SetSilent(silent bool) {
 	d.llmExecutor.SetSilent(silent)
 	d.agentExecutor.SetSilent(silent)
+}
+
+// SetPrinter sets the terminal printer for user-facing messages
+func (d *StepDispatcher) SetPrinter(p *terminal.Printer) {
+	d.printer = p
 }
 
 // SetRunner sets the runner for command execution
@@ -153,7 +160,10 @@ func (d *StepDispatcher) Dispatch(ctx context.Context, step *core.Step, execCtx 
 
 	// Log step message if provided
 	if renderedStep.Log != "" {
-		log.Info(renderedStep.Log,
+		if d.printer != nil {
+			d.printer.Info("%s", renderedStep.Log)
+		}
+		log.Debug(renderedStep.Log,
 			zap.String("step", step.Name),
 		)
 	}

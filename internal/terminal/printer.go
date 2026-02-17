@@ -221,15 +221,17 @@ func (p *Printer) StepSkippedWithCommand(stepName, typeSymbol string) {
 }
 
 // WorkflowInfo prints workflow metadata (for normal mode)
-func (p *Printer) WorkflowInfo(name, description string, tags []string, runnerType string, totalSteps int) {
+func (p *Printer) WorkflowInfo(name, description string, tags []string, runnerType string, totalSteps int, toggleCount int, speedCount int) {
 	if IsCIMode() {
 		printJSONL(map[string]interface{}{
-			"type":        "workflow_start",
-			"workflow":    name,
-			"description": description,
-			"tags":        tags,
-			"runner":      runnerType,
-			"total_steps": totalSteps,
+			"type":          "workflow_start",
+			"workflow":      name,
+			"description":   description,
+			"tags":          tags,
+			"runner":        runnerType,
+			"total_steps":   totalSteps,
+			"speed_params":  speedCount,
+			"toggle_params": toggleCount,
 		})
 		return
 	}
@@ -243,7 +245,20 @@ func (p *Printer) WorkflowInfo(name, description string, tags []string, runnerTy
 	if runnerType != "" && runnerType != "host" {
 		_, _ = fmt.Fprintf(os.Stdout, "  %s %s\n", Gray("Runner:"), runnerType)
 	}
-	_, _ = fmt.Fprintf(os.Stdout, "  %s %d\n\n", Gray("Total Steps:"), totalSteps)
+	_, _ = fmt.Fprintf(os.Stdout, "  %s %d\n", Gray("Total Steps:"), totalSteps)
+
+	if speedCount > 0 || toggleCount > 0 {
+		var parts []string
+		if speedCount > 0 {
+			parts = append(parts, fmt.Sprintf("%d speed control", speedCount))
+		}
+		if toggleCount > 0 {
+			parts = append(parts, fmt.Sprintf("%d toggle", toggleCount))
+		}
+		_, _ = fmt.Fprintf(os.Stdout, "  %s %s\n", Gray("Params:"), strings.Join(parts, ", "))
+	}
+
+	_, _ = fmt.Fprintf(os.Stdout, "  %s %s\n\n", Gray("Tip:"), Cyan("osmedeus workflow view "+name))
 }
 
 // Section prints a section header with symbol

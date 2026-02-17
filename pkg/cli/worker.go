@@ -201,18 +201,18 @@ var workerStatusCmd = &cobra.Command{
 		// Determine active headers
 		headers := resolveWorkerColumns(allHeaders, defaultHeaders, workerColumns, workerExcludeColumns)
 
-		// Map headers to column indices and project rows
+		// Map headers to column indices and build records for tablewriter
 		colIndices := mapHeaderIndices(allHeaders, headers)
-		var rows [][]string
+		var records []map[string]interface{}
 		for _, row := range allRows {
-			projected := make([]string, len(colIndices))
+			rec := make(map[string]interface{}, len(headers))
 			for i, idx := range colIndices {
-				projected[i] = row.display[idx]
+				rec[headers[i]] = row.display[idx]
 			}
-			rows = append(rows, projected)
+			records = append(records, rec)
 		}
 
-		printMarkdownTable(headers, rows)
+		renderTableWithTablewriter("", records, headers, globalWidth, false, nil)
 		return nil
 	},
 }

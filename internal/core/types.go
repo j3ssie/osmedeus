@@ -128,20 +128,28 @@ type StepResult struct {
 	LogFile   string
 }
 
+// ModuleResult holds per-module execution result for flow workflows
+type ModuleResult struct {
+	ModuleName string
+	Status     RunStatus
+	Duration   time.Duration
+}
+
 // WorkflowResult holds workflow execution result
 type WorkflowResult struct {
-	WorkflowName string
-	WorkflowKind WorkflowKind
-	RunUUID      string
-	Target       string
-	Status       RunStatus
-	StartTime    time.Time
-	EndTime      time.Time
-	Steps        []*StepResult
-	Artifacts    []string
-	Exports      map[string]interface{}
-	Error        error
-	Message      string // Optional message (e.g., for skipped status)
+	WorkflowName  string
+	WorkflowKind  WorkflowKind
+	RunUUID       string
+	Target        string
+	Status        RunStatus
+	StartTime     time.Time
+	EndTime       time.Time
+	Steps         []*StepResult
+	ModuleResults []*ModuleResult // Per-module results for flow workflows
+	Artifacts     []string
+	Exports       map[string]interface{}
+	Error         error
+	Message       string // Optional message (e.g., for skipped status)
 }
 
 // Event represents a system event for triggers

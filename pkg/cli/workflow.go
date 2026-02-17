@@ -13,7 +13,9 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/linter"
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
+	"github.com/mattn/go-runewidth"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // workflowCmd represents the workflow command
@@ -555,130 +557,15 @@ func stripAnsi(s string) string {
 	return re.ReplaceAllString(s, "")
 }
 
-// isToggleParam detects boolean/toggle parameters by:
-// - Type == "bool"
-// - Name patterns: enableX, enable_X, skipX, skip_X, disableX, useX, verboseX
-// - Default value is bool (true/false)
-func isToggleParam(p core.Param) bool {
-	// Check explicit type
-	if p.Type == "bool" {
-		return true
-	}
-
-	// Check name patterns (case-insensitive)
-	name := strings.ToLower(p.Name)
-	togglePrefixes := []string{"enable", "skip", "disable", "use", "verbose"}
-	for _, prefix := range togglePrefixes {
-		if strings.HasPrefix(name, prefix) {
-			return true
-		}
-		// Also check with underscore: enable_xxx, skip_xxx
-		if strings.HasPrefix(name, prefix+"_") {
-			return true
-		}
-	}
-
-	// Check if default value is boolean
-	if p.Default != nil {
-		switch p.Default.(type) {
-		case bool:
-			return true
-		}
-		// Also check string representation
-		defaultStr := strings.ToLower(p.DefaultString())
-		if defaultStr == "true" || defaultStr == "false" {
-			return true
-		}
-	}
-
-	return false
+// displayWidth returns the visual display width of a string, ignoring ANSI codes.
+// Unlike len(), this correctly handles multi-byte Unicode characters like ✔ (3 bytes, 1 display char).
+func displayWidth(s string) int {
+	return runewidth.StringWidth(stripAnsi(s))
 }
 
-// isSpeedControlParam detects performance/speed parameters by:
-// - Name contains: threads, timeout, rate, concurrency, delay, limit, workers, parallel, batch, interval, retry
-// - Name ends with: depth, parallel
-// - Default value matches time pattern: \d+[hms]
-func isSpeedControlParam(p core.Param) bool {
-	name := strings.ToLower(p.Name)
-	speedPatterns := []string{
-		"threads", "timeout", "rate", "concurrency", "delay",
-		"limit", "workers", "parallel", "batch", "interval", "retry",
-	}
-
-	for _, pattern := range speedPatterns {
-		if strings.Contains(name, pattern) {
-			return true
-		}
-	}
-
-	// Check suffix patterns for depth and parallel
-	speedSuffixes := []string{"depth", "parallel"}
-	for _, suffix := range speedSuffixes {
-		if strings.HasSuffix(name, suffix) {
-			return true
-		}
-	}
-
-	// Check for time pattern in default value (e.g., 8h, 30m, 1800)
-	if p.Default != nil {
-		defaultStr := p.DefaultString()
-		// Match patterns like: 8h, 30m, 1800, 60s
-		timePatternRegex := regexp.MustCompile(`^\d+[hms]?$`)
-		if timePatternRegex.MatchString(defaultStr) {
-			// Also verify it's numeric or has time suffix
-			if len(defaultStr) > 0 {
-				lastChar := defaultStr[len(defaultStr)-1]
-				// If it ends with h, m, or s, it's a time value
-				if lastChar == 'h' || lastChar == 'm' || lastChar == 's' {
-					return true
-				}
-				// If purely numeric with reasonable size, could be timeout/limit
-				if p.Type == "int" || p.Type == "" {
-					// Check if numeric only
-					numericRegex := regexp.MustCompile(`^\d+$`)
-					if numericRegex.MatchString(defaultStr) {
-						// Large numbers (>100) are likely timeouts/limits
-						val := 0
-						_, _ = fmt.Sscanf(defaultStr, "%d", &val)
-						if val > 100 {
-							return true
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return false
-}
-
-// isConfigParam detects configuration parameters by:
-// - Name ends with: Config, config, Cfg, cfg
-func isConfigParam(p core.Param) bool {
-	name := strings.ToLower(p.Name)
-	configSuffixes := []string{"config", "cfg"}
-	for _, suffix := range configSuffixes {
-		if strings.HasSuffix(name, suffix) {
-			return true
-		}
-	}
-	return false
-}
-
-// categorizeParams groups params into Toggle, Speed, Config, and General categories
+// categorizeParams is a convenience wrapper around core.CategorizeParams
 func categorizeParams(params []core.Param) (toggle, speed, config, general []core.Param) {
-	for _, p := range params {
-		if isToggleParam(p) {
-			toggle = append(toggle, p)
-		} else if isSpeedControlParam(p) {
-			speed = append(speed, p)
-		} else if isConfigParam(p) {
-			config = append(config, p)
-		} else {
-			general = append(general, p)
-		}
-	}
-	return
+	return core.CategorizeParams(params)
 }
 
 // printToggleParams prints toggle parameters with green highlighting
@@ -734,6 +621,26 @@ func printSpeedControlParams(params []core.Param) {
 	printMarkdownTable([]string{"Name", "Default", "Required"}, rows)
 }
 
+// printToggleParamsGrouped prints all toggle parameters across modules in a single table
+func printToggleParamsGrouped(rows [][]string) {
+	if len(rows) == 0 {
+		return
+	}
+	fmt.Println()
+	fmt.Println("◐ " + terminal.Bold("Toggle Parameters:"))
+	printMarkdownTable([]string{"Module", "Name", "Default", "Required"}, rows)
+}
+
+// printSpeedControlParamsGrouped prints all speed control parameters across modules in a single table
+func printSpeedControlParamsGrouped(rows [][]string) {
+	if len(rows) == 0 {
+		return
+	}
+	fmt.Println()
+	fmt.Println("◎ " + terminal.Bold("Speed Control Parameters:"))
+	printMarkdownTable([]string{"Module", "Name", "Default", "Required"}, rows)
+}
+
 // printConfigParams prints config parameters with magenta highlighting
 func printConfigParams(params []core.Param) {
 	if len(params) == 0 {
@@ -783,54 +690,77 @@ func printGeneralParams(params []core.Param) {
 		}
 		rows = append(rows, []string{terminal.Cyan(p.Name), coloredDefault, required})
 	}
-	printMarkdownTable([]string{"Name", "Default", "Required"}, rows)
+	// Use width-aware table to wrap long default values
+	// Reserve: ~42 for Name col, ~10 for Required col, ~8 for separators/padding
+	maxDefaultWidth := 60 // sensible default
+	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 80 {
+		maxDefaultWidth = w - 60
+		if maxDefaultWidth < 30 {
+			maxDefaultWidth = 30
+		}
+	}
+	printMarkdownTableWithWidth([]string{"Name", "Default", "Required"}, rows, maxDefaultWidth)
 }
 
-// printMarkdownTable prints an aligned markdown table (supports colored cells)
-func printMarkdownTable(headers []string, rows [][]string) {
-	// Calculate column widths (using display length, not byte length)
+// printMarkdownTable prints a box-drawing table with left-aligned columns (supports colored cells).
+// The optional align parameter is accepted for backward compatibility but ignored.
+func printMarkdownTable(headers []string, rows [][]string, align ...string) {
+	// Calculate column widths (using display width, not byte length)
 	widths := make([]int, len(headers))
 	for i, h := range headers {
-		widths[i] = len(stripAnsi(h))
+		widths[i] = displayWidth(h)
 	}
 	for _, row := range rows {
 		for i, cell := range row {
-			displayLen := len(stripAnsi(cell))
-			if i < len(widths) && displayLen > widths[i] {
-				widths[i] = displayLen
+			dw := displayWidth(cell)
+			if i < len(widths) && dw > widths[i] {
+				widths[i] = dw
 			}
 		}
 	}
 
 	// Print header
-	fmt.Print("|")
 	for i, h := range headers {
-		fmt.Printf(" %-*s |", widths[i], h)
+		printAlignedCell(h, widths[i])
+		if i < len(headers)-1 {
+			fmt.Print("│")
+		}
 	}
 	fmt.Println()
 
-	// Print separator
-	fmt.Print("|")
-	for _, w := range widths {
-		fmt.Printf("-%s-|", strings.Repeat("-", w))
+	// Print separator with box-drawing characters
+	for i, w := range widths {
+		fmt.Print(strings.Repeat("─", w+2))
+		if i < len(widths)-1 {
+			fmt.Print("┼")
+		}
 	}
 	fmt.Println()
 
-	// Print rows (with ANSI-aware padding)
+	// Print rows
 	for _, row := range rows {
-		fmt.Print("|")
 		for i := range headers {
 			cell := ""
 			if i < len(row) {
 				cell = row[i]
 			}
-			// Calculate padding needed (display width vs actual string length)
-			displayLen := len(stripAnsi(cell))
-			padding := widths[i] - displayLen
-			fmt.Printf(" %s%s |", cell, strings.Repeat(" ", padding))
+			printAlignedCell(cell, widths[i])
+			if i < len(headers)-1 {
+				fmt.Print("│")
+			}
 		}
 		fmt.Println()
 	}
+}
+
+// printAlignedCell prints a single left-aligned table cell within colWidth.
+func printAlignedCell(cell string, colWidth int) {
+	dw := displayWidth(cell)
+	pad := colWidth - dw
+	if pad < 0 {
+		pad = 0
+	}
+	fmt.Printf(" %s%s ", cell, strings.Repeat(" ", pad))
 }
 
 // wrapText wraps text to maxWidth characters, preserving existing newlines
@@ -892,7 +822,7 @@ func wrapText(text string, maxWidth int) []string {
 	return result
 }
 
-// printMarkdownTableWithWidth prints a table with column width wrapping
+// printMarkdownTableWithWidth prints a box-drawing table with column width wrapping
 func printMarkdownTableWithWidth(headers []string, rows [][]string, maxWidth int) {
 	// First pass: wrap all cells and calculate column widths
 	type wrappedRow struct {
@@ -903,9 +833,9 @@ func printMarkdownTableWithWidth(headers []string, rows [][]string, maxWidth int
 	var wrappedRows []wrappedRow
 	widths := make([]int, len(headers))
 
-	// Initialize widths with header lengths
+	// Initialize widths with header display widths
 	for i, h := range headers {
-		widths[i] = len(stripAnsi(h))
+		widths[i] = displayWidth(h)
 	}
 
 	// Wrap each cell and track widths
@@ -923,9 +853,9 @@ func printMarkdownTableWithWidth(headers []string, rows [][]string, maxWidth int
 			}
 			// Track max width for this column
 			for _, line := range wrapped {
-				lineWidth := len(stripAnsi(line))
-				if lineWidth > widths[i] {
-					widths[i] = lineWidth
+				lw := displayWidth(line)
+				if lw > widths[i] {
+					widths[i] = lw
 				}
 			}
 		}
@@ -933,32 +863,35 @@ func printMarkdownTableWithWidth(headers []string, rows [][]string, maxWidth int
 	}
 
 	// Print header
-	fmt.Print("|")
 	for i, h := range headers {
-		fmt.Printf(" %-*s |", widths[i], h)
+		printAlignedCell(h, widths[i])
+		if i < len(headers)-1 {
+			fmt.Print("│")
+		}
 	}
 	fmt.Println()
 
-	// Print separator
-	fmt.Print("|")
-	for _, w := range widths {
-		fmt.Printf("-%s-|", strings.Repeat("-", w))
+	// Print separator with box-drawing characters
+	for i, w := range widths {
+		fmt.Print(strings.Repeat("─", w+2))
+		if i < len(widths)-1 {
+			fmt.Print("┼")
+		}
 	}
 	fmt.Println()
 
-	// Print rows (with multi-line support)
+	// Print rows with multi-line support
 	for _, wr := range wrappedRows {
 		for lineIdx := 0; lineIdx < wr.maxHeight; lineIdx++ {
-			fmt.Print("|")
 			for colIdx := range headers {
 				cell := ""
 				if lineIdx < len(wr.cells[colIdx]) {
 					cell = wr.cells[colIdx][lineIdx]
 				}
-				// Calculate padding needed (display width vs actual string length)
-				displayLen := len(stripAnsi(cell))
-				padding := widths[colIdx] - displayLen
-				fmt.Printf(" %s%s |", cell, strings.Repeat(" ", padding))
+				printAlignedCell(cell, widths[colIdx])
+				if colIdx < len(headers)-1 {
+					fmt.Print("│")
+				}
 			}
 			fmt.Println()
 		}
@@ -1024,23 +957,87 @@ var workflowShowCmd = &cobra.Command{
 		printer.KeyValue("Description", workflow.Description)
 		printer.KeyValue("File", terminal.Gray(workflow.FilePath))
 
+		// For flows, show aggregated module param counts before Usage
+		if workflow.IsFlow() && len(workflow.Modules) > 0 {
+			var totalSpeed, totalToggle, totalCfg, totalGeneral int
+			for _, m := range workflow.Modules {
+				if m.Path == "" {
+					continue
+				}
+				mod, modErr := loader.LoadWorkflow(m.Path)
+				if modErr != nil {
+					continue
+				}
+				mToggle, mSpeed, mCfg, mGeneral := core.CategorizeParams(mod.Params)
+				totalSpeed += len(mSpeed)
+				totalToggle += len(mToggle)
+				totalCfg += len(mCfg)
+				totalGeneral += len(mGeneral)
+			}
+			var aggParts []string
+			if totalSpeed > 0 {
+				aggParts = append(aggParts, fmt.Sprintf("%s speed control", terminal.Magenta(fmt.Sprintf("%d", totalSpeed))))
+			}
+			if totalToggle > 0 {
+				aggParts = append(aggParts, fmt.Sprintf("%s toggle", terminal.Magenta(fmt.Sprintf("%d", totalToggle))))
+			}
+			if totalCfg > 0 {
+				aggParts = append(aggParts, fmt.Sprintf("%s config", terminal.Magenta(fmt.Sprintf("%d", totalCfg))))
+			}
+			if totalGeneral > 0 {
+				aggParts = append(aggParts, fmt.Sprintf("%s general", terminal.Magenta(fmt.Sprintf("%d", totalGeneral))))
+			}
+			if len(aggParts) > 0 {
+				printer.KeyValue("Params", strings.Join(aggParts, ", "))
+			}
+		}
+
 		// Show help info
 		if workflow.Help != nil {
 			if workflow.Help.Usage != "" {
-				printer.KeyValue("Usage", terminal.Cyan(workflow.Help.Usage))
+				if strings.Contains(workflow.Help.Usage, "\n") {
+					fmt.Println("  " + terminal.Gray("Usage") + ":")
+					for _, line := range strings.Split(strings.TrimRight(workflow.Help.Usage, "\n "), "\n") {
+						fmt.Println("    " + terminal.Cyan(line))
+					}
+				} else {
+					printer.KeyValue("Usage", terminal.Cyan(workflow.Help.Usage))
+				}
 			}
 			if len(workflow.Help.ExampleTargets) > 0 {
 				printer.KeyValue("Example Targets", terminal.Yellow(strings.Join(workflow.Help.ExampleTargets, ", ")))
 			}
 		}
 
-		// Show parameters (categorized)
+		// Show parameters
 		if len(workflow.Params) > 0 {
-			toggle, speed, config, general := categorizeParams(workflow.Params)
-			printToggleParams(toggle)
-			printSpeedControlParams(speed)
-			printConfigParams(config)
-			printGeneralParams(general)
+			toggle, speed, cfg, general := categorizeParams(workflow.Params)
+
+			// Always show summary counts
+			var parts []string
+			if len(speed) > 0 {
+				parts = append(parts, fmt.Sprintf("%s speed control", terminal.Magenta(fmt.Sprintf("%d", len(speed)))))
+			}
+			if len(toggle) > 0 {
+				parts = append(parts, fmt.Sprintf("%s toggle", terminal.Magenta(fmt.Sprintf("%d", len(toggle)))))
+			}
+			if len(cfg) > 0 {
+				parts = append(parts, fmt.Sprintf("%s config", terminal.Magenta(fmt.Sprintf("%d", len(cfg)))))
+			}
+			if len(general) > 0 {
+				parts = append(parts, fmt.Sprintf("%s general", terminal.Magenta(fmt.Sprintf("%d", len(general)))))
+			}
+			if len(parts) > 0 {
+				printer.KeyValue("Params", strings.Join(parts, ", "))
+			}
+
+			// Show full categorized tables only in verbose mode
+			if showVerbose {
+				printToggleParams(toggle)
+				printSpeedControlParams(speed)
+				printConfigParams(cfg)
+				printGeneralParams(general)
+			}
 		}
 
 		// Show steps (for modules)
@@ -1068,6 +1065,79 @@ var workflowShowCmd = &cobra.Command{
 				rows = append(rows, []string{fmt.Sprintf("%d", i+1), m.Name, m.Path, deps})
 			}
 			printMarkdownTable([]string{"#", "Name", "Path", "Depends On"}, rows)
+
+			// Load each module and show params
+			fmt.Println()
+			fmt.Println("◆ " + terminal.Bold("Module Parameters:"))
+
+			if showVerbose {
+				// Verbose: collect all params across modules, then render grouped tables
+				var allSpeedRows [][]string
+				var allToggleRows [][]string
+				for _, m := range workflow.Modules {
+					if m.Path == "" {
+						continue
+					}
+					mod, err := loader.LoadWorkflow(m.Path)
+					if err != nil {
+						continue
+					}
+					mToggle, mSpeed, _, _ := core.CategorizeParams(mod.Params)
+					for _, p := range mSpeed {
+						required := terminal.Gray("no")
+						if p.Required {
+							required = terminal.Green("yes")
+						}
+						defaultVal := p.DefaultString()
+						if defaultVal == "" {
+							defaultVal = "-"
+						}
+						allSpeedRows = append(allSpeedRows, []string{terminal.HiBlue(m.Name), terminal.HiBlue(p.Name), terminal.HiBlue(defaultVal), required})
+					}
+					for _, p := range mToggle {
+						required := terminal.Gray("no")
+						if p.Required {
+							required = terminal.Green("yes")
+						}
+						defaultVal := p.DefaultString()
+						if defaultVal == "" {
+							defaultVal = "-"
+						}
+						coloredDefault := defaultVal
+						if strings.ToLower(defaultVal) == "true" {
+							coloredDefault = terminal.Green(defaultVal)
+						} else if strings.ToLower(defaultVal) == "false" {
+							coloredDefault = terminal.Gray(defaultVal)
+						}
+						allToggleRows = append(allToggleRows, []string{terminal.HiCyan(m.Name), terminal.HiCyan(p.Name), coloredDefault, required})
+					}
+				}
+				printSpeedControlParamsGrouped(allSpeedRows)
+				printToggleParamsGrouped(allToggleRows)
+			} else {
+				// Summary: show counts per module
+				for _, m := range workflow.Modules {
+					if m.Path == "" {
+						continue
+					}
+					mod, err := loader.LoadWorkflow(m.Path)
+					if err != nil {
+						continue
+					}
+					mToggle, mSpeed, _, _ := core.CategorizeParams(mod.Params)
+					if len(mToggle)+len(mSpeed) == 0 {
+						continue
+					}
+					var mParts []string
+					if len(mSpeed) > 0 {
+						mParts = append(mParts, fmt.Sprintf("%s speed control", terminal.Magenta(fmt.Sprintf("%d", len(mSpeed)))))
+					}
+					if len(mToggle) > 0 {
+						mParts = append(mParts, fmt.Sprintf("%s toggle", terminal.Magenta(fmt.Sprintf("%d", len(mToggle)))))
+					}
+					printer.KeyValue("  "+m.Name, strings.Join(mParts, ", "))
+				}
+			}
 		}
 
 		// Show triggers
@@ -1192,7 +1262,7 @@ var workflowShowCmd = &cobra.Command{
 			}
 			fmt.Println()
 			fmt.Println()
-			fmt.Printf(" %s%s\n", terminal.BoldCyan(terminal.SymbolLightning), terminal.Gray("Tip: Use --verbose to show all variables with descriptions and default values or --yaml to see raw workflow file"))
+			fmt.Printf("%s %s\n", terminal.BoldCyan(terminal.SymbolLightning), terminal.Gray("Tip: Use --verbose to show all params, variables with descriptions and default values or --yaml to see raw workflow file"))
 		}
 
 		fmt.Println()

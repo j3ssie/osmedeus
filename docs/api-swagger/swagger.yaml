@@ -76,6 +76,25 @@ definitions:
       total:
         type: integer
     type: object
+  database.AssetStatsData:
+    properties:
+      asset_types:
+        items:
+          type: string
+        type: array
+      remarks:
+        items:
+          type: string
+        type: array
+      sources:
+        items:
+          type: string
+        type: array
+      technologies:
+        items:
+          type: string
+        type: array
+    type: object
   database.RunStats:
     properties:
       completed:
@@ -191,6 +210,9 @@ definitions:
         type: string
       schedule_enabled:
         description: Enable scheduled execution
+        type: boolean
+      skip_validation:
+        description: Validation
         type: boolean
       ssh_host:
         description: SSH host when runner_type=ssh
@@ -633,6 +655,32 @@ paths:
       summary: Download workspace artifact
       tags:
       - Artifacts
+  /osm/api/asset-stats:
+    get:
+      description: Get unique values for technologies, sources, remarks, and asset
+        types across all assets or filtered by workspace
+      parameters:
+      - description: Filter by workspace name
+        in: query
+        name: workspace
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Asset statistics
+          schema:
+            $ref: '#/definitions/database.AssetStatsData'
+        "500":
+          description: Failed to get stats
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get asset statistics
+      tags:
+      - Stats
   /osm/api/assets:
     get:
       description: Get a paginated list of assets with optional filtering

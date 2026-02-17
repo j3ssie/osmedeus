@@ -114,21 +114,22 @@ type AssetsResponse struct {
 
 // Asset represents an asset from the API
 type Asset struct {
-	ID          int64     `json:"id"`
-	Workspace   string    `json:"workspace"`
-	AssetType   string    `json:"asset_type"`
-	AssetValue  string    `json:"asset_value"`
-	URL         string    `json:"url,omitempty"`
-	Title       string    `json:"title,omitempty"`
-	StatusCode  int       `json:"status_code,omitempty"`
-	HostIP      string    `json:"host_ip,omitempty"`
-	TechStack   []string  `json:"tech_stack,omitempty"`
-	ContentType string    `json:"content_type,omitempty"`
-	IsCDN       bool      `json:"is_cdn,omitempty"`
-	IsCloud     bool      `json:"is_cloud,omitempty"`
-	IsWAF       bool      `json:"is_waf,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID            int64     `json:"id"`
+	Workspace     string    `json:"workspace"`
+	AssetType     string    `json:"asset_type"`
+	AssetValue    string    `json:"asset_value"`
+	URL           string    `json:"url,omitempty"`
+	Title         string    `json:"title,omitempty"`
+	StatusCode    int       `json:"status_code,omitempty"`
+	ContentLength int       `json:"content_length,omitempty"`
+	HostIP        string    `json:"host_ip,omitempty"`
+	TechStack     []string  `json:"tech_stack,omitempty"`
+	ContentType   string    `json:"content_type,omitempty"`
+	IsCDN         bool      `json:"is_cdn,omitempty"`
+	IsCloud       bool      `json:"is_cloud,omitempty"`
+	IsWAF         bool      `json:"is_waf,omitempty"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 // WorkspacesResponse represents the response from listing workspaces

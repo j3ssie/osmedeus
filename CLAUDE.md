@@ -222,6 +222,14 @@ osmedeus worker set <id> <field> <value>         # Update worker metadata
 osmedeus worker queue list                       # List queued tasks
 osmedeus worker queue new -f <flow> -t <target>  # Queue task for delayed execution
 osmedeus worker queue run --concurrency 5        # Process queued tasks
+osmedeus assets                                  # List discovered assets
+osmedeus assets -w <workspace>                   # Filter assets by workspace
+osmedeus assets --source httpx --type web        # Filter by source and type
+osmedeus assets --stats                          # Show asset statistics
+osmedeus assets --stats -w <workspace>           # Stats filtered by workspace
+osmedeus assets --columns url,title,status_code  # Custom columns
+osmedeus assets --limit 100 --offset 50          # Pagination
+osmedeus assets --json                           # JSON output
 ```
 
 ### Event Trigger Input Syntax

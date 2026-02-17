@@ -11,10 +11,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/charmbracelet/glamour"
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
+	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/renderer"
+	"github.com/olekukonko/tablewriter/tw"
 	"github.com/spf13/cobra"
 )
 
@@ -45,11 +47,22 @@ var tableDefaultColumns = map[string][]string{
 	"runs":            {"run_uuid", "workflow_name", "target", "workspace", "trigger_type", "status", "completed_steps", "total_steps"},
 	"step_results":    {"step_name", "step_type", "status", "duration_ms", "command"},
 	"artifacts":       {"name", "path", "type", "size_bytes", "line_count"},
-	"assets":          {"asset_value", "url", "status_code", "content_length", "title"},
+	"assets":          {"asset_value", "status_code", "title", "tech", "host_ip", "source", "asset_type", "url"},
 	"event_logs":      {"topic", "source", "processed", "data_type", "workspace", "data"},
 	"schedules":       {"name", "workflow_name", "workflow_kind", "target", "trigger_type", "schedule", "is_enabled", "run_count"},
 	"workspaces":      {"name", "data_source", "total_assets", "total_ips", "total_vulns", "risk_score"},
 	"vulnerabilities": {"vuln_title", "severity", "confidence", "asset_value", "last_seen_at", "workspace"},
+}
+
+// tableColumnMinWidths defines per-column minimum widths for specific tables (column_name → min_width)
+var tableColumnMinWidths = map[string]map[string]int{
+	"schedules": {
+		"name":     30,
+		"schedule": 20,
+	},
+	"assets": {
+		"title": 30,
+	},
 }
 
 // dbCmd - parent command for database management
@@ -614,24 +627,8 @@ func listTableRecordsOnce(ctx context.Context, cfg *config.Config, printer *term
 	printer.Info("Table: %s", records.Table)
 	fmt.Printf("Showing records %d-%d of %d\n\n", startRecord, endRecord, records.TotalCount)
 
-	// Output as markdown table
-	tableStr := formatAsMarkdownTable(records.Records, columns, globalWidth, hideDefaultColumns, excludeColumns)
-
-	// Render with glamour for styled markdown table
-	renderer, err := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
-		glamour.WithWordWrap(0),
-	)
-	if err == nil {
-		rendered, renderErr := renderer.Render(tableStr)
-		if renderErr == nil {
-			fmt.Print(rendered)
-		} else {
-			fmt.Println(tableStr)
-		}
-	} else {
-		fmt.Println(tableStr)
-	}
+	// Render table using tablewriter
+	renderTableWithTablewriter(dbTable, records.Records, columns, globalWidth, hideDefaultColumns, excludeColumns)
 
 	// Show pagination hints
 	if records.TotalCount > endRecord {
@@ -722,23 +719,24 @@ func isHiddenColumn(col string) bool {
 	return false
 }
 
-// formatAsMarkdownTable formats records as a markdown table
-func formatAsMarkdownTable(records interface{}, columns []string, maxWidth int, hideDefaultColumns bool, excludeColumns map[string]bool) string {
+// renderTableWithTablewriter renders records directly to stdout using tablewriter
+func renderTableWithTablewriter(tableName string, records interface{}, columns []string, maxWidth int, hideDefaultColumns bool, excludeColumns map[string]bool) {
 	// Convert records to []map[string]interface{}
 	jsonBytes, _ := json.Marshal(records)
 	var data []map[string]interface{}
 	if err := json.Unmarshal(jsonBytes, &data); err != nil {
-		return "No records found."
+		fmt.Println("No records found.")
+		return
 	}
 
 	if len(data) == 0 {
-		return "No records found."
+		fmt.Println("No records found.")
+		return
 	}
 
 	// Get headers (all keys or selected columns)
 	var headers []string
 	if len(columns) > 0 {
-		// Filter out excluded columns from specified columns
 		for _, col := range columns {
 			if !excludeColumns[col] {
 				headers = append(headers, col)
@@ -746,11 +744,9 @@ func formatAsMarkdownTable(records interface{}, columns []string, maxWidth int, 
 		}
 	} else {
 		for key := range data[0] {
-			// Skip hidden columns if hideDefaultColumns is true
 			if hideDefaultColumns && isHiddenColumn(key) {
 				continue
 			}
-			// Skip excluded columns
 			if excludeColumns[key] {
 				continue
 			}
@@ -759,39 +755,75 @@ func formatAsMarkdownTable(records interface{}, columns []string, maxWidth int, 
 		sort.Strings(headers)
 	}
 
-	// Build markdown table
-	var sb strings.Builder
-
-	// Header row
-	sb.WriteString("| ")
-	sb.WriteString(strings.Join(headers, " | "))
-	sb.WriteString(" |\n")
-
-	// Separator row
-	sb.WriteString("|")
-	for range headers {
-		sb.WriteString(" --- |")
+	// Build tablewriter options
+	opts := []tablewriter.Option{
+		tablewriter.WithRenderer(renderer.NewBlueprint(tw.Rendition{
+			Borders: tw.Border{
+				Left:   tw.Off,
+				Right:  tw.Off,
+				Top:    tw.Off,
+				Bottom: tw.Off,
+			},
+			Settings: tw.Settings{
+				Separators: tw.Separators{
+					BetweenColumns: tw.On,
+					BetweenRows:    tw.Off,
+				},
+				Lines: tw.Lines{
+					ShowHeaderLine: tw.On,
+					ShowTop:        tw.Off,
+					ShowBottom:     tw.Off,
+					ShowFooterLine: tw.Off,
+				},
+			},
+			Symbols: tw.NewSymbols(tw.StyleLight),
+		})),
+		tablewriter.WithHeaderAlignment(tw.AlignLeft),
+		tablewriter.WithRowAlignment(tw.AlignLeft),
+		tablewriter.WithHeaderAutoFormat(tw.Off),
+		tablewriter.WithHeaderAutoWrap(tw.WrapNone),
+		tablewriter.WithTrimSpace(tw.On),
 	}
-	sb.WriteString("\n")
+	if maxWidth > 0 {
+		opts = append(opts, tablewriter.WithMaxWidth(maxWidth))
+	}
 
-	// Data rows
-	for _, row := range data {
-		sb.WriteString("| ")
+	// Apply per-column minimum widths if defined for this table
+	if colWidths, ok := tableColumnMinWidths[tableName]; ok {
+		widths := tw.NewMapper[int, int]()
 		for i, h := range headers {
-			val := formatTableValue(row[h], maxWidth)
-			if i > 0 {
-				sb.WriteString(" | ")
+			if minW, exists := colWidths[h]; exists {
+				widths[i] = minW
 			}
-			sb.WriteString(val)
 		}
-		sb.WriteString(" |\n")
+		if len(widths) > 0 {
+			opts = append(opts, tablewriter.WithColumnWidths(widths))
+		}
 	}
 
-	return sb.String()
+	table := tablewriter.NewTable(os.Stdout, opts...)
+
+	// Convert headers to []any for variadic call
+	headerArgs := make([]any, len(headers))
+	for i, h := range headers {
+		headerArgs[i] = h
+	}
+	table.Header(headerArgs...)
+
+	// Add data rows
+	for _, row := range data {
+		rowArgs := make([]any, len(headers))
+		for i, h := range headers {
+			rowArgs[i] = formatTableValue(row[h], h)
+		}
+		_ = table.Append(rowArgs...)
+	}
+
+	_ = table.Render()
 }
 
-// formatTableValue converts a value to string for markdown display
-func formatTableValue(v interface{}, maxWidth int) string {
+// formatTableValue converts a value to string for table display and applies column-specific coloring
+func formatTableValue(v interface{}, columnName string) string {
 	if v == nil {
 		return ""
 	}
@@ -799,24 +831,41 @@ func formatTableValue(v interface{}, maxWidth int) string {
 	var s string
 	switch val := v.(type) {
 	case string:
-		// Escape pipe characters and newlines
-		s = strings.ReplaceAll(val, "|", "\\|")
-		s = strings.ReplaceAll(s, "\n", " ")
-	case map[string]interface{}, []interface{}:
-		// Compact JSON for complex types
+		s = strings.ReplaceAll(val, "\n", " ")
+	case []interface{}:
+		// Format arrays as comma-separated values without brackets/quotes
+		parts := make([]string, 0, len(val))
+		for _, item := range val {
+			parts = append(parts, fmt.Sprintf("%v", item))
+		}
+		s = strings.Join(parts, ", ")
+	case map[string]interface{}:
 		b, _ := json.Marshal(val)
 		s = string(b)
 	default:
 		s = fmt.Sprintf("%v", val)
 	}
 
-	// Apply width limit
-	if maxWidth > 0 && len(s) > maxWidth {
-		if maxWidth > 3 {
-			s = s[:maxWidth-3] + "..."
-		} else {
-			s = s[:maxWidth]
-		}
+	// Apply column-specific coloring
+	switch columnName {
+	case "status":
+		s = terminal.ColorizeStatus(s)
+	case "trigger_type":
+		s = terminal.ColorizeTriggerType(s)
+	case "is_enabled":
+		s = terminal.ColorizeEnabled(s)
+	case "workflow_kind":
+		s = terminal.ColorizeWorkflowKind(s)
+	case "schedule":
+		s = terminal.ColorizeSchedule(s)
+	case "status_code":
+		s = terminal.ColorizeStatusCode(s)
+	case "source":
+		s = terminal.ColorizeSource(s)
+	case "asset_type":
+		s = terminal.ColorizeAssetType(s)
+	case "tech":
+		s = terminal.Gray(s)
 	}
 
 	return s

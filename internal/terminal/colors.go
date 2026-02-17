@@ -205,3 +205,109 @@ func ColorizeStatus(status string) string {
 		return status
 	}
 }
+
+// ColorizeTriggerType applies ANSI color codes to trigger_type values for table display
+func ColorizeTriggerType(triggerType string) string {
+	switch strings.ToLower(triggerType) {
+	case "cli":
+		return Cyan(triggerType)
+	case "cron":
+		return Yellow(triggerType)
+	case "event":
+		return Magenta(triggerType)
+	case "webhook":
+		return Blue(triggerType)
+	case "manual":
+		return Gray(triggerType)
+	default:
+		return triggerType
+	}
+}
+
+// ColorizeEnabled applies ANSI color codes to boolean enabled/disabled values
+func ColorizeEnabled(val string) string {
+	switch strings.ToLower(val) {
+	case "true", "yes", "1":
+		return Green(val)
+	case "false", "no", "0":
+		return Red(val)
+	default:
+		return val
+	}
+}
+
+// ColorizeWorkflowKind applies ANSI color codes to workflow kind values
+func ColorizeWorkflowKind(kind string) string {
+	switch strings.ToLower(kind) {
+	case "flow":
+		return Blue(kind)
+	case "module":
+		return Cyan(kind)
+	default:
+		return kind
+	}
+}
+
+// ColorizeSchedule applies ANSI color codes to schedule/cron expressions
+func ColorizeSchedule(schedule string) string {
+	if schedule == "" {
+		return schedule
+	}
+	return Gray(schedule)
+}
+
+// ColorizeStatusCode applies ANSI color codes to HTTP status codes
+func ColorizeStatusCode(code string) string {
+	if code == "" || code == "0" {
+		return Gray(code)
+	}
+	if len(code) >= 1 {
+		switch code[0] {
+		case '2':
+			return Green(code)
+		case '3':
+			return Cyan(code)
+		case '4':
+			return Yellow(code)
+		case '5':
+			return Red(code)
+		}
+	}
+	return code
+}
+
+// ColorizeSource applies ANSI color codes to asset source values
+func ColorizeSource(source string) string {
+	if source == "" {
+		return Gray(source)
+	}
+	switch strings.ToLower(source) {
+	case "httpx":
+		return Cyan(source)
+	case "subfinder", "amass":
+		return Blue(source)
+	case "nmap", "rustscan":
+		return Magenta(source)
+	default:
+		return Teal(source)
+	}
+}
+
+// ColorizeAssetType applies ANSI color codes to asset type values
+func ColorizeAssetType(assetType string) string {
+	if assetType == "" {
+		return Gray(assetType)
+	}
+	switch strings.ToLower(assetType) {
+	case "web":
+		return Green(assetType)
+	case "subdomain":
+		return Blue(assetType)
+	case "ip":
+		return Magenta(assetType)
+	case "cidr":
+		return Yellow(assetType)
+	default:
+		return Cyan(assetType)
+	}
+}

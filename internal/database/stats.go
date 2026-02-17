@@ -215,7 +215,7 @@ func GetAssetStats(ctx context.Context, workspace string) (*AssetStatsData, erro
 	var assets []Asset
 	query := db.NewSelect().
 		Model(&assets).
-		Column("tech", "source", "remarks", "asset_type")
+		Column("technologies", "source", "remarks", "asset_type")
 
 	if workspace != "" {
 		query = query.Where("workspace = ?", workspace)

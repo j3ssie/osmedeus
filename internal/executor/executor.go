@@ -77,12 +77,15 @@ type Executor struct {
 
 // NewExecutor creates a new workflow executor
 func NewExecutor() *Executor {
+	p := terminal.NewPrinter()
+	sd := NewStepDispatcher()
+	sd.SetPrinter(p)
 	return &Executor{
 		templateEngine:   template.NewEngine(),
 		functionRegistry: functions.NewRegistry(),
-		stepDispatcher:   NewStepDispatcher(),
+		stepDispatcher:   sd,
 		logger:           logger.Get(),
-		printer:          terminal.NewPrinter(),
+		printer:          p,
 		showSpinner:      false, // Disabled by default, enabled with --spinner
 	}
 }
@@ -1197,7 +1200,8 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 		}
 		printDryRunHeader(module.Name, string(core.KindModule), params["target"], tactic, len(module.Steps), execCtx)
 	} else if e.progressBar == nil {
-		e.printer.WorkflowInfo(module.Name, module.Description, module.Tags, string(module.Runner), len(module.Steps))
+		toggle, speed, _, _ := core.CategorizeParams(module.Params)
+		e.printer.WorkflowInfo(module.Name, module.Description, module.Tags, string(module.Runner), len(module.Steps), len(toggle), len(speed))
 	}
 
 	// Show target space folder location
@@ -1953,6 +1957,10 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 		if isModuleExcluded(modRef.Name, excludeList) || isFuzzyModuleExcluded(modRef.Name, fuzzyExcludeList) {
 			execCtx.Logger.Info("Skipping excluded module", zap.String("module", modRef.Name))
 			executed[modRef.Name] = true
+			result.ModuleResults = append(result.ModuleResults, &core.ModuleResult{
+				ModuleName: modRef.Name,
+				Status:     core.RunStatusSkipped,
+			})
 			// Unblock dependents even for excluded modules
 			for _, dependent := range dependents[modRef.Name] {
 				inDegree[dependent]--
@@ -1969,6 +1977,10 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 			if err != nil {
 				execCtx.Logger.Warn("Condition evaluation failed", zap.Error(err))
 				executed[modRef.Name] = true
+				result.ModuleResults = append(result.ModuleResults, &core.ModuleResult{
+					ModuleName: modRef.Name,
+					Status:     core.RunStatusSkipped,
+				})
 				// Unblock dependents even for skipped modules
 				for _, dependent := range dependents[modRef.Name] {
 					inDegree[dependent]--
@@ -1980,6 +1992,10 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 			}
 			if !ok {
 				executed[modRef.Name] = true
+				result.ModuleResults = append(result.ModuleResults, &core.ModuleResult{
+					ModuleName: modRef.Name,
+					Status:     core.RunStatusSkipped,
+				})
 				// Unblock dependents even for skipped modules
 				for _, dependent := range dependents[modRef.Name] {
 					inDegree[dependent]--
@@ -2071,13 +2087,20 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 		}
 
 		// Execute the module
+		moduleStart := time.Now()
 		moduleResult, err := e.ExecuteModule(ctx, module, mergedParams, cfg)
+		moduleDuration := time.Since(moduleStart)
 		if err != nil {
 			// Check for context cancellation FIRST (interrupt/timeout)
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				if e.progressBar != nil {
 					e.progressBar.Abort()
 				}
+				result.ModuleResults = append(result.ModuleResults, &core.ModuleResult{
+					ModuleName: modRef.Name,
+					Status:     core.RunStatusCancelled,
+					Duration:   moduleDuration,
+				})
 				result.Status = core.RunStatusCancelled
 				result.EndTime = time.Now()
 				execCtx.Logger.Warn("Flow execution cancelled", zap.Error(err))
@@ -2093,6 +2116,11 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 			for _, action := range modRef.OnError {
 				e.handleModuleAction(action, execCtx)
 				if action.Action == "abort" {
+					result.ModuleResults = append(result.ModuleResults, &core.ModuleResult{
+						ModuleName: modRef.Name,
+						Status:     core.RunStatusFailed,
+						Duration:   moduleDuration,
+					})
 					result.Status = core.RunStatusFailed
 					result.Error = fmt.Errorf("module %s failed: %w", modRef.Name, err)
 					result.EndTime = time.Now()
@@ -2102,6 +2130,11 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 			}
 			// If no abort action, mark as executed and continue
 			executed[modRef.Name] = true
+			result.ModuleResults = append(result.ModuleResults, &core.ModuleResult{
+				ModuleName: modRef.Name,
+				Status:     core.RunStatusFailed,
+				Duration:   moduleDuration,
+			})
 			// Unblock dependents even for failed modules (if not aborted)
 			for _, dependent := range dependents[modRef.Name] {
 				inDegree[dependent]--
@@ -2125,6 +2158,17 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 				}
 			}
 		}
+
+		// Record module result
+		modStatus := core.RunStatusCompleted
+		if moduleResult != nil {
+			modStatus = moduleResult.Status
+		}
+		result.ModuleResults = append(result.ModuleResults, &core.ModuleResult{
+			ModuleName: modRef.Name,
+			Status:     modStatus,
+			Duration:   moduleDuration,
+		})
 
 		executed[modRef.Name] = true
 
