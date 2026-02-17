@@ -15,6 +15,10 @@ import (
 
 // TestCloud_ConfigSet tests cloud configuration setting via CLI
 func TestCloud_ConfigSet(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing cloud config set command")
 
@@ -29,6 +33,10 @@ func TestCloud_ConfigSet(t *testing.T) {
 
 // TestCloud_ConfigShow tests cloud configuration display
 func TestCloud_ConfigShow(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing cloud config show command")
 
@@ -54,6 +62,10 @@ func TestCloud_ConfigShow(t *testing.T) {
 
 // TestCloud_ConfigSetInvalidKey tests error handling for invalid config keys
 func TestCloud_ConfigSetInvalidKey(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing cloud config set with invalid key")
 
@@ -73,6 +85,10 @@ func TestCloud_ConfigSetInvalidKey(t *testing.T) {
 
 // TestCloud_ConfigEnvironmentVariables tests environment variable resolution
 func TestCloud_ConfigEnvironmentVariables(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing cloud config with environment variables")
 
@@ -101,6 +117,10 @@ func TestCloud_ConfigEnvironmentVariables(t *testing.T) {
 
 // TestCloud_CreateHelp tests cloud create help output
 func TestCloud_CreateHelp(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing cloud create --help")
 
@@ -190,6 +210,10 @@ func TestCloud_CreateDryRun(t *testing.T) {
 
 // TestCloud_List tests cloud infrastructure listing
 func TestCloud_List(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing cloud list command")
 
@@ -212,6 +236,10 @@ func TestCloud_List(t *testing.T) {
 
 // TestCloud_DestroyHelp tests cloud destroy help output
 func TestCloud_DestroyHelp(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing cloud destroy --help")
 
@@ -227,6 +255,10 @@ func TestCloud_DestroyHelp(t *testing.T) {
 
 // TestCloud_DestroyNonExistent tests destroying non-existent infrastructure
 func TestCloud_DestroyNonExistent(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing cloud destroy with non-existent ID")
 
@@ -253,6 +285,10 @@ func TestCloud_DestroyNonExistent(t *testing.T) {
 
 // TestCloud_RunHelp tests cloud run help output
 func TestCloud_RunHelp(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing cloud run --help")
 
@@ -298,6 +334,10 @@ func TestCloud_RunWithoutTarget(t *testing.T) {
 
 // TestCloud_ConfigFileCreation tests that cloud config file is created properly
 func TestCloud_ConfigFileCreation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing cloud config file creation")
 
@@ -331,6 +371,10 @@ func TestCloud_ConfigFileCreation(t *testing.T) {
 
 // TestCloud_MultipleProviderConfigs tests configuring multiple cloud providers
 func TestCloud_MultipleProviderConfigs(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing multiple cloud provider configurations")
 
@@ -365,6 +409,10 @@ func TestCloud_MultipleProviderConfigs(t *testing.T) {
 
 // TestCloud_CostLimitConfiguration tests cost limit settings
 func TestCloud_CostLimitConfiguration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing cost limit configuration")
 
@@ -395,6 +443,10 @@ func TestCloud_CostLimitConfiguration(t *testing.T) {
 
 // TestCloud_StateDirectory tests cloud state directory creation
 func TestCloud_StateDirectory(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing cloud state directory")
 
@@ -471,6 +523,10 @@ func TestCloud_Integration_FullLifecycle(t *testing.T) {
 
 // TestCloud_SSHKeyConfiguration tests SSH key settings for cloud workers
 func TestCloud_SSHKeyConfiguration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing SSH key configuration for cloud")
 
@@ -774,6 +830,10 @@ func TestCloud_ParallelOperations(t *testing.T) {
 
 // TestCloud_SpotInstanceConfiguration tests spot/preemptible instance settings
 func TestCloud_SpotInstanceConfiguration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing spot instance configuration")
 
@@ -803,6 +863,10 @@ func TestCloud_SpotInstanceConfiguration(t *testing.T) {
 
 // TestCloud_CustomSetupCommands tests custom worker setup commands
 func TestCloud_CustomSetupCommands(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing custom setup commands configuration")
 
@@ -829,6 +893,10 @@ func TestCloud_CustomSetupCommands(t *testing.T) {
 
 // TestCloud_ProviderRegions tests region configuration for different providers
 func TestCloud_ProviderRegions(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping cloud E2E test in short mode")
+	}
+
 	log := NewTestLogger(t)
 	log.Step("Testing provider region configuration")
 

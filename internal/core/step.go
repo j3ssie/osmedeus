@@ -275,10 +275,37 @@ type Step struct {
 
 // DecisionCase represents a single case in switch-style decision
 type DecisionCase struct {
-	Goto string `yaml:"goto"`
+	Goto      string   `yaml:"goto,omitempty"`
+	Command   string   `yaml:"command,omitempty"`
+	Commands  []string `yaml:"commands,omitempty"`
+	Function  string   `yaml:"function,omitempty"`
+	Functions []string `yaml:"functions,omitempty"`
 }
 
-// DecisionConfig supports switch/case routing for conditional workflow branching.
+// HasInlineExecution returns true if the case has inline command or function execution
+func (dc *DecisionCase) HasInlineExecution() bool {
+	return dc.Command != "" || len(dc.Commands) > 0 || dc.Function != "" || len(dc.Functions) > 0
+}
+
+// DecisionCondition represents a condition-based decision entry evaluated via JS expressions.
+// Unlike switch/cases (exact string matching), conditions support boolean logic.
+// All matching conditions execute (no short-circuit).
+type DecisionCondition struct {
+	If        string   `yaml:"if"`
+	Goto      string   `yaml:"goto,omitempty"`
+	Command   string   `yaml:"command,omitempty"`
+	Commands  []string `yaml:"commands,omitempty"`
+	Function  string   `yaml:"function,omitempty"`
+	Functions []string `yaml:"functions,omitempty"`
+}
+
+// HasInlineExecution returns true if the condition has inline command or function execution
+func (dc *DecisionCondition) HasInlineExecution() bool {
+	return dc.Command != "" || len(dc.Commands) > 0 || dc.Function != "" || len(dc.Functions) > 0
+}
+
+// DecisionConfig supports switch/case routing for conditional workflow branching,
+// and condition-based routing with JS boolean expressions.
 //
 // Switch/case syntax:
 //
@@ -289,10 +316,20 @@ type DecisionCase struct {
 //	    "value2": { goto: step-b }
 //	  default:
 //	    goto: fallback-step
+//
+// Conditions syntax:
+//
+//	decision:
+//	  conditions:
+//	    - if: "file_length('{{inputFile}}')"
+//	      function: "log_info('file has content')"
+//	    - if: "{{enableNmap}} && contains('{{Port}}', '-')"
+//	      function: "log_info('long scan mode detected')"
 type DecisionConfig struct {
-	Switch  string                  `yaml:"switch,omitempty"`
-	Cases   map[string]DecisionCase `yaml:"cases,omitempty"`
-	Default *DecisionCase           `yaml:"default,omitempty"`
+	Switch     string                  `yaml:"switch,omitempty"`
+	Cases      map[string]DecisionCase `yaml:"cases,omitempty"`
+	Default    *DecisionCase           `yaml:"default,omitempty"`
+	Conditions []DecisionCondition     `yaml:"conditions,omitempty"`
 }
 
 // Action represents on_success/on_error handler
@@ -372,7 +409,7 @@ func (s *Step) HasDecision() bool {
 	if s.Decision == nil {
 		return false
 	}
-	return s.Decision.Switch != "" || len(s.Decision.Cases) > 0
+	return s.Decision.Switch != "" || len(s.Decision.Cases) > 0 || len(s.Decision.Conditions) > 0
 }
 
 // HasExports returns true if step exports variables

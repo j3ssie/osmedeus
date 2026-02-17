@@ -1,0 +1,102 @@
+name: test-decision-inline
+kind: module
+description: Test inline command/function execution in decision cases
+tags: test,decision,inline
+
+params:
+  - name: target
+    required: true
+  - name: scan_mode
+    type: string
+    default: "quick"
+
+steps:
+  # Step 1: Test inline function for visible output
+  - name: detect-mode
+    type: bash
+    command: echo "Detecting scan mode"
+    exports:
+      mode: "{{scan_mode}}"
+    decision:
+      switch: "{{mode}}"
+      cases:
+        "quick":
+          function: "log_info('[INLINE] Quick scan selected')"
+        "deep":
+          function: "log_info('[INLINE] Deep scan selected')"
+      default:
+        function: "log_info('[INLINE] Default mode selected')"
+
+  # Step 2: Test inline functions (plural) with multiple functions
+  - name: setup-scan
+    type: bash
+    command: echo "Setting up scan"
+    exports:
+      setup_mode: "{{scan_mode}}"
+    decision:
+      switch: "{{setup_mode}}"
+      cases:
+        "quick":
+          functions:
+            - "log_info('[MULTI-FUNC-1] Configuring quick scan')"
+            - "log_info('[MULTI-FUNC-2] Quick scan configured')"
+        "deep":
+          functions:
+            - "log_info('[MULTI-FUNC-1] Configuring deep scan')"
+            - "log_info('[MULTI-FUNC-2] Deep scan configured')"
+
+  # Step 3: Test inline command execution (verifiable via step table)
+  - name: run-inline-cmd
+    type: bash
+    command: echo "Running inline command test"
+    exports:
+      cmd_mode: "{{scan_mode}}"
+    decision:
+      switch: "{{cmd_mode}}"
+      cases:
+        "quick":
+          command: echo "quick inline command executed"
+        "deep":
+          command: echo "deep inline command executed"
+
+  # Step 4: Test inline commands (plural) - multiple bash commands
+  - name: run-multi-cmd
+    type: bash
+    command: echo "Running multi-command test"
+    exports:
+      multi_mode: "{{scan_mode}}"
+    decision:
+      switch: "{{multi_mode}}"
+      cases:
+        "quick":
+          commands:
+            - echo "quick cmd 1"
+            - echo "quick cmd 2"
+
+  # Step 5: Test inline function with goto (both execute)
+  - name: branch-and-jump
+    type: bash
+    command: echo "Branch and jump phase"
+    exports:
+      jump_mode: "{{scan_mode}}"
+    decision:
+      switch: "{{jump_mode}}"
+      cases:
+        "quick":
+          function: "log_info('[INLINE-GOTO] Quick inline before jump')"
+          goto: final-step
+        "deep":
+          function: "log_info('[INLINE-GOTO] Deep inline before jump')"
+          goto: final-step
+      default:
+        function: "log_info('[INLINE-GOTO] Default inline before jump')"
+        goto: final-step
+
+  # This step should be skipped when goto is used
+  - name: skipped-step
+    type: bash
+    command: echo "[SKIPPED] This should not appear"
+
+  - name: final-step
+    type: bash
+    command: echo "[FINAL] Scan complete for {{target}} in {{scan_mode}} mode"

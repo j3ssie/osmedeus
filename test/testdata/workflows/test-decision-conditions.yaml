@@ -1,0 +1,76 @@
+name: test-decision-conditions
+kind: module
+description: Test condition-based decision routing with JS boolean expressions
+tags: test,decision,conditions
+
+params:
+  - name: target
+    required: true
+  - name: enable_extra
+    type: string
+    default: "true"
+  - name: scan_depth
+    type: string
+    default: "3"
+
+steps:
+  # Step 1: Single condition match with function
+  - name: check-target
+    type: bash
+    command: echo "Checking target"
+    exports:
+      has_target: "true"
+    decision:
+      conditions:
+        - if: "{{has_target}}"
+          function: "log_info('[COND] Target is present')"
+
+  # Step 2: Multiple conditions - all matching ones execute
+  - name: check-flags
+    type: bash
+    command: echo "Checking flags"
+    exports:
+      flag_a: "true"
+      flag_b: "true"
+      flag_c: "false"
+    decision:
+      conditions:
+        - if: "{{flag_a}}"
+          function: "log_info('[COND-A] Flag A is true')"
+        - if: "{{flag_b}}"
+          function: "log_info('[COND-B] Flag B is true')"
+        - if: "{{flag_c}}"
+          function: "log_info('[COND-C] Flag C should not appear')"
+
+  # Step 3: Condition with inline command
+  - name: check-extra
+    type: bash
+    command: echo "Checking extra"
+    exports:
+      run_extra: "{{enable_extra}}"
+    decision:
+      conditions:
+        - if: "{{run_extra}}"
+          command: echo "[COND-CMD] Extra command executed"
+
+  # Step 4: Condition with goto
+  - name: check-skip
+    type: bash
+    command: echo "Checking skip condition"
+    exports:
+      should_skip: "true"
+    decision:
+      conditions:
+        - if: "{{should_skip}}"
+          function: "log_info('[COND-GOTO] Jumping to final')"
+          goto: final-step
+
+  # This step should be skipped via goto
+  - name: skipped-step
+    type: bash
+    command: echo "[SKIPPED] This should not appear"
+
+  # Step 5: Conditions coexisting with switch/cases
+  - name: final-step
+    type: bash
+    command: echo "[FINAL] Scan complete for {{target}}"

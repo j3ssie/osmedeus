@@ -1275,6 +1275,8 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 
 			stepResult, err := e.executeStep(ctx, step, execCtx)
 			result.Steps = append(result.Steps, stepResult)
+			// Append inline decision case results (if any)
+			result.Steps = append(result.Steps, stepResult.InlineResults...)
 
 			// Update progress bar with completed step
 			if e.progressBar != nil {
@@ -2432,6 +2434,14 @@ func (e *Executor) executeStep(ctx context.Context, step *core.Step, execCtx *co
 		return result, nil
 	}
 
+	// Print log message before step start if provided
+	if step.Log != "" {
+		renderedLog, logErr := e.templateEngine.Render(step.Log, execCtx.GetVariables())
+		if logErr == nil && renderedLog != "" && e.progressBar == nil {
+			_, _ = fmt.Fprintf(os.Stdout, "%s %s\n", terminal.Cyan(terminal.SymbolAsterisk), renderedLog)
+		}
+	}
+
 	// Get step type symbol, command prefix, and command for display
 	stepSymbol := terminal.StepTypeSymbol(string(step.Type), string(step.StepRunner))
 	cmdPrefix := terminal.StepCommandPrefix(string(step.Type))
@@ -2560,7 +2570,21 @@ func (e *Executor) executeStep(ctx context.Context, step *core.Step, execCtx *co
 
 	// Evaluate decision routing
 	if step.HasDecision() {
-		result.NextStep = e.evaluateDecision(step.Decision, execCtx)
+		// Switch/cases: exact string matching
+		if dc := e.evaluateDecision(step.Decision, execCtx); dc != nil {
+			if dc.HasInlineExecution() {
+				result.InlineResults = e.executeDecisionCase(ctx, dc, execCtx)
+			}
+			result.NextStep = dc.Goto
+		}
+		// Conditions: JS boolean expressions (all matching conditions execute)
+		if len(step.Decision.Conditions) > 0 {
+			gotoStep, condResults := e.evaluateConditions(ctx, step.Decision.Conditions, execCtx)
+			result.InlineResults = append(result.InlineResults, condResults...)
+			if gotoStep != "" {
+				result.NextStep = gotoStep
+			}
+		}
 	}
 
 	// Log step execution details to state execution log file
@@ -2803,10 +2827,10 @@ func validateStepDependencies(steps []core.Step) error {
 	return nil
 }
 
-// evaluateDecision evaluates decision routing and returns the next step.
-func (e *Executor) evaluateDecision(decision *core.DecisionConfig, execCtx *core.ExecutionContext) string {
+// evaluateDecision evaluates decision routing and returns the matched case.
+func (e *Executor) evaluateDecision(decision *core.DecisionConfig, execCtx *core.ExecutionContext) *core.DecisionCase {
 	if decision == nil {
-		return ""
+		return nil
 	}
 
 	vars := execCtx.GetVariables()
@@ -2816,22 +2840,146 @@ func (e *Executor) evaluateDecision(decision *core.DecisionConfig, execCtx *core
 		// Render the switch expression
 		switchValue, err := e.templateEngine.Render(decision.Switch, vars)
 		if err != nil {
-			return ""
+			return nil
 		}
 		switchValue = strings.TrimSpace(switchValue)
 
 		// Look up the case
 		if caseAction, ok := decision.Cases[switchValue]; ok {
-			return caseAction.Goto
+			return &caseAction
 		}
 
 		// Fall through to default
 		if decision.Default != nil {
-			return decision.Default.Goto
+			return decision.Default
 		}
 	}
 
-	return ""
+	return nil
+}
+
+// executeDecisionCase executes inline commands/functions from a matched DecisionCase.
+func (e *Executor) executeDecisionCase(ctx context.Context, dc *core.DecisionCase, execCtx *core.ExecutionContext) []*core.StepResult {
+	var results []*core.StepResult
+
+	// Build command list from Command/Commands fields
+	commands := dc.Commands
+	if dc.Command != "" {
+		commands = append([]string{dc.Command}, commands...)
+	}
+
+	// Execute bash commands via synthetic step
+	for _, cmd := range commands {
+		step := &core.Step{
+			Name:    "decision-inline-bash",
+			Type:    core.StepTypeBash,
+			Command: cmd,
+		}
+		if sr, err := e.stepDispatcher.Dispatch(ctx, step, execCtx); err == nil && sr != nil {
+			results = append(results, sr)
+		}
+	}
+
+	// Build function list from Function/Functions fields
+	functions := dc.Functions
+	if dc.Function != "" {
+		functions = append([]string{dc.Function}, functions...)
+	}
+
+	// Execute functions via synthetic step
+	if len(functions) > 0 {
+		step := &core.Step{
+			Name:      "decision-inline-function",
+			Type:      core.StepTypeFunction,
+			Functions: functions,
+		}
+		if sr, err := e.stepDispatcher.Dispatch(ctx, step, execCtx); err == nil && sr != nil {
+			results = append(results, sr)
+		}
+	}
+
+	return results
+}
+
+// evaluateConditions evaluates condition-based decision entries.
+// All matching conditions execute their inline commands/functions (no short-circuit).
+// Returns the last matched goto target (if any) and collected inline results.
+func (e *Executor) evaluateConditions(ctx context.Context, conditions []core.DecisionCondition, execCtx *core.ExecutionContext) (string, []*core.StepResult) {
+	vars := execCtx.GetVariables()
+	var lastGoto string
+	var allResults []*core.StepResult
+
+	for i := range conditions {
+		cond := &conditions[i]
+
+		// Render template variables in the if expression
+		rendered, err := e.templateEngine.Render(cond.If, vars)
+		if err != nil {
+			continue
+		}
+
+		// Evaluate the rendered expression as a JS boolean
+		ok, err := e.functionRegistry.EvaluateCondition(rendered, vars)
+		if err != nil || !ok {
+			continue
+		}
+
+		// Condition matched — execute inline commands/functions
+		if cond.HasInlineExecution() {
+			results := e.executeDecisionCondition(ctx, cond, execCtx)
+			allResults = append(allResults, results...)
+		}
+
+		// Save goto (last match wins)
+		if cond.Goto != "" {
+			lastGoto = cond.Goto
+		}
+	}
+
+	return lastGoto, allResults
+}
+
+// executeDecisionCondition executes inline commands/functions from a matched DecisionCondition.
+func (e *Executor) executeDecisionCondition(ctx context.Context, dc *core.DecisionCondition, execCtx *core.ExecutionContext) []*core.StepResult {
+	var results []*core.StepResult
+
+	// Build command list from Command/Commands fields
+	commands := dc.Commands
+	if dc.Command != "" {
+		commands = append([]string{dc.Command}, commands...)
+	}
+
+	// Execute bash commands via synthetic step
+	for _, cmd := range commands {
+		step := &core.Step{
+			Name:    "decision-condition-bash",
+			Type:    core.StepTypeBash,
+			Command: cmd,
+		}
+		if sr, err := e.stepDispatcher.Dispatch(ctx, step, execCtx); err == nil && sr != nil {
+			results = append(results, sr)
+		}
+	}
+
+	// Build function list from Function/Functions fields
+	funcs := dc.Functions
+	if dc.Function != "" {
+		funcs = append([]string{dc.Function}, funcs...)
+	}
+
+	// Execute functions via synthetic step
+	if len(funcs) > 0 {
+		step := &core.Step{
+			Name:      "decision-condition-function",
+			Type:      core.StepTypeFunction,
+			Functions: funcs,
+		}
+		if sr, err := e.stepDispatcher.Dispatch(ctx, step, execCtx); err == nil && sr != nil {
+			results = append(results, sr)
+		}
+	}
+
+	return results
 }
 
 // handleModuleAction handles a module action (for flow execution)

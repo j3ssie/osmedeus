@@ -116,16 +116,17 @@ const (
 
 // StepResult holds step execution result
 type StepResult struct {
-	StepName  string
-	Status    StepStatus
-	Output    string
-	Error     error
-	StartTime time.Time
-	EndTime   time.Time
-	Duration  time.Duration
-	Exports   map[string]interface{}
-	NextStep  string // from decision routing
-	LogFile   string
+	StepName      string
+	Status        StepStatus
+	Output        string
+	Error         error
+	StartTime     time.Time
+	EndTime       time.Time
+	Duration      time.Duration
+	Exports       map[string]interface{}
+	NextStep      string // from decision routing
+	LogFile       string
+	InlineResults []*StepResult // results from inline decision case execution
 }
 
 // ModuleResult holds per-module execution result for flow workflows

@@ -564,6 +564,66 @@ func (vf *vmFunc) chunkFile(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(true)
 }
 
+// cutToFile reads a file line by line, extracts a field by delimiter, and writes results to output
+// Usage: cut_to_file(input_file, delim, field, output_file) -> bool
+func (vf *vmFunc) cutToFile(call goja.FunctionCall) goja.Value {
+	inputFile := call.Argument(0).String()
+	delim := call.Argument(1).String()
+	field := int(call.Argument(2).ToInteger())
+	outputFile := call.Argument(3).String()
+	log := logger.Get()
+
+	log.Debug("Calling "+terminal.HiGreen("cut_to_file"),
+		zap.String("input", inputFile), zap.String("delim", delim),
+		zap.Int("field", field), zap.String("output", outputFile))
+
+	if inputFile == "undefined" || inputFile == "" || outputFile == "undefined" || outputFile == "" {
+		log.Warn("cut_to_file: input and output paths are required")
+		return vf.vm.ToValue(false)
+	}
+	if delim == "undefined" || delim == "" {
+		log.Warn("cut_to_file: delimiter is required")
+		return vf.vm.ToValue(false)
+	}
+
+	f, err := os.Open(inputFile)
+	if err != nil {
+		log.Warn("cut_to_file: failed to open input file", zap.String("input", inputFile), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+	defer func() { _ = f.Close() }()
+
+	idx := field - 1 // Convert 1-indexed to 0-indexed
+	var results []string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		parts := strings.Split(line, delim)
+		if idx >= 0 && idx < len(parts) {
+			val := parts[idx]
+			if val != "" {
+				results = append(results, val)
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Warn("cut_to_file: failed to read input file", zap.String("input", inputFile), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	if err := writeLinesToFile(outputFile, results); err != nil {
+		log.Warn("cut_to_file: failed to write output file", zap.String("output", outputFile), zap.Error(err))
+		return vf.vm.ToValue(false)
+	}
+
+	log.Debug(terminal.HiGreen("cut_to_file")+" result",
+		zap.String("input", inputFile), zap.Int("lines", len(results)), zap.String("output", outputFile))
+	return vf.vm.ToValue(true)
+}
+
 // zipDir creates a zip archive from a directory using Go's archive/zip
 // Usage: zip_dir(source, dest) -> bool
 func (vf *vmFunc) zipDir(call goja.FunctionCall) goja.Value {

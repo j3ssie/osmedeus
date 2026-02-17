@@ -267,6 +267,28 @@ func (vf *vmFunc) cutWithDelim(call goja.FunctionCall) goja.Value {
 	return vf.vm.ToValue(parts[idx])
 }
 
+// cutSpace extracts a field from input split by whitespace (1-indexed)
+// Uses strings.Fields() which handles multiple spaces, tabs, and mixed whitespace
+// Usage: cut_space(input, field) -> string
+func (vf *vmFunc) cutSpace(call goja.FunctionCall) goja.Value {
+	input := call.Argument(0).String()
+	field := call.Argument(1).ToInteger()
+
+	if input == "undefined" {
+		return vf.vm.ToValue("")
+	}
+
+	parts := strings.Fields(input)
+
+	// Field is 1-indexed (like cut command)
+	idx := int(field) - 1
+	if idx < 0 || idx >= len(parts) {
+		return vf.vm.ToValue("")
+	}
+
+	return vf.vm.ToValue(parts[idx])
+}
+
 // normalizePath replaces special characters with underscore for clean directory/file names
 // Replaces: / | : \ * ? " < > with _
 // Usage: normalize_path(input) -> string

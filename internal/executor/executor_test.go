@@ -1066,6 +1066,289 @@ func TestExecutor_Decision_SwitchCase_NoMatchNoDefault(t *testing.T) {
 	assert.Equal(t, "next-step", result.Steps[1].StepName)
 }
 
+// Tests for inline command/function execution in decision cases
+
+func TestExecutor_Decision_InlineCommand(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-inline-cmd",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "check-type",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				Exports: map[string]string{
+					"detected_type": "domain",
+				},
+				Decision: &core.DecisionConfig{
+					Switch: "{{detected_type}}",
+					Cases: map[string]core.DecisionCase{
+						"domain": {Command: "echo 'inline domain'"},
+						"ip":     {Command: "echo 'inline ip'"},
+					},
+				},
+			},
+			{
+				Name:    "final-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'done'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// Should execute: check-type -> inline command -> final-step
+	assert.GreaterOrEqual(t, len(result.Steps), 3)
+	assert.Equal(t, "check-type", result.Steps[0].StepName)
+	assert.Equal(t, "decision-inline-bash", result.Steps[1].StepName)
+	assert.Equal(t, "final-step", result.Steps[2].StepName)
+}
+
+func TestExecutor_Decision_InlineCommands(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-inline-cmds",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "check-type",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				Exports: map[string]string{
+					"detected_type": "domain",
+				},
+				Decision: &core.DecisionConfig{
+					Switch: "{{detected_type}}",
+					Cases: map[string]core.DecisionCase{
+						"domain": {Commands: []string{"echo 'cmd1'", "echo 'cmd2'"}},
+					},
+				},
+			},
+			{
+				Name:    "final-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'done'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// Should execute: check-type -> 2 inline commands -> final-step
+	assert.GreaterOrEqual(t, len(result.Steps), 4)
+	assert.Equal(t, "check-type", result.Steps[0].StepName)
+	assert.Equal(t, "decision-inline-bash", result.Steps[1].StepName)
+	assert.Equal(t, "decision-inline-bash", result.Steps[2].StepName)
+	assert.Equal(t, "final-step", result.Steps[3].StepName)
+}
+
+func TestExecutor_Decision_InlineFunction(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-inline-func",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "check-type",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				Exports: map[string]string{
+					"detected_type": "domain",
+				},
+				Decision: &core.DecisionConfig{
+					Switch: "{{detected_type}}",
+					Cases: map[string]core.DecisionCase{
+						"domain": {Function: "log_info('inline function executed')"},
+					},
+				},
+			},
+			{
+				Name:    "final-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'done'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// Should execute: check-type -> inline function -> final-step
+	assert.GreaterOrEqual(t, len(result.Steps), 3)
+	assert.Equal(t, "check-type", result.Steps[0].StepName)
+	assert.Equal(t, "decision-inline-function", result.Steps[1].StepName)
+	assert.Equal(t, "final-step", result.Steps[2].StepName)
+}
+
+func TestExecutor_Decision_InlineFunctions(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-inline-funcs",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "check-type",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				Exports: map[string]string{
+					"detected_type": "domain",
+				},
+				Decision: &core.DecisionConfig{
+					Switch: "{{detected_type}}",
+					Cases: map[string]core.DecisionCase{
+						"domain": {Functions: []string{"log_info('func1')", "log_info('func2')"}},
+					},
+				},
+			},
+			{
+				Name:    "final-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'done'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// Should execute: check-type -> inline functions step -> final-step
+	assert.GreaterOrEqual(t, len(result.Steps), 3)
+	assert.Equal(t, "check-type", result.Steps[0].StepName)
+	assert.Equal(t, "decision-inline-function", result.Steps[1].StepName)
+	assert.Equal(t, "final-step", result.Steps[2].StepName)
+}
+
+func TestExecutor_Decision_InlineWithGoto(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-inline-goto",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "check-type",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				Exports: map[string]string{
+					"detected_type": "domain",
+				},
+				Decision: &core.DecisionConfig{
+					Switch: "{{detected_type}}",
+					Cases: map[string]core.DecisionCase{
+						"domain": {
+							Command: "echo 'inline before jump'",
+							Goto:    "target-step",
+						},
+					},
+				},
+			},
+			{
+				Name:    "skipped-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'should be skipped'",
+			},
+			{
+				Name:    "target-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'jumped here'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// Should execute: check-type -> inline command -> jump to target-step (skip skipped-step)
+	assert.GreaterOrEqual(t, len(result.Steps), 3)
+	assert.Equal(t, "check-type", result.Steps[0].StepName)
+	assert.Equal(t, "decision-inline-bash", result.Steps[1].StepName)
+	assert.Equal(t, "target-step", result.Steps[2].StepName)
+}
+
+func TestExecutor_Decision_DefaultInline(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-default-inline",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "check-type",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				Exports: map[string]string{
+					"detected_type": "unknown",
+				},
+				Decision: &core.DecisionConfig{
+					Switch: "{{detected_type}}",
+					Cases: map[string]core.DecisionCase{
+						"domain": {Command: "echo 'domain'"},
+					},
+					Default: &core.DecisionCase{Command: "echo 'default executed'"},
+				},
+			},
+			{
+				Name:    "final-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'done'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// No case matched, should execute default inline command, then continue to final-step
+	assert.GreaterOrEqual(t, len(result.Steps), 3)
+	assert.Equal(t, "check-type", result.Steps[0].StepName)
+	assert.Equal(t, "decision-inline-bash", result.Steps[1].StepName)
+	assert.Equal(t, "final-step", result.Steps[2].StepName)
+}
+
 // Tests for Kahn's algorithm dependency graph (O(V+E) flow execution)
 
 func TestBuildDependencyGraph_NoDependencies(t *testing.T) {
@@ -1820,4 +2103,310 @@ func TestExecutor_FuzzyExcludeModules(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, core.RunStatusCompleted, result.Status)
+}
+
+// --- Decision Conditions tests ---
+
+func TestExecutor_Decision_ConditionMatch(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-cond-match",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "check-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				Exports: map[string]string{
+					"has_data": "true",
+				},
+				Decision: &core.DecisionConfig{
+					Conditions: []core.DecisionCondition{
+						{
+							If:       "{{has_data}}",
+							Function: "log_info('condition matched')",
+						},
+					},
+				},
+			},
+			{
+				Name:    "final-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'done'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// Should execute: check-step -> inline condition function -> final-step
+	assert.GreaterOrEqual(t, len(result.Steps), 3)
+	assert.Equal(t, "check-step", result.Steps[0].StepName)
+	assert.Equal(t, "decision-condition-function", result.Steps[1].StepName)
+	assert.Equal(t, "final-step", result.Steps[2].StepName)
+}
+
+func TestExecutor_Decision_ConditionNoMatch(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-cond-nomatch",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "check-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				Exports: map[string]string{
+					"has_data": "false",
+				},
+				Decision: &core.DecisionConfig{
+					Conditions: []core.DecisionCondition{
+						{
+							If:       "{{has_data}}",
+							Function: "log_info('should not run')",
+						},
+					},
+				},
+			},
+			{
+				Name:    "final-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'done'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// No condition matched, should only have: check-step -> final-step
+	assert.Equal(t, 2, len(result.Steps))
+	assert.Equal(t, "check-step", result.Steps[0].StepName)
+	assert.Equal(t, "final-step", result.Steps[1].StepName)
+}
+
+func TestExecutor_Decision_ConditionMultiple(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-cond-multi",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "check-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				Exports: map[string]string{
+					"flag_a": "true",
+					"flag_b": "true",
+					"flag_c": "false",
+				},
+				Decision: &core.DecisionConfig{
+					Conditions: []core.DecisionCondition{
+						{
+							If:       "{{flag_a}}",
+							Function: "log_info('condition A matched')",
+						},
+						{
+							If:       "{{flag_b}}",
+							Function: "log_info('condition B matched')",
+						},
+						{
+							If:       "{{flag_c}}",
+							Function: "log_info('condition C should not run')",
+						},
+					},
+				},
+			},
+			{
+				Name:    "final-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'done'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// Should execute: check-step -> cond A function -> cond B function -> final-step
+	assert.GreaterOrEqual(t, len(result.Steps), 4)
+	assert.Equal(t, "check-step", result.Steps[0].StepName)
+	assert.Equal(t, "decision-condition-function", result.Steps[1].StepName)
+	assert.Equal(t, "decision-condition-function", result.Steps[2].StepName)
+	assert.Equal(t, "final-step", result.Steps[3].StepName)
+}
+
+func TestExecutor_Decision_ConditionWithGoto(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-cond-goto",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "check-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				Exports: map[string]string{
+					"should_skip": "true",
+				},
+				Decision: &core.DecisionConfig{
+					Conditions: []core.DecisionCondition{
+						{
+							If:   "{{should_skip}}",
+							Goto: "target-step",
+						},
+					},
+				},
+			},
+			{
+				Name:    "skipped-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'should be skipped'",
+			},
+			{
+				Name:    "target-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'jumped here'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// Should execute: check-step -> target-step (skipped-step skipped via goto)
+	assert.Equal(t, 2, len(result.Steps))
+	assert.Equal(t, "check-step", result.Steps[0].StepName)
+	assert.Equal(t, "target-step", result.Steps[1].StepName)
+}
+
+func TestExecutor_Decision_ConditionWithCommand(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-cond-cmd",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "check-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				Exports: map[string]string{
+					"run_extra": "true",
+				},
+				Decision: &core.DecisionConfig{
+					Conditions: []core.DecisionCondition{
+						{
+							If:      "{{run_extra}}",
+							Command: "echo 'condition command executed'",
+						},
+					},
+				},
+			},
+			{
+				Name:    "final-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'done'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// Should execute: check-step -> inline condition bash -> final-step
+	assert.GreaterOrEqual(t, len(result.Steps), 3)
+	assert.Equal(t, "check-step", result.Steps[0].StepName)
+	assert.Equal(t, "decision-condition-bash", result.Steps[1].StepName)
+	assert.Equal(t, "final-step", result.Steps[2].StepName)
+}
+
+func TestExecutor_Decision_ConditionWithSwitchCase(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-cond-switch",
+		Kind: core.KindModule,
+		Steps: []core.Step{
+			{
+				Name:    "check-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				Exports: map[string]string{
+					"detected_type": "domain",
+					"extra_flag":    "true",
+				},
+				Decision: &core.DecisionConfig{
+					// Switch/cases for exact matching
+					Switch: "{{detected_type}}",
+					Cases: map[string]core.DecisionCase{
+						"domain": {Function: "log_info('switch matched domain')"},
+					},
+					// Conditions for boolean logic (both should execute)
+					Conditions: []core.DecisionCondition{
+						{
+							If:       "{{extra_flag}}",
+							Function: "log_info('condition also matched')",
+						},
+					},
+				},
+			},
+			{
+				Name:    "final-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'done'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// Should execute: check-step -> switch inline function -> condition inline function -> final-step
+	assert.GreaterOrEqual(t, len(result.Steps), 4)
+	assert.Equal(t, "check-step", result.Steps[0].StepName)
+	assert.Equal(t, "decision-inline-function", result.Steps[1].StepName)
+	assert.Equal(t, "decision-condition-function", result.Steps[2].StepName)
+	assert.Equal(t, "final-step", result.Steps[3].StepName)
 }

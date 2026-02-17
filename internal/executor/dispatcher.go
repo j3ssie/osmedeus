@@ -158,16 +158,6 @@ func (d *StepDispatcher) Dispatch(ctx context.Context, step *core.Step, execCtx 
 		zap.String("command", renderedStep.Command),
 	)
 
-	// Log step message if provided
-	if renderedStep.Log != "" {
-		if d.printer != nil {
-			d.printer.Info("%s", renderedStep.Log)
-		}
-		log.Debug(renderedStep.Log,
-			zap.String("step", step.Name),
-		)
-	}
-
 	// Dispatch based on step type using plugin registry
 	log.Debug("Dispatching to executor",
 		zap.String("executor_type", string(step.Type)),

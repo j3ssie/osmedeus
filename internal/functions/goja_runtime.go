@@ -68,6 +68,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnGrepRegex, vf.grepRegex)
 	_ = vm.Set(FnRemoveBlankLines, vf.removeBlankLines)
 	_ = vm.Set(FnChunkFile, vf.chunkFile)
+	_ = vm.Set(FnCutToFile, vf.cutToFile)
 
 	// String functions
 	_ = vm.Set(FnTrim, vf.trim)
@@ -86,6 +87,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	_ = vm.Set(FnRegexMatch, vf.regexMatch)
 	_ = vm.Set(FnCutWithDelim, vf.cutWithDelim)
 	_ = vm.Set(FnCut, vf.cutWithDelim) // alias for cut_with_delim
+	_ = vm.Set(FnCutSpace, vf.cutSpace)
 	_ = vm.Set(FnNormalizePath, vf.normalizePath)
 	_ = vm.Set(FnGetTargetSpace, vf.getTargetSpace)
 	_ = vm.Set(FnCleanSub, vf.cleanSub)

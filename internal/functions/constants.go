@@ -51,6 +51,7 @@ const (
 	FnGrepRegex        = "grep_regex"          // grep_regex(source, pattern) -> string
 	FnRemoveBlankLines = "remove_blank_lines"  // remove_blank_lines(path) -> bool (in-place)
 	FnChunkFile        = "chunk_file"          // chunk_file(input, lines_per_chunk, output) -> bool
+	FnCutToFile        = "cut_to_file"         // cut_to_file(input_file, delim, field, output_file) -> bool
 )
 
 // String Functions - String manipulation operations
@@ -71,6 +72,7 @@ const (
 	FnRegexMatch     = "regex_match"      // regex_match(pattern, str) -> bool (pattern first)
 	FnCutWithDelim   = "cut_with_delim"   // cut_with_delim(input, delim, field) -> string (1-indexed like cut)
 	FnCut            = "cut"              // cut(input, delim, field) -> string (alias for cut_with_delim)
+	FnCutSpace       = "cut_space"        // cut_space(input, field) -> string (split by whitespace, 1-indexed)
 	FnNormalizePath  = "normalize_path"   // normalize_path(input) -> string (replace / | : etc with _)
 	FnGetTargetSpace = "get_target_space" // get_target_space(input) -> string (same as {{TargetSpace}}: sanitize + truncate)
 	FnCleanSub       = "clean_sub"        // clean_sub(path, target?) -> bool (clean and deduplicate subdomains in file)
@@ -402,6 +404,7 @@ func AllFunctions() []string {
 		FnGrepRegex,
 		FnRemoveBlankLines,
 		FnChunkFile,
+		FnCutToFile,
 
 		// String Functions
 		FnTrim,
@@ -420,6 +423,7 @@ func AllFunctions() []string {
 		FnRegexMatch,
 		FnCutWithDelim,
 		FnCut,
+		FnCutSpace,
 		FnNormalizePath,
 		FnGetTargetSpace,
 		FnCleanSub,
@@ -780,6 +784,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnGrepRegex, "grep_regex(source, pattern)", "Return lines matching regex", "string", "grep_regex('{{Output}}/in.txt', '.*api.*')"},
 			{FnRemoveBlankLines, "remove_blank_lines(path)", "Remove blank lines from file in-place", "bool", "remove_blank_lines('{{Output}}/urls.txt')"},
 			{FnChunkFile, "chunk_file(input, lines_per_chunk, output)", "Split file into chunks and write manifest of chunk paths", "bool", "chunk_file('{{Output}}/urls.txt', 100, '{{Output}}/url_chunks.txt')"},
+			{FnCutToFile, "cut_to_file(input_file, delim, field, output_file)", "Extract field from each line by delimiter and write to output file", "bool", "cut_to_file('{{Output}}/urls.txt', '/', 3, '{{Output}}/domains.txt')"},
 		},
 		CategoryString: {
 			{FnTrim, "trim(str)", "Trim whitespace", "string", "trim('  hello  ')"},
@@ -798,6 +803,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnRegexMatch, "regex_match(pattern, str)", "Check if string matches regex (pattern first)", "bool", "regex_match('[0-9]+', 'test123')"},
 			{FnCutWithDelim, "cut_with_delim(input, delim, field)", "Extract field by delimiter (1-indexed)", "string", "cut_with_delim('a:b:c', ':', 2)"},
 			{FnCut, "cut(input, delim, field)", "Extract field by delimiter (1-indexed, alias for cut_with_delim)", "string", "cut('a:b:c', ':', 2)"},
+			{FnCutSpace, "cut_space(input, field)", "Extract field by whitespace (1-indexed, handles multiple spaces/tabs)", "string", "cut_space('hello  world', 2)"},
 			{FnNormalizePath, "normalize_path(input)", "Replace special chars with underscore", "string", "normalize_path('test/path:file')"},
 			{FnGetTargetSpace, "get_target_space(input)", "Normalize to path-friendly format (same as {{TargetSpace}})", "string", "get_target_space('https://example.com/path')"},
 			{FnCleanSub, "clean_sub(path, target?)", "Clean and deduplicate subdomains in file, optionally filter by target domain", "bool", "clean_sub('{{Output}}/subdomains.txt', 'example.com')"},

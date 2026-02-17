@@ -1007,6 +1007,145 @@ func TestSkip(t *testing.T) {
 	})
 }
 
+func TestCutSpace(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("basic split", func(t *testing.T) {
+		result, err := runtime.Execute(`cut_space("hello world", 1)`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "hello", result)
+	})
+
+	t.Run("second field", func(t *testing.T) {
+		result, err := runtime.Execute(`cut_space("hello world", 2)`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "world", result)
+	})
+
+	t.Run("multiple spaces", func(t *testing.T) {
+		result, err := runtime.Execute(`cut_space("hello    world", 2)`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "world", result)
+	})
+
+	t.Run("tabs", func(t *testing.T) {
+		result, err := runtime.Execute(`cut_space("hello\tworld", 2)`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "world", result)
+	})
+
+	t.Run("mixed whitespace", func(t *testing.T) {
+		result, err := runtime.Execute(`cut_space("  hello \t world  ", 2)`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "world", result)
+	})
+
+	t.Run("out of range returns empty", func(t *testing.T) {
+		result, err := runtime.Execute(`cut_space("hello world", 5)`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("field zero returns empty", func(t *testing.T) {
+		result, err := runtime.Execute(`cut_space("hello world", 0)`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("empty input returns empty", func(t *testing.T) {
+		result, err := runtime.Execute(`cut_space("", 1)`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("three fields", func(t *testing.T) {
+		result, err := runtime.Execute(`cut_space("one two three", 3)`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "three", result)
+	})
+}
+
+func TestCutToFile(t *testing.T) {
+	runtime := NewOttoRuntime()
+
+	t.Run("basic file processing", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		inputFile := filepath.Join(tmpDir, "input.txt")
+		outputFile := filepath.Join(tmpDir, "output.txt")
+
+		err := os.WriteFile(inputFile, []byte("a,b,c\nd,e,f\ng,h,i\n"), 0644)
+		require.NoError(t, err)
+
+		result, err := runtime.Execute(`cut_to_file("`+inputFile+`", ",", 2, "`+outputFile+`")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+
+		content, err := os.ReadFile(outputFile)
+		require.NoError(t, err)
+		assert.Equal(t, "b\ne\nh\n", string(content))
+	})
+
+	t.Run("colon delimiter", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		inputFile := filepath.Join(tmpDir, "input.txt")
+		outputFile := filepath.Join(tmpDir, "output.txt")
+
+		err := os.WriteFile(inputFile, []byte("root:x:0:0\nnobody:x:65534:65534\n"), 0644)
+		require.NoError(t, err)
+
+		result, err := runtime.Execute(`cut_to_file("`+inputFile+`", ":", 1, "`+outputFile+`")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+
+		content, err := os.ReadFile(outputFile)
+		require.NoError(t, err)
+		assert.Equal(t, "root\nnobody\n", string(content))
+	})
+
+	t.Run("out of range field produces empty output", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		inputFile := filepath.Join(tmpDir, "input.txt")
+		outputFile := filepath.Join(tmpDir, "output.txt")
+
+		err := os.WriteFile(inputFile, []byte("a,b\nc,d\n"), 0644)
+		require.NoError(t, err)
+
+		result, err := runtime.Execute(`cut_to_file("`+inputFile+`", ",", 10, "`+outputFile+`")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+
+		content, err := os.ReadFile(outputFile)
+		require.NoError(t, err)
+		assert.Equal(t, "", string(content))
+	})
+
+	t.Run("skips blank lines", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		inputFile := filepath.Join(tmpDir, "input.txt")
+		outputFile := filepath.Join(tmpDir, "output.txt")
+
+		err := os.WriteFile(inputFile, []byte("a,b\n\nc,d\n  \ne,f\n"), 0644)
+		require.NoError(t, err)
+
+		result, err := runtime.Execute(`cut_to_file("`+inputFile+`", ",", 2, "`+outputFile+`")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+
+		content, err := os.ReadFile(outputFile)
+		require.NoError(t, err)
+		assert.Equal(t, "b\nd\nf\n", string(content))
+	})
+
+	t.Run("nonexistent input returns false", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		outputFile := filepath.Join(tmpDir, "output.txt")
+
+		result, err := runtime.Execute(`cut_to_file("/tmp/nonexistent_cut_test_12345.txt", ",", 1, "`+outputFile+`")`, nil)
+		require.NoError(t, err)
+		assert.Equal(t, false, result)
+	})
+}
+
 func TestSkipModuleError(t *testing.T) {
 	t.Run("Error returns formatted message", func(t *testing.T) {
 		err := &SkipModuleError{Message: "test message"}
