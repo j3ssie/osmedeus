@@ -14,15 +14,13 @@ params:
     default: "3"
 
 steps:
-  # Step 1: Single condition match with function
+  # Step 1: Single condition match — uses params directly (no exports needed)
   - name: check-target
     type: bash
     command: echo "Checking target"
-    exports:
-      has_target: "true"
     decision:
       conditions:
-        - if: "{{has_target}}"
+        - if: "{{enable_extra}} && {{target}} != ''"
           function: "log_info('[COND] Target is present')"
 
   # Step 2: Multiple conditions - all matching ones execute

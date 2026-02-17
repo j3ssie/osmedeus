@@ -2410,3 +2410,166 @@ func TestExecutor_Decision_ConditionWithSwitchCase(t *testing.T) {
 	assert.Equal(t, "decision-condition-function", result.Steps[2].StepName)
 	assert.Equal(t, "final-step", result.Steps[3].StepName)
 }
+
+func TestStripTemplateVarsForJS(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "bare variables outside quotes",
+			input:    "{{enable_extra}} && {{target}} != ''",
+			expected: "enable_extra && target != ''",
+		},
+		{
+			name:     "variable inside single quotes preserved",
+			input:    "file_exists('{{output}}/results.txt')",
+			expected: "file_exists('{{output}}/results.txt')",
+		},
+		{
+			name:     "variable inside double quotes preserved",
+			input:    `file_exists("{{output}}/results.txt")`,
+			expected: `file_exists("{{output}}/results.txt")`,
+		},
+		{
+			name:     "mixed inside and outside quotes",
+			input:    "{{flag}} && file_exists('{{path}}/f.txt')",
+			expected: "flag && file_exists('{{path}}/f.txt')",
+		},
+		{
+			name:     "no template variables",
+			input:    "enable_extra && target != ''",
+			expected: "enable_extra && target != ''",
+		},
+		{
+			name:     "simple boolean variable",
+			input:    "{{flag_a}}",
+			expected: "flag_a",
+		},
+		{
+			name:     "numeric comparison",
+			input:    "{{scan_depth}} > 2",
+			expected: "scan_depth > 2",
+		},
+		{
+			name:     "variable with spaces in braces",
+			input:    "{{ flag_a }} && {{ target }}",
+			expected: "flag_a && target",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := stripTemplateVarsForJS(tc.input)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestExecutor_Decision_ConditionWithParams(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-cond-params",
+		Kind: core.KindModule,
+		Params: []core.Param{
+			{Name: "target", Required: true},
+			{Name: "enable_extra", Type: "string", Default: "true"},
+		},
+		Steps: []core.Step{
+			{
+				Name:    "check-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				// No exports — condition uses params directly
+				Decision: &core.DecisionConfig{
+					Conditions: []core.DecisionCondition{
+						{
+							If:       "{{enable_extra}} && {{target}} != ''",
+							Function: "log_info('param condition matched')",
+						},
+					},
+				},
+			},
+			{
+				Name:    "final-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'done'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{
+		"target": "example.com",
+	}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// Should execute: check-step -> inline condition function -> final-step
+	assert.GreaterOrEqual(t, len(result.Steps), 3)
+	assert.Equal(t, "check-step", result.Steps[0].StepName)
+	assert.Equal(t, "decision-condition-function", result.Steps[1].StepName)
+	assert.Equal(t, "final-step", result.Steps[2].StepName)
+}
+
+func TestExecutor_Decision_ConditionWithParams_Disabled(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+
+	module := &core.Workflow{
+		Name: "test-decision-cond-params-disabled",
+		Kind: core.KindModule,
+		Params: []core.Param{
+			{Name: "target", Required: true},
+			{Name: "enable_extra", Type: "string", Default: "true"},
+		},
+		Steps: []core.Step{
+			{
+				Name:    "check-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'check'",
+				Decision: &core.DecisionConfig{
+					Conditions: []core.DecisionCondition{
+						{
+							If:       "{{enable_extra}} && {{target}} != ''",
+							Function: "log_info('should not run')",
+						},
+					},
+				},
+			},
+			{
+				Name:    "final-step",
+				Type:    core.StepTypeBash,
+				Command: "echo 'done'",
+			},
+		},
+	}
+
+	executor := NewExecutor()
+	executor.SetDryRun(false)
+	executor.SetSpinner(false)
+
+	// Pass enable_extra=false to disable the condition
+	result, err := executor.ExecuteModule(ctx, module, map[string]string{
+		"target":       "example.com",
+		"enable_extra": "false",
+	}, cfg)
+
+	require.NoError(t, err)
+	assert.Equal(t, core.RunStatusCompleted, result.Status)
+	// Should execute: check-step -> final-step (condition skipped)
+	assert.Equal(t, 2, len(result.Steps))
+	assert.Equal(t, "check-step", result.Steps[0].StepName)
+	assert.Equal(t, "final-step", result.Steps[1].StepName)
+}

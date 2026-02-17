@@ -285,7 +285,7 @@ func init() {
 	// Global flags available to all subcommands
 	rootCmd.PersistentFlags().BoolVar(&globalForce, "force", false, "skip confirmation prompts and force operations")
 	rootCmd.PersistentFlags().BoolVar(&globalJSON, "json", false, "output in JSON format")
-	rootCmd.PersistentFlags().IntVar(&globalWidth, "width", 70, "max column width for table display (0 = no limit)")
+	rootCmd.PersistentFlags().IntVar(&globalWidth, "width", 0, "max table width for display (0 = auto-detect terminal width)")
 
 	// Suppress usage display and default error output (we handle errors in Execute())
 	rootCmd.SilenceUsage = true

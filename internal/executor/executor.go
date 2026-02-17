@@ -2904,22 +2904,40 @@ func (e *Executor) executeDecisionCase(ctx context.Context, dc *core.DecisionCas
 // evaluateConditions evaluates condition-based decision entries.
 // All matching conditions execute their inline commands/functions (no short-circuit).
 // Returns the last matched goto target (if any) and collected inline results.
+//
+// Condition `if` expressions support both template and bare variable syntax:
+//   - "{{enable_extra}} && {{target}} != ”"  (template syntax — works with params/exports)
+//   - "enable_extra && target != ”"           (bare JS variables — also works)
+//
+// Template {{var}} references outside string literals are converted to bare JS variable
+// names so that params and exports are injected into the JS context with proper types.
+// Template {{var}} inside string literals ('{{path}}/file') are still template-rendered.
 func (e *Executor) evaluateConditions(ctx context.Context, conditions []core.DecisionCondition, execCtx *core.ExecutionContext) (string, []*core.StepResult) {
 	vars := execCtx.GetVariables()
+
+	// Normalize string "true"/"false" to actual booleans for JS evaluation.
+	// This ensures string params (type: string, default: "true") behave correctly
+	// in boolean conditions — matching the old template rendering behavior where
+	// {{var}} rendered to the literal true/false.
+	jsVars := normalizeBoolStringsForJS(vars)
+
 	var lastGoto string
 	var allResults []*core.StepResult
 
 	for i := range conditions {
 		cond := &conditions[i]
 
-		// Render template variables in the if expression
-		rendered, err := e.templateEngine.Render(cond.If, vars)
+		// Convert {{var}} outside quotes to bare JS variable names,
+		// then template-render any remaining {{var}} inside quotes.
+		jsExpr := stripTemplateVarsForJS(cond.If)
+		rendered, err := e.templateEngine.Render(jsExpr, vars)
 		if err != nil {
-			continue
+			// Fallback: if template render fails, use the stripped expression as-is
+			rendered = jsExpr
 		}
 
 		// Evaluate the rendered expression as a JS boolean
-		ok, err := e.functionRegistry.EvaluateCondition(rendered, vars)
+		ok, err := e.functionRegistry.EvaluateCondition(rendered, jsVars)
 		if err != nil || !ok {
 			continue
 		}
@@ -2937,6 +2955,80 @@ func (e *Executor) evaluateConditions(ctx context.Context, conditions []core.Dec
 	}
 
 	return lastGoto, allResults
+}
+
+// stripTemplateVarsForJS converts {{variable}} patterns to bare JS variable names
+// when they appear outside string literals. Variables inside quoted strings are
+// left as {{var}} for subsequent template rendering.
+//
+// Examples:
+//
+//	"{{flag}} && {{target}} != ''"      → "flag && target != ''"
+//	"file_exists('{{output}}/f.txt')"   → "file_exists('{{output}}/f.txt')"
+//	"{{depth}} > 2"                     → "depth > 2"
+func stripTemplateVarsForJS(expr string) string {
+	if !strings.Contains(expr, "{{") {
+		return expr
+	}
+
+	var result strings.Builder
+	result.Grow(len(expr))
+	inQuote := byte(0) // 0 = not in quote, '\'' or '"' = in quote
+
+	for i := 0; i < len(expr); {
+		ch := expr[i]
+
+		// Track quote state
+		if (ch == '\'' || ch == '"') && inQuote == 0 {
+			inQuote = ch
+			result.WriteByte(ch)
+			i++
+			continue
+		}
+		if ch == inQuote {
+			inQuote = 0
+			result.WriteByte(ch)
+			i++
+			continue
+		}
+
+		// Outside quotes: strip {{var}} to bare variable name
+		if inQuote == 0 && ch == '{' && i+1 < len(expr) && expr[i+1] == '{' {
+			end := strings.Index(expr[i+2:], "}}")
+			if end >= 0 {
+				varName := strings.TrimSpace(expr[i+2 : i+2+end])
+				result.WriteString(varName)
+				i += 2 + end + 2
+				continue
+			}
+		}
+
+		result.WriteByte(ch)
+		i++
+	}
+
+	return result.String()
+}
+
+// normalizeBoolStringsForJS converts string "true"/"false" values to actual Go booleans.
+// This ensures correct JS evaluation where string "false" is truthy but bool false is falsy.
+func normalizeBoolStringsForJS(vars map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{}, len(vars))
+	for k, v := range vars {
+		if s, ok := v.(string); ok {
+			switch strings.ToLower(s) {
+			case "true":
+				result[k] = true
+			case "false":
+				result[k] = false
+			default:
+				result[k] = v
+			}
+		} else {
+			result[k] = v
+		}
+	}
+	return result
 }
 
 // executeDecisionCondition executes inline commands/functions from a matched DecisionCondition.

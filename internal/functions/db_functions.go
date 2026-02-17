@@ -2004,10 +2004,13 @@ func (vf *vmFunc) dbImportAssetFromFile(call goja.FunctionCall) goja.Value {
 	workspace := call.Argument(0).String()
 	filePath := call.Argument(1).String()
 
-	// Parse optional source (3rd arg)
+	// Parse optional source (3rd arg), default to "web"
 	var defaultSource string
 	if len(call.Arguments) >= 3 {
 		defaultSource = call.Argument(2).String()
+	}
+	if defaultSource == "" || defaultSource == "undefined" {
+		defaultSource = "web"
 	}
 
 	if workspace == "" || workspace == "undefined" {
@@ -2281,6 +2284,20 @@ func mapJSONToAsset(data map[string]interface{}, workspace, rawLine string) data
 	// Prefer URL over raw IP for asset_value (more descriptive identifier)
 	if asset.AssetValue != "" && asset.URL != "" && net.ParseIP(asset.AssetValue) != nil {
 		asset.AssetValue = asset.URL
+	}
+
+	// Fallback: if asset_value is still empty, derive from URL
+	if asset.AssetValue == "" && asset.URL != "" {
+		asset.AssetValue = asset.URL
+	}
+
+	// Auto-classify asset_type based on asset_value
+	if asset.AssetType == "" && asset.AssetValue != "" {
+		asset.AssetType = database.ClassifyAssetType(asset.AssetValue)
+	}
+	// Refine: URL with HTTP response data -> "http"
+	if asset.AssetType == "url" && (asset.StatusCode > 0 || asset.ContentLength > 0) {
+		asset.AssetType = "http"
 	}
 
 	return asset

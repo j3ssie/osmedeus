@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/term"
+
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
@@ -47,7 +49,7 @@ var tableDefaultColumns = map[string][]string{
 	"runs":            {"run_uuid", "workflow_name", "target", "workspace", "trigger_type", "status", "completed_steps", "total_steps"},
 	"step_results":    {"step_name", "step_type", "status", "duration_ms", "command"},
 	"artifacts":       {"name", "path", "type", "size_bytes", "line_count"},
-	"assets":          {"asset_value", "status_code", "title", "tech", "host_ip", "source", "asset_type", "url"},
+	"assets":          {"asset_value", "status_code", "title", "tech", "host_ip", "source", "asset_type"},
 	"event_logs":      {"topic", "source", "processed", "data_type", "workspace", "data"},
 	"schedules":       {"name", "workflow_name", "workflow_kind", "target", "trigger_type", "schedule", "is_enabled", "run_count"},
 	"workspaces":      {"name", "data_source", "total_assets", "total_ips", "total_vulns", "risk_score"},
@@ -62,6 +64,23 @@ var tableColumnMinWidths = map[string]map[string]int{
 	},
 	"assets": {
 		"title": 30,
+	},
+}
+
+// tableColumnWeights defines per-column weights for surplus width distribution (default weight = 1)
+var tableColumnWeights = map[string]map[string]int{
+	"assets": {
+		"asset_value": 8,
+		"title":       3,
+		"tech":        3,
+		"host_ip":     2,
+	},
+}
+
+// tableColumnDisplayNames maps internal column names to shorter display names
+var tableColumnDisplayNames = map[string]map[string]string{
+	"assets": {
+		"status_code": "status",
 	},
 }
 
@@ -624,17 +643,26 @@ func listTableRecordsOnce(ctx context.Context, cfg *config.Config, printer *term
 		startRecord = 0
 	}
 
-	printer.Info("Table: %s", records.Table)
-	fmt.Printf("Showing records %d-%d of %d\n\n", startRecord, endRecord, records.TotalCount)
+	statsLine := fmt.Sprintf("%s Table: %s | Showing %s-%s of %s",
+		terminal.InfoSymbol(),
+		records.Table,
+		terminal.HiCyan(fmt.Sprintf("%d", startRecord)),
+		terminal.HiCyan(fmt.Sprintf("%d", endRecord)),
+		terminal.HiCyan(fmt.Sprintf("%d", records.TotalCount)),
+	)
+	if records.TotalCount > endRecord {
+		nextOffset := records.Offset + records.Limit
+		statsLine += fmt.Sprintf(" | Next: osmedeus db list -t %s --offset %s --limit %s",
+			dbTable,
+			terminal.HiCyan(fmt.Sprintf("%d", nextOffset)),
+			terminal.HiCyan(fmt.Sprintf("%d", dbLimit)),
+		)
+	}
+	fmt.Println(statsLine)
+	fmt.Println()
 
 	// Render table using tablewriter
 	renderTableWithTablewriter(dbTable, records.Records, columns, globalWidth, hideDefaultColumns, excludeColumns)
-
-	// Show pagination hints
-	if records.TotalCount > endRecord {
-		nextOffset := records.Offset + records.Limit
-		printer.Info("Next page: osmedeus db list -t %s --offset %d --limit %d", dbTable, nextOffset, dbLimit)
-	}
 
 	return nil
 }
@@ -784,28 +812,99 @@ func renderTableWithTablewriter(tableName string, records interface{}, columns [
 		tablewriter.WithHeaderAutoWrap(tw.WrapNone),
 		tablewriter.WithTrimSpace(tw.On),
 	}
-	if maxWidth > 0 {
-		opts = append(opts, tablewriter.WithMaxWidth(maxWidth))
-	}
-
-	// Apply per-column minimum widths if defined for this table
-	if colWidths, ok := tableColumnMinWidths[tableName]; ok {
-		widths := tw.NewMapper[int, int]()
-		for i, h := range headers {
-			if minW, exists := colWidths[h]; exists {
-				widths[i] = minW
-			}
+	// Auto-detect terminal width if maxWidth is 0
+	effectiveWidth := maxWidth
+	if effectiveWidth == 0 {
+		if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
+			effectiveWidth = w
 		}
-		if len(widths) > 0 {
+	}
+	if effectiveWidth > 0 && len(headers) > 0 {
+		// Compute per-column widths that fill the terminal width.
+		// WithMaxWidth only caps columns — short-content columns don't expand to fill space.
+		// Using WithColumnWidths forces each column to the allocated width.
+		numCols := len(headers)
+		// Overhead: " │ " (3 chars) between columns, plus leading/trailing space
+		overhead := (numCols-1)*3 + 2
+		available := effectiveWidth - overhead
+
+		widths := tw.NewMapper[int, int]()
+		displayNames := tableColumnDisplayNames[tableName]
+		if available >= numCols*4 {
+			// Base width per column = display header length + 2 (padding), minimum 8
+			mins := make([]int, numCols)
+			totalMin := 0
+			for i, h := range headers {
+				hLen := len(h)
+				if displayNames != nil {
+					if alias, ok := displayNames[h]; ok {
+						hLen = len(alias)
+					}
+				}
+				mins[i] = hLen + 2
+				if mins[i] < 8 {
+					mins[i] = 8
+				}
+				totalMin += mins[i]
+			}
+			if totalMin >= available {
+				// Terminal too narrow for headers — equal distribution
+				perCol := available / numCols
+				for i := range headers {
+					widths[i] = max(perCol, 4)
+				}
+			} else {
+				// Distribute surplus using per-column weights (default weight = 1)
+				surplus := available - totalMin
+				colWeights := tableColumnWeights[tableName]
+				totalWeight := 0
+				weights := make([]int, numCols)
+				for i, h := range headers {
+					w := 1
+					if colWeights != nil {
+						if cw, ok := colWeights[h]; ok {
+							w = cw
+						}
+					}
+					weights[i] = w
+					totalWeight += w
+				}
+				for i := range headers {
+					widths[i] = mins[i] + surplus*weights[i]/totalWeight
+				}
+			}
 			opts = append(opts, tablewriter.WithColumnWidths(widths))
+		} else {
+			opts = append(opts, tablewriter.WithMaxWidth(effectiveWidth))
+		}
+		opts = append(opts, tablewriter.WithRowAutoWrap(tw.WrapBreak))
+	} else if effectiveWidth == 0 {
+		// No width constraint (piped output) — apply per-column minimums if defined
+		if colWidths, ok := tableColumnMinWidths[tableName]; ok {
+			widths := tw.NewMapper[int, int]()
+			for i, h := range headers {
+				if minW, exists := colWidths[h]; exists {
+					widths[i] = minW
+				}
+			}
+			if len(widths) > 0 {
+				opts = append(opts, tablewriter.WithColumnWidths(widths))
+			}
 		}
 	}
 
 	table := tablewriter.NewTable(os.Stdout, opts...)
 
-	// Convert headers to []any for variadic call
+	// Convert headers to []any for variadic call, applying display name aliases
+	displayNames := tableColumnDisplayNames[tableName]
 	headerArgs := make([]any, len(headers))
 	for i, h := range headers {
+		if displayNames != nil {
+			if alias, ok := displayNames[h]; ok {
+				headerArgs[i] = alias
+				continue
+			}
+		}
 		headerArgs[i] = h
 	}
 	table.Header(headerArgs...)
