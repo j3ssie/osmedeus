@@ -91,6 +91,13 @@ var builtInVariables = map[string]bool{
 	"ChunkStart":  true,
 	"ChunkEnd":    true,
 
+	// Platform Variables
+	"PlatformOS":            true,
+	"PlatformArch":          true,
+	"PlatformInDocker":      true,
+	"PlatformInKubernetes":  true,
+	"PlatformCloudProvider": true,
+
 	// Legacy/Aliases (for backward compatibility)
 	"Base":     true,
 	"base":     true,
@@ -199,42 +206,25 @@ func (r *UndefinedVariableRule) Check(wast *WorkflowAST) []LintIssue {
 
 	// Check each step for undefined variables
 	for i, step := range w.Steps {
-		// Check command
-		checkStringForUndefinedVars(step.Command, fmt.Sprintf("steps[%d].command", i), defined, wast, r, &issues)
+		stepPrefix := fmt.Sprintf("steps[%d]", i)
 
-		// Check commands array
-		for j, cmd := range step.Commands {
-			checkStringForUndefinedVars(cmd, fmt.Sprintf("steps[%d].commands[%d]", i, j), defined, wast, r, &issues)
+		// Check all fields of this step
+		checkStepFieldsForUndefinedVars(&step, stepPrefix, defined, wast, r, &issues)
+
+		// Recurse into foreach inner step with scoped defined copy
+		if step.Step != nil {
+			innerDefined := copyDefinedMap(defined)
+			if step.Variable != "" {
+				innerDefined[step.Variable] = true
+			}
+			// _id_ is always available in foreach inner steps
+			innerDefined["_id_"] = true
+			checkStepFieldsForUndefinedVars(step.Step, stepPrefix+".step", innerDefined, wast, r, &issues)
 		}
 
-		// Check parallel commands
-		for j, cmd := range step.ParallelCommands {
-			checkStringForUndefinedVars(cmd, fmt.Sprintf("steps[%d].parallel_commands[%d]", i, j), defined, wast, r, &issues)
-		}
-
-		// Check function fields
-		checkStringForUndefinedVars(step.Function, fmt.Sprintf("steps[%d].function", i), defined, wast, r, &issues)
-		for j, fn := range step.Functions {
-			checkStringForUndefinedVars(fn, fmt.Sprintf("steps[%d].functions[%d]", i, j), defined, wast, r, &issues)
-		}
-
-		// Check pre_condition
-		checkStringForUndefinedVars(step.PreCondition, fmt.Sprintf("steps[%d].pre_condition", i), defined, wast, r, &issues)
-
-		// Check input for foreach
-		checkStringForUndefinedVars(step.Input, fmt.Sprintf("steps[%d].input", i), defined, wast, r, &issues)
-
-		// Check URL for HTTP steps
-		checkStringForUndefinedVars(step.URL, fmt.Sprintf("steps[%d].url", i), defined, wast, r, &issues)
-
-		// Check export values
-		for exportName, exportValue := range step.Exports {
-			checkStringForUndefinedVars(exportValue, fmt.Sprintf("steps[%d].exports.%s", i, exportName), defined, wast, r, &issues)
-		}
-
-		// Check decision switch
-		if step.Decision != nil {
-			checkStringForUndefinedVars(step.Decision.Switch, fmt.Sprintf("steps[%d].decision.switch", i), defined, wast, r, &issues)
+		// Recurse into parallel_steps
+		for j := range step.ParallelSteps {
+			checkStepFieldsForUndefinedVars(&step.ParallelSteps[j], fmt.Sprintf("%s.parallel_steps[%d]", stepPrefix, j), defined, wast, r, &issues)
 		}
 
 		// After processing this step, add its exports to defined
@@ -242,7 +232,7 @@ func (r *UndefinedVariableRule) Check(wast *WorkflowAST) []LintIssue {
 			defined[exportName] = true
 		}
 
-		// Add foreach variable to defined for nested step
+		// Add foreach variable to defined for subsequent steps
 		if step.Variable != "" {
 			defined[step.Variable] = true
 		}
@@ -698,6 +688,120 @@ func extractVariables(s string) []string {
 	return vars
 }
 
+// copyDefinedMap creates a shallow copy of a map[string]bool
+func copyDefinedMap(m map[string]bool) map[string]bool {
+	cp := make(map[string]bool, len(m))
+	for k, v := range m {
+		cp[k] = v
+	}
+	return cp
+}
+
+// checkStepFieldsForUndefinedVars checks ALL template-renderable fields of a single step.
+// stepPrefix is the field path prefix (e.g. "steps[0]" or "steps[0].step").
+func checkStepFieldsForUndefinedVars(step *core.Step, stepPrefix string, defined map[string]bool, wast *WorkflowAST, rule *UndefinedVariableRule, issues *[]LintIssue) {
+	check := func(s, field string) {
+		checkStringForUndefinedVars(s, field, defined, wast, rule, issues)
+	}
+	checkSlice := func(slice []string, fieldBase string) {
+		for j, s := range slice {
+			check(s, fmt.Sprintf("%s[%d]", fieldBase, j))
+		}
+	}
+
+	// Bash fields
+	check(step.Command, stepPrefix+".command")
+	checkSlice(step.Commands, stepPrefix+".commands")
+	checkSlice(step.ParallelCommands, stepPrefix+".parallel_commands")
+
+	// Structured args
+	check(step.SpeedArgs, stepPrefix+".speed_args")
+	check(step.ConfigArgs, stepPrefix+".config_args")
+	check(step.InputArgs, stepPrefix+".input_args")
+	check(step.OutputArgs, stepPrefix+".output_args")
+
+	// Function fields
+	check(step.Function, stepPrefix+".function")
+	checkSlice(step.Functions, stepPrefix+".functions")
+	checkSlice(step.ParallelFunctions, stepPrefix+".parallel_functions")
+
+	// Common fields
+	check(step.PreCondition, stepPrefix+".pre_condition")
+	check(step.Log, stepPrefix+".log")
+	check(step.Input, stepPrefix+".input")
+	check(step.VariablePreProcess, stepPrefix+".variable_pre_process")
+
+	// File paths
+	check(step.StdFile, stepPrefix+".std_file")
+	check(step.StepRemoteFile, stepPrefix+".step_remote_file")
+	check(step.HostOutputFile, stepPrefix+".host_output_file")
+
+	// HTTP fields
+	check(step.URL, stepPrefix+".url")
+	check(step.RequestBody, stepPrefix+".request_body")
+	for hk, hv := range step.Headers {
+		check(hv, fmt.Sprintf("%s.headers.%s", stepPrefix, hk))
+	}
+
+	// LLM fields
+	for j, msg := range step.Messages {
+		if s, ok := msg.Content.(string); ok {
+			check(s, fmt.Sprintf("%s.messages[%d].content", stepPrefix, j))
+		}
+	}
+	checkSlice(step.EmbeddingInput, stepPrefix+".embedding_input")
+
+	// Agent fields
+	check(step.Query, stepPrefix+".query")
+	checkSlice(step.Queries, stepPrefix+".queries")
+	check(step.SystemPrompt, stepPrefix+".system_prompt")
+	check(step.StopCondition, stepPrefix+".stop_condition")
+	check(step.PlanPrompt, stepPrefix+".plan_prompt")
+	check(step.OnToolStart, stepPrefix+".on_tool_start")
+	check(step.OnToolEnd, stepPrefix+".on_tool_end")
+
+	// Agent memory paths
+	if step.Memory != nil {
+		check(step.Memory.PersistPath, stepPrefix+".memory.persist_path")
+		check(step.Memory.ResumePath, stepPrefix+".memory.resume_path")
+	}
+
+	// Export values
+	for exportName, exportValue := range step.Exports {
+		check(exportValue, fmt.Sprintf("%s.exports.%s", stepPrefix, exportName))
+	}
+
+	// Decision fields
+	if step.Decision != nil {
+		check(step.Decision.Switch, stepPrefix+".decision.switch")
+
+		for caseVal, dc := range step.Decision.Cases {
+			casePrefix := fmt.Sprintf("%s.decision.cases.%s", stepPrefix, caseVal)
+			check(dc.Command, casePrefix+".command")
+			checkSlice(dc.Commands, casePrefix+".commands")
+			check(dc.Function, casePrefix+".function")
+			checkSlice(dc.Functions, casePrefix+".functions")
+		}
+
+		if step.Decision.Default != nil {
+			defPrefix := stepPrefix + ".decision.default"
+			check(step.Decision.Default.Command, defPrefix+".command")
+			checkSlice(step.Decision.Default.Commands, defPrefix+".commands")
+			check(step.Decision.Default.Function, defPrefix+".function")
+			checkSlice(step.Decision.Default.Functions, defPrefix+".functions")
+		}
+
+		for j, cond := range step.Decision.Conditions {
+			condPrefix := fmt.Sprintf("%s.decision.conditions[%d]", stepPrefix, j)
+			check(cond.If, condPrefix+".if")
+			check(cond.Command, condPrefix+".command")
+			checkSlice(cond.Commands, condPrefix+".commands")
+			check(cond.Function, condPrefix+".function")
+			checkSlice(cond.Functions, condPrefix+".functions")
+		}
+	}
+}
+
 func checkStringForUndefinedVars(s, field string, defined map[string]bool, wast *WorkflowAST, rule *UndefinedVariableRule, issues *[]LintIssue) {
 	if s == "" {
 		return
@@ -720,48 +824,121 @@ func checkStringForUndefinedVars(s, field string, defined map[string]bool, wast 
 	}
 }
 
-func collectReferencedVars(step *core.Step, _ int, referenced map[string]bool, _ []core.Step) {
-	// Collect from all string fields
-	for _, v := range extractVariables(step.Command) {
-		referenced[v] = true
-	}
-	for _, cmd := range step.Commands {
-		for _, v := range extractVariables(cmd) {
+// collectReferencedVarsFromStep extracts all variable references from a step's fields.
+func collectReferencedVarsFromStep(step *core.Step, referenced map[string]bool) {
+	addVars := func(s string) {
+		for _, v := range extractVariables(s) {
 			referenced[v] = true
 		}
 	}
-	for _, cmd := range step.ParallelCommands {
-		for _, v := range extractVariables(cmd) {
-			referenced[v] = true
+	addSliceVars := func(slice []string) {
+		for _, s := range slice {
+			addVars(s)
 		}
 	}
-	for _, v := range extractVariables(step.Function) {
-		referenced[v] = true
+
+	// Bash fields
+	addVars(step.Command)
+	addSliceVars(step.Commands)
+	addSliceVars(step.ParallelCommands)
+
+	// Structured args
+	addVars(step.SpeedArgs)
+	addVars(step.ConfigArgs)
+	addVars(step.InputArgs)
+	addVars(step.OutputArgs)
+
+	// Function fields
+	addVars(step.Function)
+	addSliceVars(step.Functions)
+	addSliceVars(step.ParallelFunctions)
+
+	// Common fields
+	addVars(step.PreCondition)
+	addVars(step.Log)
+	addVars(step.Input)
+	addVars(step.VariablePreProcess)
+
+	// File paths
+	addVars(step.StdFile)
+	addVars(step.StepRemoteFile)
+	addVars(step.HostOutputFile)
+
+	// HTTP fields
+	addVars(step.URL)
+	addVars(step.RequestBody)
+	for _, hv := range step.Headers {
+		addVars(hv)
 	}
-	for _, fn := range step.Functions {
-		for _, v := range extractVariables(fn) {
-			referenced[v] = true
+
+	// LLM fields
+	for _, msg := range step.Messages {
+		if s, ok := msg.Content.(string); ok {
+			addVars(s)
 		}
 	}
-	for _, v := range extractVariables(step.PreCondition) {
-		referenced[v] = true
+	addSliceVars(step.EmbeddingInput)
+
+	// Agent fields
+	addVars(step.Query)
+	addSliceVars(step.Queries)
+	addVars(step.SystemPrompt)
+	addVars(step.StopCondition)
+	addVars(step.PlanPrompt)
+	addVars(step.OnToolStart)
+	addVars(step.OnToolEnd)
+
+	// Agent memory paths
+	if step.Memory != nil {
+		addVars(step.Memory.PersistPath)
+		addVars(step.Memory.ResumePath)
 	}
-	for _, v := range extractVariables(step.Input) {
-		referenced[v] = true
-	}
-	for _, v := range extractVariables(step.URL) {
-		referenced[v] = true
-	}
+
+	// Export values
 	for _, exportValue := range step.Exports {
-		for _, v := range extractVariables(exportValue) {
-			referenced[v] = true
-		}
+		addVars(exportValue)
 	}
+
+	// Decision fields
 	if step.Decision != nil {
-		for _, v := range extractVariables(step.Decision.Switch) {
-			referenced[v] = true
+		addVars(step.Decision.Switch)
+
+		for _, dc := range step.Decision.Cases {
+			addVars(dc.Command)
+			addSliceVars(dc.Commands)
+			addVars(dc.Function)
+			addSliceVars(dc.Functions)
+		}
+
+		if step.Decision.Default != nil {
+			addVars(step.Decision.Default.Command)
+			addSliceVars(step.Decision.Default.Commands)
+			addVars(step.Decision.Default.Function)
+			addSliceVars(step.Decision.Default.Functions)
+		}
+
+		for _, cond := range step.Decision.Conditions {
+			addVars(cond.If)
+			addVars(cond.Command)
+			addSliceVars(cond.Commands)
+			addVars(cond.Function)
+			addSliceVars(cond.Functions)
 		}
 	}
+
+	// Recurse into foreach inner step
+	if step.Step != nil {
+		collectReferencedVarsFromStep(step.Step, referenced)
+	}
+
+	// Recurse into parallel_steps
+	for i := range step.ParallelSteps {
+		collectReferencedVarsFromStep(&step.ParallelSteps[i], referenced)
+	}
+}
+
+func collectReferencedVars(step *core.Step, _ int, referenced map[string]bool, _ []core.Step) {
+	collectReferencedVarsFromStep(step, referenced)
 }
 
 func findSimilarVariable(v string, defined map[string]bool) string {
@@ -923,6 +1100,7 @@ func GetDefaultRules() []LinterRule {
 		&MissingRequiredFieldRule{},
 		&DuplicateStepNameRule{},
 		&EmptyStepRule{},
+		&UndefinedVariableRule{},
 		&UnusedVariableRule{},
 		&InvalidGotoRule{},
 		&InvalidDependsOnRule{},

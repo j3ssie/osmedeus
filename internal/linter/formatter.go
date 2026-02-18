@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -44,7 +45,7 @@ func (f *PrettyFormatter) Format(result *LintResult, source []byte) string {
 		severityStr := f.colorSeverity(issue.Severity)
 		sb.WriteString(fmt.Sprintf("%s:%d:%d: %s[%s]: %s\n",
 			displayPath, issue.Line, issue.Column,
-			severityStr, issue.Rule, issue.Message))
+			severityStr, issue.Rule, f.highlightQuoted(issue.Message)))
 
 		// Source context
 		if f.ShowContext && issue.Line > 0 && issue.Line <= len(lines) {
@@ -168,6 +169,16 @@ func (f *PrettyFormatter) colorMuted(s string) string {
 		return s
 	}
 	return "\033[90m" + s + "\033[0m" // Gray
+}
+
+var quotedPattern = regexp.MustCompile(`'([^']+)'`)
+
+// highlightQuoted highlights single-quoted terms in a message with bold + yellow
+func (f *PrettyFormatter) highlightQuoted(s string) string {
+	if f.NoColor {
+		return s
+	}
+	return quotedPattern.ReplaceAllString(s, "'\033[1;33m$1\033[0m'")
 }
 
 // JSONFormatter provides machine-readable JSON output

@@ -131,6 +131,30 @@ func TestWorkflow_Validate_Success(t *testing.T) {
 	log.Success("workflow validate reports valid workflow")
 }
 
+func TestWorkflow_Validate_UndefinedVarsComprehensive(t *testing.T) {
+	log := NewTestLogger(t)
+	log.Step("Testing workflow validate catches undefined vars in functions and foreach")
+
+	fixturePath := filepath.Join(getTestdataPath(t), "linter", "undefined-vars-comprehensive.yaml")
+	log.Info("Validating fixture: %s", fixturePath)
+
+	stdout, _, err := runCLIWithLog(t, log, "workflow", "validate", fixturePath)
+	require.NoError(t, err) // warnings don't cause error exit
+
+	log.Info("Asserting each undefined variable is reported")
+	assert.Contains(t, stdout, "funcUndef")
+	assert.Contains(t, stdout, "foreachCmdUndef")
+	assert.Contains(t, stdout, "foreachFuncUndef")
+
+	// Verify valid vars are NOT flagged
+	assert.NotContains(t, stdout, "'target' is not defined")
+	assert.NotContains(t, stdout, "'line' is not defined")
+	assert.NotContains(t, stdout, "'item' is not defined")
+	assert.NotContains(t, stdout, "'Output' is not defined")
+
+	log.Success("All undefined variables detected correctly")
+}
+
 func TestWorkflow_Validate_Fail(t *testing.T) {
 	log := NewTestLogger(t)
 	log.Step("Testing workflow validate with invalid workflow")

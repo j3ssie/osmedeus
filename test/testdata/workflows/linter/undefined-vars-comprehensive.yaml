@@ -1,0 +1,43 @@
+name: undefined-vars-comprehensive
+kind: module
+description: Tests undefined variable detection in functions and foreach
+params:
+  - name: target
+    required: true
+  - name: threads
+    default: 10
+
+steps:
+  # 1) Undefined var inside functions: array
+  - name: func-with-undef
+    type: function
+    functions:
+      - 'log_info("target={{target}}")'
+      - 'log_info("bad={{funcUndef}}")'
+
+  # 2) Undefined var inside foreach inner step commands:
+  - name: foreach-with-undef
+    type: foreach
+    input: "{{target}}"
+    variable: line
+    step:
+      name: inner-step
+      type: bash
+      commands:
+        - echo "valid=[[line]]"
+        - echo "bad={{foreachCmdUndef}}"
+
+  # 3) Undefined var in foreach inner step function:
+  - name: foreach-func-undef
+    type: foreach
+    input: "{{target}}"
+    variable: item
+    step:
+      name: inner-func
+      type: function
+      function: 'log_info("bad={{foreachFuncUndef}}")'
+
+  # 4) Valid step (control - should produce no warnings)
+  - name: valid-step
+    type: bash
+    command: echo "{{target}} {{Output}}"
