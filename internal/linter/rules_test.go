@@ -919,3 +919,249 @@ func searchSubstring(s, substr string) bool {
 	}
 	return false
 }
+
+func TestUndefinedVariableRule_TriggerInputVars(t *testing.T) {
+	rule := &UndefinedVariableRule{}
+
+	t.Run("trigger input vars downgraded to info", func(t *testing.T) {
+		ast := parseTestWorkflow(t, `
+name: event-handler
+kind: module
+params:
+  - name: target
+triggers:
+  - name: on-new-asset
+    on: event
+    enabled: true
+    event:
+      topic: assets.new
+    input:
+      source: event_data.source
+      description: event_data.desc
+steps:
+  - name: process
+    type: bash
+    command: echo "{{target}} {{source}} {{description}}"
+`)
+		issues := rule.Check(ast)
+
+		// Should have issues for source and description, but at info severity
+		var infoIssues, warningIssues []LintIssue
+		for _, issue := range issues {
+			if issue.Rule == "undefined-variable" {
+				if issue.Severity == SeverityInfo {
+					infoIssues = append(infoIssues, issue)
+				} else if issue.Severity == SeverityWarning {
+					warningIssues = append(warningIssues, issue)
+				}
+			}
+		}
+
+		assert.Len(t, infoIssues, 2, "should have 2 info-level issues for trigger vars")
+		assert.Empty(t, warningIssues, "should have no warning-level undefined-variable issues")
+
+		// Verify messages mention trigger input
+		for _, issue := range infoIssues {
+			assert.Contains(t, issue.Message, "provided by trigger input")
+		}
+	})
+
+	t.Run("legacy trigger input syntax downgraded to info", func(t *testing.T) {
+		ast := parseTestWorkflow(t, `
+name: event-handler-legacy
+kind: module
+triggers:
+  - name: on-webhook
+    on: event
+    enabled: true
+    event:
+      topic: webhook.received
+    input:
+      type: event_data
+      field: url
+      name: webhook_target
+steps:
+  - name: process
+    type: bash
+    command: echo "{{webhook_target}}"
+`)
+		issues := rule.Check(ast)
+
+		var infoIssues, warningIssues []LintIssue
+		for _, issue := range issues {
+			if issue.Rule == "undefined-variable" {
+				if issue.Severity == SeverityInfo {
+					infoIssues = append(infoIssues, issue)
+				} else if issue.Severity == SeverityWarning {
+					warningIssues = append(warningIssues, issue)
+				}
+			}
+		}
+
+		assert.Len(t, infoIssues, 1, "should have 1 info-level issue for legacy trigger var")
+		assert.Empty(t, warningIssues, "should have no warning-level issues")
+		assert.Contains(t, infoIssues[0].Message, "webhook_target")
+	})
+
+	t.Run("event envelope variables recognized in event-triggered workflow", func(t *testing.T) {
+		ast := parseTestWorkflow(t, `
+name: event-handler-envelope
+kind: module
+triggers:
+  - name: on-asset
+    on: event
+    enabled: true
+    event:
+      topic: assets.new
+    input:
+      source: event_data.source
+steps:
+  - name: process
+    type: bash
+    command: echo "{{EventTopic}} {{EventSource}} {{EventTimestamp}} {{EventData}} {{EventEnvelope}} {{EventDataType}}"
+`)
+		issues := rule.Check(ast)
+
+		// Event envelope variables should NOT produce any undefined-variable issues
+		var undefinedWarnings []LintIssue
+		for _, issue := range issues {
+			if issue.Rule == "undefined-variable" && issue.Severity == SeverityWarning {
+				undefinedWarnings = append(undefinedWarnings, issue)
+			}
+		}
+		assert.Empty(t, undefinedWarnings, "event envelope variables should be recognized as defined")
+	})
+
+	t.Run("truly undefined vars still warned alongside trigger vars", func(t *testing.T) {
+		ast := parseTestWorkflow(t, `
+name: mixed-vars
+kind: module
+triggers:
+  - name: on-event
+    on: event
+    enabled: true
+    event:
+      topic: test.topic
+    input:
+      source: event_data.source
+steps:
+  - name: process
+    type: bash
+    command: echo "{{source}} {{truly_undefined}}"
+`)
+		issues := rule.Check(ast)
+
+		var infoIssues, warningIssues []LintIssue
+		for _, issue := range issues {
+			if issue.Rule == "undefined-variable" {
+				if issue.Severity == SeverityInfo {
+					infoIssues = append(infoIssues, issue)
+				} else if issue.Severity == SeverityWarning {
+					warningIssues = append(warningIssues, issue)
+				}
+			}
+		}
+
+		// truly_undefined should be info (downgraded because event trigger exists)
+		// source is in triggerVars so also info
+		assert.Len(t, infoIssues, 2, "both source and truly_undefined should be info due to event trigger")
+		assert.Empty(t, warningIssues, "no warnings expected when event trigger is present")
+	})
+
+	t.Run("no trigger means no downgrade", func(t *testing.T) {
+		ast := parseTestWorkflow(t, `
+name: no-triggers
+kind: module
+steps:
+  - name: step1
+    type: bash
+    command: echo "{{source}}"
+`)
+		issues := rule.Check(ast)
+
+		// source should be a normal warning, not info
+		var warningIssues []LintIssue
+		for _, issue := range issues {
+			if issue.Rule == "undefined-variable" && issue.Severity == SeverityWarning {
+				warningIssues = append(warningIssues, issue)
+			}
+		}
+		assert.Len(t, warningIssues, 1)
+		assert.Contains(t, warningIssues[0].Message, "source")
+	})
+
+	t.Run("event trigger downgrades unlisted vars to info", func(t *testing.T) {
+		// Scenario: input only maps "target", but steps also use source, description,
+		// asset_type — these should be SeverityInfo, not SeverityWarning.
+		ast := parseTestWorkflow(t, `
+name: event-handler-partial-input
+kind: module
+triggers:
+  - name: on-new-asset
+    on: event
+    enabled: true
+    event:
+      topic: assets.new
+    input:
+      target: event_data.url
+steps:
+  - name: process
+    type: bash
+    command: echo "{{target}} {{source}} {{description}} {{asset_type}}"
+`)
+		issues := rule.Check(ast)
+
+		var infoIssues, warningIssues []LintIssue
+		for _, issue := range issues {
+			if issue.Rule == "undefined-variable" {
+				if issue.Severity == SeverityInfo {
+					infoIssues = append(infoIssues, issue)
+				} else if issue.Severity == SeverityWarning {
+					warningIssues = append(warningIssues, issue)
+				}
+			}
+		}
+
+		// target is a built-in variable so no issue is emitted
+		// source, description, asset_type are NOT in triggerVars but hasEventTrigger → info ("may be provided by event data")
+		assert.Len(t, infoIssues, 3, "source, description, asset_type should be info-level")
+		assert.Empty(t, warningIssues, "no warnings when event trigger is present")
+
+		// Verify the messages indicate possible event data
+		for _, issue := range infoIssues {
+			assert.Contains(t, issue.Message, "may be provided by event data")
+		}
+	})
+
+	t.Run("no event trigger means undefined vars are warnings", func(t *testing.T) {
+		// Workflow with a cron trigger (not event) — undefined vars should stay as warnings
+		ast := parseTestWorkflow(t, `
+name: cron-handler
+kind: module
+triggers:
+  - name: nightly
+    on: cron
+    enabled: true
+    schedule: "0 0 * * *"
+steps:
+  - name: process
+    type: bash
+    command: echo "{{source}} {{description}}"
+`)
+		issues := rule.Check(ast)
+
+		var infoIssues, warningIssues []LintIssue
+		for _, issue := range issues {
+			if issue.Rule == "undefined-variable" {
+				if issue.Severity == SeverityInfo {
+					infoIssues = append(infoIssues, issue)
+				} else if issue.Severity == SeverityWarning {
+					warningIssues = append(warningIssues, issue)
+				}
+			}
+		}
+
+		assert.Empty(t, infoIssues, "no info downgrades without event trigger")
+		assert.Len(t, warningIssues, 2, "source and description should be warnings")
+	})
+}

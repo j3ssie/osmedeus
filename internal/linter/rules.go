@@ -204,12 +204,37 @@ func (r *UndefinedVariableRule) Check(wast *WorkflowAST) []LintIssue {
 		defined[param.Name] = true
 	}
 
+	// Collect variables provided by trigger inputs
+	triggerVars := make(map[string]bool)
+	hasEventTrigger := false
+	for _, trigger := range w.Triggers {
+		if trigger.On == core.TriggerEvent {
+			hasEventTrigger = true
+		}
+		if trigger.Input.HasVars() {
+			for varName := range trigger.Input.Vars {
+				triggerVars[varName] = true
+			}
+		}
+		// Legacy syntax
+		if trigger.Input.Name != "" {
+			triggerVars[trigger.Input.Name] = true
+		}
+	}
+
+	// If workflow has event triggers, add event envelope variables as defined
+	if hasEventTrigger {
+		for _, v := range []string{"EventEnvelope", "EventTopic", "EventSource", "EventDataType", "EventTimestamp", "EventData"} {
+			defined[v] = true
+		}
+	}
+
 	// Check each step for undefined variables
 	for i, step := range w.Steps {
 		stepPrefix := fmt.Sprintf("steps[%d]", i)
 
 		// Check all fields of this step
-		checkStepFieldsForUndefinedVars(&step, stepPrefix, defined, wast, r, &issues)
+		checkStepFieldsForUndefinedVars(&step, stepPrefix, defined, triggerVars, hasEventTrigger, wast, r, &issues)
 
 		// Recurse into foreach inner step with scoped defined copy
 		if step.Step != nil {
@@ -219,12 +244,12 @@ func (r *UndefinedVariableRule) Check(wast *WorkflowAST) []LintIssue {
 			}
 			// _id_ is always available in foreach inner steps
 			innerDefined["_id_"] = true
-			checkStepFieldsForUndefinedVars(step.Step, stepPrefix+".step", innerDefined, wast, r, &issues)
+			checkStepFieldsForUndefinedVars(step.Step, stepPrefix+".step", innerDefined, triggerVars, hasEventTrigger, wast, r, &issues)
 		}
 
 		// Recurse into parallel_steps
 		for j := range step.ParallelSteps {
-			checkStepFieldsForUndefinedVars(&step.ParallelSteps[j], fmt.Sprintf("%s.parallel_steps[%d]", stepPrefix, j), defined, wast, r, &issues)
+			checkStepFieldsForUndefinedVars(&step.ParallelSteps[j], fmt.Sprintf("%s.parallel_steps[%d]", stepPrefix, j), defined, triggerVars, hasEventTrigger, wast, r, &issues)
 		}
 
 		// After processing this step, add its exports to defined
@@ -699,9 +724,9 @@ func copyDefinedMap(m map[string]bool) map[string]bool {
 
 // checkStepFieldsForUndefinedVars checks ALL template-renderable fields of a single step.
 // stepPrefix is the field path prefix (e.g. "steps[0]" or "steps[0].step").
-func checkStepFieldsForUndefinedVars(step *core.Step, stepPrefix string, defined map[string]bool, wast *WorkflowAST, rule *UndefinedVariableRule, issues *[]LintIssue) {
+func checkStepFieldsForUndefinedVars(step *core.Step, stepPrefix string, defined map[string]bool, triggerVars map[string]bool, hasEventTrigger bool, wast *WorkflowAST, rule *UndefinedVariableRule, issues *[]LintIssue) {
 	check := func(s, field string) {
-		checkStringForUndefinedVars(s, field, defined, wast, rule, issues)
+		checkStringForUndefinedVars(s, field, defined, triggerVars, hasEventTrigger, wast, rule, issues)
 	}
 	checkSlice := func(slice []string, fieldBase string) {
 		for j, s := range slice {
@@ -802,24 +827,46 @@ func checkStepFieldsForUndefinedVars(step *core.Step, stepPrefix string, defined
 	}
 }
 
-func checkStringForUndefinedVars(s, field string, defined map[string]bool, wast *WorkflowAST, rule *UndefinedVariableRule, issues *[]LintIssue) {
+func checkStringForUndefinedVars(s, field string, defined map[string]bool, triggerVars map[string]bool, hasEventTrigger bool, wast *WorkflowAST, rule *UndefinedVariableRule, issues *[]LintIssue) {
 	if s == "" {
 		return
 	}
 
 	for _, v := range extractVariables(s) {
 		if !defined[v] && !builtInVariables[v] {
-			line, col := wast.GetNodePosition(field)
-			suggestion := findSimilarVariable(v, defined)
-			*issues = append(*issues, LintIssue{
-				Rule:       rule.Name(),
-				Severity:   rule.Severity(),
-				Message:    fmt.Sprintf("Variable '%s' is not defined", v),
-				Suggestion: suggestion,
-				Line:       line,
-				Column:     col,
-				Field:      field,
-			})
+			if triggerVars[v] {
+				line, col := wast.GetNodePosition(field)
+				*issues = append(*issues, LintIssue{
+					Rule:     rule.Name(),
+					Severity: SeverityInfo,
+					Message:  fmt.Sprintf("Variable '%s' is provided by trigger input (not statically defined)", v),
+					Line:     line,
+					Column:   col,
+					Field:    field,
+				})
+			} else if hasEventTrigger {
+				line, col := wast.GetNodePosition(field)
+				*issues = append(*issues, LintIssue{
+					Rule:     rule.Name(),
+					Severity: SeverityInfo,
+					Message:  fmt.Sprintf("Variable '%s' may be provided by event data at runtime", v),
+					Line:     line,
+					Column:   col,
+					Field:    field,
+				})
+			} else {
+				line, col := wast.GetNodePosition(field)
+				suggestion := findSimilarVariable(v, defined)
+				*issues = append(*issues, LintIssue{
+					Rule:       rule.Name(),
+					Severity:   rule.Severity(),
+					Message:    fmt.Sprintf("Variable '%s' is not defined", v),
+					Suggestion: suggestion,
+					Line:       line,
+					Column:     col,
+					Field:      field,
+				})
+			}
 		}
 	}
 }
