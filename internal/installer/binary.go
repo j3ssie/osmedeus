@@ -295,14 +295,35 @@ func IsBinaryInPath(name string) bool {
 func IsBinaryInstalled(name string, entry *BinaryEntry) bool {
 	// If validate command is provided and not empty, use it
 	if entry != nil && entry.ValidateCommand != "" {
+		vc := entry.ValidateCommand
+		// If validate command is a bare binary name (no spaces, flags, or shell operators),
+		// check PATH instead of executing — many tools (e.g. massdns) exit non-zero
+		// when run without arguments, causing false negatives.
+		if !strings.ContainsAny(vc, " \t|;&") {
+			return IsBinaryInPath(vc)
+		}
 		// @NOTE: This is intentional - ValidateCommand comes from the binary registry
 		// configuration which is a trusted source for installation validation commands.
-		cmd := exec.Command("sh", "-c", entry.ValidateCommand)
+		cmd := exec.Command("sh", "-c", vc)
 		err := cmd.Run()
 		return err == nil // exit code 0 means installed
 	}
 	// Fall back to default PATH check
-	return IsBinaryInPath(name)
+	if IsBinaryInPath(name) {
+		return true
+	}
+	// nuclei-templates is a directory cloned to $HOME/nuclei-templates, not a binary.
+	// Check if the folder exists and is non-empty as a fallback.
+	if name == "nuclei-templates" {
+		if home, err := os.UserHomeDir(); err == nil {
+			dir := filepath.Join(home, "nuclei-templates")
+			entries, err := os.ReadDir(dir)
+			if err == nil && len(entries) > 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // InstallBinary installs a single binary from the registry
