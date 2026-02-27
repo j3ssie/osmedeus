@@ -328,7 +328,10 @@ func InstallBinaryViaGoGetter(binaryName string, goPackage string, binariesFolde
 	// go-getter format: git::https://github.com/user/repo?ref=tag
 	src := fmt.Sprintf("git::https://%s", repoURL)
 	if version != "" && version != "latest" {
-		src = fmt.Sprintf("%s?ref=%s", src, version)
+		src = fmt.Sprintf("%s?ref=%s&depth=1", src, version)
+	} else {
+		// Explicitly set ref=HEAD to avoid go-getter passing empty string to git checkout
+		src = fmt.Sprintf("%s?ref=HEAD&depth=1", src)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
