@@ -121,6 +121,7 @@ func NewStepDispatcherWithConfig(cfg StepDispatcherConfig) *StepDispatcher {
 	d.registry.Register(NewHTTPExecutor(engine))
 	d.registry.Register(d.llmExecutor)
 	d.registry.Register(d.agentExecutor)
+	d.registry.Register(NewACPExecutor(engine))
 
 	return d
 }
@@ -318,6 +319,22 @@ func collectRenderRequests(step *core.Step) []template.RenderRequest {
 		}
 	}
 
+	// Agent-ACP step fields
+	add("Agent", step.Agent)
+	add("Cwd", step.Cwd)
+	for i, p := range step.AllowedPaths {
+		add(fmt.Sprintf("AllowedPaths[%d]", i), p)
+	}
+	if step.ACPConfig != nil {
+		add("ACPConfig.Command", step.ACPConfig.Command)
+		for i, arg := range step.ACPConfig.Args {
+			add(fmt.Sprintf("ACPConfig.Args[%d]", i), arg)
+		}
+		for k, v := range step.ACPConfig.Env {
+			add(fmt.Sprintf("ACPConfig.Env[%s]", k), v)
+		}
+	}
+
 	// RunnerConfig fields
 	if step.StepRunnerConfig != nil && step.StepRunnerConfig.RunnerConfig != nil {
 		cfg := step.StepRunnerConfig.RunnerConfig
@@ -512,6 +529,39 @@ func (d *StepDispatcher) renderStepBatch(step *core.Step, vars map[string]any) (
 			}
 		}
 		rendered.SubAgents = renderedSAs
+	}
+
+	// Agent-ACP step fields
+	if v := get("Agent"); v != "" {
+		rendered.Agent = v
+	}
+	if v := get("Cwd"); v != "" {
+		rendered.Cwd = v
+	}
+	if len(step.AllowedPaths) > 0 {
+		rendered.AllowedPaths = make([]string, len(step.AllowedPaths))
+		for i := range step.AllowedPaths {
+			rendered.AllowedPaths[i] = get(fmt.Sprintf("AllowedPaths[%d]", i))
+		}
+	}
+	if step.ACPConfig != nil {
+		cfg := *step.ACPConfig
+		if v := get("ACPConfig.Command"); v != "" {
+			cfg.Command = v
+		}
+		if len(step.ACPConfig.Args) > 0 {
+			cfg.Args = make([]string, len(step.ACPConfig.Args))
+			for i := range step.ACPConfig.Args {
+				cfg.Args[i] = get(fmt.Sprintf("ACPConfig.Args[%d]", i))
+			}
+		}
+		if len(step.ACPConfig.Env) > 0 {
+			cfg.Env = make(map[string]string, len(step.ACPConfig.Env))
+			for k := range step.ACPConfig.Env {
+				cfg.Env[k] = get(fmt.Sprintf("ACPConfig.Env[%s]", k))
+			}
+		}
+		rendered.ACPConfig = &cfg
 	}
 
 	// Apply results to slice fields
@@ -1086,6 +1136,54 @@ func (d *StepDispatcher) renderStepSequential(step *core.Step, vars map[string]a
 			}
 		}
 		rendered.SubAgents = renderedSAs
+	}
+
+	// Render agent-acp step fields
+	if step.Agent != "" {
+		agent, err := d.templateEngine.Render(step.Agent, vars)
+		if err != nil {
+			return nil, fmt.Errorf("error rendering agent: %w", err)
+		}
+		rendered.Agent = agent
+	}
+	if step.Cwd != "" {
+		cwd, err := d.templateEngine.Render(step.Cwd, vars)
+		if err != nil {
+			return nil, fmt.Errorf("error rendering cwd: %w", err)
+		}
+		rendered.Cwd = cwd
+	}
+	if len(step.AllowedPaths) > 0 {
+		paths, err := d.templateEngine.RenderSlice(step.AllowedPaths, vars)
+		if err != nil {
+			return nil, fmt.Errorf("error rendering allowed_paths: %w", err)
+		}
+		rendered.AllowedPaths = paths
+	}
+	if step.ACPConfig != nil {
+		cfg := *step.ACPConfig
+		if cfg.Command != "" {
+			cmd, err := d.templateEngine.Render(cfg.Command, vars)
+			if err != nil {
+				return nil, fmt.Errorf("error rendering acp_config.command: %w", err)
+			}
+			cfg.Command = cmd
+		}
+		if len(cfg.Args) > 0 {
+			args, err := d.templateEngine.RenderSlice(cfg.Args, vars)
+			if err != nil {
+				return nil, fmt.Errorf("error rendering acp_config.args: %w", err)
+			}
+			cfg.Args = args
+		}
+		if len(cfg.Env) > 0 {
+			env, err := d.templateEngine.RenderMap(cfg.Env, vars)
+			if err != nil {
+				return nil, fmt.Errorf("error rendering acp_config.env: %w", err)
+			}
+			cfg.Env = env
+		}
+		rendered.ACPConfig = &cfg
 	}
 
 	// Render LLM step fields

@@ -374,6 +374,9 @@ func (s *Server) setupRoutes() {
 	api.Post("/llm/v1/chat/completions", handlers.LLMChat(s.config))
 	api.Post("/llm/v1/embeddings", handlers.LLMEmbedding(s.config))
 
+	// Agent ACP endpoints (OpenAI-compatible)
+	api.Post("/agent/chat/completions", handlers.AgentChat(s.config))
+
 	// Distributed endpoints (only available when running in master mode)
 	if s.options.Master != nil {
 		api.Get("/workers", handlers.ListWorkers(s.options.Master))

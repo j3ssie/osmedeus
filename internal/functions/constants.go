@@ -120,6 +120,7 @@ const (
 	FnExecTS         = "exec_ts"          // exec_ts(code) -> string (run inline TypeScript via bun)
 	FnExecTSFile     = "exec_ts_file"     // exec_ts_file(path) -> string (run TypeScript file via bun)
 	FnSudoAuth       = "sudo_auth"        // sudo_auth(password?, keepalive?) -> bool (authenticate sudo and optionally keep credentials alive)
+	FnRunAgent       = "run_agent"        // run_agent(message, agent_name?) -> string (run ACP agent and return output)
 )
 
 // Logging Functions - Log messages with level prefixes
@@ -465,6 +466,7 @@ func AllFunctions() []string {
 		FnExecTS,
 		FnExecTSFile,
 		FnSudoAuth,
+		FnRunAgent,
 
 		// Logging Functions
 		FnLogDebug,
@@ -834,6 +836,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnExecTS, "exec_ts(code)", "Run inline TypeScript code via bun -e", "string", "exec_ts('console.log(2+2)')"},
 			{FnExecTSFile, "exec_ts_file(path)", "Run a TypeScript file via bun run", "string", "exec_ts_file('/tmp/script.ts')"},
 			{FnSudoAuth, "sudo_auth(password?, keepalive?)", "Authenticate sudo and optionally keep credentials alive", "bool", "sudo_auth('', true)"},
+			{FnRunAgent, "run_agent(message, agent_name?)", "Run ACP agent subprocess and return its output (default: claude-code)", "string", "run_agent('Summarize this project')"},
 		},
 		CategoryLogging: {
 			{FnLogDebug, "log_debug(message)", "Log debug message with [DEBUG] prefix", "void", "log_debug('Processing target')"},

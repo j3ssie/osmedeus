@@ -9,6 +9,7 @@ This document describes the technical architecture and development practices for
 - [Core Components](#core-components)
 - [Workflow Engine](#workflow-engine)
 - [Agent Step Type](#agent-step-type)
+- [Agent-ACP Step Type](#agent-acp-step-type)
 - [Execution Pipeline](#execution-pipeline)
 - [Runner System](#runner-system)
 - [Authentication Middleware](#authentication-middleware)
@@ -138,7 +139,7 @@ type Workflow struct {
 
 type Step struct {
     Name             string
-    Type             StepType      // bash, function, foreach, parallel-steps, remote-bash, http, llm, agent
+    Type             StepType      // bash, function, foreach, parallel-steps, remote-bash, http, llm, agent, agent-acp
     PreCondition     string        // Skip condition
     Command          string        // For bash/remote-bash
     Commands         []string      // Multiple commands
@@ -166,6 +167,12 @@ type Step struct {
     PlanPrompt        string             // Planning stage prompt
     OnToolStart       string             // JS hook before each tool call
     OnToolEnd         string             // JS hook after each tool call
+
+    // Agent-ACP step fields
+    Agent            string             // Built-in ACP agent name (claude-code, codex, etc.)
+    Cwd              string             // Working directory for ACP session
+    AllowedPaths     []string           // Restrict file access to these directories
+    ACPConfig        *ACPStepConfig     // Custom agent command, env, write permissions
 
     Exports          map[string]string
     OnSuccess        []Action
@@ -400,6 +407,115 @@ Hook expressions receive these variables:
 - `iteration` - Current agent iteration number
 - `error` - Error string (empty if no error)
 
+## Agent-ACP Step Type
+
+The `agent-acp` step type spawns an external AI coding agent as a subprocess and communicates via the Agent Communication Protocol (ACP). Unlike the `agent` step type (which uses the internal LLM loop), `agent-acp` delegates to real agent binaries.
+
+### Built-in Agents
+
+| Agent Name | Command | Args |
+|------------|---------|------|
+| `claude-code` | `npx` | `-y @zed-industries/claude-code-acp@latest` |
+| `codex` | `npx` | `-y @zed-industries/codex-acp` |
+| `opencode` | `opencode` | `acp` |
+| `gemini` | `gemini` | `--experimental-acp` |
+
+Defined in `builtinACPAgents` map in `internal/executor/acp_executor.go`.
+
+### Architecture
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│  ACPExecutor.Execute()                                         │
+│    1. Resolve agent name → command + args                      │
+│    2. Build prompt from step.Messages                          │
+│    3. Call RunAgentACP() standalone function                   │
+│       a. Spawn subprocess with stdin/stdout pipes              │
+│       b. Create ACP client (acpClient) for callbacks           │
+│       c. ACP Initialize → NewSession → Prompt                 │
+│       d. Collect agent output via SessionUpdate callbacks      │
+│    4. Return output as StepResult with exports                 │
+└───────────────────────────────────────────────────────────────┘
+```
+
+### YAML Structure
+
+```yaml
+steps:
+  - name: acp-agent
+    type: agent-acp
+    agent: claude-code          # Built-in agent name
+    cwd: "{{Output}}"          # Working directory
+    allowed_paths:
+      - "{{Output}}"
+    acp_config:
+      env:
+        CUSTOM_VAR: "value"
+      write_enabled: true       # Allow file writes (default: false)
+    messages:
+      - role: system
+        content: "You are a security analyst."
+      - role: user
+        content: "Analyze the scan results."
+    exports:
+      analysis: "{{acp_output}}"
+```
+
+### ACP Client Callbacks
+
+The `acpClient` (`internal/executor/acp_client.go`) implements the `acp.Client` interface:
+
+| Method | Behavior |
+|--------|----------|
+| `SessionUpdate` | Accumulates agent text output, logs tool calls and thoughts |
+| `RequestPermission` | Auto-approves by selecting `allow_once` → `allow_always` → first option |
+| `ReadTextFile` | Reads files scoped to `allowedPaths` |
+| `WriteTextFile` | Writes files if `writeEnabled` is true |
+| `CreateTerminal` / `KillTerminalCommand` / etc. | No-op stubs |
+
+### Available Exports
+
+| Export | Description |
+|--------|-------------|
+| `acp_output` | Collected agent text output |
+| `acp_stderr` | Agent process stderr |
+| `acp_agent` | Agent name used |
+
+### Standalone Function
+
+`RunAgentACP(ctx, prompt, agentName, cfg)` can be called independently from workflow execution (used by the CLI `agent` command and the API endpoint):
+
+```go
+output, stderr, err := executor.RunAgentACP(ctx, "your prompt", "claude-code", &executor.RunAgentACPConfig{
+    Cwd:          "/workspace",
+    AllowedPaths: []string{"/workspace"},
+    WriteEnabled: false,
+})
+```
+
+### Agent CLI Command
+
+```bash
+osmedeus agent "your message"                    # Default agent (claude-code)
+osmedeus agent --agent codex "your message"     # Specific agent
+osmedeus agent --list                            # List available agents
+osmedeus agent --cwd /path "message"            # Set working directory
+osmedeus agent --timeout 1h "message"           # Custom timeout
+echo "message" | osmedeus agent --stdin          # Read from stdin
+```
+
+### API Endpoint
+
+`POST /osm/api/agent/chat/completions` provides an OpenAI-compatible interface:
+
+```bash
+curl -X POST http://localhost:8000/osm/api/agent/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"claude-code","messages":[{"role":"user","content":"Hello"}]}'
+```
+
+The `model` field maps to a built-in agent name. Only one ACP agent can run at a time (returns `409 Conflict` if busy).
+
 ### Execution Context
 
 
@@ -479,6 +595,9 @@ Lookup order:
              ┌──────────────┐            ┌──────────────┐            ┌──────────────┐
              │ HTTPExecutor │            │ LLMExecutor  │            │AgentExecutor │
              └──────────────┘            └──────────────┘            └──────────────┘
+             ┌──────────────┐
+             │ ACPExecutor  │
+             └──────────────┘
                     │                            │                            │
                     └────────────────────────────┼────────────────────────────┘
                                                  ▼
@@ -551,6 +670,7 @@ Built-in executors registered at startup:
 - `HTTPExecutor` - handles `http` steps
 - `LLMExecutor` - handles `llm` steps
 - `AgentExecutor` - handles `agent` steps (agentic LLM loop with tool calling)
+- `ACPExecutor` - handles `agent-acp` steps (ACP subprocess agents)
 
 ## Run Control Plane
 
@@ -1674,6 +1794,7 @@ test/e2e/                                # E2E CLI tests
 ├── ssh_test.go                          # SSH runner e2e tests (module & step level)
 ├── api_test.go                          # API endpoint e2e tests (all routes)
 ├── agent_test.go                        # Agent step e2e tests
+├── agent_acp_test.go                    # Agent-ACP step e2e tests
 ├── canary_test.go                       # Canary tests (real-world scans in Docker)
 ├── cloud_test.go                        # Cloud CLI e2e tests
 ├── db_clean_test.go                     # Database cleanup e2e tests

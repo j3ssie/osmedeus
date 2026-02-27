@@ -25,6 +25,7 @@ const (
 	StepTypeHTTP       StepType = "http"
 	StepTypeLLM        StepType = "llm"
 	StepTypeAgent      StepType = "agent"
+	StepTypeAgentACP   StepType = "agent-acp"
 )
 
 // TriggerType represents trigger types

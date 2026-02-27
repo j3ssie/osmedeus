@@ -262,6 +262,12 @@ type Step struct {
 	// Maximum nesting depth for sub-agent spawning (default: 3)
 	MaxAgentDepth int `yaml:"max_agent_depth,omitempty"`
 
+	// Agent-ACP step fields
+	Agent        string         `yaml:"agent,omitempty"`         // Built-in agent name (e.g., "claude-code", "codex")
+	Cwd          string         `yaml:"cwd,omitempty"`           // Working directory for ACP session
+	AllowedPaths []string       `yaml:"allowed_paths,omitempty"` // Paths the agent is allowed to read
+	ACPConfig    *ACPStepConfig `yaml:"acp_config,omitempty"`    // ACP-specific configuration
+
 	// Streaming (applies to both llm and agent steps)
 	Stream *bool `yaml:"stream,omitempty"` // Enable streaming output (overrides llm_config.stream and global config)
 
@@ -346,6 +352,14 @@ type Action struct {
 	Notify    string            `yaml:"notify"`    // notification message
 }
 
+// ACPStepConfig holds configuration specific to agent-acp steps
+type ACPStepConfig struct {
+	Command      string            `yaml:"command,omitempty"`       // Custom agent command (overrides built-in registry)
+	Args         []string          `yaml:"args,omitempty"`          // Custom agent command arguments
+	Env          map[string]string `yaml:"env,omitempty"`           // Environment variables for the agent process
+	WriteEnabled bool              `yaml:"write_enabled,omitempty"` // Allow the agent to write files (default: false)
+}
+
 // IsBashStep returns true if this is a bash step
 func (s *Step) IsBashStep() bool {
 	return s.Type == StepTypeBash
@@ -384,6 +398,11 @@ func (s *Step) IsLLMStep() bool {
 // IsAgentStep returns true if this is an agent step
 func (s *Step) IsAgentStep() bool {
 	return s.Type == StepTypeAgent
+}
+
+// IsAgentACPStep returns true if this is an agent-acp step
+func (s *Step) IsAgentACPStep() bool {
+	return s.Type == StepTypeAgentACP
 }
 
 // GetStepRunner returns the step runner type, defaulting to host/local
@@ -533,6 +552,26 @@ func (s *Step) Clone() *Step {
 	if len(s.Models) > 0 {
 		cloned.Models = make([]string, len(s.Models))
 		copy(cloned.Models, s.Models)
+	}
+
+	// Deep copy Agent-ACP fields
+	if len(s.AllowedPaths) > 0 {
+		cloned.AllowedPaths = make([]string, len(s.AllowedPaths))
+		copy(cloned.AllowedPaths, s.AllowedPaths)
+	}
+	if s.ACPConfig != nil {
+		cfg := *s.ACPConfig
+		if len(s.ACPConfig.Args) > 0 {
+			cfg.Args = make([]string, len(s.ACPConfig.Args))
+			copy(cfg.Args, s.ACPConfig.Args)
+		}
+		if len(s.ACPConfig.Env) > 0 {
+			cfg.Env = make(map[string]string, len(s.ACPConfig.Env))
+			for k, v := range s.ACPConfig.Env {
+				cfg.Env[k] = v
+			}
+		}
+		cloned.ACPConfig = &cfg
 	}
 
 	// Deep copy SubAgents

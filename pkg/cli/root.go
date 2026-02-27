@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/executor"
+	"github.com/j3ssie/osmedeus/v5/internal/functions"
 	"github.com/j3ssie/osmedeus/v5/internal/installer"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
@@ -319,6 +321,13 @@ func init() {
 	rootCmd.AddCommand(clientCmd)
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(assetsCmd)
+	rootCmd.AddCommand(agentCmd)
+
+	// Register the run_agent hook so the JS run_agent() function can call the executor
+	// without circular imports (functions -> executor).
+	functions.RegisterRunAgentFunc(func(ctx context.Context, prompt, agent string) (string, string, error) {
+		return executor.RunAgentACP(ctx, prompt, agent, nil)
+	})
 }
 
 // installRequiredBinaries installs all required binaries from the registry.
@@ -557,6 +566,7 @@ func shouldSkipAutoSetup(cmd *cobra.Command) bool {
 		"update":     true,
 		"completion": true,
 		"client":     true,
+		"agent":      true,
 	}
 	// Check command and all parent commands
 	for c := cmd; c != nil; c = c.Parent() {

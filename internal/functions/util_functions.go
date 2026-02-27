@@ -1370,6 +1370,44 @@ func (vf *vmFunc) runFlow(call goja.FunctionCall) goja.Value {
 	return vf.runOsmedeus("-f", flow, target, params, "run_flow")
 }
 
+// runAgent runs an ACP agent subprocess and returns its output.
+// Usage: run_agent(message, agent_name?) -> string
+// agent_name defaults to "claude-code" if not provided.
+// Uses the registered RunAgentFunc hook to avoid circular imports with the executor package.
+func (vf *vmFunc) runAgent(call goja.FunctionCall) goja.Value {
+	message := call.Argument(0).String()
+	agentName := call.Argument(1).String()
+
+	if message == "undefined" || message == "" {
+		logger.Get().Warn("run_agent: message is required")
+		return vf.vm.ToValue("")
+	}
+	if agentName == "undefined" {
+		agentName = ""
+	}
+
+	logger.Get().Debug("Calling "+terminal.HiGreen("run_agent"),
+		zap.String("message_length", fmt.Sprintf("%d", len(message))),
+		zap.String("agent", agentName))
+
+	fn := GetRunAgentFunc()
+	if fn == nil {
+		logger.Get().Warn("run_agent: agent hook not registered (call functions.RegisterRunAgentFunc first)")
+		return vf.vm.ToValue("")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+
+	output, _, err := fn(ctx, message, agentName)
+	if err != nil {
+		logger.Get().Warn("run_agent failed", zap.Error(err))
+		return vf.vm.ToValue("")
+	}
+
+	return vf.vm.ToValue(output)
+}
+
 // runOnMaster executes an action on the master node in distributed mode.
 // In distributed mode, the request is sent via Redis to the master.
 // In standalone mode, falls back to local execution.

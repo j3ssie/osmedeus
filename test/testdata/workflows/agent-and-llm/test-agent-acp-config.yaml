@@ -1,0 +1,39 @@
+kind: module
+name: test-agent-acp-config
+description: Test agent-acp step with full ACP configuration options
+tags: test,agent-acp,config
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  # Agent-ACP with cwd, allowed_paths, and acp_config
+  - name: acp-configured
+    type: agent-acp
+    log: "Running configured ACP agent for {{Target}}"
+    agent: claude-code
+    cwd: "{{Output}}"
+    allowed_paths:
+      - "{{Output}}"
+      - "/tmp"
+    acp_config:
+      env:
+        CUSTOM_VAR: "hello"
+        TARGET_DOMAIN: "{{Target}}"
+      write_enabled: true
+    messages:
+      - role: system
+        content: "You are a security reconnaissance agent. Be concise."
+      - role: user
+        content: "Analyze the target {{Target}} and create a summary file."
+    exports:
+      analysis: "{{acp_output}}"
+      agent_name: "{{acp_agent}}"
+
+  # Verify exports from previous step
+  - name: verify-acp-exports
+    type: bash
+    log: "Verifying ACP exports"
+    command: echo "Agent {{agent_name}} produced output"

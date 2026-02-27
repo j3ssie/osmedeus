@@ -1,0 +1,20 @@
+kind: module
+name: test-agent-acp-codex
+description: Test agent-acp step with codex agent
+tags: test,agent-acp,codex
+
+params:
+  - name: target
+    required: true
+    default: example.com
+
+steps:
+  - name: acp-codex
+    type: agent-acp
+    log: "Running Codex ACP agent for {{Target}}"
+    agent: codex
+    messages:
+      - role: user
+        content: "Explain what {{Target}} is."
+    exports:
+      result: "{{acp_output}}"

@@ -1359,6 +1359,34 @@ func UsageAssets() string {
 }
 
 // docsFooter returns the documentation footer
+// UsageAgent returns the Long description for the agent command
+func UsageAgent() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Run an ACP (Agent Communication Protocol) agent interactively from the terminal.
+  Spawns a coding agent subprocess and sends a prompt, streaming output to stdout.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Run with a message") + `
+  osmedeus agent "Summarize the code in this directory"
+
+  ` + terminal.Green("# Use a specific agent") + `
+  osmedeus agent ` + terminal.Yellow("--agent") + ` codex "Explain this project"
+
+  ` + terminal.Green("# Read message from stdin") + `
+  echo "Analyze this" | osmedeus agent ` + terminal.Yellow("--stdin") + `
+
+  ` + terminal.Green("# Pipe with -") + `
+  echo "Hello" | osmedeus agent -
+
+  ` + terminal.Green("# Set working directory and timeout") + `
+  osmedeus agent ` + terminal.Yellow("--cwd") + ` /path/to/project ` + terminal.Yellow("--timeout") + ` 1h "Review the code"
+
+  ` + terminal.Green("# List available agents") + `
+  osmedeus agent ` + terminal.Yellow("--list") + `
+
+` + docsFooter()
+}
+
 func docsFooter() string {
 	return terminal.HiCyan("📖 Documentation: ") + terminal.HiWhite(core.DOCS) + "\n"
 }

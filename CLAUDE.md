@@ -63,7 +63,7 @@ CLI/API (pkg/cli, pkg/server)
          ↓
 Executor (internal/executor) - coordinates workflow execution
          ↓
-StepDispatcher - routes to: BashExecutor, FunctionExecutor, ForeachExecutor, ParallelExecutor, RemoteBashExecutor, HTTPExecutor, LLMExecutor, AgentExecutor
+StepDispatcher - routes to: BashExecutor, FunctionExecutor, ForeachExecutor, ParallelExecutor, RemoteBashExecutor, HTTPExecutor, LLMExecutor, AgentExecutor, ACPExecutor
          ↓
 Runner (internal/runner) - executes commands via: HostRunner, DockerRunner, SSHRunner
 ```
@@ -92,7 +92,7 @@ Runner (internal/runner) - executes commands via: HostRunner, DockerRunner, SSHR
 
 ```go
 WorkflowKind: "module" | "flow"  // module = single unit, flow = orchestrates modules
-StepType: "bash" | "function" | "parallel-steps" | "foreach" | "remote-bash" | "http" | "llm" | "agent"
+StepType: "bash" | "function" | "parallel-steps" | "foreach" | "remote-bash" | "http" | "llm" | "agent" | "agent-acp"
 RunnerType: "host" | "docker" | "ssh"
 TriggerType: "cron" | "event" | "watch" | "manual"
 ```
@@ -174,6 +174,61 @@ steps:
       findings: "{{agent_content}}"
 ```
 
+### Agent-ACP Step Type
+
+The `agent-acp` step type spawns an external AI coding agent as a subprocess and communicates via the Agent Communication Protocol (ACP). Unlike the `agent` step type (which uses the internal LLM loop), `agent-acp` delegates to real agent binaries.
+
+Built-in agents (defined in `internal/executor/acp_executor.go`):
+- `claude-code` — `npx -y @zed-industries/claude-code-acp@latest`
+- `codex` — `npx -y @zed-industries/codex-acp`
+- `opencode` — `opencode acp`
+- `gemini` — `gemini --experimental-acp`
+
+Key YAML fields:
+- `agent` - Built-in agent name (required unless `acp_config.command` is set)
+- `messages` - Conversation messages (role + content) used as the prompt
+- `cwd` - Working directory for the ACP session
+- `allowed_paths` - Restrict file reads to these directories
+- `acp_config.command` - Custom agent command (overrides built-in registry)
+- `acp_config.args` - Custom agent command arguments
+- `acp_config.env` - Environment variables for the agent process
+- `acp_config.write_enabled` - Allow file writes (default: false)
+
+Available exports: `acp_output`, `acp_stderr`, `acp_agent`
+
+```yaml
+steps:
+  - name: acp-agent
+    type: agent-acp
+    agent: claude-code
+    cwd: "{{Output}}"
+    allowed_paths:
+      - "{{Output}}"
+    acp_config:
+      env:
+        CUSTOM_VAR: "hello"
+      write_enabled: true
+    messages:
+      - role: system
+        content: "You are a security analyst."
+      - role: user
+        content: "Analyze the scan results in {{Output}} and create a summary."
+    exports:
+      analysis: "{{acp_output}}"
+```
+
+### Agent CLI Command
+
+Run an ACP agent interactively from the terminal:
+```bash
+osmedeus agent "your message here"              # Run with claude-code (default)
+osmedeus agent --agent codex "your message"     # Use a specific agent
+osmedeus agent --list                            # List available agents
+osmedeus agent --cwd /path/to/project "msg"     # Set working directory
+osmedeus agent --timeout 1h "msg"               # Custom timeout (default: 30m)
+echo "message" | osmedeus agent --stdin          # Read from stdin
+```
+
 ## CLI Commands
 
 ```bash
@@ -230,6 +285,12 @@ osmedeus assets --stats -w <workspace>           # Stats filtered by workspace
 osmedeus assets --columns url,title,status_code  # Custom columns
 osmedeus assets --limit 100 --offset 50          # Pagination
 osmedeus assets --json                           # JSON output
+osmedeus agent "your prompt"                     # Run ACP agent (default: claude-code)
+osmedeus agent --agent codex "your prompt"       # Use a specific agent
+osmedeus agent --list                            # List available agents
+osmedeus agent --cwd /path/to/project "prompt"   # Set working directory
+osmedeus agent --timeout 1h "prompt"             # Custom timeout (default: 30m)
+echo "prompt" | osmedeus agent --stdin           # Read from stdin
 ```
 
 ### Event Trigger Input Syntax
@@ -268,6 +329,7 @@ REST API documentation with curl examples is in `docs/api/`. Key endpoint catego
 - **Functions**: Execute utility functions via API
 - **Snapshots**: Export/import workspace archives
 - **LLM**: OpenAI-compatible chat completions and embeddings
+- **Agent ACP**: OpenAI-compatible endpoint that spawns local ACP agent subprocesses (`POST /osm/api/agent/chat/completions`)
 - **Install**: Binary registry and installation management
 
 ## Cloud Documentation

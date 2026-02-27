@@ -26,7 +26,7 @@ Built for both beginners and experts, it delivers powerful, composable automatio
 - **Distributed Execution** - Redis-based master-worker pattern with queue system, webhook triggers, and file sync across workers
 - **Rich Function Library** - 80+ utility functions including nmap integration, tmux sessions, SSH execution, TypeScript/Python scripting, SARIF parsing, and CDN/WAF classification
 - **Event-Driven Scheduling** - Cron, file-watch, and event triggers with filtering, deduplication, and delayed task queues
-- **Agentic LLM Steps** - Tool-calling agent loops with sub-agent orchestration, memory management, and structured output
+- **Agentic LLM Steps** - Tool-calling agent loops with sub-agent orchestration, memory management, and structured output; plus ACP subprocess agents (Claude Code, Codex, OpenCode, Gemini)
 - **Cloud Infrastructure** - Provision and run scans across DigitalOcean, AWS, GCP, Linode, and Azure with cost controls and automatic cleanup
 - **Rich CLI Interface** - Interactive database queries, bulk function evaluation, workflow linting, progress bars, and comprehensive usage examples
 - **REST API & Web UI** - Full API server with webhook triggers, database queries, and embedded dashboard for visualization
@@ -99,6 +99,11 @@ osmedeus worker queue run --concurrency 5              # Process queue
 osmedeus worker status                          # Show workers
 osmedeus worker eval -e 'ssh_exec("host", "whoami")'  # Eval with distributed hooks
 
+# Run an ACP agent interactively
+osmedeus agent "analyze this codebase"
+osmedeus agent --agent codex "explain main.go"
+osmedeus agent --list
+
 # Show all usage examples
 osmedeus --usage-example
 ```
@@ -133,7 +138,7 @@ For more CLI usage and example commands, refer to the [CLI Reference](https://do
 │  │ CONFIG ──▶ PARSER ──▶ EXECUTOR ──▶ STEP DISPATCHER ──▶ RUNNER       │  │
 │  │                          │                                          │  │
 │  │  Step Executors: bash | function | parallel | foreach | remote-bash │  │
-│  │                  http | llm | agent | SARIF/SAST integration        │  │
+│  │                  http | llm | agent | agent-acp | SARIF/SAST       │  │
 │  │  Hooks: pre_scan_steps → [main steps] → post_scan_steps             │  │
 │  │                          │                                          │  │
 │  │  Runners: HostRunner | DockerRunner | SSHRunner                     │  │
