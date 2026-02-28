@@ -949,9 +949,10 @@ steps:
 		var infoIssues, warningIssues []LintIssue
 		for _, issue := range issues {
 			if issue.Rule == "undefined-variable" {
-				if issue.Severity == SeverityInfo {
+				switch issue.Severity {
+				case SeverityInfo:
 					infoIssues = append(infoIssues, issue)
-				} else if issue.Severity == SeverityWarning {
+				case SeverityWarning:
 					warningIssues = append(warningIssues, issue)
 				}
 			}
@@ -990,9 +991,10 @@ steps:
 		var infoIssues, warningIssues []LintIssue
 		for _, issue := range issues {
 			if issue.Rule == "undefined-variable" {
-				if issue.Severity == SeverityInfo {
+				switch issue.Severity {
+				case SeverityInfo:
 					infoIssues = append(infoIssues, issue)
-				} else if issue.Severity == SeverityWarning {
+				case SeverityWarning:
 					warningIssues = append(warningIssues, issue)
 				}
 			}
@@ -1054,9 +1056,10 @@ steps:
 		var infoIssues, warningIssues []LintIssue
 		for _, issue := range issues {
 			if issue.Rule == "undefined-variable" {
-				if issue.Severity == SeverityInfo {
+				switch issue.Severity {
+				case SeverityInfo:
 					infoIssues = append(infoIssues, issue)
-				} else if issue.Severity == SeverityWarning {
+				case SeverityWarning:
 					warningIssues = append(warningIssues, issue)
 				}
 			}
@@ -1114,9 +1117,10 @@ steps:
 		var infoIssues, warningIssues []LintIssue
 		for _, issue := range issues {
 			if issue.Rule == "undefined-variable" {
-				if issue.Severity == SeverityInfo {
+				switch issue.Severity {
+				case SeverityInfo:
 					infoIssues = append(infoIssues, issue)
-				} else if issue.Severity == SeverityWarning {
+				case SeverityWarning:
 					warningIssues = append(warningIssues, issue)
 				}
 			}
@@ -1153,9 +1157,10 @@ steps:
 		var infoIssues, warningIssues []LintIssue
 		for _, issue := range issues {
 			if issue.Rule == "undefined-variable" {
-				if issue.Severity == SeverityInfo {
+				switch issue.Severity {
+				case SeverityInfo:
 					infoIssues = append(infoIssues, issue)
-				} else if issue.Severity == SeverityWarning {
+				case SeverityWarning:
 					warningIssues = append(warningIssues, issue)
 				}
 			}

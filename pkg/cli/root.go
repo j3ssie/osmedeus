@@ -334,6 +334,12 @@ func init() {
 // Returns counts of installed, skipped, and failed binaries.
 // This is a shared helper used by both runFirstTimeSetup and runInstallBase --preset.
 func installRequiredBinaries(cfg *config.Config, printer *terminal.Printer) (installed, skipped, failed int) {
+	if strings.EqualFold(os.Getenv("OSM_IGNORE_REGISTRY"), "true") {
+		printer.Info("%s Skipping automatic binary installation (OSM_IGNORE_REGISTRY=true)",
+			terminal.Yellow("⚠"))
+		return 0, 0, 0
+	}
+
 	// Check for registry URL override
 	registryURL := os.Getenv("OSM_REGISTRY_URL")
 	registryDisplay := "the default registry"

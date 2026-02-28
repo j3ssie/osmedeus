@@ -1957,6 +1957,7 @@ This is handled by the `Installer.KeepSetting` field in `internal/installer/inst
 |----------|---------|-------------|
 | `OSM_PRESET_URL` | Default base repo | Override base preset source |
 | `OSM_WORKFLOW_URL` | Default workflow repo | Override workflow preset source |
+| `OSM_IGNORE_REGISTRY` | (unset) | Skip auto binary installation and binary health check |
 
 Preset installation is useful for Docker images and CI/CD pipelines where reproducible, stable deployments from tested configurations are preferred over manual source specification.
 

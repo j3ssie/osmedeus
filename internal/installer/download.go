@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +12,8 @@ import (
 	"time"
 
 	"github.com/j3ssie/osmedeus/v5/internal/core"
+	"github.com/j3ssie/osmedeus/v5/internal/logger"
+	"go.uber.org/zap"
 )
 
 // SourceType represents the type of installation source
@@ -85,63 +88,184 @@ func isGitHubURL(url string) bool {
 	return strings.Contains(url, "github.com") || strings.Contains(url, "raw.githubusercontent.com")
 }
 
-// DownloadFile downloads a file from a URL to the destination path
-// Optional customHeaders map adds custom HTTP headers to the request
-func DownloadFile(url, dest string, customHeaders map[string]string) error {
+// downloadMaxRetries is the number of retry attempts for transient download failures
+const downloadMaxRetries = 3
+
+// DownloadFile downloads a file from a URL to the destination path with retry and fallback.
+// It retries transient failures with exponential backoff, then falls back to wget/curl.
+// Optional customHeaders map adds custom HTTP headers to the request.
+func DownloadFile(rawURL, dest string, customHeaders map[string]string) error {
 	// Ensure destination directory exists
 	dir := filepath.Dir(dest)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
 
-	// Create HTTP client with timeout
+	var lastErr error
+
+	for attempt := 0; attempt <= downloadMaxRetries; attempt++ {
+		if attempt > 0 {
+			backoff := time.Duration(1<<uint(attempt)) * time.Second // 2s, 4s, 8s
+			logger.Get().Info("Retrying download",
+				zap.Int("attempt", attempt),
+				zap.Duration("backoff", backoff),
+				zap.String("url", rawURL))
+			time.Sleep(backoff)
+		}
+
+		lastErr = downloadFileOnce(rawURL, dest, customHeaders)
+		if lastErr == nil {
+			return nil
+		}
+
+		// Don't retry on non-retryable errors (404, 403, 401)
+		if isNonRetryableError(lastErr) {
+			return lastErr
+		}
+
+		// Clean up partial file before retry
+		_ = os.Remove(dest)
+	}
+
+	// All Go HTTP retries exhausted — fall back to wget/curl
+	logger.Get().Warn("Go HTTP download failed after retries, falling back to wget/curl",
+		zap.String("url", rawURL),
+		zap.Error(lastErr))
+	_ = os.Remove(dest)
+
+	if err := downloadFileWithExternalTool(rawURL, dest, customHeaders); err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("download failed after %d retries and wget/curl fallback: %w", downloadMaxRetries, lastErr)
+}
+
+// downloadFileOnce performs a single HTTP download attempt with content-length validation.
+func downloadFileOnce(rawURL, dest string, customHeaders map[string]string) error {
 	client := &http.Client{
 		Timeout: 10 * time.Minute,
 	}
 
-	// Create request with User-Agent header
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", rawURL, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create request for %s: %w", url, err)
+		return fmt.Errorf("failed to create request for %s: %w", rawURL, err)
 	}
 	req.Header.Set("User-Agent", core.DefaultUA)
 
-	// Auto-inject GitHub token for GitHub URLs (helps with rate limiting and private repos)
-	if isGitHubURL(url) {
+	// Auto-inject GitHub token for GitHub URLs
+	if isGitHubURL(rawURL) {
 		if token := getGitHubToken(); token != "" {
 			req.Header.Set("Authorization", "Bearer "+token)
 		}
 	}
 
-	// Add custom headers (can override auto-injected headers if needed)
+	// Add custom headers
 	for key, value := range customHeaders {
 		req.Header.Set(key, value)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to download %s: %w", url, err)
+		return fmt.Errorf("failed to download %s: %w", rawURL, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to download %s: status %d", url, resp.StatusCode)
+		return fmt.Errorf("failed to download %s: status %d", rawURL, resp.StatusCode)
 	}
 
-	// Create destination file
 	out, err := os.Create(dest)
 	if err != nil {
 		return fmt.Errorf("failed to create file %s: %w", dest, err)
 	}
 	defer func() { _ = out.Close() }()
 
-	// Copy data
-	_, err = io.Copy(out, resp.Body)
+	written, err := io.Copy(out, resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to write to %s: %w", dest, err)
 	}
 
+	// Validate content length if the server provided one
+	if resp.ContentLength > 0 && written != resp.ContentLength {
+		return fmt.Errorf("incomplete download of %s: got %d bytes, expected %d", rawURL, written, resp.ContentLength)
+	}
+
 	return nil
+}
+
+// validateDownloadURL ensures the URL is safe for use as an argument to external tools.
+func validateDownloadURL(rawURL string) error {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return fmt.Errorf("unsupported URL scheme %q: only http and https are allowed", parsed.Scheme)
+	}
+	// Reject shell metacharacters to prevent injection when passed as exec args
+	for _, ch := range []string{";", "|", "&", "`", "$", "(", ")", "\n", "\r"} {
+		if strings.Contains(rawURL, ch) {
+			return fmt.Errorf("URL contains disallowed character %q", ch)
+		}
+	}
+	return nil
+}
+
+// downloadFileWithExternalTool attempts to download using wget, then curl as fallback.
+func downloadFileWithExternalTool(rawURL, dest string, customHeaders map[string]string) error {
+	if err := validateDownloadURL(rawURL); err != nil {
+		return fmt.Errorf("URL validation failed: %w", err)
+	}
+
+	// Build auth header args for GitHub URLs
+	var authHeaderWget []string
+	var authHeaderCurl []string
+	if isGitHubURL(rawURL) {
+		if token := getGitHubToken(); token != "" {
+			authHeaderWget = []string{"--header", "Authorization: Bearer " + token}
+			authHeaderCurl = []string{"-H", "Authorization: Bearer " + token}
+		}
+	}
+
+	// Add custom headers
+	for key, value := range customHeaders {
+		authHeaderWget = append(authHeaderWget, "--header", key+": "+value)
+		authHeaderCurl = append(authHeaderCurl, "-H", key+": "+value)
+	}
+
+	// Try wget first
+	if wgetPath, err := exec.LookPath("wget"); err == nil {
+		args := append([]string{"-q", "-O", dest}, authHeaderWget...)
+		args = append(args, rawURL)
+		cmd := exec.Command(wgetPath, args...)
+		if output, err := cmd.CombinedOutput(); err == nil {
+			logger.Get().Info("Download succeeded via wget", zap.String("url", rawURL))
+			return nil
+		} else {
+			logger.Get().Debug("wget fallback failed",
+				zap.String("url", rawURL),
+				zap.String("output", string(output)),
+				zap.Error(err))
+		}
+	}
+
+	// Fallback to curl
+	if curlPath, err := exec.LookPath("curl"); err == nil {
+		args := append([]string{"-fsSL", "-o", dest}, authHeaderCurl...)
+		args = append(args, rawURL)
+		cmd := exec.Command(curlPath, args...)
+		if output, err := cmd.CombinedOutput(); err == nil {
+			logger.Get().Info("Download succeeded via curl", zap.String("url", rawURL))
+			return nil
+		} else {
+			logger.Get().Debug("curl fallback failed",
+				zap.String("url", rawURL),
+				zap.String("output", string(output)),
+				zap.Error(err))
+		}
+	}
+
+	return fmt.Errorf("neither wget nor curl succeeded for %s", rawURL)
 }
 
 // getGitHubToken returns the GitHub token from settings or environment

@@ -134,13 +134,18 @@ func checkFolders(printer *terminal.Printer, cfg *config.Config) bool {
 						}
 					}
 					if binaryCount == 0 {
-						printer.Error("  %s No binaries detected in %s",
-							terminal.Red("✗"),
-							terminal.White(f.path))
-						printer.Println("    %s Run %s to fetch required binaries",
-							terminal.Yellow("→"),
-							terminal.Cyan("osmedeus install binary --all"))
-						hasErrors = true
+						if strings.EqualFold(os.Getenv("OSM_IGNORE_REGISTRY"), "true") {
+							printer.Info("  %s Binaries folder empty (OSM_IGNORE_REGISTRY=true, skipping check)",
+								terminal.Yellow("⚠"))
+						} else {
+							printer.Error("  %s No binaries detected in %s",
+								terminal.Red("✗"),
+								terminal.White(f.path))
+							printer.Println("    %s Run %s to fetch required binaries",
+								terminal.Yellow("→"),
+								terminal.Cyan("osmedeus install binary --all"))
+							hasErrors = true
+						}
 					}
 				}
 			}
