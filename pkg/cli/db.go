@@ -458,7 +458,7 @@ func runDBListTUI(ctx context.Context) error {
 	// Record fetcher wraps database.GetTableRecords
 	recordFetcher := func(ctx context.Context, tableName string, offset, limit int, filters map[string]string, search string) (*terminal.TableRecords, error) {
 		excludeCols := getDefaultExcludeColumns(tableName)
-		result, err := database.GetTableRecords(ctx, tableName, offset, limit, filters, search, excludeCols)
+		result, err := database.GetTableRecords(ctx, tableName, offset, limit, filters, nil, search, excludeCols)
 		if err != nil {
 			return nil, err
 		}
@@ -515,7 +515,7 @@ func listTableRecordsJSON(ctx context.Context) error {
 
 	filters := parseWhereFilters(dbWhere)
 	excludeCols := getDefaultExcludeColumns(dbTable)
-	records, err := database.GetTableRecords(ctx, dbTable, dbOffset, dbLimit, filters, dbSearch, excludeCols)
+	records, err := database.GetTableRecords(ctx, dbTable, dbOffset, dbLimit, filters, nil, dbSearch, excludeCols)
 	if err != nil {
 		return fmt.Errorf("failed to get records: %w", err)
 	}
@@ -618,7 +618,7 @@ func listTableRecordsOnce(ctx context.Context, cfg *config.Config, printer *term
 	hideDefaultColumns := !dbAll && len(requestedColumns) == 0 && tableDefaultColumns[dbTable] == nil
 
 	sqlExcludeCols := getDefaultExcludeColumns(dbTable)
-	records, err := database.GetTableRecords(ctx, dbTable, dbOffset, dbLimit, filters, dbSearch, sqlExcludeCols)
+	records, err := database.GetTableRecords(ctx, dbTable, dbOffset, dbLimit, filters, nil, dbSearch, sqlExcludeCols)
 	if err != nil {
 		return fmt.Errorf("failed to get records: %w", err)
 	}

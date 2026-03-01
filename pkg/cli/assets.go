@@ -22,6 +22,9 @@ var (
 	assetsColumns        string
 	assetsExcludeColumns string
 	assetsAll            bool
+	assetsWhere          []string
+	assetsSearch         string
+	assetsValue          string
 )
 
 var assetsCmd = &cobra.Command{
@@ -34,14 +37,17 @@ var assetsCmd = &cobra.Command{
 
 func init() {
 	assetsCmd.Flags().StringVarP(&assetsWorkspace, "workspace", "w", "", "filter by workspace name")
-	assetsCmd.Flags().StringVar(&assetsSource, "source", "", "filter by source field (e.g., httpx, subfinder)")
-	assetsCmd.Flags().StringVar(&assetsType, "type", "", "filter by asset_type field (e.g., web, subdomain)")
+	assetsCmd.Flags().StringVar(&assetsSource, "source", "", "filter by source (fuzzy match, e.g., httpx)")
+	assetsCmd.Flags().StringVar(&assetsType, "type", "", "filter by asset_type (fuzzy match, e.g., web, subdomain)")
 	assetsCmd.Flags().BoolVar(&assetsStats, "stats", false, "show asset statistics (unique technologies, sources, remarks, types)")
 	assetsCmd.Flags().IntVar(&assetsLimit, "limit", 50, "maximum number of records to return")
 	assetsCmd.Flags().IntVar(&assetsOffset, "offset", 0, "number of records to skip (for pagination)")
 	assetsCmd.Flags().StringVar(&assetsColumns, "columns", "", "comma-separated columns to display")
 	assetsCmd.Flags().StringVar(&assetsExcludeColumns, "exclude-columns", "", "comma-separated columns to exclude from output")
 	assetsCmd.Flags().BoolVar(&assetsAll, "all", false, "show all columns including hidden ones (id, timestamps)")
+	assetsCmd.Flags().StringArrayVar(&assetsWhere, "where", nil, "filter by column (key=value, fuzzy match, repeatable)")
+	assetsCmd.Flags().StringVar(&assetsSearch, "search", "", "search all columns for substring (case-insensitive)")
+	assetsCmd.Flags().StringVarP(&assetsValue, "value", "V", "", "filter by asset_value (fuzzy match)")
 }
 
 func runAssets(cmd *cobra.Command, args []string) error {
@@ -84,25 +90,31 @@ func runAssetsList(ctx context.Context, args []string) error {
 		assetsOffset = 0
 	}
 
-	// Build filters
+	// Exact-match filters
 	filters := make(map[string]string)
-	if assetsSource != "" {
-		filters["source"] = assetsSource
-	}
-	if assetsType != "" {
-		filters["asset_type"] = assetsType
-	}
 	if assetsWorkspace != "" {
 		filters["workspace"] = assetsWorkspace
 	}
 
-	// Search term from positional arg
-	search := ""
+	// Fuzzy-match filters (LIKE)
+	fuzzyFilters := parseWhereFilters(assetsWhere)
+	if assetsSource != "" {
+		fuzzyFilters["source"] = assetsSource
+	}
+	if assetsType != "" {
+		fuzzyFilters["asset_type"] = assetsType
+	}
+	if assetsValue != "" {
+		fuzzyFilters["asset_value"] = assetsValue
+	}
+
+	// Search term: --search flag or positional arg
+	search := assetsSearch
 	if len(args) > 0 {
 		search = args[0]
 	}
 
-	records, err := database.GetTableRecords(ctx, "assets", assetsOffset, assetsLimit, filters, search, database.AssetHeavyColumns)
+	records, err := database.GetTableRecords(ctx, "assets", assetsOffset, assetsLimit, filters, fuzzyFilters, search, database.AssetHeavyColumns)
 	if err != nil {
 		return fmt.Errorf("failed to get assets: %w", err)
 	}

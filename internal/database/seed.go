@@ -2882,10 +2882,12 @@ func ListTables(ctx context.Context) ([]TableInfo, error) {
 
 // tableSearchColumns defines which columns to search for each table
 var tableSearchColumns = map[string][]string{
-	"runs":            {"id", "run_uuid", "run_group_id", "workflow_name", "target", "workspace", "status", "error_message"},
-	"step_results":    {"id", "run_id", "step_name", "step_type", "status", "command", "output", "error_message"},
-	"artifacts":       {"id", "run_id", "workspace", "name", "artifact_path", "artifact_type", "description"},
-	"assets":          {"workspace", "asset_value", "url", "title", "host_ip", "source", "remarks"},
+	"runs":         {"id", "run_uuid", "run_group_id", "workflow_name", "target", "workspace", "status", "error_message"},
+	"step_results": {"id", "run_id", "step_name", "step_type", "status", "command", "output", "error_message"},
+	"artifacts":    {"id", "run_id", "workspace", "name", "artifact_path", "artifact_type", "description"},
+	"assets": {"workspace", "asset_value", "url", "input", "scheme", "method", "path",
+		"status_code", "content_type", "title", "host_ip", "dns_records", "tls",
+		"asset_type", "tech", "remarks", "language", "source", "external_url"},
 	"event_logs":      {"event_id", "topic", "name", "source", "workspace", "run_id", "workflow_name", "data"},
 	"schedules":       {"id", "name", "workflow_name", "workflow_kind", "target", "trigger_name", "schedule"},
 	"workspaces":      {"name", "local_path", "data_source", "run_workflow"},
@@ -2972,7 +2974,7 @@ var AssetHeavyColumns = []string{"raw_json_data", "raw_response", "screenshot_ba
 
 // GetTableRecords returns paginated records from a specific table with optional filters and search.
 // excludeColumns specifies columns to omit from the SELECT (useful for skipping large blob fields).
-func GetTableRecords(ctx context.Context, tableName string, offset, limit int, filters map[string]string, search string, excludeColumns []string) (*TableRecords, error) {
+func GetTableRecords(ctx context.Context, tableName string, offset, limit int, filters map[string]string, fuzzyFilters map[string]string, search string, excludeColumns []string) (*TableRecords, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database not connected")
 	}
@@ -2990,6 +2992,11 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 		// Apply exact filters
 		for key, value := range filters {
 			query = query.Where("? = ?", bun.Ident(key), value)
+		}
+		// Apply fuzzy (LIKE) filters — case-insensitive substring match per column
+		for key, value := range fuzzyFilters {
+			pattern := "%" + value + "%"
+			query = query.Where("LOWER(CAST(? AS TEXT)) LIKE LOWER(?)", bun.Ident(key), pattern)
 		}
 		// Apply search across columns (OR conditions)
 		if search != "" && len(searchCols) > 0 {

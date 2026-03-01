@@ -1331,14 +1331,25 @@ func UsageAssets() string {
   ` + terminal.Green("# Filter by workspace") + `
   osmedeus assets ` + terminal.Yellow("-w") + ` myworkspace
 
-  ` + terminal.Green("# Filter by source") + `
+  ` + terminal.Green("# Filter by source (fuzzy match)") + `
   osmedeus assets ` + terminal.Yellow("--source") + ` httpx
 
-  ` + terminal.Green("# Filter by asset type") + `
+  ` + terminal.Green("# Filter by asset type (fuzzy match)") + `
   osmedeus assets ` + terminal.Yellow("--type") + ` web
+
+  ` + terminal.Green("# Filter by asset value (fuzzy match)") + `
+  osmedeus assets ` + terminal.Yellow("--value") + ` api.example.com
+
+  ` + terminal.Green("# Filter by any column (fuzzy match, repeatable)") + `
+  osmedeus assets ` + terminal.Yellow("--where") + ` status_code=200
+  osmedeus assets ` + terminal.Yellow("--where") + ` title=nginx ` + terminal.Yellow("--where") + ` source=httpx
+
+  ` + terminal.Green("# Full-text search across all columns") + `
+  osmedeus assets ` + terminal.Yellow("--search") + ` example.com
 
   ` + terminal.Green("# Combined filters") + `
   osmedeus assets ` + terminal.Yellow("--source") + ` httpx ` + terminal.Yellow("--type") + ` web
+  osmedeus assets ` + terminal.Yellow("-w") + ` myworkspace ` + terminal.Yellow("--where") + ` status_code=200 ` + terminal.Yellow("--json") + `
 
   ` + terminal.Green("# Show asset statistics") + `
   osmedeus assets ` + terminal.Yellow("--stats") + `
@@ -1383,6 +1394,170 @@ func UsageAgent() string {
 
   ` + terminal.Green("# List available agents") + `
   osmedeus agent ` + terminal.Yellow("--list") + `
+
+` + docsFooter()
+}
+
+// UsageQuery returns the Long description for the query command
+func UsageQuery() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Agent-friendly commands for querying scan data.
+  All subcommands support ` + terminal.Yellow("--json") + ` for machine-readable output.
+
+` + terminal.BoldCyan("▶ Subcommands") + `
+  • ` + terminal.Yellow("vulns") + `   - Query vulnerabilities
+  • ` + terminal.Yellow("runs") + `    - Query workflow runs
+  • ` + terminal.Yellow("steps") + `   - Query steps for a specific run
+
+` + terminal.BoldCyan("▶ Filtering") + `
+  All subcommands support ` + terminal.Yellow("--where") + ` for filtering by any column:
+    ` + terminal.Yellow("--where") + ` key=value    (can be repeated for multiple filters)
+    ` + terminal.Yellow("--search") + ` text        (full-text search across all columns)
+
+  Each subcommand also has typed convenience flags (e.g. ` + terminal.Yellow("--severity") + `,
+  ` + terminal.Yellow("--status") + `) that map to the underlying column.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# List vulnerabilities as JSON") + `
+  osmedeus query vulns ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# Filter by any column") + `
+  osmedeus query vulns ` + terminal.Yellow("--where") + ` source=nuclei ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# List running workflows") + `
+  osmedeus query runs ` + terminal.Yellow("--status") + ` running ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# Full-text search across columns") + `
+  osmedeus query runs ` + terminal.Yellow("--search") + ` example.com ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# List steps for a run") + `
+  osmedeus query steps ` + terminal.Yellow("-r") + ` <run-uuid> ` + terminal.Yellow("--json") + `
+
+` + docsFooter()
+}
+
+// UsageQueryVulns returns the Long description for the query vulns command
+func UsageQueryVulns() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Query vulnerabilities from the database with filtering and pagination.
+  Typed flags are shortcuts for common filters. Use ` + terminal.Yellow("--where") + ` for any column.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# List all vulnerabilities") + `
+  osmedeus query vulns
+
+  ` + terminal.Green("# JSON output") + `
+  osmedeus query vulns ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# Filter by workspace and severity") + `
+  osmedeus query vulns ` + terminal.Yellow("-w") + ` example.com ` + terminal.Yellow("--severity") + ` critical
+
+  ` + terminal.Green("# Filter by confidence") + `
+  osmedeus query vulns ` + terminal.Yellow("--confidence") + ` confirmed ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# Filter by asset") + `
+  osmedeus query vulns ` + terminal.Yellow("--asset") + ` api.example.com ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# Filter by any column with --where") + `
+  osmedeus query vulns ` + terminal.Yellow("--where") + ` source=nuclei ` + terminal.Yellow("--json") + `
+  osmedeus query vulns ` + terminal.Yellow("--where") + ` asset_type=web ` + terminal.Yellow("--where") + ` severity=high
+
+  ` + terminal.Green("# Full-text search") + `
+  osmedeus query vulns ` + terminal.Yellow("--search") + ` sql-injection ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# With pagination") + `
+  osmedeus query vulns ` + terminal.Yellow("--limit") + ` 100 ` + terminal.Yellow("--offset") + ` 50
+
+` + docsFooter()
+}
+
+// UsageQueryRuns returns the Long description for the query runs command
+func UsageQueryRuns() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Query workflow runs from the database with filtering and pagination.
+  Typed flags are shortcuts for common filters. Use ` + terminal.Yellow("--where") + ` for any column.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# List all runs") + `
+  osmedeus query runs
+
+  ` + terminal.Green("# JSON output") + `
+  osmedeus query runs ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# Filter by status") + `
+  osmedeus query runs ` + terminal.Yellow("--status") + ` running ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# Filter by workflow name") + `
+  osmedeus query runs ` + terminal.Yellow("--workflow") + ` basic-recon
+
+  ` + terminal.Green("# Filter by target") + `
+  osmedeus query runs ` + terminal.Yellow("--target") + ` example.com ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# Filter by any column with --where") + `
+  osmedeus query runs ` + terminal.Yellow("--where") + ` trigger_type=cron ` + terminal.Yellow("--json") + `
+  osmedeus query runs ` + terminal.Yellow("--where") + ` workflow_kind=flow ` + terminal.Yellow("--where") + ` status=completed
+
+  ` + terminal.Green("# Full-text search") + `
+  osmedeus query runs ` + terminal.Yellow("--search") + ` example.com ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# Filter by workspace") + `
+  osmedeus query runs ` + terminal.Yellow("-w") + ` myworkspace
+
+` + docsFooter()
+}
+
+// UsageQuerySteps returns the Long description for the query steps command
+func UsageQuerySteps() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Query steps for a specific workflow run.
+  Use ` + terminal.Yellow("--where") + ` to filter by any step column (e.g. status, step_type).
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# List steps for a run") + `
+  osmedeus query steps ` + terminal.Yellow("-r") + ` <run-uuid>
+
+  ` + terminal.Green("# JSON output") + `
+  osmedeus query steps ` + terminal.Yellow("-r") + ` <run-uuid> ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# Filter steps by status") + `
+  osmedeus query steps ` + terminal.Yellow("-r") + ` <run-uuid> ` + terminal.Yellow("--where") + ` status=failed ` + terminal.Yellow("--json") + `
+
+  ` + terminal.Green("# Filter by step type") + `
+  osmedeus query steps ` + terminal.Yellow("-r") + ` <run-uuid> ` + terminal.Yellow("--where") + ` step_type=bash
+
+  ` + terminal.Green("# Custom columns") + `
+  osmedeus query steps ` + terminal.Yellow("-r") + ` <run-uuid> ` + terminal.Yellow("--columns") + ` step_name,status,duration_ms
+
+` + docsFooter()
+}
+
+// UsageRunStatus returns the Long description for the run status command
+func UsageRunStatus() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Show the current status of a workflow run.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Show run status") + `
+  osmedeus run status <run-uuid>
+
+  ` + terminal.Green("# JSON output") + `
+  osmedeus run status <run-uuid> ` + terminal.Yellow("--json") + `
+
+` + docsFooter()
+}
+
+// UsageRunCancel returns the Long description for the run cancel command
+func UsageRunCancel() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Cancel a pending or running workflow. Terminates associated processes
+  and updates the run status to cancelled.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Cancel a run") + `
+  osmedeus run cancel <run-uuid>
+
+  ` + terminal.Green("# Cancel with JSON output") + `
+  osmedeus run cancel <run-uuid> ` + terminal.Yellow("--json") + `
 
 ` + docsFooter()
 }
