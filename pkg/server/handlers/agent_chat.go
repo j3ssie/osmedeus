@@ -165,10 +165,8 @@ func resolveAgentName(model string) string {
 	if model == "" {
 		return "claude-code"
 	}
-	for _, name := range executor.ListAgentNames() {
-		if name == model {
-			return model
-		}
+	if executor.IsBuiltinAgent(model) {
+		return model
 	}
 	return "claude-code"
 }

@@ -102,39 +102,8 @@ func (e *ACPExecutor) Execute(ctx context.Context, step *core.Step, execCtx *cor
 		Exports:   make(map[string]interface{}),
 	}
 
-	// Resolve agent name for the standalone function
-	agentName := step.Agent
-	var customCommand string
-	var customArgs []string
-	if agentName == "" && step.ACPConfig != nil && step.ACPConfig.Command != "" {
-		customCommand = step.ACPConfig.Command
-		customArgs = step.ACPConfig.Args
-	}
-
-	// For custom commands, use ResolveAgent + the old path
-	// For built-in agents, delegate to RunAgentACP
-	if customCommand != "" {
-		// Custom agent — validate command exists
-		_, err := exec.LookPath(customCommand)
-		if err != nil {
-			err = fmt.Errorf("agent command %q not found in PATH: %w", customCommand, err)
-			result.Status = core.StepStatusFailed
-			result.Error = err
-			result.EndTime = time.Now()
-			result.Duration = result.EndTime.Sub(result.StartTime)
-			return result, err
-		}
-		// Custom agents not supported by RunAgentACP — keep original error
-		_ = customArgs
-		err = fmt.Errorf("custom agent commands should use 'agent' field with a built-in agent name; use acp_config for custom agents via workflow steps only")
-		result.Status = core.StepStatusFailed
-		result.Error = err
-		result.EndTime = time.Now()
-		result.Duration = result.EndTime.Sub(result.StartTime)
-		return result, err
-	}
-
 	// Validate we have an agent
+	agentName := step.Agent
 	if agentName == "" {
 		err := fmt.Errorf("agent-acp step requires 'agent' field or 'acp_config.command'")
 		result.Status = core.StepStatusFailed
@@ -298,6 +267,7 @@ func RunAgentACP(ctx context.Context, prompt, agentName string, cfg *RunAgentACP
 	}()
 
 	defer func() {
+		_ = stdinPipe.Close()
 		_ = stderrWriter.Close()
 		stderrWg.Wait()
 		if cmd.Process != nil {
@@ -426,11 +396,13 @@ func resolveAgentName(step *core.Step) string {
 	return "unknown"
 }
 
+// IsBuiltinAgent returns true if the given name is a built-in ACP agent.
+func IsBuiltinAgent(name string) bool {
+	_, ok := builtinACPAgents[name]
+	return ok
+}
+
 // availableAgentNames returns a comma-separated list of built-in agent names.
 func availableAgentNames() string {
-	names := make([]string, 0, len(builtinACPAgents))
-	for name := range builtinACPAgents {
-		names = append(names, name)
-	}
-	return strings.Join(names, ", ")
+	return strings.Join(ListAgentNames(), ", ")
 }

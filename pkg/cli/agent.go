@@ -75,15 +75,10 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		StreamWriter: os.Stdout,
 	}
 
-	output, _, err := executor.RunAgentACP(ctx, message, agentName, cfg)
+	_, _, err = executor.RunAgentACP(ctx, message, agentName, cfg)
 	if err != nil {
 		printer.Error("Agent failed: %s", err)
 		return err
-	}
-
-	// If there was no stream writer, print output at the end
-	if cfg.StreamWriter == nil && output != "" {
-		fmt.Println(output)
 	}
 
 	return nil
