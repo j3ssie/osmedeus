@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/j3ssie/osmedeus/v5/internal/config"
+	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/executor"
 )
 
@@ -41,10 +42,7 @@ type AgentChoice struct {
 }
 
 // Concurrency guard: only one ACP agent subprocess at a time.
-var (
-	agentMu      sync.Mutex
-	agentRunning bool
-)
+var agentMu sync.Mutex
 
 // AgentChat handles ACP agent chat completion requests.
 // @Summary Agent Chat Completion
@@ -90,25 +88,16 @@ func AgentChat(cfg *config.Config) fiber.Handler {
 		agentName := resolveAgentName(req.Model)
 
 		// Acquire concurrency lock
-		agentMu.Lock()
-		if agentRunning {
-			agentMu.Unlock()
+		if !agentMu.TryLock() {
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 				"error":   true,
 				"message": "An agent is already running. Only one agent subprocess is allowed at a time.",
 			})
 		}
-		agentRunning = true
-		agentMu.Unlock()
+		defer agentMu.Unlock()
 
-		defer func() {
-			agentMu.Lock()
-			agentRunning = false
-			agentMu.Unlock()
-		}()
-
-		// Create context with 10-minute timeout
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		// Create context with 10-minute timeout, derived from request context
+		ctx, cancel := context.WithTimeout(c.UserContext(), 10*time.Minute)
 		defer cancel()
 
 		// Run ACP agent
@@ -160,13 +149,10 @@ func buildAgentPrompt(messages []AgentChatMessage) string {
 }
 
 // resolveAgentName maps the model field to a known agent name.
-// Falls back to "claude-code" for unknown values.
+// Falls back to the default agent for unknown values.
 func resolveAgentName(model string) string {
-	if model == "" {
-		return "claude-code"
-	}
-	if executor.IsBuiltinAgent(model) {
+	if model != "" && executor.IsBuiltinAgent(model) {
 		return model
 	}
-	return "claude-code"
+	return core.DefaultACPAgent
 }

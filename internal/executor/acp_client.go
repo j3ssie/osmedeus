@@ -56,6 +56,12 @@ func newACPClient(opts ...acpClientOption) *acpClient {
 	for _, opt := range opts {
 		opt(c)
 	}
+	// Precompute absolute allowed paths to avoid repeated filepath.Abs calls.
+	for i, p := range c.allowedPaths {
+		if abs, err := filepath.Abs(p); err == nil {
+			c.allowedPaths[i] = abs
+		}
+	}
 	return c
 }
 
@@ -310,12 +316,8 @@ func (c *acpClient) isPathAllowed(absPath string) bool {
 		return true
 	}
 	for _, allowed := range c.allowedPaths {
-		allowedAbs, err := filepath.Abs(allowed)
-		if err != nil {
-			continue
-		}
-		prefix := allowedAbs + string(filepath.Separator)
-		if absPath == allowedAbs || strings.HasPrefix(absPath, prefix) {
+		prefix := allowed + string(filepath.Separator)
+		if absPath == allowed || strings.HasPrefix(absPath, prefix) {
 			return true
 		}
 	}

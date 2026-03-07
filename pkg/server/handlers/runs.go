@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"strconv"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -20,24 +19,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// killProcessAndChildren kills a process and all its children using SIGKILL
-// Returns true if the kill signal was sent successfully
+// killProcessAndChildren delegates to core.KillProcessAndChildren.
 func killProcessAndChildren(pid int) bool {
-	if pid <= 0 {
-		return false
-	}
-
-	// First, try to kill the process group (negative PID kills all processes in the group)
-	// This ensures child processes are also terminated
-	err := syscall.Kill(-pid, syscall.SIGKILL)
-	if err != nil {
-		// Process group kill failed, try killing just the process
-		err = syscall.Kill(pid, syscall.SIGKILL)
-		if err != nil {
-			return false
-		}
-	}
-	return true
+	return core.KillProcessAndChildren(pid)
 }
 
 // generateEmptyTarget creates a placeholder target name for empty_target mode

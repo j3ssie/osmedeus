@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"syscall"
 
+	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
 	"github.com/j3ssie/osmedeus/v5/internal/executor"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
@@ -106,7 +106,7 @@ func runRunCancel(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("run not found: %w", err)
 	}
 
-	if run.Status != "pending" && run.Status != "running" {
+	if run.Status != string(core.RunStatusPending) && run.Status != string(core.RunStatusRunning) {
 		return fmt.Errorf("cannot cancel run with status '%s'", run.Status)
 	}
 
@@ -121,14 +121,14 @@ func runRunCancel(cmd *cobra.Command, args []string) error {
 		killedPIDs = controlPlanePIDs
 		killMethod = "control_plane"
 	} else if run.CurrentPID > 0 {
-		if cliKillProcessAndChildren(run.CurrentPID) {
+		if core.KillProcessAndChildren(run.CurrentPID) {
 			killedPIDs = []int{run.CurrentPID}
 			killMethod = "database_pid"
 		}
 	}
 
 	// Update database status
-	if err := database.UpdateRunStatus(ctx, run.RunUUID, "cancelled", "Cancelled via CLI"); err != nil {
+	if err := database.UpdateRunStatus(ctx, run.RunUUID, string(core.RunStatusCancelled), "Cancelled via CLI"); err != nil {
 		return fmt.Errorf("failed to update run status: %w", err)
 	}
 
@@ -158,21 +158,3 @@ func runRunCancel(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// cliKillProcessAndChildren kills a process and all its children using SIGKILL.
-// Returns true if the kill signal was sent successfully.
-func cliKillProcessAndChildren(pid int) bool {
-	if pid <= 0 {
-		return false
-	}
-
-	// Try to kill the process group first (negative PID kills all processes in the group)
-	err := syscall.Kill(-pid, syscall.SIGKILL)
-	if err != nil {
-		// Process group kill failed, try killing just the process
-		err = syscall.Kill(pid, syscall.SIGKILL)
-		if err != nil {
-			return false
-		}
-	}
-	return true
-}

@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"syscall"
 	"time"
 )
 
@@ -114,6 +115,26 @@ const (
 	RunStatusCancelled RunStatus = "cancelled"
 	RunStatusSkipped   RunStatus = "skipped"
 )
+
+// DefaultACPAgent is the default ACP agent used when none is specified.
+const DefaultACPAgent = "claude-code"
+
+// KillProcessAndChildren kills a process and all its children using SIGKILL.
+// It first attempts to kill the entire process group (negative PID), falling
+// back to killing just the process. Returns true if the signal was sent.
+func KillProcessAndChildren(pid int) bool {
+	if pid <= 0 {
+		return false
+	}
+	err := syscall.Kill(-pid, syscall.SIGKILL)
+	if err != nil {
+		err = syscall.Kill(pid, syscall.SIGKILL)
+		if err != nil {
+			return false
+		}
+	}
+	return true
+}
 
 // StepResult holds step execution result
 type StepResult struct {

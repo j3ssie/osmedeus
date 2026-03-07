@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/executor"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
 	"github.com/spf13/cobra"
@@ -30,7 +31,7 @@ var agentCmd = &cobra.Command{
 }
 
 func init() {
-	agentCmd.Flags().StringVar(&agentName, "agent", "claude-code", "agent to use (see --list for available agents)")
+	agentCmd.Flags().StringVar(&agentName, "agent", core.DefaultACPAgent, "agent to use (see --list for available agents)")
 	agentCmd.Flags().StringVar(&agentCwd, "cwd", "", "working directory for the agent (default: current directory)")
 	agentCmd.Flags().BoolVar(&agentStdin, "stdin", false, "read message from stdin")
 	agentCmd.Flags().StringVar(&agentTimeout, "timeout", "30m", "timeout duration (e.g., 30m, 1h)")

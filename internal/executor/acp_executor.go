@@ -196,7 +196,7 @@ func RunAgentACP(ctx context.Context, prompt, agentName string, cfg *RunAgentACP
 
 	// Default agent
 	if agentName == "" {
-		agentName = "claude-code"
+		agentName = core.DefaultACPAgent
 	}
 
 	// Resolve agent command from built-in registry
@@ -360,9 +360,6 @@ func RunAgentACP(ctx context.Context, prompt, agentName string, cfg *RunAgentACP
 		}
 		return agentOutput, stderrStr, fmt.Errorf("ACP prompt failed: %w", promptErr)
 	}
-
-	// Close stdin to signal EOF to the agent process
-	_ = stdinPipe.Close()
 
 	stopReason := "unknown"
 	if promptResp.StopReason != "" {

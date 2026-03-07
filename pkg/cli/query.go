@@ -216,14 +216,13 @@ func runQueryRuns(cmd *cobra.Command, args []string) error {
 }
 
 func runQuerySteps(cmd *cobra.Command, args []string) error {
+	// Resolve run UUID to numeric run_id, then delegate to runQueryTable.
 	if err := connectDB(); err != nil {
 		return err
 	}
-	defer func() { _ = database.Close() }()
-
-	// Resolve run UUID to numeric run_id for step_results table
-	ctx := context.Background()
-	run, err := database.GetRunByID(ctx, queryRunUUID, false, false)
+	// Close here since runQueryTable will open its own connection.
+	run, err := database.GetRunByID(context.Background(), queryRunUUID, false, false)
+	_ = database.Close()
 	if err != nil {
 		return fmt.Errorf("run not found: %w", err)
 	}
@@ -231,34 +230,5 @@ func runQuerySteps(cmd *cobra.Command, args []string) error {
 	filters := buildQueryFilters(map[string]string{
 		"run_id": fmt.Sprintf("%d", run.ID),
 	})
-
-	validatePagination(&queryLimit, &queryOffset)
-
-	records, err := database.GetTableRecords(ctx, "step_results", queryOffset, queryLimit, filters, nil, querySearch, nil)
-	if err != nil {
-		return fmt.Errorf("failed to query steps: %w", err)
-	}
-
-	if globalJSON {
-		jsonBytes, err := json.Marshal(records.Records)
-		if err != nil {
-			return fmt.Errorf("failed to format results: %w", err)
-		}
-		fmt.Println(string(jsonBytes))
-		return nil
-	}
-
-	// Table output
-	printer := terminal.NewPrinter()
-	requestedColumns := parseColumns(queryColumns)
-	columns := getEffectiveColumns("step_results", requestedColumns, queryAll)
-	excludeColumns := parseExcludeColumns(queryExcludeColumns)
-	hideDefaultColumns := !queryAll && len(requestedColumns) == 0 && tableDefaultColumns["step_results"] == nil
-
-	printer.Info("Steps for run: %s", queryRunUUID)
-	fmt.Printf("Total: %d steps\n\n", records.TotalCount)
-
-	renderTableWithTablewriter("step_results", records.Records, columns, globalWidth, hideDefaultColumns, excludeColumns)
-
-	return nil
+	return runQueryTable("step_results", filters)
 }
