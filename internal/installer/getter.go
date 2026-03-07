@@ -328,7 +328,10 @@ func InstallBinaryViaGoGetter(binaryName string, goPackage string, binariesFolde
 	// go-getter format: git::https://github.com/user/repo?ref=tag
 	src := fmt.Sprintf("git::https://%s", repoURL)
 	if version != "" && version != "latest" {
-		src = fmt.Sprintf("%s?ref=%s", src, version)
+		src = fmt.Sprintf("%s?ref=%s&depth=1", src, version)
+	} else {
+		// Explicitly set ref=HEAD to avoid go-getter passing empty string to git checkout
+		src = fmt.Sprintf("%s?ref=HEAD&depth=1", src)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -350,35 +353,53 @@ func InstallBinaryViaGoGetter(binaryName string, goPackage string, binariesFolde
 		return fmt.Errorf("build directory not found: %s", buildDir)
 	}
 
-	// Build the binary
-	outputPath := filepath.Join(tempDir, binaryName)
-	cmd := exec.Command("go", "build", "-o", outputPath, ".")
-	cmd.Dir = buildDir
-	cmd.Env = os.Environ()
-
-	logger.Get().Info("Building binary",
-		zap.String("dir", buildDir),
-		zap.String("output", outputPath))
-
-	output, err := cmd.CombinedOutput()
-	GoGetterInstallOutput = string(output)
-
-	if err != nil {
-		if len(output) > 0 {
-			return fmt.Errorf("failed to build %s: %w\nOutput: %s", binaryName, err, string(output))
-		}
-		return fmt.Errorf("failed to build %s: %w", binaryName, err)
-	}
-
 	// Ensure binaries folder exists
 	if err := os.MkdirAll(binariesFolder, 0755); err != nil {
 		return fmt.Errorf("failed to create binaries folder: %w", err)
 	}
 
-	// Copy binary to binaries folder
 	destPath := filepath.Join(binariesFolder, binaryName)
-	if err := copyBinaryFile(outputPath, destPath); err != nil {
-		return fmt.Errorf("failed to copy binary: %w", err)
+
+	// Fall back to go install if go.mod is not found in the build directory
+	if _, err := os.Stat(filepath.Join(buildDir, "go.mod")); err != nil {
+		logger.Get().Warn("go.mod not found, falling back to go install",
+			zap.String("package", goPackage),
+			zap.String("gobin", binariesFolder))
+
+		cmd := exec.Command("go", "install", goPackage)
+		cmd.Env = append(os.Environ(), fmt.Sprintf("GOBIN=%s", binariesFolder))
+		output, err := cmd.CombinedOutput()
+		GoGetterInstallOutput = string(output)
+		if err != nil {
+			if len(output) > 0 {
+				return fmt.Errorf("failed to install %s: %w\nOutput: %s", binaryName, err, string(output))
+			}
+			return fmt.Errorf("failed to install %s: %w", binaryName, err)
+		}
+	} else {
+		// Build the binary from cloned source
+		outputPath := filepath.Join(tempDir, binaryName)
+		cmd := exec.Command("go", "build", "-o", outputPath, ".")
+		cmd.Dir = buildDir
+		cmd.Env = os.Environ()
+
+		logger.Get().Info("Building binary",
+			zap.String("dir", buildDir),
+			zap.String("output", outputPath))
+
+		output, err := cmd.CombinedOutput()
+		GoGetterInstallOutput = string(output)
+
+		if err != nil {
+			if len(output) > 0 {
+				return fmt.Errorf("failed to build %s: %w\nOutput: %s", binaryName, err, string(output))
+			}
+			return fmt.Errorf("failed to build %s: %w", binaryName, err)
+		}
+
+		if err := copyBinaryFile(outputPath, destPath); err != nil {
+			return fmt.Errorf("failed to copy binary: %w", err)
+		}
 	}
 
 	logger.Get().Info("Binary installed successfully",
