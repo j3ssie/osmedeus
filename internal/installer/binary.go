@@ -444,6 +444,18 @@ func executeCommand(command string) error {
 // executeCommands runs multiple shell commands sequentially
 func executeCommands(commands []string) error {
 	for i, command := range commands {
+		// If this is a git clone command, remove the destination folder first
+		// so cloning doesn't fail when the folder already exists
+		if dest := extractGitCloneDest(command); dest != "" {
+			if _, err := os.Stat(dest); err == nil {
+				logger.Get().Info("Removing existing git clone destination",
+					zap.String("dest", dest))
+				if err := os.RemoveAll(dest); err != nil {
+					return fmt.Errorf("failed to remove existing directory %s: %w", dest, err)
+				}
+			}
+		}
+
 		logger.Get().Info("Running command",
 			zap.Int("step", i+1),
 			zap.Int("total", len(commands)),
@@ -454,6 +466,43 @@ func executeCommands(commands []string) error {
 		}
 	}
 	return nil
+}
+
+// extractGitCloneDest extracts the destination directory from a git clone command.
+// Returns empty string if the command is not a git clone or has no explicit destination.
+// Handles forms like: "git clone <url> <dest>" and "git clone --depth=1 <url> <dest>"
+func extractGitCloneDest(command string) string {
+	fields := strings.Fields(command)
+	if len(fields) < 3 {
+		return ""
+	}
+
+	// Find "git" followed by "clone"
+	gitIdx := -1
+	for i, f := range fields {
+		if f == "git" {
+			gitIdx = i
+			break
+		}
+	}
+	if gitIdx < 0 || gitIdx+1 >= len(fields) || fields[gitIdx+1] != "clone" {
+		return ""
+	}
+
+	// Collect non-flag arguments after "git clone"
+	var args []string
+	for _, f := range fields[gitIdx+2:] {
+		if strings.HasPrefix(f, "-") {
+			continue
+		}
+		args = append(args, f)
+	}
+
+	// args[0] = repo URL, args[1] = destination (if present)
+	if len(args) >= 2 {
+		return os.ExpandEnv(args[1])
+	}
+	return ""
 }
 
 // downloadAndExtractBinary downloads and extracts a binary to the binaries folder

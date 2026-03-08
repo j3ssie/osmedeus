@@ -1,5 +1,22 @@
 {
   "_last_update_at": "2026-02-15T17:36:33.284844+00:00",
+  "make": {
+    "desc": "Essential tools for compiling software from source code",
+    "version": "<version>",
+    "repo_link": "https://packages.debian.org/sid/build-essential",
+    "package-manager": "<auto_detect_package_manager>",
+    "tags": [
+      "utility",
+      "build"
+    ],
+    "valide-command": "",
+    "command-linux": {
+      "dual": "<auto_detect_package_manager> install build-essential"
+    },
+    "command-darwin": {
+      "dual": "<auto_detect_package_manager> install cmake"
+    }
+  },
   "amass": {
     "desc": "In-depth attack surface mapping and asset discovery",
     "repo_link": "https://github.com/owasp-amass/amass",
