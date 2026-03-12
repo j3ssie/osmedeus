@@ -764,7 +764,7 @@
   "trivy": {
     "desc": "Find vulnerabilities, misconfigurations, secrets, SBOM in containers, Kubernetes, code repositories, clouds and more",
     "repo_link": "https://github.com/aquasecurity/trivy",
-    "version": "0.69.1",
+    "version": "0.69.3",
     "package-manager": "github-release",
     "tags": [
       "vulnerability-scanner",
@@ -775,12 +775,12 @@
     ],
     "valide-command": "",
     "linux": {
-      "amd64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.1/trivy_0.69.1_Linux-64bit.tar.gz",
-      "arm64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.1/trivy_0.69.1_Linux-ARM64.tar.gz"
+      "amd64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.tar.gz",
+      "arm64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-ARM64.tar.gz"
     },
     "darwin": {
-      "amd64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.1/trivy_0.69.1_macOS-64bit.tar.gz",
-      "arm64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.1/trivy_0.69.1_macOS-ARM64.tar.gz"
+      "amd64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_macOS-64bit.tar.gz",
+      "arm64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_macOS-ARM64.tar.gz"
     }
   },
   "legba": {
