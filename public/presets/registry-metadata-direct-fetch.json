@@ -1,5 +1,5 @@
 {
-  "_last_update_at": "2026-03-13T15:11:36.292828+00:00",
+  "_last_update_at": "2026-04-30T19:07:50.883492+00:00",
   "make": {
     "desc": "Essential tools for compiling software from source code",
     "version": "<version>",
@@ -21,7 +21,7 @@
   "amass": {
     "desc": "In-depth attack surface mapping and asset discovery",
     "repo_link": "https://github.com/owasp-amass/amass",
-    "version": "5.0.1",
+    "version": "5.1.1",
     "package-manager": "github-release",
     "tags": [
       "recon",
@@ -31,18 +31,18 @@
     ],
     "valide-command": "",
     "linux": {
-      "amd64": "https://github.com/owasp-amass/amass/releases/download/v5.0.1/amass_linux_amd64.tar.gz",
-      "arm64": "https://github.com/owasp-amass/amass/releases/download/v5.0.1/amass_linux_arm64.tar.gz"
+      "amd64": "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_amd64.tar.gz",
+      "arm64": "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_arm64.tar.gz"
     },
     "darwin": {
-      "amd64": "https://github.com/owasp-amass/amass/releases/download/v5.0.1/amass_darwin_amd64.tar.gz",
-      "arm64": "https://github.com/owasp-amass/amass/releases/download/v5.0.1/amass_darwin_arm64.tar.gz"
+      "amd64": "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_darwin_amd64.tar.gz",
+      "arm64": "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_darwin_arm64.tar.gz"
     }
   },
   "subfinder": {
     "desc": "Fast passive subdomain enumeration tool.",
     "repo_link": "https://github.com/projectdiscovery/subfinder",
-    "version": "2.13.0",
+    "version": "2.14.0",
     "package-manager": "github-release",
     "tags": [
       "recon",
@@ -51,12 +51,12 @@
     ],
     "valide-command": "",
     "linux": {
-      "amd64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.13.0/subfinder_2.13.0_linux_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.13.0/subfinder_2.13.0_linux_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.14.0/subfinder_2.14.0_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.14.0/subfinder_2.14.0_linux_arm64.zip"
     },
     "darwin": {
-      "amd64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.13.0/subfinder_2.13.0_macOS_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.13.0/subfinder_2.13.0_macOS_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.14.0/subfinder_2.14.0_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.14.0/subfinder_2.14.0_macOS_arm64.zip"
     }
   },
   "dnsx": {
@@ -102,7 +102,7 @@
   "nuclei": {
     "desc": "Nuclei is a fast, customizable vulnerability scanner powered by the global security community and built on a simple YAML-based DSL, enabling collaboration to tackle trending vulnerabilities on the internet. It helps you find vulnerabilities in your applications, APIs, networks, DNS, and cloud configurations.",
     "repo_link": "https://github.com/projectdiscovery/nuclei",
-    "version": "3.7.1",
+    "version": "3.8.0",
     "package-manager": "github-release",
     "tags": [
       "vulnerability-scanner",
@@ -111,12 +111,12 @@
     ],
     "valide-command": "",
     "linux": {
-      "amd64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.7.1/nuclei_3.7.1_linux_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.7.1/nuclei_3.7.1_linux_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.8.0/nuclei_3.8.0_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.8.0/nuclei_3.8.0_linux_arm64.zip"
     },
     "darwin": {
-      "amd64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.7.1/nuclei_3.7.1_macOS_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.7.1/nuclei_3.7.1_macOS_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.8.0/nuclei_3.8.0_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/nuclei/releases/download/v3.8.0/nuclei_3.8.0_macOS_arm64.zip"
     }
   },
   "nuclei-templates": {
@@ -137,7 +137,7 @@
       "rm -rf $HOME/nuclei-templates && git clone --depth=1 https://github.com/projectdiscovery/nuclei-templates $HOME/nuclei-templates"
     ]
   },
-  "httpx": {
+  "pd-httpx": {
     "desc": "httpx is a fast and multi-purpose HTTP toolkit that allows running multiple probes using the retryablehttp library.",
     "repo_link": "https://github.com/projectdiscovery/httpx",
     "version": "1.9.0",
@@ -182,7 +182,7 @@
   "naabu": {
     "desc": "A fast port scanner written in go with a focus on reliability and simplicity. Designed to be used in combination with other tools for attack surface discovery in bug bounties and pentests",
     "repo_link": "https://github.com/projectdiscovery/naabu",
-    "version": "2.5.0",
+    "version": "2.6.0",
     "package-manager": "github-release",
     "tags": [
       "port-scanner",
@@ -191,12 +191,12 @@
     ],
     "valide-command": "",
     "linux": {
-      "amd64": "https://github.com/projectdiscovery/naabu/releases/download/v2.5.0/naabu_2.5.0_linux_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/naabu/releases/download/v2.5.0/naabu_2.5.0_linux_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/naabu/releases/download/v2.6.0/naabu_2.6.0_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/naabu/releases/download/v2.6.0/naabu_2.6.0_linux_arm64.zip"
     },
     "darwin": {
-      "amd64": "https://github.com/projectdiscovery/naabu/releases/download/v2.5.0/naabu_2.5.0_macOS_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/naabu/releases/download/v2.5.0/naabu_2.5.0_macOS_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/naabu/releases/download/v2.6.0/naabu_2.6.0_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/naabu/releases/download/v2.6.0/naabu_2.6.0_macOS_arm64.zip"
     }
   },
   "ffuf": {
@@ -243,9 +243,9 @@
     }
   },
   "kingfisher": {
-    "desc": "Kingfisher is a blazingly fast and highly accurate tool for secret detection and live validation across files, Git repos, GitHub, GitLab, Azure Repos, BitBucket, Gitea, AWS S3, Docker images, Jira, Slack, and Confluence",
+    "desc": "Find, validate, and map the impact of leaked secrets across your stack. Revoke fast. 900+ rules.",
     "repo_link": "https://github.com/mongodb/kingfisher",
-    "version": "1.88.0",
+    "version": "1.97.0",
     "package-manager": "github-release",
     "tags": [
       "secret-detection",
@@ -255,12 +255,12 @@
     ],
     "valide-command": "",
     "linux": {
-      "amd64": "https://github.com/mongodb/kingfisher/releases/download/v1.88.0/kingfisher-linux-x64.tgz",
-      "arm64": "https://github.com/mongodb/kingfisher/releases/download/v1.88.0/kingfisher-linux-arm64.tgz"
+      "amd64": "https://github.com/mongodb/kingfisher/releases/download/v1.97.0/kingfisher-linux-x64.tgz",
+      "arm64": "https://github.com/mongodb/kingfisher/releases/download/v1.97.0/kingfisher-linux-arm64.tgz"
     },
     "darwin": {
-      "amd64": "https://github.com/mongodb/kingfisher/releases/download/v1.88.0/kingfisher-darwin-x64.tgz",
-      "arm64": "https://github.com/mongodb/kingfisher/releases/download/v1.88.0/kingfisher-darwin-arm64.tgz"
+      "amd64": "https://github.com/mongodb/kingfisher/releases/download/v1.97.0/kingfisher-darwin-x64.tgz",
+      "arm64": "https://github.com/mongodb/kingfisher/releases/download/v1.97.0/kingfisher-darwin-arm64.tgz"
     }
   },
   "bearer": {
@@ -766,7 +766,7 @@
   "trivy": {
     "desc": "Find vulnerabilities, misconfigurations, secrets, SBOM in containers, Kubernetes, code repositories, clouds and more",
     "repo_link": "https://github.com/aquasecurity/trivy",
-    "version": "0.69.3",
+    "version": "0.70.0",
     "package-manager": "github-release",
     "tags": [
       "vulnerability-scanner",
@@ -777,12 +777,12 @@
     ],
     "valide-command": "",
     "linux": {
-      "amd64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.tar.gz",
-      "arm64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-ARM64.tar.gz"
+      "amd64": "https://github.com/aquasecurity/trivy/releases/download/v0.70.0/trivy_0.70.0_Linux-64bit.tar.gz",
+      "arm64": "https://github.com/aquasecurity/trivy/releases/download/v0.70.0/trivy_0.70.0_Linux-ARM64.tar.gz"
     },
     "darwin": {
-      "amd64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_macOS-64bit.tar.gz",
-      "arm64": "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_macOS-ARM64.tar.gz"
+      "amd64": "https://github.com/aquasecurity/trivy/releases/download/v0.70.0/trivy_0.70.0_macOS-64bit.tar.gz",
+      "arm64": "https://github.com/aquasecurity/trivy/releases/download/v0.70.0/trivy_0.70.0_macOS-ARM64.tar.gz"
     }
   },
   "legba": {
@@ -827,7 +827,7 @@
   "gosec": {
     "desc": "Go security checker",
     "repo_link": "https://github.com/securego/gosec",
-    "version": "2.24.7",
+    "version": "2.26.1",
     "package-manager": "go-getter",
     "tags": [
       "sast",
@@ -878,7 +878,7 @@
   "cariddi": {
     "desc": "Take a list of domains, crawl urls and scan for endpoints, secrets, api keys, file extensions, tokens and more",
     "repo_link": "https://github.com/edoardottt/cariddi",
-    "version": "1.4.5",
+    "version": "1.4.6",
     "package-manager": "go-getter",
     "tags": [
       "api-scanner",
@@ -895,7 +895,7 @@
   "cloudfox": {
     "desc": "Automating situational awareness for cloud penetration tests.",
     "repo_link": "https://github.com/BishopFox/cloudfox",
-    "version": "2.0.1",
+    "version": "2.0.4",
     "package-manager": "go-getter",
     "tags": [
       "cloud-security",
