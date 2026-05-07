@@ -71,6 +71,7 @@ func (wc *WriteCoordinator) AddStepResult(stepName, stepType, status, command, o
 	result := &StepResult{
 		ID:           uuid.New().String(),
 		RunID:        wc.runID,
+		RunUUID:      wc.runUUID,
 		StepName:     stepName,
 		StepType:     stepType,
 		Status:       status,

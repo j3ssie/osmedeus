@@ -321,7 +321,10 @@ func (w *Worker) executeTask(ctx context.Context, task *Task) *TaskResult {
 
 	// Create run record for distributed tracking
 	now := time.Now()
-	runUUID := uuid.New().String()
+	runUUID := task.ScanID
+	if runUUID == "" {
+		runUUID = uuid.New().String()
+	}
 	paramsInterface := make(map[string]interface{})
 	for k, v := range params {
 		paramsInterface[k] = v
@@ -348,6 +351,7 @@ func (w *Worker) executeTask(ctx context.Context, task *Task) *TaskResult {
 
 	// Wire up executor for run tracking
 	w.executor.SetDBRunUUID(runUUID)
+	w.executor.SetDBRunID(time.Now().UnixNano() % 1000000000)
 
 	// Execute based on workflow kind
 	var wfResult *core.WorkflowResult

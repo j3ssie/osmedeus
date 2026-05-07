@@ -450,6 +450,9 @@ func (m *Master) processWorkerData(ctx context.Context, key string, envelope *Da
 	}
 
 	if m.db == nil {
+		m.db = database.GetDB()
+	}
+	if m.db == nil {
 		m.logger.Debug("skipping data processing - no database connection",
 			zap.String("key", key),
 			zap.String("type", envelope.Type),
@@ -505,10 +508,27 @@ func (m *Master) processStepData(ctx context.Context, envelope *DataEnvelope) {
 		return
 	}
 
-	// Insert step result
-	_, err := m.db.NewInsert().Model(&step).Exec(ctx)
-	if err != nil {
-		m.printer.Warning("Failed to create step result %s: %s", step.StepName, err)
+	// Resolve the real DB RunID using RunUUID sent by the worker
+	if step.RunUUID != "" {
+		repo := repository.NewRunRepository(m.db)
+		existing, err := repo.GetByRunID(ctx, step.RunUUID)
+		if err == nil && existing != nil {
+			step.RunID = existing.ID
+		}
+	}
+
+	// Insert step result and increment progress
+	if step.RunID > 0 {
+		_, err := m.db.NewInsert().Model(&step).Exec(ctx)
+		if err != nil {
+			m.printer.Warning("Failed to create step result %s: %s", step.StepName, err)
+		} else {
+			// Increment completed_steps on the run
+			_, _ = m.db.NewUpdate().Model((*database.Run)(nil)).
+				Set("completed_steps = completed_steps + 1").
+				Where("id = ?", step.RunID).
+				Exec(ctx)
+		}
 	}
 }
 

@@ -493,6 +493,9 @@ func CreateRun(cfg *config.Config, master *distributed.Master) fiber.Handler {
 					Target:       target,
 					Params:       taskParams,
 				}
+				if run != nil {
+					task.ScanID = run.RunUUID
+				}
 
 				if err := master.SubmitTask(ctx, task); err != nil {
 					lgr := logger.Get()

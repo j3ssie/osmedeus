@@ -65,6 +65,11 @@ var workerJoinCmd = &cobra.Command{
 		// Ensure external-binaries are in PATH so workflow steps can find tools
 		ensureExternalBinariesInPath(cfg)
 
+		// Connect to database so db_import_* functions work on the worker
+		if _, err := database.Connect(cfg); err != nil {
+			fmt.Fprintf(os.Stderr, "Worker database connection failed (asset imports will be skipped): %v\n", err)
+		}
+
 		// Create worker
 		worker, err := distributed.NewWorker(cfg, &distributed.WorkerOptions{
 			GetPublicIP: getPublicIP,
