@@ -65,6 +65,7 @@ type StepResult struct {
 
 	ID           string                 `bun:"id,pk,type:text" json:"id"`
 	RunID        int64                  `bun:"run_id,notnull" json:"run_id"`
+	RunUUID      string                 `bun:"run_uuid" json:"run_uuid,omitempty"`
 	StepName     string                 `bun:"step_name,notnull" json:"step_name"`
 	StepType     string                 `bun:"step_type,notnull" json:"step_type"`
 	Status       string                 `bun:"status,notnull" json:"status"`

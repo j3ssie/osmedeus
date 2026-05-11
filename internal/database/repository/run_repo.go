@@ -42,7 +42,7 @@ func (r *RunRepository) GetByRunID(ctx context.Context, runID string) (*database
 	scan := new(database.Run)
 	err := r.db.NewSelect().
 		Model(scan).
-		Where("run_id = ?", runID).
+		Where("run_uuid = ?", runID).
 		Scan(ctx)
 	if err != nil {
 		return nil, err
