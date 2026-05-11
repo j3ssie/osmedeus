@@ -1136,6 +1136,31 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 		Exports:      make(map[string]interface{}),
 	}
 
+	// Always emit a workflow_* webhook on every return path (success, failure, cancel, skip, panic).
+	defer func() {
+		if result == nil {
+			return
+		}
+		if result.EndTime.IsZero() {
+			result.EndTime = time.Now()
+		}
+		errMsg := ""
+		if result.Error != nil {
+			errMsg = result.Error.Error()
+		}
+		notify.TriggerWebhooks(cfg, "workflow_"+string(result.Status), map[string]interface{}{
+			"workflow":  module.Name,
+			"kind":      result.WorkflowKind,
+			"target":    execCtx.Target,
+			"status":    string(result.Status),
+			"duration":  result.EndTime.Sub(result.StartTime).Seconds(),
+			"run_uuid":  result.RunUUID,
+			"error":     errMsg,
+			"artifacts": result.Artifacts,
+			"message":   result.Message,
+		})
+	}()
+
 	// Record workflow start for metrics
 	metrics.RecordWorkflowStart()
 
@@ -1421,15 +1446,6 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	// Record workflow completion metrics
 	metrics.RecordWorkflowEnd(module.Name, string(core.KindModule), string(result.Status), result.EndTime.Sub(result.StartTime).Seconds())
 
-	// Send webhook notification on completion
-	notify.TriggerWebhooks(cfg, "workflow_"+string(result.Status), map[string]interface{}{
-		"workflow": module.Name,
-		"kind":     string(core.KindModule),
-		"target":   execCtx.Target,
-		"status":   string(result.Status),
-		"duration": result.EndTime.Sub(result.StartTime).Seconds(),
-	})
-
 	// Export state on module completion
 	if stateFile, ok := execCtx.GetVariable("StateFile"); ok {
 		if sfStr, ok := stateFile.(string); ok && sfStr != "" {
@@ -1450,9 +1466,11 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 
 	// Register artifacts (reports from workflow + state files)
 	if !e.dryRun {
-		if err := RegisterArtifacts(module, execCtx, e.dbRunID, execCtx.Logger); err != nil {
+		paths, err := RegisterArtifacts(module, execCtx, e.dbRunID, execCtx.Logger)
+		if err != nil {
 			execCtx.Logger.Warn("Failed to register artifacts", zap.Error(err))
 		}
+		result.Artifacts = paths
 	}
 
 	// Flush write coordinator at workflow completion
@@ -1850,6 +1868,31 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 		StartTime:    time.Now(),
 		Exports:      make(map[string]interface{}),
 	}
+
+	// Always emit a workflow_* webhook on every return path (success, failure, cancel, skip, panic).
+	defer func() {
+		if result == nil {
+			return
+		}
+		if result.EndTime.IsZero() {
+			result.EndTime = time.Now()
+		}
+		errMsg := ""
+		if result.Error != nil {
+			errMsg = result.Error.Error()
+		}
+		notify.TriggerWebhooks(cfg, "workflow_"+string(result.Status), map[string]interface{}{
+			"workflow":  result.WorkflowName,
+			"kind":      result.WorkflowKind,
+			"target":    execCtx.Target,
+			"status":    string(result.Status),
+			"duration":  result.EndTime.Sub(result.StartTime).Seconds(),
+			"run_uuid":  result.RunUUID,
+			"error":     errMsg,
+			"artifacts": result.Artifacts,
+			"message":   result.Message,
+		})
+	}()
 
 	// Record workflow start for metrics
 	metrics.RecordWorkflowStart()
@@ -2261,15 +2304,6 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	// Record workflow completion metrics
 	metrics.RecordWorkflowEnd(flow.Name, string(core.KindFlow), string(result.Status), result.EndTime.Sub(result.StartTime).Seconds())
 
-	// Send webhook notification on flow completion
-	notify.TriggerWebhooks(cfg, "workflow_"+string(result.Status), map[string]interface{}{
-		"workflow": flow.Name,
-		"kind":     string(core.KindFlow),
-		"target":   execCtx.Target,
-		"status":   string(result.Status),
-		"duration": result.EndTime.Sub(result.StartTime).Seconds(),
-	})
-
 	// Export state on flow completion
 	if stateFile, ok := execCtx.GetVariable("StateFile"); ok {
 		if sfStr, ok := stateFile.(string); ok && sfStr != "" {
@@ -2290,9 +2324,11 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 
 	// Register artifacts (reports from workflow + state files)
 	if !e.dryRun {
-		if err := RegisterArtifacts(flow, execCtx, e.dbRunID, execCtx.Logger); err != nil {
+		paths, err := RegisterArtifacts(flow, execCtx, e.dbRunID, execCtx.Logger)
+		if err != nil {
 			execCtx.Logger.Warn("Failed to register artifacts", zap.Error(err))
 		}
+		result.Artifacts = paths
 	}
 
 	// Flush write coordinator at workflow completion
@@ -3118,6 +3154,7 @@ func (e *Executor) executeDecisionCondition(ctx context.Context, dc *core.Decisi
 
 // handleModuleAction handles a module action (for flow execution)
 func (e *Executor) handleModuleAction(action core.Action, execCtx *core.ExecutionContext) {
+
 	// Check condition if present
 	if action.Condition != "" {
 		ok, err := e.functionRegistry.EvaluateCondition(action.Condition, execCtx.GetVariables())
@@ -3133,6 +3170,36 @@ func (e *Executor) handleModuleAction(action core.Action, execCtx *core.Executio
 
 	case core.ActionExport:
 		execCtx.SetExport(action.Name, action.Value)
+
+	case core.ActionNotify:
+		rendered, _ := e.templateEngine.Render(action.Notify, execCtx.GetVariables())
+		if rendered == "" {
+			rendered = action.Notify
+		}
+		payload := map[string]interface{}{
+			"message":  rendered,
+			"workflow": execCtx.WorkflowName,
+			"run_uuid": execCtx.RunUUID,
+			"target":   execCtx.Target,
+		}
+		if err := notify.SendStructuredEvent("action_notify", "executor", "notification", payload); err != nil {
+			execCtx.Logger.Warn("on_error notify: structured event send failed", zap.Error(err))
+		}
+
+	case core.ActionContinue:
+		if action.Message != "" {
+			rendered, _ := e.templateEngine.Render(action.Message, execCtx.GetVariables())
+			execCtx.Logger.Info("continue: " + rendered)
+		}
+		// Actual continue semantics are decided by shouldContinueOnError().
+
+	case core.ActionAbort:
+		if action.Message != "" {
+			rendered, _ := e.templateEngine.Render(action.Message, execCtx.GetVariables())
+			execCtx.Logger.Warn("abort: " + rendered)
+		}
+		// Mark abort in exports so the caller can honor it.
+		execCtx.SetExport("_abort", "true")
 	}
 }
 
@@ -3168,15 +3235,57 @@ func (e *Executor) processAction(ctx context.Context, action *core.Action, execC
 	case core.ActionExport:
 		execCtx.SetExport(action.Name, action.Value)
 
+	case core.ActionNotify:
+		rendered, _ := e.templateEngine.Render(action.Notify, execCtx.GetVariables())
+		if rendered == "" {
+			rendered = action.Notify
+		}
+		payload := map[string]interface{}{
+			"message":  rendered,
+			"workflow": execCtx.WorkflowName,
+			"run_uuid": execCtx.RunUUID,
+			"target":   execCtx.Target,
+		}
+		if err := notify.SendStructuredEvent("action_notify", "executor", "notification", payload); err != nil {
+			execCtx.Logger.Warn("on_error notify: structured event send failed", zap.Error(err))
+		}
+
+	case core.ActionContinue:
+		if action.Message != "" {
+			rendered, _ := e.templateEngine.Render(action.Message, execCtx.GetVariables())
+			execCtx.Logger.Info("continue: " + rendered)
+		}
+		// Actual continue semantics are decided by shouldContinueOnError().
+
+	case core.ActionAbort:
+		if action.Message != "" {
+			rendered, _ := e.templateEngine.Render(action.Message, execCtx.GetVariables())
+			execCtx.Logger.Warn("abort: " + rendered)
+		}
+		// Mark abort in exports so the caller can honor it.
+		execCtx.SetExport("_abort", "true")
+
 	case core.ActionRun:
-		// Execute embedded step
-		if action.Type == core.StepTypeBash && action.Command != "" {
-			step := &core.Step{
-				Name:    "action-run",
-				Type:    core.StepTypeBash,
-				Command: action.Command,
+		// Execute embedded step (both bash and function forms)
+		switch action.Type {
+		case core.StepTypeBash:
+			if action.Command != "" {
+				step := &core.Step{
+					Name:    "action-run",
+					Type:    core.StepTypeBash,
+					Command: action.Command,
+				}
+				_, _ = e.stepDispatcher.Dispatch(ctx, step, execCtx)
 			}
-			_, _ = e.stepDispatcher.Dispatch(ctx, step, execCtx)
+		case core.StepTypeFunction:
+			if len(action.Functions) > 0 {
+				step := &core.Step{
+					Name:      "action-run",
+					Type:      core.StepTypeFunction,
+					Functions: action.Functions,
+				}
+				_, _ = e.stepDispatcher.Dispatch(ctx, step, execCtx)
+			}
 		}
 	}
 }

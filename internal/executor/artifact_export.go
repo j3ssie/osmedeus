@@ -15,21 +15,20 @@ import (
 )
 
 // RegisterArtifacts registers workflow reports and state files as artifacts in the database
-// runID is the integer Run.ID used as a foreign key for artifacts
-func RegisterArtifacts(workflow *core.Workflow, execCtx *core.ExecutionContext, runID int64, logger *zap.Logger) error {
+// and returns the collected artifact file paths. runID is the integer Run.ID used as a
+// foreign key for artifacts. Path collection happens regardless of whether the database
+// is available, so callers can always populate WorkflowResult.Artifacts.
+func RegisterArtifacts(workflow *core.Workflow, execCtx *core.ExecutionContext, runID int64, logger *zap.Logger) ([]string, error) {
 	db := database.GetDB()
-	if db == nil {
-		return nil
-	}
-
 	ctx := context.Background()
 	templateEngine := template.NewEngine()
+	var paths []string
 
 	// Get output path
 	outputPath, ok := execCtx.GetVariable("Output")
 	if !ok {
 		logger.Debug("Output variable not set, skipping artifact registration")
-		return nil
+		return paths, nil
 	}
 	outputStr, _ := outputPath.(string)
 
@@ -43,6 +42,11 @@ func RegisterArtifacts(workflow *core.Workflow, execCtx *core.ExecutionContext, 
 				zap.String("path", report.Path),
 				zap.Error(err),
 			)
+			continue
+		}
+		paths = append(paths, renderedPath)
+
+		if db == nil {
 			continue
 		}
 
@@ -98,6 +102,11 @@ func RegisterArtifacts(workflow *core.Workflow, execCtx *core.ExecutionContext, 
 	// Register state files
 	for _, stateFile := range database.DefaultStateFiles {
 		statePath := filepath.Join(outputStr, stateFile.FileName)
+		paths = append(paths, statePath)
+
+		if db == nil {
+			continue
+		}
 
 		// Check if artifact already exists for this workspace + name
 		var existingArtifact database.Artifact
@@ -171,7 +180,7 @@ func RegisterArtifacts(workflow *core.Workflow, execCtx *core.ExecutionContext, 
 		}
 	}
 
-	return nil
+	return paths, nil
 }
 
 // mapReportTypeToContentType converts workflow report type to database content type
