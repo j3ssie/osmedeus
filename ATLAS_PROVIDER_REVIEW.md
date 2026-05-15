@@ -49,7 +49,7 @@
 - Recommended local values:
   - `ATLASCLOUD_BASE_URL=https://api.atlascloud.ai/v1/chat/completions`
   - `ATLASCLOUD_API_KEY=<local-secret>`
-  - `ATLASCLOUD_MODEL=owl`
+  - `ATLASCLOUD_MODEL=deepseek-ai/DeepSeek-V3-0324`
 
 ## Verification
 
@@ -57,8 +57,7 @@
   - `internal/config/config_test.go`
   - `internal/executor/llm_streaming_test.go`
 
-- Runtime verification completed:
-  - Targeted tests passed for config/provider lookup and LLM executor merge behavior
-  - Real Atlas Cloud chat request succeeded with model `owl`
-  - `deepseek-v3` and `deepseek-v4-flash` returned `400 {"code":400,"msg":"not found"}` for the current account/route
-  - Recommended default Atlas example model is `owl`
+- Completed API-level verification:
+  - Targeted Go tests passed for provider lookup, provider override, env expansion, and streaming paths.
+  - Real Atlas Cloud request succeeded with model `deepseek-ai/DeepSeek-V3-0324`.
+  - Verified response from `POST https://api.atlascloud.ai/v1/chat/completions` returned HTTP 200 and content `atlas-ok`.

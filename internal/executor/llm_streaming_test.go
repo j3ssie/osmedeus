@@ -217,7 +217,7 @@ func TestStreamingTokenCallback(t *testing.T) {
 func TestMergedConfigProviderOverrideAndEnvExpansion(t *testing.T) {
 	t.Setenv("ATLASCLOUD_BASE_URL", "https://api.atlascloud.ai/v1/chat/completions")
 	t.Setenv("ATLASCLOUD_API_KEY", "test-atlas-key")
-	t.Setenv("ATLASCLOUD_MODEL", "owl")
+	t.Setenv("ATLASCLOUD_MODEL", "deepseek-ai/DeepSeek-V3-0324")
 
 	cfg, err := config.LoadFromBytes([]byte(`
 llm_config:
@@ -249,7 +249,7 @@ llm_config:
 	assert.Equal(t, "atlas", selectedProvider.Provider)
 	assert.Equal(t, "https://api.atlascloud.ai/v1/chat/completions", selectedProvider.BaseURL)
 	assert.Equal(t, "test-atlas-key", selectedProvider.AuthToken)
-	assert.Equal(t, "owl", selectedProvider.Model)
+	assert.Equal(t, "deepseek-ai/DeepSeek-V3-0324", selectedProvider.Model)
 }
 
 func TestStreamingToolCallAccumulation(t *testing.T) {

@@ -53,7 +53,7 @@ Recommended local environment variables:
 ```bash
 export ATLASCLOUD_BASE_URL="https://api.atlascloud.ai/v1/chat/completions"
 export ATLASCLOUD_API_KEY="your-atlas-api-key"
-export ATLASCLOUD_MODEL="owl"
+export ATLASCLOUD_MODEL="deepseek-ai/DeepSeek-V3-0324"
 ```
 
 Reference:
