@@ -33,6 +33,33 @@ Built for both beginners and experts, it delivers powerful, composable automatio
 
 See [Documentation Page](https://docs.osmedeus.org/) for more details.
 
+## LLM Providers
+
+Osmedeus uses an OpenAI-compatible LLM interface, so MAAS providers such as Atlas Cloud can be integrated by configuring a provider entry with a compatible `base_url`, `auth_token`, and model.
+
+Atlas Cloud setup:
+
+```yaml
+llm_config:
+  llm_providers:
+    - provider: atlas
+      base_url: "${ATLASCLOUD_BASE_URL}"
+      auth_token: "${ATLASCLOUD_API_KEY}"
+      model: "${ATLASCLOUD_MODEL}"
+```
+
+Recommended local environment variables:
+
+```bash
+export ATLASCLOUD_BASE_URL="https://api.atlascloud.ai/v1/chat/completions"
+export ATLASCLOUD_API_KEY="your-atlas-api-key"
+export ATLASCLOUD_MODEL="owl"
+```
+
+Reference:
+- Atlas Cloud docs: [atlascloud.ai/docs](https://www.atlascloud.ai/docs)
+- Atlas Cloud project link: [atlascloud.ai](https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=osmedeus)
+
 ## Installation
 
 ```bash

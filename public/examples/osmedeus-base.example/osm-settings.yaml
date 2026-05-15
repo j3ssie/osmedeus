@@ -262,6 +262,11 @@ llm_config:
       base_url: "http://localhost:11434/v1/chat/completions"
       auth_token: ""
       model: "gpt-oss:120b-cloud"
+    # Atlas Cloud example (OpenAI-compatible)
+    # - provider: atlas
+    #   base_url: "${ATLASCLOUD_BASE_URL}"
+    #   auth_token: "${ATLASCLOUD_API_KEY}"
+    #   model: "${ATLASCLOUD_MODEL}"
     # Backup provider example (uncomment to enable rotation)
     # - provider: openai
     #   base_url: "https://api.openai.com/v1/chat/completions"

@@ -7,6 +7,35 @@ description: "OpenAI-compatible chat completions and embeddings"
 
 Direct API access to Large Language Model capabilities without requiring workflow execution.
 
+## Atlas Cloud
+
+Atlas Cloud works as a drop-in OpenAI-compatible provider in Osmedeus.
+
+Example `llm_config`:
+
+```yaml
+llm_config:
+  llm_providers:
+    - provider: atlas
+      base_url: "${ATLASCLOUD_BASE_URL}"
+      auth_token: "${ATLASCLOUD_API_KEY}"
+      model: "${ATLASCLOUD_MODEL}"
+```
+
+Recommended local environment variables:
+
+```bash
+export ATLASCLOUD_BASE_URL="https://api.atlascloud.ai/v1/chat/completions"
+export ATLASCLOUD_API_KEY="your-atlas-api-key"
+export ATLASCLOUD_MODEL="owl"
+```
+
+Osmedeus also supports step-level provider selection with `llm_config.provider: atlas`.
+
+Reference:
+- [Atlas Cloud Docs](https://www.atlascloud.ai/docs)
+- [Atlas Cloud](https://www.atlascloud.ai/?utm_source=github&utm_medium=link&utm_campaign=osmedeus)
+
 ## Chat Completion
 
 Send a chat completion request to the configured LLM provider.

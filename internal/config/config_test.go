@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestServerConfig_GetServerURL(t *testing.T) {
@@ -115,4 +116,19 @@ func TestServerConfig_GetEventReceiverURL(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestLLMConfigGetProviderByName(t *testing.T) {
+	llmCfg := LLMConfig{
+		LLMProviders: []LLMProvider{
+			{Provider: "openai", BaseURL: "https://api.openai.com/v1/chat/completions"},
+			{Provider: "atlas", BaseURL: "https://api.atlascloud.ai/v1/chat/completions"},
+		},
+	}
+
+	provider := llmCfg.GetProviderByName("ATLAS")
+	require.NotNil(t, provider)
+	assert.Equal(t, "atlas", provider.Provider)
+	assert.Equal(t, "https://api.atlascloud.ai/v1/chat/completions", provider.BaseURL)
+	assert.Nil(t, llmCfg.GetProviderByName("missing"))
 }

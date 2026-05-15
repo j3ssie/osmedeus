@@ -582,9 +582,13 @@ func (e *AgentExecutor) callLLM(
 	totalAttempts := maxRetries * providerCount
 
 	for attempt := 0; attempt < totalAttempts; attempt++ {
-		provider := e.config.LLM.GetCurrentProvider()
+		provider := e.getProviderForRequest(llmConfig)
 		if provider == nil {
-			lastErr = fmt.Errorf("no LLM providers available")
+			if llmConfig.Provider != "" {
+				lastErr = fmt.Errorf("LLM provider %q not configured", llmConfig.Provider)
+			} else {
+				lastErr = fmt.Errorf("no LLM providers available")
+			}
 			break
 		}
 
@@ -637,6 +641,13 @@ func (e *AgentExecutor) sendChatRequest(
 ) (*ChatCompletionResponse, error) {
 	llmExec := &LLMExecutor{config: e.config}
 	return llmExec.sendChatRequest(ctx, provider, request, llmConfig)
+}
+
+func (e *AgentExecutor) getProviderForRequest(llmConfig *MergedLLMConfig) *config.LLMProvider {
+	if llmConfig != nil && llmConfig.Provider != "" {
+		return e.config.LLM.GetProviderByName(llmConfig.Provider)
+	}
+	return e.config.LLM.GetCurrentProvider()
 }
 
 // executeToolCalls executes tool calls from the LLM response, with tracing hooks (Group 7)

@@ -65,6 +65,7 @@ func (e *LLMExecutor) CanHandle(stepType core.StepType) bool {
 
 // MergedLLMConfig holds the final merged configuration
 type MergedLLMConfig struct {
+	Provider       string
 	Model          string
 	MaxTokens      int
 	Temperature    float64
@@ -288,9 +289,13 @@ func (e *LLMExecutor) executeChatCompletion(
 	totalAttempts := maxRetries * providerCount
 
 	for attempt := 0; attempt < totalAttempts; attempt++ {
-		provider := e.config.LLM.GetCurrentProvider()
+		provider := e.getProviderForRequest(llmConfig)
 		if provider == nil {
-			lastErr = fmt.Errorf("no LLM providers available")
+			if llmConfig.Provider != "" {
+				lastErr = fmt.Errorf("LLM provider %q not configured", llmConfig.Provider)
+			} else {
+				lastErr = fmt.Errorf("no LLM providers available")
+			}
 			break
 		}
 
@@ -412,9 +417,13 @@ func (e *LLMExecutor) executeEmbedding(
 	totalAttempts := maxRetries * providerCount
 
 	for attempt := 0; attempt < totalAttempts; attempt++ {
-		provider := e.config.LLM.GetCurrentProvider()
+		provider := e.getProviderForRequest(llmConfig)
 		if provider == nil {
-			lastErr = fmt.Errorf("no LLM providers available")
+			if llmConfig.Provider != "" {
+				lastErr = fmt.Errorf("LLM provider %q not configured", llmConfig.Provider)
+			} else {
+				lastErr = fmt.Errorf("no LLM providers available")
+			}
 			break
 		}
 
@@ -1039,6 +1048,10 @@ func (e *LLMExecutor) getMergedConfig(step *core.Step) *MergedLLMConfig {
 	if step.LLMConfig != nil {
 		cfg := step.LLMConfig
 
+		if cfg.Provider != "" {
+			merged.Provider = cfg.Provider
+		}
+
 		if cfg.Model != "" {
 			merged.Model = cfg.Model
 		}
@@ -1101,6 +1114,13 @@ func (e *LLMExecutor) getMergedConfig(step *core.Step) *MergedLLMConfig {
 	}
 
 	return merged
+}
+
+func (e *LLMExecutor) getProviderForRequest(llmConfig *MergedLLMConfig) *config.LLMProvider {
+	if llmConfig != nil && llmConfig.Provider != "" {
+		return e.config.LLM.GetProviderByName(llmConfig.Provider)
+	}
+	return e.config.LLM.GetCurrentProvider()
 }
 
 // isProviderError checks if error indicates provider-level failure
