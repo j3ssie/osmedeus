@@ -105,8 +105,10 @@ func (vf *vmFunc) sshExec(call goja.FunctionCall) goja.Value {
 		Password: cfg.Password,
 	}
 
-	// Use a 5-minute timeout context
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	// Derive a 5-minute timeout from the active run's context so cancellation
+	// reaches the underlying ExecuteSSHCommand and kills the remote process.
+	parent := runContextFor(vmScanID(vf))
+	ctx, cancel := context.WithTimeout(parent, 5*time.Minute)
 	defer cancel()
 
 	// Get pooled SSH connection
@@ -119,24 +121,18 @@ func (vf *vmFunc) sshExec(call goja.FunctionCall) goja.Value {
 	}
 	defer pool.Release(poolKey)
 
-	// Create session and run command
-	session, err := client.NewSession()
-	if err != nil {
-		logger.Get().Warn(FnSSHExec+": failed to create SSH session",
-			zap.String("host", host), zap.Error(err))
-		return vf.vm.ToValue("")
-	}
-	defer func() { _ = session.Close() }()
-
-	output, err := session.CombinedOutput(command)
+	// ExecuteSSHCommand wraps the command with a pidfile + process-group
+	// kill watcher, so cancellation kills the remote process — not just the
+	// local session.
+	output, err := runner.ExecuteSSHCommand(ctx, client, command)
 	if err != nil {
 		logger.Get().Warn(FnSSHExec+": command execution failed",
 			zap.String("host", host), zap.String("command", command), zap.Error(err))
 		// Return partial output even on error (non-zero exit code)
-		return vf.vm.ToValue(strings.TrimSpace(string(output)))
+		return vf.vm.ToValue(strings.TrimSpace(output))
 	}
 
-	result := strings.TrimSpace(string(output))
+	result := strings.TrimSpace(output)
 	logger.Get().Debug(terminal.HiGreen(FnSSHExec)+" result",
 		zap.String("host", host), zap.Int("outputLength", len(result)))
 	return vf.vm.ToValue(result)
@@ -174,8 +170,10 @@ func (vf *vmFunc) sshRsync(call goja.FunctionCall) goja.Value {
 	// Build rsync destination: user@host:dest
 	rsyncDest := fmt.Sprintf("%s@%s:%s", cfg.User, host, dest)
 
-	// Use a 5-minute timeout context for rsync
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	// Derive timeout from the active run so cancellation kills local rsync;
+	// rsync's protocol detects the closed channel and the remote half exits.
+	parent := runContextFor(vmScanID(vf))
+	ctx, cancel := context.WithTimeout(parent, 5*time.Minute)
 	defer cancel()
 
 	// Build rsync command with SSH options
@@ -241,9 +239,11 @@ func resolveWorkerSSHParams(info *WorkerSSHInfo, ip string) (host, user, keyPath
 }
 
 // executeRsync runs rsync with SSH options. src and dest should already include
-// user@host: prefix where appropriate.
-func executeRsync(src, dest, keyPath string, port int) bool {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+// user@host: prefix where appropriate. runUUID may be "" for callers that have
+// no active run; in that case the timeout is anchored to context.Background.
+func executeRsync(runUUID, src, dest, keyPath string, port int) bool {
+	parent := runContextFor(runUUID)
+	ctx, cancel := context.WithTimeout(parent, 5*time.Minute)
 	defer cancel()
 
 	args := []string{"-avz", "-e"}
@@ -295,8 +295,10 @@ func (vf *vmFunc) syncFromMaster(call goja.FunctionCall) goja.Value {
 		return vf.vm.ToValue(true)
 	}
 
-	// Fallback: local cp -r (standalone mode)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	// Fallback: local cp -r (standalone mode). Derive timeout from the run
+	// so cancelling the run also stops the copy.
+	parent := runContextFor(vmScanID(vf))
+	ctx, cancel := context.WithTimeout(parent, 5*time.Minute)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "cp", "-r", src, dest)
@@ -350,7 +352,7 @@ func (vf *vmFunc) syncFromWorker(call goja.FunctionCall) goja.Value {
 
 	// rsync pull: user@host:src -> dest
 	rsyncSrc := fmt.Sprintf("%s@%s:%s", user, host, src)
-	ok := executeRsync(rsyncSrc, dest, keyPath, port)
+	ok := executeRsync(vmScanID(vf), rsyncSrc, dest, keyPath, port)
 
 	if ok {
 		logger.Get().Debug(terminal.HiGreen(FnSyncFromWorker)+" completed",
@@ -399,7 +401,7 @@ func (vf *vmFunc) rsyncToWorker(call goja.FunctionCall) goja.Value {
 
 	// rsync push: src -> user@host:dest
 	rsyncDest := fmt.Sprintf("%s@%s:%s", user, host, dest)
-	ok := executeRsync(src, rsyncDest, keyPath, port)
+	ok := executeRsync(vmScanID(vf), src, rsyncDest, keyPath, port)
 
 	if ok {
 		logger.Get().Debug(terminal.HiGreen(FnRsyncToWorker)+" completed",

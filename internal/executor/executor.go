@@ -957,7 +957,7 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 	// Register with run control plane if we have a database run UUID
 	// This enables API-based cancellation of the run
 	if e.dbRunUUID != "" {
-		activeRun := GetRunControlPlane().Register(e.dbRunUUID, cancel)
+		activeRun := GetRunControlPlane().RegisterWithContext(e.dbRunUUID, ctx, cancel)
 		defer GetRunControlPlane().Unregister(e.dbRunUUID)
 		e.logger.Debug("Registered run with control plane",
 			zap.String("run_uuid", e.dbRunUUID),
@@ -1762,7 +1762,7 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 	// Register with run control plane if we have a database run UUID
 	// This enables API-based cancellation of the run
 	if e.dbRunUUID != "" {
-		activeRun := GetRunControlPlane().Register(e.dbRunUUID, cancel)
+		activeRun := GetRunControlPlane().RegisterWithContext(e.dbRunUUID, ctx, cancel)
 		defer GetRunControlPlane().Unregister(e.dbRunUUID)
 		e.logger.Debug("Registered flow with control plane",
 			zap.String("run_uuid", e.dbRunUUID),

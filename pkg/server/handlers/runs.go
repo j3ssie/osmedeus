@@ -952,15 +952,17 @@ func CancelRun(cfg *config.Config) fiber.Handler {
 		}
 
 		var killedPIDs []int
+		var killedSessions []string
 		var killMethod string
 
 		// Try to cancel via control plane first (kills running processes tracked in memory)
 		controlPlane := executor.GetRunControlPlane()
-		controlPlanePIDs, controlPlaneErr := controlPlane.Cancel(run.RunUUID)
+		controlPlanePIDs, controlPlaneSessions, controlPlaneErr := controlPlane.Cancel(run.RunUUID)
 
-		if controlPlaneErr == nil && len(controlPlanePIDs) > 0 {
-			// Control plane had the run and killed processes
+		if controlPlaneErr == nil && (len(controlPlanePIDs) > 0 || len(controlPlaneSessions) > 0) {
+			// Control plane had the run and tore down its side effects
 			killedPIDs = controlPlanePIDs
+			killedSessions = controlPlaneSessions
 			killMethod = "control_plane"
 		} else if run.CurrentPID > 0 {
 			// Run not in control plane, but we have a PID from database - kill it directly
@@ -987,11 +989,18 @@ func CancelRun(cfg *config.Config) fiber.Handler {
 		}
 
 		// Add PID information to response
+		if len(killedPIDs) > 0 || len(killedSessions) > 0 {
+			response["kill_method"] = killMethod
+		}
 		if len(killedPIDs) > 0 {
 			response["killed_pids"] = killedPIDs
 			response["processes_terminated"] = len(killedPIDs)
-			response["kill_method"] = killMethod
-		} else {
+		}
+		if len(killedSessions) > 0 {
+			response["killed_tmux_sessions"] = killedSessions
+			response["tmux_sessions_terminated"] = len(killedSessions)
+		}
+		if len(killedPIDs) == 0 && len(killedSessions) == 0 {
 			response["note"] = "No active processes found to terminate; database status updated"
 		}
 

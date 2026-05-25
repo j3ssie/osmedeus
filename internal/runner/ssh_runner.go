@@ -8,12 +8,16 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
+
+// sshPidCounter generates unique remote pidfile names per command invocation.
+var sshPidCounter int64
 
 // SSHRunner executes commands on a remote machine via SSH
 type SSHRunner struct {
@@ -153,17 +157,13 @@ func (r *SSHRunner) getRemoteHome() (string, error) {
 	return strings.TrimSpace(output), nil
 }
 
-// runCommand executes a command on the remote machine with context support
+// runCommand executes a command on the remote machine with context support.
+// Adds workdir prefix and a `timeout(1)` wrapper when ctx has a deadline, then
+// delegates to ExecuteSSHCommand for the cancel-aware exec path.
 func (r *SSHRunner) runCommand(ctx context.Context, command string) (string, error) {
 	if r.client == nil {
 		return "", fmt.Errorf("SSH client not connected")
 	}
-
-	session, err := r.client.NewSession()
-	if err != nil {
-		return "", fmt.Errorf("failed to create SSH session: %w", err)
-	}
-	defer func() { _ = session.Close() }()
 
 	// Set working directory if specified
 	if r.config.WorkDir != "" {
@@ -181,8 +181,106 @@ func (r *SSHRunner) runCommand(ctx context.Context, command string) (string, err
 		}
 	}
 
-	output, err := session.CombinedOutput(command)
+	return ExecuteSSHCommand(ctx, r.client, command)
+}
+
+// ExecuteSSHCommand runs `command` on an existing *ssh.Client and returns
+// combined output. When ctx is cancelled mid-flight, a watcher goroutine
+// opens a second SSH session and kills the remote process group (TERM then
+// KILL). This is the shared cancel-aware code path used by SSHRunner and by
+// ad-hoc helpers (e.g. the ssh_exec workflow function).
+//
+// Why this matters: closing the local SSH session does NOT kill remote
+// processes — sshd just detaches them. The pidfile + process-group kill is
+// the only reliable way to terminate scanning still running on the remote.
+func ExecuteSSHCommand(ctx context.Context, client *ssh.Client, command string) (string, error) {
+	if client == nil {
+		return "", fmt.Errorf("SSH client not connected")
+	}
+
+	session, err := client.NewSession()
+	if err != nil {
+		return "", fmt.Errorf("failed to create SSH session: %w", err)
+	}
+	defer func() { _ = session.Close() }()
+
+	// Pin the pidfile to /tmp: callers (e.g. SSHRunner.Setup) may invoke this
+	// before any remote scratch directory exists; /tmp is always writable.
+	pidFile := fmt.Sprintf("/tmp/.osm-pid-%d-%d.tmp",
+		time.Now().UnixNano(), atomic.AddInt64(&sshPidCounter, 1))
+
+	// No `exec` here: keeping the wrapper sh alive means pipelines (which
+	// run in subshells) still inherit the wrapper's process group, so the
+	// negative-PID kill in killRemoteProcessGroup reaches every child.
+	wrapped := fmt.Sprintf("echo $$ > %s; %s", pidFile, command)
+
+	// Watch for cancellation and kill the remote process group out-of-band.
+	cancelWatchDone := make(chan struct{})
+	defer close(cancelWatchDone)
+	if ctx != nil && ctx.Done() != nil {
+		go func() {
+			select {
+			case <-ctx.Done():
+				killRemoteProcessGroup(client, pidFile)
+			case <-cancelWatchDone:
+			}
+		}()
+	}
+
+	output, err := session.CombinedOutput(wrapped)
+
+	// Best-effort pidfile cleanup. Uses a short-lived session so a stuck
+	// kill goroutine cannot indefinitely tie up cleanup.
+	removeRemoteFile(client, pidFile)
+
 	return string(output), err
+}
+
+// killRemoteProcessGroup opens a separate SSH session and sends SIGTERM then
+// SIGKILL to the process group whose leader PID is recorded in pidFile.
+// All operations are best-effort — failures are intentional silent because
+// this runs from a cancellation path that should not block the caller.
+func killRemoteProcessGroup(client *ssh.Client, pidFile string) {
+	if client == nil {
+		return
+	}
+	session, err := client.NewSession()
+	if err != nil {
+		return
+	}
+	defer func() { _ = session.Close() }()
+
+	// Race-tolerant kill: the wrapper shell may not have written the pidfile
+	// yet at the moment cancellation fires. Retry briefly, then escalate
+	// from TERM to KILL on the negative PID (process-group signal).
+	script := fmt.Sprintf(`for i in 1 2 3 4 5 6 7 8 9 10; do
+  if [ -s %s ]; then
+    P=$(cat %s 2>/dev/null)
+    if [ -n "$P" ]; then
+      kill -TERM -- -"$P" 2>/dev/null
+      sleep 1
+      kill -KILL -- -"$P" 2>/dev/null
+      kill -KILL -- "$P" 2>/dev/null
+      break
+    fi
+  fi
+  sleep 1
+done
+rm -f %s 2>/dev/null`, pidFile, pidFile, pidFile)
+	_ = session.Run(script)
+}
+
+// removeRemoteFile best-effort deletes a file on the remote host.
+func removeRemoteFile(client *ssh.Client, path string) {
+	if client == nil {
+		return
+	}
+	session, err := client.NewSession()
+	if err != nil {
+		return
+	}
+	defer func() { _ = session.Close() }()
+	_ = session.Run(fmt.Sprintf("rm -f %s", path))
 }
 
 // Execute runs a command on the remote machine
@@ -308,10 +406,11 @@ func (r *SSHRunner) GetRemoteDir() string {
 	return r.remoteDir
 }
 
-// SetPIDCallbacks sets callbacks for process lifecycle events.
-// For SSH runner, this is a no-op since processes run on remote machines
-// and cannot be killed from the local host. The context timeout mechanism
-// is used instead to stop commands on the remote host.
+// SetPIDCallbacks records process lifecycle callbacks. Remote PIDs are NOT
+// forwarded to the local run control plane (the control plane's PID kill is
+// a local syscall, so a remote PID could collide with an unrelated local
+// process). Remote cancellation is instead driven by ctx.Done() inside
+// runCommand, which kills the remote process group out-of-band via SSH.
 func (r *SSHRunner) SetPIDCallbacks(onStart, onEnd PIDCallback) {
 	r.onPIDStart = onStart
 	r.onPIDEnd = onEnd

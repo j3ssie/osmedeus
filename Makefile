@@ -1,4 +1,4 @@
-.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-e2e-cloud test-sudo test-cloud test-docker test-ssh test-distributed distributed-e2e-up distributed-e2e-run distributed-e2e-down test-canary-all test-canary-repo test-canary-domain test-canary-ip test-canary-general canary-up canary-down test-all test-summary test-ci clean install install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release run-github-action docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish
+.PHONY: build run test test-unit test-integration test-workflow-integration test-e2e test-e2e-verbose test-e2e-ssh test-e2e-api test-e2e-nix test-e2e-install test-e2e-cloud test-sudo test-cloud test-docker test-ssh test-distributed distributed-e2e-up distributed-e2e-run distributed-e2e-down test-canary-all test-canary-repo test-canary-domain test-canary-ip test-canary-general canary-up canary-down test-all test-summary test-ci clean install install-gotestsum lint fmt db-seed db-clean db-migrate run-server-debug swagger update-ui snapshot-release github-release run-github-action docker-toolbox docker-toolbox-run docker-toolbox-shell docker-publish docker-buildx-setup
 
 # Go parameters
 GOCMD=go
@@ -380,17 +380,48 @@ docker-toolbox-run:
 docker-toolbox-shell:
 	docker exec -it osmedeus-toolbox bash
 
-# Docker publish (build and push to Docker Hub)
+DOCKER_IMAGE ?= j3ssie/osmedeus:latest
+
+# Docker publish (build and push a multi-arch image to Docker Hub)
+#
+# The two arches are built SEQUENTIALLY, not via a single `--platform a,b`
+# build. Compiling the large generated SDKs (pulumi-azure-native, aws-sdk-go-v2)
+# is memory-heavy, and building both arches at once OOM-kills the compiler on a
+# typical (~16GB) Docker VM. Each arch is pushed by digest (no stray tags), then
+# combined into one multi-arch manifest with `imagetools create`.
+#
+# Requires QEMU/binfmt for the foreign-arch runtime steps (run
+# `make docker-buildx-setup` once if builds fail with exec-format errors).
 docker-publish:
-	@echo "$(PREFIX) Building Docker image j3ssie/osmedeus:latest..."
-	docker build -t j3ssie/osmedeus:latest \
-		-f build/docker/Dockerfile \
-		--build-arg BUILD_TIME=$(BUILD_TIME) \
-		--build-arg COMMIT_HASH=$(COMMIT_HASH) \
-		.
-	@echo "$(PREFIX) Pushing to Docker Hub..."
-	docker push j3ssie/osmedeus:latest
-	@echo "$(PREFIX) Published j3ssie/osmedeus:latest successfully!"
+	@echo "$(PREFIX) Ensuring buildx builder 'osmedeus-builder' exists..."
+	@docker buildx inspect osmedeus-builder >/dev/null 2>&1 || \
+		docker buildx create --name osmedeus-builder --driver docker-container --bootstrap
+	@repo=$$(echo "$(DOCKER_IMAGE)" | cut -d: -f1); \
+	for arch in amd64 arm64; do \
+		echo "$(PREFIX) Building linux/$$arch..."; \
+		docker buildx build \
+			--builder osmedeus-builder \
+			--platform linux/$$arch \
+			-f build/docker/Dockerfile \
+			--build-arg BUILD_TIME=$(BUILD_TIME) \
+			--build-arg COMMIT_HASH=$(COMMIT_HASH) \
+			--output "type=image,name=$$repo,push-by-digest=true,name-canonical=true,push=true" \
+			--metadata-file /tmp/osmedeus-$$arch.json \
+			. || exit 1; \
+	done; \
+	amd64_digest=$$(jq -r '."containerimage.digest"' /tmp/osmedeus-amd64.json); \
+	arm64_digest=$$(jq -r '."containerimage.digest"' /tmp/osmedeus-arm64.json); \
+	echo "$(PREFIX) Combining into multi-arch manifest $(DOCKER_IMAGE)..."; \
+	docker buildx imagetools create -t $(DOCKER_IMAGE) \
+		$$repo@$$amd64_digest $$repo@$$arm64_digest || exit 1; \
+	echo "$(PREFIX) Published $(DOCKER_IMAGE) (linux/amd64, linux/arm64) successfully!"; \
+	docker buildx imagetools inspect $(DOCKER_IMAGE) | grep -iE "platform|name:"
+
+# One-time setup: register QEMU emulators for cross-arch buildx builds
+docker-buildx-setup:
+	@echo "$(PREFIX) Registering QEMU emulators for cross-platform builds..."
+	docker run --privileged --rm tonistiigi/binfmt --install all
+	@echo "$(PREFIX) QEMU emulators registered."
 
 # Release commands (GoReleaser)
 snapshot-release:
@@ -502,7 +533,8 @@ help:
 	@echo "\033[33m  DOCKER\033[0m"
 	@echo "    make docker-build     Build Docker image"
 	@echo "    make docker-run       Run Docker container"
-	@echo "    make docker-publish   Build and push j3ssie/osmedeus:latest to Docker Hub"
+	@echo "    make docker-publish   Build & push multi-arch (amd64+arm64) j3ssie/osmedeus:latest (sequential)"
+	@echo "    make docker-buildx-setup  Register QEMU for cross-arch builds (one-time)"
 	@echo "    make docker-toolbox       Build toolbox image (all tools pre-installed)"
 	@echo "    make docker-toolbox-run   Start toolbox container"
 	@echo "    make docker-toolbox-shell Enter toolbox container shell"

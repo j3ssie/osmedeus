@@ -75,7 +75,7 @@ func TestRunControlPlaneCancel(t *testing.T) {
 	controlPlane.Register(runUUID, cancel)
 
 	// Cancel should call the cancel function
-	_, err := controlPlane.Cancel(runUUID)
+	_, _, err := controlPlane.Cancel(runUUID)
 	if err != nil {
 		t.Errorf("Cancel returned error: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestRunControlPlaneCancel(t *testing.T) {
 	}
 
 	// Cancel non-existent run
-	_, err = controlPlane.Cancel("non-existent")
+	_, _, err = controlPlane.Cancel("non-existent")
 	if err == nil {
 		t.Error("Cancel should return error for non-existent run")
 	}
@@ -132,6 +132,90 @@ func TestRunControlPlanePIDTracking(t *testing.T) {
 	})
 	if count != 1 {
 		t.Errorf("Expected 1 PID after removal, got %d", count)
+	}
+}
+
+func TestRunControlPlaneTmuxSessionTracking(t *testing.T) {
+	controlPlane := &RunControlPlane{
+		runs: make(map[string]*ActiveRun),
+	}
+
+	_, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	runUUID := "test-run-tmux"
+	controlPlane.Register(runUUID, cancel)
+
+	controlPlane.AddTmuxSession(runUUID, "bosm-aaa11111")
+	controlPlane.AddTmuxSession(runUUID, "bosm-bbb22222")
+	controlPlane.AddTmuxSession(runUUID, "") // ignored
+	controlPlane.AddTmuxSession("", "bosm-ccc33333") // ignored (no run)
+
+	activeRun := controlPlane.Get(runUUID)
+	count := 0
+	activeRun.TmuxSessions.Range(func(_, _ any) bool {
+		count++
+		return true
+	})
+	if count != 2 {
+		t.Errorf("Expected 2 tracked tmux sessions, got %d", count)
+	}
+
+	controlPlane.RemoveTmuxSession(runUUID, "bosm-aaa11111")
+	count = 0
+	activeRun.TmuxSessions.Range(func(_, _ any) bool {
+		count++
+		return true
+	})
+	if count != 1 {
+		t.Errorf("Expected 1 tracked tmux session after removal, got %d", count)
+	}
+}
+
+func TestActiveRunKillAllTmuxSessions(t *testing.T) {
+	activeRun := &ActiveRun{
+		RunUUID:      "test-kill-tmux",
+		TmuxSessions: &sync.Map{},
+		PIDs:         &sync.Map{},
+		StartedAt:    time.Now(),
+	}
+
+	// Track sessions that do not exist; KillAllTmuxSessions should still
+	// report them and clear the map (best-effort cleanup).
+	activeRun.AddTmuxSession("bosm-doesnotexist-1")
+	activeRun.AddTmuxSession("bosm-doesnotexist-2")
+
+	killed := activeRun.KillAllTmuxSessions()
+	if len(killed) != 2 {
+		t.Errorf("Expected 2 reported sessions, got %d", len(killed))
+	}
+
+	count := 0
+	activeRun.TmuxSessions.Range(func(_, _ any) bool {
+		count++
+		return true
+	})
+	if count != 0 {
+		t.Errorf("Expected 0 tracked sessions after kill, got %d", count)
+	}
+}
+
+func TestRunControlPlaneCancelKillsTmuxSessions(t *testing.T) {
+	controlPlane := &RunControlPlane{
+		runs: make(map[string]*ActiveRun),
+	}
+
+	_, cancel := context.WithCancel(context.Background())
+	runUUID := "test-cancel-tmux"
+	controlPlane.Register(runUUID, cancel)
+	controlPlane.AddTmuxSession(runUUID, "bosm-zzz99999")
+
+	_, sessions, err := controlPlane.Cancel(runUUID)
+	if err != nil {
+		t.Fatalf("Cancel returned error: %v", err)
+	}
+	if len(sessions) != 1 || sessions[0] != "bosm-zzz99999" {
+		t.Errorf("Expected one tmux session in cancel result, got %v", sessions)
 	}
 }
 

@@ -3,6 +3,7 @@ package functions
 import (
 	"os/exec"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -91,6 +92,62 @@ func TestTmuxRunAndKill(t *testing.T) {
 
 	// Verify session is gone
 	assert.False(t, tmuxSessionExists(tmuxBin, sessionName))
+}
+
+// TestTmuxRunInvokesHooksWithRunUUID verifies that tmux_run triggers the
+// registered TmuxHooks with the current run's UUID, which is how run
+// cancellation finds and tears down detached sessions.
+func TestTmuxRunInvokesHooksWithRunUUID(t *testing.T) {
+	if !tmuxAvailable() {
+		t.Skip("tmux not installed")
+	}
+
+	type event struct {
+		runUUID string
+		session string
+	}
+	var createdMu sync.Mutex
+	var created []event
+	var destroyed []event
+
+	RegisterTmuxHooks(&TmuxHooks{
+		OnSessionCreated: func(runUUID, sessionName string) {
+			createdMu.Lock()
+			created = append(created, event{runUUID, sessionName})
+			createdMu.Unlock()
+		},
+		OnSessionDestroyed: func(runUUID, sessionName string) {
+			createdMu.Lock()
+			destroyed = append(destroyed, event{runUUID, sessionName})
+			createdMu.Unlock()
+		},
+	})
+	defer UnregisterTmuxHooks()
+
+	rt := NewGojaRuntime()
+	ctx := map[string]interface{}{"RunUUID": "hook-test-run"}
+
+	result, err := rt.Execute(`tmux_run("sleep 60")`, ctx)
+	assert.NoError(t, err)
+	sessionName, _ := result.(string)
+	assert.True(t, strings.HasPrefix(sessionName, "bosm-"))
+
+	createdMu.Lock()
+	if assert.Len(t, created, 1) {
+		assert.Equal(t, "hook-test-run", created[0].runUUID)
+		assert.Equal(t, sessionName, created[0].session)
+	}
+	createdMu.Unlock()
+
+	_, err = rt.Execute(`tmux_kill("`+sessionName+`")`, ctx)
+	assert.NoError(t, err)
+
+	createdMu.Lock()
+	if assert.Len(t, destroyed, 1) {
+		assert.Equal(t, "hook-test-run", destroyed[0].runUUID)
+		assert.Equal(t, sessionName, destroyed[0].session)
+	}
+	createdMu.Unlock()
 }
 
 func TestTmuxRunWithCustomName(t *testing.T) {

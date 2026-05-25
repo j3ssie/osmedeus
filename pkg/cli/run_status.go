@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/j3ssie/osmedeus/v5/internal/core"
 	"github.com/j3ssie/osmedeus/v5/internal/database"
@@ -111,14 +112,16 @@ func runRunCancel(cmd *cobra.Command, args []string) error {
 	}
 
 	var killedPIDs []int
+	var killedSessions []string
 	var killMethod string
 
 	// Try to cancel via control plane first
 	controlPlane := executor.GetRunControlPlane()
-	controlPlanePIDs, controlPlaneErr := controlPlane.Cancel(run.RunUUID)
+	controlPlanePIDs, controlPlaneSessions, controlPlaneErr := controlPlane.Cancel(run.RunUUID)
 
-	if controlPlaneErr == nil && len(controlPlanePIDs) > 0 {
+	if controlPlaneErr == nil && (len(controlPlanePIDs) > 0 || len(controlPlaneSessions) > 0) {
 		killedPIDs = controlPlanePIDs
+		killedSessions = controlPlaneSessions
 		killMethod = "control_plane"
 	} else if run.CurrentPID > 0 {
 		if core.KillProcessAndChildren(run.CurrentPID) {
@@ -134,10 +137,11 @@ func runRunCancel(cmd *cobra.Command, args []string) error {
 
 	if globalJSON {
 		response := map[string]interface{}{
-			"message":     "Run cancelled successfully",
-			"run_uuid":    run.RunUUID,
-			"killed_pids": killedPIDs,
-			"kill_method": killMethod,
+			"message":              "Run cancelled successfully",
+			"run_uuid":             run.RunUUID,
+			"killed_pids":          killedPIDs,
+			"killed_tmux_sessions": killedSessions,
+			"kill_method":          killMethod,
 		}
 		jsonBytes, err := json.Marshal(response)
 		if err != nil {
@@ -151,7 +155,11 @@ func runRunCancel(cmd *cobra.Command, args []string) error {
 	printer.Success("Run %s cancelled", run.RunUUID)
 	if len(killedPIDs) > 0 {
 		fmt.Printf("  Terminated %d process(es) via %s\n", len(killedPIDs), killMethod)
-	} else {
+	}
+	if len(killedSessions) > 0 {
+		fmt.Printf("  Killed %d tmux session(s): %s\n", len(killedSessions), strings.Join(killedSessions, ", "))
+	}
+	if len(killedPIDs) == 0 && len(killedSessions) == 0 {
 		fmt.Println("  No active processes found to terminate")
 	}
 

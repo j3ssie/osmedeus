@@ -107,6 +107,13 @@ func (vf *vmFunc) tmuxRun(call goja.FunctionCall) goja.Value {
 	fmt.Printf("%s %s %s\n", terminal.Green("[tmux]"), "created session:", terminal.HiGreen(sessionName))
 	logger.Get().Debug(terminal.HiGreen(FnTmuxRun)+" session created",
 		zap.String("session", sessionName))
+
+	runUUID := ""
+	if ctx := vf.getContext(); ctx != nil {
+		runUUID = ctx.scanID
+	}
+	notifyTmuxSessionCreated(runUUID, sessionName)
+
 	return vf.vm.ToValue(sessionName)
 }
 
@@ -262,6 +269,13 @@ func (vf *vmFunc) tmuxKill(call goja.FunctionCall) goja.Value {
 	fmt.Printf("%s %s %s\n", terminal.Green("[tmux]"), "killed session:", terminal.HiGreen(sessionName))
 	logger.Get().Debug(terminal.HiGreen(FnTmuxKill)+" session killed",
 		zap.String("session", sessionName))
+
+	runUUID := ""
+	if ctx := vf.getContext(); ctx != nil {
+		runUUID = ctx.scanID
+	}
+	notifyTmuxSessionDestroyed(runUUID, sessionName)
+
 	return vf.vm.ToValue(true)
 }
 

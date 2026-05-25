@@ -2,7 +2,9 @@ package runner
 
 import (
 	"context"
+	"fmt"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -128,6 +130,90 @@ func TestSSHRunner_Execute_Integration(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, result.ExitCode)
 	assert.Contains(t, result.Output, "hello from ssh")
+}
+
+// TestSSHRunner_Cancel_KillsRemoteProcessGroup verifies that cancelling the
+// context passed to Execute kills the remote process group, not just the
+// local SSH client. Previously, cancellation would close the local session
+// but leave the remote command running (the bug reported in #stop-scan).
+func TestSSHRunner_Cancel_KillsRemoteProcessGroup(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	conn, err := net.DialTimeout("tcp", "localhost:2222", 500*time.Millisecond)
+	if err != nil {
+		t.Skip("skipping integration test: SSH server not available on localhost:2222")
+	}
+	_ = conn.Close()
+
+	ctx := context.Background()
+	config := &core.RunnerConfig{
+		Host:     "localhost",
+		Port:     2222,
+		User:     "testuser",
+		Password: "testpass",
+	}
+	r, err := NewSSHRunner(config, "")
+	require.NoError(t, err)
+	require.NoError(t, r.Setup(ctx))
+	defer func() { _ = r.Cleanup(ctx) }()
+
+	// Unique marker so we can identify *this* test's process across runs.
+	markerID := fmt.Sprintf("osm-sshcancel-%d", time.Now().UnixNano())
+	markerFile := fmt.Sprintf("/tmp/%s.heartbeat", markerID)
+	defer func() {
+		// Best-effort cleanup of any stragglers between test runs.
+		_, _ = r.Execute(ctx, fmt.Sprintf("rm -f %s; pkill -KILL -f %s 2>/dev/null || true", markerFile, markerID))
+	}()
+
+	// Long-running command that touches a heartbeat file each second so we
+	// can detect whether it kept running after cancel. The marker is part of
+	// the command line so pgrep can find it.
+	heartbeat := fmt.Sprintf(`while :; do date +%%s > %s; sleep 1; done # %s`, markerFile, markerID)
+
+	runCtx, cancel := context.WithCancel(ctx)
+	done := make(chan error, 1)
+	go func() {
+		_, execErr := r.Execute(runCtx, heartbeat)
+		done <- execErr
+	}()
+
+	// Wait until the heartbeat file appears, proving the remote command is alive.
+	deadline := time.Now().Add(8 * time.Second)
+	for time.Now().Before(deadline) {
+		res, _ := r.Execute(ctx, fmt.Sprintf("test -s %s && echo ok", markerFile))
+		if strings.Contains(res.Output, "ok") {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	res, _ := r.Execute(ctx, fmt.Sprintf("test -s %s && echo ok", markerFile))
+	require.Contains(t, res.Output, "ok", "heartbeat file never appeared; remote command may not have started")
+
+	// Cancel and wait for Execute to return.
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(15 * time.Second):
+		t.Fatal("Execute did not return within 15s after cancel")
+	}
+
+	// Give the remote kill a moment to propagate.
+	time.Sleep(2 * time.Second)
+
+	// 1) No process matching our unique marker should remain.
+	psRes, _ := r.Execute(ctx, fmt.Sprintf(
+		"ps -ef 2>/dev/null | grep %s | grep -v grep | wc -l", markerID))
+	count := strings.TrimSpace(psRes.Output)
+	assert.Equal(t, "0", count,
+		"expected no remote processes matching %s after cancel, found: %s", markerID, psRes.Output)
+
+	// 2) Heartbeat file mtime must stop advancing after cancel.
+	stat1, _ := r.Execute(ctx, fmt.Sprintf("stat -c %%Y %s 2>/dev/null", markerFile))
+	time.Sleep(3 * time.Second)
+	stat2, _ := r.Execute(ctx, fmt.Sprintf("stat -c %%Y %s 2>/dev/null", markerFile))
+	assert.Equal(t, strings.TrimSpace(stat1.Output), strings.TrimSpace(stat2.Output),
+		"heartbeat file mtime advanced after cancel; remote process is still running")
 }
 
 func TestSSHRunner_Type(t *testing.T) {
