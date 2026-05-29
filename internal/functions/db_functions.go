@@ -3160,6 +3160,286 @@ func mapJSONToVuln(data map[string]interface{}, workspace, rawLine string) datab
 	return vuln
 }
 
+// mapVigoliumFindingToVuln maps a vigolium "finding" record to the Vulnerability model.
+func mapVigoliumFindingToVuln(data map[string]interface{}, workspace, rawLine string) database.Vulnerability {
+	vuln := database.Vulnerability{
+		Workspace:   workspace,
+		AssetType:   "http",
+		RawVulnJSON: rawLine,
+	}
+
+	if v, ok := data["finding_hash"].(string); ok {
+		vuln.FindingHash = v
+	}
+	if v, ok := data["module_id"].(string); ok {
+		vuln.VulnInfo = v
+	}
+	if v, ok := data["module_name"].(string); ok {
+		vuln.VulnTitle = v
+	}
+	if v, ok := data["description"].(string); ok {
+		vuln.VulnDesc = v
+	}
+	if v, ok := data["severity"].(string); ok {
+		vuln.Severity = v
+	}
+	if v, ok := data["confidence"].(string); ok {
+		vuln.Confidence = v
+	}
+
+	// Asset value: prefer url, fall back to hostname
+	if v, ok := data["url"].(string); ok && v != "" {
+		vuln.AssetValue = v
+	} else if v, ok := data["hostname"].(string); ok {
+		vuln.AssetValue = v
+	}
+
+	if v, ok := data["request"].(string); ok {
+		vuln.DetailHTTPRequest = v
+	}
+	if v, ok := data["response"].(string); ok {
+		vuln.DetailHTTPResponse = v
+	}
+
+	// Tags from module_type, finding_source, status
+	for _, key := range []string{"module_type", "finding_source", "status"} {
+		if v, ok := data[key].(string); ok && v != "" {
+			vuln.Tags = append(vuln.Tags, v)
+		}
+	}
+
+	// POC from matched_at + extracted_results
+	var pocParts []string
+	for _, key := range []string{"matched_at", "extracted_results"} {
+		if arr, ok := data[key].([]interface{}); ok {
+			for _, m := range arr {
+				if s, ok := m.(string); ok && s != "" {
+					pocParts = append(pocParts, s)
+				}
+			}
+		}
+	}
+	vuln.VulnPOC = strings.Join(pocParts, "\n")
+
+	if vuln.Confidence == "" {
+		vuln.Confidence = "firm"
+	}
+
+	return vuln
+}
+
+// dbImportVigolium imports a vigolium JSONL file, routing each record by its envelope type.
+// http_record -> assets table, finding -> vulnerabilities table; scan, oast_interaction and
+// any other types are skipped. Findings are deduplicated on (workspace, finding_hash), falling
+// back to (workspace, vuln_info, asset_value) when finding_hash is absent.
+// Usage: db_import_vigolium(workspace, file_path, [source]) -> nested stats map
+//
+//	{ assets: {new, updated, unchanged, errors}, vulns: {...}, skipped, total }
+func (vf *vmFunc) dbImportVigolium(call goja.FunctionCall) goja.Value {
+	logger.Get().Debug("Calling " + terminal.HiGreen("dbImportVigolium"))
+
+	if len(call.Arguments) < 2 {
+		return vf.errorValue("db_import_vigolium requires at least 2 arguments: workspace, file_path")
+	}
+
+	workspace := call.Argument(0).String()
+	filePath := call.Argument(1).String()
+
+	source := "vigolium"
+	if len(call.Arguments) >= 3 {
+		if s := call.Argument(2).String(); s != "" && s != "undefined" {
+			source = s
+		}
+	}
+
+	if workspace == "" || workspace == "undefined" {
+		return vf.errorValue("workspace cannot be empty")
+	}
+	if filePath == "" || filePath == "undefined" {
+		return vf.errorValue("file_path cannot be empty")
+	}
+
+	db := database.GetDB()
+	if db == nil {
+		return vf.errorValue("database not connected")
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return vf.errorValue(fmt.Sprintf("failed to open file: %v", err))
+	}
+	defer func() { _ = file.Close() }()
+
+	ctx := context.Background()
+	var assetStats, vulnStats database.ImportStats
+	skipped := 0
+	total := 0
+
+	scanner := bufio.NewScanner(file)
+	buf := make([]byte, 0, 10*1024*1024) // 10MB buffer
+	scanner.Buffer(buf, 10*1024*1024)
+
+	now := time.Now()
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		total++
+
+		// Peek at the envelope: {"type":"...","data":{...}}
+		var envelope struct {
+			Type string          `json:"type"`
+			Data json.RawMessage `json:"data"`
+		}
+		if err := json.Unmarshal([]byte(line), &envelope); err != nil || envelope.Type == "" || len(envelope.Data) == 0 {
+			skipped++
+			continue
+		}
+
+		switch envelope.Type {
+		case "http_record":
+			// Reuse the shared envelope unwrap + asset mapping path
+			extracted, skip := unwrapEnvelopeJSON([]byte(line))
+			if skip || extracted == nil {
+				assetStats.Errors++
+				continue
+			}
+
+			var asset database.Asset
+			if err := unmarshalAssetJSON(extracted, &asset); err != nil {
+				logger.Get().Debug("vigolium: skipping invalid http_record", zap.Error(err))
+				assetStats.Errors++
+				continue
+			}
+
+			asset.Workspace = workspace
+			asset.LastSeenAt = now
+			asset.RawJsonData = line
+			if asset.AssetValue == "" && asset.URL != "" {
+				asset.AssetValue = asset.URL
+			}
+			if asset.Source == "" {
+				asset.Source = source
+			}
+
+			var existing database.Asset
+			selectErr := db.NewSelect().Model(&existing).
+				Where("workspace = ?", workspace).
+				Where("asset_value = ?", asset.AssetValue).
+				Where("url = ?", asset.URL).
+				Scan(ctx)
+
+			if selectErr != nil {
+				asset.CreatedAt = now
+				asset.UpdatedAt = now
+				if _, insertErr := db.NewInsert().Model(&asset).Exec(ctx); insertErr != nil {
+					logger.Get().Debug("vigolium: failed to insert asset", zap.Error(insertErr))
+					assetStats.Errors++
+					continue
+				}
+				assetStats.New++
+			} else {
+				mergeAssetFields(&existing, &asset)
+				asset.UpdatedAt = now
+				if _, updateErr := db.NewUpdate().Model(&asset).WherePK().Exec(ctx); updateErr != nil {
+					logger.Get().Debug("vigolium: failed to update asset", zap.Error(updateErr))
+					assetStats.Errors++
+					continue
+				}
+				assetStats.Updated++
+			}
+
+		case "finding":
+			var fields map[string]interface{}
+			if err := json.Unmarshal(envelope.Data, &fields); err != nil {
+				logger.Get().Debug("vigolium: skipping invalid finding", zap.Error(err))
+				vulnStats.Errors++
+				continue
+			}
+
+			vuln := mapVigoliumFindingToVuln(fields, workspace, line)
+			vuln.LastSeenAt = now
+
+			var existing database.Vulnerability
+			query := db.NewSelect().Model(&existing).Where("workspace = ?", workspace)
+			if vuln.FindingHash != "" {
+				query = query.Where("finding_hash = ?", vuln.FindingHash)
+			} else {
+				query = query.Where("vuln_info = ?", vuln.VulnInfo).
+					Where("asset_value = ?", vuln.AssetValue)
+			}
+			selectErr := query.Scan(ctx)
+
+			if selectErr != nil {
+				vuln.CreatedAt = now
+				vuln.UpdatedAt = now
+				if _, insertErr := db.NewInsert().Model(&vuln).Exec(ctx); insertErr != nil {
+					logger.Get().Debug("vigolium: failed to insert vuln", zap.Error(insertErr))
+					vulnStats.Errors++
+					continue
+				}
+				vulnStats.New++
+			} else {
+				mergeVulnFields(&existing, &vuln)
+				vuln.UpdatedAt = now
+				if hasVulnChanged(&existing, &vuln) {
+					if _, updateErr := db.NewUpdate().Model(&vuln).WherePK().Exec(ctx); updateErr != nil {
+						logger.Get().Debug("vigolium: failed to update vuln", zap.Error(updateErr))
+						vulnStats.Errors++
+						continue
+					}
+					vulnStats.Updated++
+				} else {
+					if _, updateErr := db.NewUpdate().Model((*database.Vulnerability)(nil)).
+						Set("last_seen_at = ?", now).
+						Where("id = ?", existing.ID).
+						Exec(ctx); updateErr != nil {
+						vulnStats.Errors++
+						continue
+					}
+					vulnStats.Unchanged++
+				}
+			}
+
+		default:
+			// scan, oast_interaction, and any unknown types
+			skipped++
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return vf.errorValue(fmt.Sprintf("error reading file: %v", err))
+	}
+
+	logger.Get().Info("db_import_vigolium: import completed",
+		zap.String("workspace", workspace),
+		zap.Int("assets_new", assetStats.New),
+		zap.Int("assets_updated", assetStats.Updated),
+		zap.Int("vulns_new", vulnStats.New),
+		zap.Int("vulns_updated", vulnStats.Updated),
+		zap.Int("skipped", skipped),
+		zap.Int("total", total))
+
+	return vf.vm.ToValue(map[string]interface{}{
+		"assets": map[string]interface{}{
+			"new":       assetStats.New,
+			"updated":   assetStats.Updated,
+			"unchanged": assetStats.Unchanged,
+			"errors":    assetStats.Errors,
+		},
+		"vulns": map[string]interface{}{
+			"new":       vulnStats.New,
+			"updated":   vulnStats.Updated,
+			"unchanged": vulnStats.Unchanged,
+			"errors":    vulnStats.Errors,
+		},
+		"skipped": skipped,
+		"total":   total,
+	})
+}
+
 // getAssetDiffInternal is a helper that retrieves asset diff data
 func (vf *vmFunc) getAssetDiffInternal(workspace string) (*database.AssetDiff, error) {
 	db := database.GetDB()

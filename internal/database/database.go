@@ -302,6 +302,11 @@ func Migrate(ctx context.Context) error {
 		return err
 	}
 
+	// Add finding_hash column to vulnerabilities table if it doesn't exist
+	if err := addVulnFindingHashColumn(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -537,6 +542,21 @@ func addRunsWebhookColumns(ctx context.Context) error {
 	return nil
 }
 
+// addVulnFindingHashColumn adds the finding_hash column to vulnerabilities table for existing databases
+func addVulnFindingHashColumn(ctx context.Context) error {
+	_, err := db.ExecContext(ctx, "ALTER TABLE vulnerabilities ADD COLUMN finding_hash TEXT DEFAULT ''")
+	if err != nil {
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "duplicate column") ||
+			strings.Contains(errStr, "already exists") ||
+			strings.Contains(errStr, "sqlstate 42701") {
+			return nil
+		}
+		return fmt.Errorf("failed to add finding_hash column: %w", err)
+	}
+	return nil
+}
+
 // createAssetIndexes creates indexes for the assets table
 func createAssetIndexes(ctx context.Context) error {
 	indexes := []string{
@@ -599,6 +619,7 @@ func createVulnerabilityIndexes(ctx context.Context) error {
 		"CREATE INDEX IF NOT EXISTS idx_vulnerabilities_severity ON vulnerabilities(severity)",
 		"CREATE INDEX IF NOT EXISTS idx_vulnerabilities_confidence ON vulnerabilities(confidence)",
 		"CREATE INDEX IF NOT EXISTS idx_vulnerabilities_asset_value ON vulnerabilities(asset_value)",
+		"CREATE INDEX IF NOT EXISTS idx_vulnerabilities_finding_hash ON vulnerabilities(finding_hash)",
 	}
 
 	for _, idx := range indexes {

@@ -356,6 +356,7 @@ const (
 	// DNS and custom asset import functions
 	FnDBImportDNSAsset    = "db_import_dns_asset"    // db_import_dns_asset(workspace, file_path) -> int
 	FnDBImportCustomAsset = "db_import_custom_asset" // db_import_custom_asset(workspace, file_path, [asset_type], [source]) -> map
+	FnDBImportVigolium    = "db_import_vigolium"     // db_import_vigolium(workspace, file_path, [source]) -> map (nested stats)
 
 	// SARIF import functions
 	FnDBImportSARIF          = "db_import_sarif"           // db_import_sarif(workspace, file_path) -> map (stats)
@@ -630,6 +631,7 @@ func AllFunctions() []string {
 		// DNS and custom asset import functions
 		FnDBImportDNSAsset,
 		FnDBImportCustomAsset,
+		FnDBImportVigolium,
 
 		// SARIF import functions
 		FnDBImportSARIF,
@@ -999,6 +1001,7 @@ func FunctionRegistry() map[string][]FunctionInfo {
 			{FnDBImportVulnFromFile, "db_import_vuln_from_file(workspace, file_path)", "Import vulnerabilities from JSONL file (nuclei format)", "int", "db_import_vuln_from_file('{{TargetSpace}}', '{{Output}}/nuclei.jsonl')"},
 			{FnDBImportDNSAsset, "db_import_dns_asset(workspace, file_path)", "Import DNS records from zone-style file (domain TYPE value per line), groups by domain", "int", "db_import_dns_asset('{{TargetSpace}}', '{{Output}}/dns-records.txt')"},
 			{FnDBImportCustomAsset, "db_import_custom_asset(workspace, file_path, [asset_type], [source])", "Import assets from JSONL (httpx, vigolium, custom); auto-unwraps envelope formats", "map", "db_import_custom_asset('{{TargetSpace}}', '{{Output}}/custom-assets.jsonl', 'subdomain', 'recon')"},
+			{FnDBImportVigolium, "db_import_vigolium(workspace, file_path, [source])", "Import vigolium JSONL routing by record type: http_record->assets, finding->vulns (dedup on finding_hash)", "map", "db_import_vigolium('{{TargetSpace}}', '{{Output}}/vigolium-output.jsonl')"},
 			{FnDBImportSARIF, "db_import_sarif(workspace, file_path)", "Import vulnerabilities from SARIF file (Semgrep, Trivy, etc.)", "map", "db_import_sarif('{{TargetSpace}}', '{{Output}}/semgrep.sarif')"},
 			{FnDBImportPortAssets, "db_import_port_assets(workspace, file_path, [source])", "Import port scan data from JSONL (nmap_to_jsonl output) with asset_type=ip and source=portscan", "map", "db_import_port_assets('{{TargetSpace}}', '{{Output}}/nmap-scan.jsonl')"},
 			{FnDBAssetDiff, "db_asset_diff(workspace)", "Get asset diff as JSONL string", "string", "db_asset_diff('{{TargetSpace}}')"},

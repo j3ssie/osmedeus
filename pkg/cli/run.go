@@ -667,6 +667,14 @@ func runRun(cmd *cobra.Command, args []string) error {
 
 		// Handle repeat
 		if !repeatRun {
+			// Best-effort mode: with --silent and --empty-target the run targets a
+			// throwaway placeholder, so step/command failures are expected and
+			// should not fail the process. Surface the cause at debug level only.
+			if lastErr != nil && silent && emptyTarget {
+				log.Debug("Suppressing run error for --silent --empty-target mode",
+					zap.Error(lastErr))
+				return nil
+			}
 			return lastErr
 		}
 
@@ -1712,15 +1720,47 @@ func fetchWorkflowFromURL(urlStr string) (*core.Workflow, error) {
 	return nil, fmt.Errorf("failed to fetch workflow: %w", err)
 }
 
-// fetchURLContent fetches content from a URL with optional headers
+// fetchURLContent fetches content from a URL with optional headers, retrying
+// transient failures (network/timeout errors and 408/429/5xx responses) with
+// exponential backoff. Non-retryable responses (e.g. 401/403/404) return
+// immediately so the GitHub auth fallback in fetchWorkflowFromURL can kick in.
 func fetchURLContent(urlStr string, headers map[string]string) ([]byte, error) {
+	const maxAttempts = 4
+	log := logger.Get()
+	backoff := 500 * time.Millisecond
+
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		content, retryable, err := fetchURLContentOnce(urlStr, headers)
+		if err == nil {
+			return content, nil
+		}
+		lastErr = err
+		if !retryable || attempt == maxAttempts {
+			break
+		}
+		log.Debug("Retrying workflow URL fetch after transient error",
+			zap.String("url", urlStr),
+			zap.Int("attempt", attempt),
+			zap.Duration("backoff", backoff),
+			zap.Error(err),
+		)
+		time.Sleep(backoff)
+		backoff *= 2
+	}
+	return nil, lastErr
+}
+
+// fetchURLContentOnce performs a single HTTP GET. The returned bool reports
+// whether the error (if any) is transient and worth retrying.
+func fetchURLContentOnce(urlStr string, headers map[string]string) ([]byte, bool, error) {
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
 
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, false, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("User-Agent", core.DefaultUA)
@@ -1730,20 +1770,38 @@ func fetchURLContent(urlStr string, headers map[string]string) ([]byte, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		// Network/DNS/TLS/timeout errors are transient.
+		return nil, true, fmt.Errorf("request failed: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
+		return nil, retryableHTTPStatus(resp.StatusCode), fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
 	}
 
 	content, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
+		// A truncated/interrupted body read is transient.
+		return nil, true, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	return content, nil
+	return content, false, nil
+}
+
+// retryableHTTPStatus reports whether an HTTP status code is a transient
+// failure worth retrying (request timeout, rate limiting, or server errors).
+func retryableHTTPStatus(code int) bool {
+	switch code {
+	case http.StatusRequestTimeout, // 408
+		http.StatusTooManyRequests,     // 429
+		http.StatusInternalServerError, // 500
+		http.StatusBadGateway,          // 502
+		http.StatusServiceUnavailable,  // 503
+		http.StatusGatewayTimeout:      // 504
+		return true
+	default:
+		return false
+	}
 }
 
 // isGitHubURLForFetch checks if the URL is a GitHub URL

@@ -295,6 +295,7 @@ func (r *GojaRuntime) registerFunctionsOnVM(vm *goja.Runtime) {
 	// DNS and custom asset import functions
 	_ = vm.Set(FnDBImportDNSAsset, vf.dbImportDNSAsset)
 	_ = vm.Set(FnDBImportCustomAsset, vf.dbImportCustomAsset)
+	_ = vm.Set(FnDBImportVigolium, vf.dbImportVigolium)
 
 	// SARIF import functions
 	_ = vm.Set(FnDBImportSARIF, vf.dbImportSARIF)

@@ -349,6 +349,7 @@ type Vulnerability struct {
 	VulnPOC            string   `bun:"vuln_poc" json:"vuln_poc"`
 	Severity           string   `bun:"severity" json:"severity"`
 	Confidence         string   `bun:"confidence" json:"confidence"` // Certain, Firm, Tentative, Manual Review Required
+	FindingHash        string   `bun:"finding_hash" json:"finding_hash,omitempty"`
 	AssetType          string   `bun:"asset_type" json:"asset_type"`
 	AssetValue         string   `bun:"asset_value" json:"asset_value"`
 	Tags               []string `bun:"tags,type:json" json:"tags,omitempty"`

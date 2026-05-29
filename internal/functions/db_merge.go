@@ -108,6 +108,7 @@ func mergeVulnFields(existing, incoming *database.Vulnerability) {
 	incoming.VulnPOC = mergeString(existing.VulnPOC, incoming.VulnPOC)
 	incoming.Severity = mergeString(existing.Severity, incoming.Severity)
 	incoming.Confidence = mergeString(existing.Confidence, incoming.Confidence)
+	incoming.FindingHash = mergeString(existing.FindingHash, incoming.FindingHash)
 	incoming.AssetType = mergeString(existing.AssetType, incoming.AssetType)
 	incoming.AssetValue = mergeString(existing.AssetValue, incoming.AssetValue)
 	incoming.Tags = mergeStringSlice(existing.Tags, incoming.Tags)
