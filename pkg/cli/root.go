@@ -261,6 +261,12 @@ func Execute() {
 		if !errors.As(err, &ttmErr) {
 			fmt.Fprintf(os.Stderr, "%s %s\n", terminal.Red("Error:"), err)
 		}
+		// Hint users toward the migration command when the DB schema is stale
+		// (e.g. an existing database missing a column added in a newer version).
+		if strings.Contains(err.Error(), "failed to run migrations") {
+			fmt.Fprintf(os.Stderr, "%s your database schema may be out of date. Run %s to migrate it (rebuild/reinstall the binary first if you just updated).\n",
+				terminal.Yellow("Hint:"), terminal.Cyan("osmedeus db migrate"))
+		}
 		os.Exit(1)
 	}
 }

@@ -202,45 +202,10 @@ func Migrate(ctx context.Context) error {
 		}
 	}
 
-	// Create indexes for Run table
-	if err := createRunIndexes(ctx); err != nil {
-		return err
-	}
-
-	// Create indexes for Asset table
-	if err := createAssetIndexes(ctx); err != nil {
-		return err
-	}
-
-	// Create indexes for EventLog table
-	if err := createEventLogIndexes(ctx); err != nil {
-		return err
-	}
-
-	// Create indexes for WorkflowMeta table
-	if err := createWorkflowMetaIndexes(ctx); err != nil {
-		return err
-	}
-
-	// Create indexes for Vulnerability table
-	if err := createVulnerabilityIndexes(ctx); err != nil {
-		return err
-	}
-
-	// Create indexes for Workspace table
-	if err := createWorkspaceIndexes(ctx); err != nil {
-		return err
-	}
-
-	// Create indexes for AssetDiffSnapshot table
-	if err := createAssetDiffIndexes(ctx); err != nil {
-		return err
-	}
-
-	// Create indexes for VulnDiffSnapshot table
-	if err := createVulnDiffIndexes(ctx); err != nil {
-		return err
-	}
+	// Add columns to existing tables BEFORE creating indexes. CREATE TABLE
+	// IF NOT EXISTS is a no-op for existing databases, so their tables retain
+	// the old schema. Some indexes below reference migrated columns (e.g.
+	// finding_hash), so the columns must exist first or index creation fails.
 
 	// Add current_pid column to runs table if it doesn't exist (for existing databases)
 	if err := addRunsPIDColumn(ctx); err != nil {
@@ -304,6 +269,46 @@ func Migrate(ctx context.Context) error {
 
 	// Add finding_hash column to vulnerabilities table if it doesn't exist
 	if err := addVulnFindingHashColumn(ctx); err != nil {
+		return err
+	}
+
+	// Create indexes for Run table
+	if err := createRunIndexes(ctx); err != nil {
+		return err
+	}
+
+	// Create indexes for Asset table
+	if err := createAssetIndexes(ctx); err != nil {
+		return err
+	}
+
+	// Create indexes for EventLog table
+	if err := createEventLogIndexes(ctx); err != nil {
+		return err
+	}
+
+	// Create indexes for WorkflowMeta table
+	if err := createWorkflowMetaIndexes(ctx); err != nil {
+		return err
+	}
+
+	// Create indexes for Vulnerability table
+	if err := createVulnerabilityIndexes(ctx); err != nil {
+		return err
+	}
+
+	// Create indexes for Workspace table
+	if err := createWorkspaceIndexes(ctx); err != nil {
+		return err
+	}
+
+	// Create indexes for AssetDiffSnapshot table
+	if err := createAssetDiffIndexes(ctx); err != nil {
+		return err
+	}
+
+	// Create indexes for VulnDiffSnapshot table
+	if err := createVulnDiffIndexes(ctx); err != nil {
 		return err
 	}
 
