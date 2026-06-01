@@ -3,6 +3,8 @@ package functions
 import (
 	"context"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/j3ssie/osmedeus/v5/internal/database"
@@ -117,6 +119,52 @@ func TestDbImportVigolium_Idempotent(t *testing.T) {
 		Where("workspace = ?", "test-workspace").Count(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, 146, vulnCount, "no duplicate vulns after re-import")
+}
+
+// A single finding record can embed a multi-MB response body, producing a JSONL
+// line longer than bufio.Scanner's max token size. The reader-based import must
+// stream these without "token too long".
+func TestDbImportVigolium_OversizedLine(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	registry := NewRegistry()
+
+	// 12MB response body — comfortably past the old 10MB scanner buffer.
+	bigBody := strings.Repeat("A", 12*1024*1024)
+	line := `{"type":"finding","data":{` +
+		`"finding_hash":"oversized-line-hash",` +
+		`"module_id":"big-response",` +
+		`"module_name":"Big Response",` +
+		`"severity":"high",` +
+		`"url":"https://example.com/big",` +
+		`"response":"` + bigBody + `"}}`
+
+	testFile := filepath.Join(t.TempDir(), "vigolium-oversized.jsonl")
+	require.NoError(t, os.WriteFile(testFile, []byte(line+"\n"), 0o644))
+
+	result, err := registry.Execute(
+		`db_import_vigolium("test-workspace", "`+testFile+`")`,
+		map[string]interface{}{},
+	)
+	require.NoError(t, err)
+
+	stats, ok := result.(map[string]interface{})
+	require.True(t, ok, "result should be a nested stats map, got: %v", result)
+
+	vulnStats := stats["vulns"].(map[string]interface{})
+	assert.Equal(t, 1, vulnStats["new"], "oversized finding should import")
+	assert.Equal(t, 0, vulnStats["errors"])
+	assert.Equal(t, 1, stats["total"])
+
+	ctx := context.Background()
+	db := database.GetDB()
+	var vuln database.Vulnerability
+	err = db.NewSelect().Model(&vuln).
+		Where("finding_hash = ?", "oversized-line-hash").Scan(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "big-response", vuln.VulnInfo)
+	assert.Len(t, vuln.DetailHTTPResponse, 12*1024*1024)
 }
 
 func TestDbImportVigolium_EmptyArgs(t *testing.T) {

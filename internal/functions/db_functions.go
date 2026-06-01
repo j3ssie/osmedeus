@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/j3ssie/osmedeus/v5/internal/json"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -3275,17 +3276,11 @@ func (vf *vmFunc) dbImportVigolium(call goja.FunctionCall) goja.Value {
 	skipped := 0
 	total := 0
 
-	scanner := bufio.NewScanner(file)
-	buf := make([]byte, 0, 10*1024*1024) // 10MB buffer
-	scanner.Buffer(buf, 10*1024*1024)
-
 	now := time.Now()
 
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
+	// processLine handles a single JSONL record. Extracted into a closure so the
+	// streaming reader below can stay a tight loop; early-outs use return.
+	processLine := func(line string) {
 		total++
 
 		// Peek at the envelope: {"type":"...","data":{...}}
@@ -3295,7 +3290,7 @@ func (vf *vmFunc) dbImportVigolium(call goja.FunctionCall) goja.Value {
 		}
 		if err := json.Unmarshal([]byte(line), &envelope); err != nil || envelope.Type == "" || len(envelope.Data) == 0 {
 			skipped++
-			continue
+			return
 		}
 
 		switch envelope.Type {
@@ -3304,14 +3299,14 @@ func (vf *vmFunc) dbImportVigolium(call goja.FunctionCall) goja.Value {
 			extracted, skip := unwrapEnvelopeJSON([]byte(line))
 			if skip || extracted == nil {
 				assetStats.Errors++
-				continue
+				return
 			}
 
 			var asset database.Asset
 			if err := unmarshalAssetJSON(extracted, &asset); err != nil {
 				logger.Get().Debug("vigolium: skipping invalid http_record", zap.Error(err))
 				assetStats.Errors++
-				continue
+				return
 			}
 
 			asset.Workspace = workspace
@@ -3337,7 +3332,7 @@ func (vf *vmFunc) dbImportVigolium(call goja.FunctionCall) goja.Value {
 				if _, insertErr := db.NewInsert().Model(&asset).Exec(ctx); insertErr != nil {
 					logger.Get().Debug("vigolium: failed to insert asset", zap.Error(insertErr))
 					assetStats.Errors++
-					continue
+					return
 				}
 				assetStats.New++
 			} else {
@@ -3346,7 +3341,7 @@ func (vf *vmFunc) dbImportVigolium(call goja.FunctionCall) goja.Value {
 				if _, updateErr := db.NewUpdate().Model(&asset).WherePK().Exec(ctx); updateErr != nil {
 					logger.Get().Debug("vigolium: failed to update asset", zap.Error(updateErr))
 					assetStats.Errors++
-					continue
+					return
 				}
 				assetStats.Updated++
 			}
@@ -3356,7 +3351,7 @@ func (vf *vmFunc) dbImportVigolium(call goja.FunctionCall) goja.Value {
 			if err := json.Unmarshal(envelope.Data, &fields); err != nil {
 				logger.Get().Debug("vigolium: skipping invalid finding", zap.Error(err))
 				vulnStats.Errors++
-				continue
+				return
 			}
 
 			vuln := mapVigoliumFindingToVuln(fields, workspace, line)
@@ -3378,7 +3373,7 @@ func (vf *vmFunc) dbImportVigolium(call goja.FunctionCall) goja.Value {
 				if _, insertErr := db.NewInsert().Model(&vuln).Exec(ctx); insertErr != nil {
 					logger.Get().Debug("vigolium: failed to insert vuln", zap.Error(insertErr))
 					vulnStats.Errors++
-					continue
+					return
 				}
 				vulnStats.New++
 			} else {
@@ -3388,7 +3383,7 @@ func (vf *vmFunc) dbImportVigolium(call goja.FunctionCall) goja.Value {
 					if _, updateErr := db.NewUpdate().Model(&vuln).WherePK().Exec(ctx); updateErr != nil {
 						logger.Get().Debug("vigolium: failed to update vuln", zap.Error(updateErr))
 						vulnStats.Errors++
-						continue
+						return
 					}
 					vulnStats.Updated++
 				} else {
@@ -3397,7 +3392,7 @@ func (vf *vmFunc) dbImportVigolium(call goja.FunctionCall) goja.Value {
 						Where("id = ?", existing.ID).
 						Exec(ctx); updateErr != nil {
 						vulnStats.Errors++
-						continue
+						return
 					}
 					vulnStats.Unchanged++
 				}
@@ -3409,8 +3404,21 @@ func (vf *vmFunc) dbImportVigolium(call goja.FunctionCall) goja.Value {
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		return vf.errorValue(fmt.Sprintf("error reading file: %v", err))
+	// Stream the file with a bufio.Reader rather than bufio.Scanner: vigolium
+	// http_record lines can embed multi-MB response bodies, which overflow the
+	// Scanner's max-token limit ("token too long"). ReadString grows as needed.
+	reader := bufio.NewReaderSize(file, 1024*1024) // 1MB read buffer
+	for {
+		lineStr, readErr := reader.ReadString('\n')
+		if line := strings.TrimSpace(lineStr); line != "" {
+			processLine(line)
+		}
+		if readErr != nil {
+			if readErr != io.EOF {
+				return vf.errorValue(fmt.Sprintf("error reading file: %v", readErr))
+			}
+			break
+		}
 	}
 
 	logger.Get().Info("db_import_vigolium: import completed",
