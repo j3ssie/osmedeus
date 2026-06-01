@@ -214,6 +214,44 @@ func TestStreamingTokenCallback(t *testing.T) {
 	assert.Equal(t, []string{"token1", "token2", "token3", "\n"}, tokens)
 }
 
+func TestMergedConfigProviderOverrideAndEnvExpansion(t *testing.T) {
+	t.Setenv("ATLASCLOUD_BASE_URL", "https://api.atlascloud.ai/v1/chat/completions")
+	t.Setenv("ATLASCLOUD_API_KEY", "test-atlas-key")
+	t.Setenv("ATLASCLOUD_MODEL", "deepseek-ai/DeepSeek-V3-0324")
+
+	cfg, err := config.LoadFromBytes([]byte(`
+llm_config:
+  llm_providers:
+    - provider: atlas
+      base_url: "${ATLASCLOUD_BASE_URL}"
+      auth_token: "${ATLASCLOUD_API_KEY}"
+      model: "${ATLASCLOUD_MODEL}"
+    - provider: openai
+      base_url: "https://api.openai.com/v1/chat/completions"
+      auth_token: "sk-test"
+      model: "gpt-4o-mini"
+`))
+	require.NoError(t, err)
+
+	executor := &LLMExecutor{config: cfg}
+	step := &core.Step{
+		Type: core.StepTypeLLM,
+		LLMConfig: &core.LLMStepConfig{
+			Provider: "atlas",
+		},
+	}
+
+	merged := executor.getMergedConfig(step)
+	assert.Equal(t, "atlas", merged.Provider)
+
+	selectedProvider := executor.getProviderForRequest(merged)
+	require.NotNil(t, selectedProvider)
+	assert.Equal(t, "atlas", selectedProvider.Provider)
+	assert.Equal(t, "https://api.atlascloud.ai/v1/chat/completions", selectedProvider.BaseURL)
+	assert.Equal(t, "test-atlas-key", selectedProvider.AuthToken)
+	assert.Equal(t, "deepseek-ai/DeepSeek-V3-0324", selectedProvider.Model)
+}
+
 func TestStreamingToolCallAccumulation(t *testing.T) {
 	// Simulate streaming tool calls: name arrives in one chunk, arguments split across chunks
 	server := newStreamingMockServer(func(w http.ResponseWriter, r *http.Request) {

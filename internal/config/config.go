@@ -319,6 +319,11 @@ llm_config:
       base_url: "http://localhost:11434/v1/chat/completions"
       auth_token: ""
       model: "gpt-oss:120b-cloud"
+    # Atlas Cloud example (OpenAI-compatible)
+    # - provider: atlas
+    #   base_url: "${ATLASCLOUD_BASE_URL}"
+    #   auth_token: "${ATLASCLOUD_API_KEY}"
+    #   model: "${ATLASCLOUD_MODEL}"
     # Backup provider example (uncomment to enable rotation)
     # - provider: openai
     #   base_url: "https://api.openai.com/v1/chat/completions"
@@ -1055,6 +1060,20 @@ func (l *LLMConfig) GetCurrentProvider() *LLMProvider {
 	return &l.LLMProviders[l.currentIndex]
 }
 
+// GetProviderByName returns the provider with the given name (case-insensitive).
+// Returns nil if no matching provider is configured.
+func (l *LLMConfig) GetProviderByName(name string) *LLMProvider {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	for i := range l.LLMProviders {
+		if strings.EqualFold(l.LLMProviders[i].Provider, name) {
+			return &l.LLMProviders[i]
+		}
+	}
+	return nil
+}
+
 // RotateProvider advances to the next LLM provider (thread-safe, wraps around)
 // Returns the new current provider, or nil if no providers are configured
 func (l *LLMConfig) RotateProvider() *LLMProvider {
@@ -1085,6 +1104,18 @@ func (l *LLMConfig) GetCurrentProviderIndex() int {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.currentIndex
+}
+
+// ResolveEnvVars expands environment variables inside LLM provider fields.
+func (l *LLMConfig) ResolveEnvVars() {
+	for i := range l.LLMProviders {
+		l.LLMProviders[i].Provider = os.ExpandEnv(l.LLMProviders[i].Provider)
+		l.LLMProviders[i].BaseURL = os.ExpandEnv(l.LLMProviders[i].BaseURL)
+		l.LLMProviders[i].AuthToken = os.ExpandEnv(l.LLMProviders[i].AuthToken)
+		l.LLMProviders[i].Model = os.ExpandEnv(l.LLMProviders[i].Model)
+	}
+	l.SystemPrompt = os.ExpandEnv(l.SystemPrompt)
+	l.CustomHeaders = os.ExpandEnv(l.CustomHeaders)
 }
 
 // ResolveServerCredentials adds credentials from environment variables

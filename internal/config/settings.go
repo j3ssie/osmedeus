@@ -10,6 +10,7 @@ func ParseConfig(data []byte) (*Config, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
+	cfg.LLM.ResolveEnvVars()
 	return &cfg, nil
 }
 
@@ -19,6 +20,7 @@ func ParseConfigStrict(data []byte) (*Config, error) {
 	if err := yaml.UnmarshalWithOptions(data, &cfg, yaml.Strict()); err != nil {
 		return nil, err
 	}
+	cfg.LLM.ResolveEnvVars()
 	return &cfg, nil
 }
 
