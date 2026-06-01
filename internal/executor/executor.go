@@ -696,11 +696,13 @@ func getStepCommand(step *core.Step) string {
 				parts = append(parts, fmt.Sprintf("step: %s (%s)", step.Step.Name, step.Step.Type))
 			}
 		}
-		threads, _ := step.Threads.Int()
-		if threads <= 0 {
-			threads = 1
+		// Emit the raw threads value so template variables (e.g. {{deparosParallel}})
+		// are resolved later by templateEngine.Render; Int() can't parse an unrendered template.
+		threadsStr := strings.TrimSpace(string(step.Threads))
+		if threadsStr == "" {
+			threadsStr = "1"
 		}
-		parts = append(parts, fmt.Sprintf("threads: %d", threads))
+		parts = append(parts, fmt.Sprintf("threads: %s", threadsStr))
 		return strings.Join(parts, " | ")
 	}
 
@@ -735,11 +737,13 @@ func getStepCommandColored(step *core.Step) string {
 			firstLineParts = append(firstLineParts, fmt.Sprintf("pre_process: %s", terminal.Gray(step.VariablePreProcess)))
 		}
 
-		threads, _ := step.Threads.Int()
-		if threads <= 0 {
-			threads = 1
+		// Emit the raw threads value so template variables (e.g. {{deparosParallel}})
+		// are resolved later by templateEngine.Render; Int() can't parse an unrendered template.
+		threadsStr := strings.TrimSpace(string(step.Threads))
+		if threadsStr == "" {
+			threadsStr = "1"
 		}
-		firstLineParts = append(firstLineParts, fmt.Sprintf("threads: %s", terminal.Yellow(fmt.Sprintf("%d", threads))))
+		firstLineParts = append(firstLineParts, fmt.Sprintf("threads: %s", terminal.Yellow(threadsStr)))
 		lines = append(lines, strings.Join(firstLineParts, terminal.Gray(" | ")))
 
 		// Second line: step: name (type)

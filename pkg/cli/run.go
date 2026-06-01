@@ -1562,7 +1562,8 @@ func printResultSummary(result *core.WorkflowResult) {
 		printMarkdownTable([]string{terminal.Bold("Status"), terminal.Bold("Step"), terminal.Bold("Duration")}, rows, "clc")
 	}
 
-	if len(result.Artifacts) > 0 {
+	// Only list artifacts (state/log files) in verbose mode (-v); they clutter normal output.
+	if verbose && len(result.Artifacts) > 0 {
 		fmt.Println()
 		fmt.Println(terminal.ListSymbol() + " " + terminal.Bold("Artifacts:"))
 		for _, artifact := range result.Artifacts {
