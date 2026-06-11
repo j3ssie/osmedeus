@@ -1040,6 +1040,12 @@ const docTemplate = `{
                         "description": "Registry mode: direct-fetch or nix-build",
                         "name": "registry_mode",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Custom registry URL or local file path. In direct-fetch mode: source for the full binary list. In nix-build mode: metadata overlay (desc, tags, version).",
+                        "name": "registry_url",
+                        "in": "query"
                     }
                 ],
                 "responses": {

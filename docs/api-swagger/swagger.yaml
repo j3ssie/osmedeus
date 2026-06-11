@@ -1184,6 +1184,12 @@ paths:
         in: query
         name: registry_mode
         type: string
+      - description: 'Custom registry URL or local file path. In direct-fetch mode:
+          source for the full binary list. In nix-build mode: metadata overlay (desc,
+          tags, version).'
+        in: query
+        name: registry_url
+        type: string
       produces:
       - application/json
       responses:
