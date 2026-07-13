@@ -33,6 +33,12 @@ Built for both beginners and experts, it delivers powerful, composable automatio
 
 See [Documentation Page](https://docs.osmedeus.org/) for more details.
 
+## ☁️ Sponsor — Bloome
+
+[![Bloome — humans and AI agents, working as one team](assets/bloome-home.png)](https://bloome.im/login?ref=j3ssie)
+
+Automating recon with Osmedeus? [Bloome](https://bloome.im/login?ref=j3ssie) brings that same team-of-agents mindset to the rest of your workflow: multiple AI agents (Claude, ChatGPT, DeepSeek and more) in one shared chat that split the work, hand off tasks, cross-check each other, and refine the output until it's right — triage findings, draft reports, and run scheduled checks together. Zero setup, in the cloud, on web and mobile, and shareable with your team. 👉 [Try Bloome](https://bloome.im/login?ref=j3ssie)
+
 ## Installation
 
 ```bash
