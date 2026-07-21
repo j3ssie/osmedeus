@@ -32,6 +32,7 @@ RUN apt-get update && \
             git \
             curl \
             wget \
+            jq \
             ca-certificates \
             python3 \
             python3-pip \

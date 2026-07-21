@@ -35,9 +35,9 @@ See [Documentation Page](https://docs.osmedeus.org/) for more details.
 
 ## ☁️ Sponsor — Bloome
 
-[![Bloome — humans and AI agents, working as one team](assets/bloome-home.png)](https://bloome.im/login?ref=j3ssie)
+[![Bloome — humans and AI agents, working as one team](assets/bloome-home.png)](https://bloome.im/app?ref=j3ssie&utm_medium=github&utm_source=j3ssie-osmedeus-ivor-202607)
 
-Automating recon with Osmedeus? [Bloome](https://bloome.im/login?ref=j3ssie) brings that same team-of-agents mindset to the rest of your workflow: multiple AI agents (Claude, ChatGPT, DeepSeek and more) in one shared chat that split the work, hand off tasks, cross-check each other, and refine the output until it's right — triage findings, draft reports, and run scheduled checks together. Zero setup, in the cloud, on web and mobile, and shareable with your team. 👉 [Try Bloome](https://bloome.im/login?ref=j3ssie)
+Automating recon with Osmedeus? [Bloome](https://bloome.im/app?ref=j3ssie&utm_medium=github&utm_source=j3ssie-osmedeus-ivor-202607) brings that same team-of-agents mindset to the rest of your workflow: multiple AI agents (Claude, ChatGPT, DeepSeek and more) in one shared chat that split the work, hand off tasks, cross-check each other, and refine the output until it's right — triage findings, draft reports, and run scheduled checks together. Zero setup, in the cloud, on web and mobile, and shareable with your team. 👉 [Try Bloome](https://bloome.im/app?ref=j3ssie&utm_medium=github&utm_source=j3ssie-osmedeus-ivor-202607)
 
 ## Installation
 

@@ -8,8 +8,8 @@ FROM nixos/nix:latest
 RUN mkdir -p /root/.config/nix && \
     echo "experimental-features = nix-command flakes" > /root/.config/nix/nix.conf
 
-# Install Go using Nix (for building the binary)
-RUN nix profile add nixpkgs#go
+# Install Go and jq using Nix (Go for building the binary)
+RUN nix profile add nixpkgs#go nixpkgs#jq
 
 # Create app directory
 WORKDIR /app

@@ -10,6 +10,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     curl \
+    jq \
     xz-utils \
     ca-certificates \
     sudo \

@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     sudo \
     curl \
     wget \
+    jq \
     vim \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir /var/run/sshd
