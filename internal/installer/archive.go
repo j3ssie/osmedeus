@@ -133,6 +133,14 @@ func extractTarEntry(header *tar.Header, tr *tar.Reader, dest string) error {
 		_ = outFile.Close()
 
 	case tar.TypeSymlink:
+		// Validate the symlink target stays within dest to prevent symlink traversal
+		linkTarget := header.Linkname
+		if !filepath.IsAbs(linkTarget) {
+			linkTarget = filepath.Join(filepath.Dir(path), linkTarget)
+		}
+		if !strings.HasPrefix(filepath.Clean(linkTarget)+string(os.PathSeparator), filepath.Clean(dest)+string(os.PathSeparator)) {
+			return fmt.Errorf("symlink target %q would escape destination directory", header.Linkname)
+		}
 		// Create parent directory
 		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			return err
