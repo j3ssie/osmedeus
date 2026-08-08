@@ -36,9 +36,27 @@ func GetRegistryInfo(cfg *config.Config) fiber.Handler {
 	}
 }
 
+// isTrustedRegistry reports whether the registry source is one the server controls.
+// An empty registry_url means the embedded registry; anything else was supplied by the
+// caller and its entries must never be executed (see IsBinaryInstalledNoExec).
+func isTrustedRegistry(registryPathOrURL string) bool {
+	return registryPathOrURL == ""
+}
+
+// registryInstalledStatus reports install status for one entry, shelling out to its
+// valide-command only when the registry came from a trusted source.
+func registryInstalledStatus(name string, entry *installer.BinaryEntry, trusted bool) bool {
+	if trusted {
+		return installer.IsBinaryInstalled(name, entry)
+	}
+	return installer.IsBinaryInstalledNoExec(name, entry)
+}
+
 // getDirectFetchRegistry returns the direct-fetch registry (existing behavior)
 func getDirectFetchRegistry(c *fiber.Ctx) error {
 	registryPathOrURL := c.Query("registry_url", "")
+	trusted := isTrustedRegistry(registryPathOrURL)
+
 	registry, err := installer.LoadRegistry(registryPathOrURL, nil)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -70,7 +88,7 @@ func getDirectFetchRegistry(c *fiber.Ctx) error {
 			CommandDual:         entry.CommandDual,
 			MultiCommandsLinux:  entry.MultiCommandsLinux,
 			MultiCommandsDarwin: entry.MultiCommandsDarwin,
-			Installed:           installer.IsBinaryInstalled(name, &entry),
+			Installed:           registryInstalledStatus(name, &entry, trusted),
 			Path:                path,
 			Optional:            containsOptionalTag(entry.Tags),
 		}
@@ -104,7 +122,26 @@ func getNixBuildRegistry(c *fiber.Ctx) error {
 
 	// Load registry for metadata (desc, tags) - use custom registry_url if provided
 	registryPathOrURL := c.Query("registry_url", "")
-	registry, _ := installer.LoadRegistry(registryPathOrURL, nil)
+	trusted := isTrustedRegistry(registryPathOrURL)
+
+	registry, err := installer.LoadRegistry(registryPathOrURL, nil)
+	if err != nil {
+		// Metadata is optional for the embedded registry, but a caller-supplied source
+		// that fails to load is a mistake the caller needs to see rather than a silent
+		// response with every desc/tags field missing.
+		if !trusted {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   true,
+				"message": "Failed to load registry: " + err.Error(),
+			})
+		}
+		registry = nil
+	}
+
+	// Report the concrete source used, matching direct-fetch mode
+	if registryPathOrURL == "" {
+		registryPathOrURL = installer.DefaultRegistryURL
+	}
 
 	// Build response with categories and tool metadata
 	categoriesData := make([]map[string]interface{}, 0)
@@ -121,7 +158,7 @@ func getNixBuildRegistry(c *fiber.Ctx) error {
 
 			toolData := map[string]interface{}{
 				"name":      tool,
-				"installed": installer.IsBinaryInstalled(tool, entryPtr),
+				"installed": registryInstalledStatus(tool, entryPtr, trusted),
 			}
 			if entryPtr != nil {
 				toolData["desc"] = entryPtr.Desc
