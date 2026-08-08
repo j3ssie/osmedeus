@@ -8,7 +8,10 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -469,15 +472,61 @@ func testScheduleEndpoints(t *testing.T, log *TestLogger) {
 	log.Success("Schedule endpoints OK")
 }
 
+// getPresetRegistryPath returns the absolute path to the bundled direct-fetch registry file
+func getPresetRegistryPath(t *testing.T) string {
+	t.Helper()
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("Failed to get caller info")
+	}
+	return filepath.Join(filepath.Dir(filename), "..", "..", "public", "presets", "registry-metadata-direct-fetch.json")
+}
+
 // testRegistryEndpoint tests metadata registry endpoint
 func testRegistryEndpoint(t *testing.T, log *TestLogger) {
 	log.Info("Testing registry endpoint")
 
+	presetRegistryPath := getPresetRegistryPath(t)
+
+	// Default: embedded registry, direct-fetch mode
+	log.Info("Testing default registry (embedded)")
 	resp := apiGet(t, "/osm/api/registry-info")
 	assert.Equal(t, 200, resp.StatusCode, "GET /osm/api/registry-info should return 200")
 	body := parseJSONResponse(t, resp)
+	assert.Equal(t, "direct-fetch", body["registry_mode"], "Default mode should be direct-fetch")
 	assert.Contains(t, body, "registry_url", "Should contain registry_url")
 	assert.Contains(t, body, "binaries", "Should contain binaries")
+
+	// direct-fetch with local preset registry file https://github.com/j3ssie/osmedeus/blob/d5aa39ba30545102a8c9717801f16879f8197736/public/presets/registry-metadata-direct-fetch.json
+	log.Info("Testing registry_url with preset file (direct-fetch)")
+	encodedPath := url.QueryEscape(presetRegistryPath)
+	resp = apiGet(t, "/osm/api/registry-info?registry_url="+encodedPath)
+	assert.Equal(t, 200, resp.StatusCode, "GET /osm/api/registry-info with preset file should return 200")
+	body = parseJSONResponse(t, resp)
+	assert.Equal(t, "direct-fetch", body["registry_mode"], "Mode should be direct-fetch")
+	assert.Equal(t, presetRegistryPath, body["registry_url"], "registry_url in response should match the path passed")
+	binaries, ok := body["binaries"].(map[string]interface{})
+	assert.True(t, ok, "Binaries should be a map")
+	assert.Contains(t, binaries, "amass", "Preset registry should contain amass")
+	assert.Contains(t, binaries, "nuclei", "Preset registry should contain nuclei")
+
+	// nix-build mode (may or may not have Nix; endpoint must respond regardless)
+	log.Info("Testing registry_mode=nix-build (no custom registry_url)")
+	resp = apiGet(t, "/osm/api/registry-info?registry_mode=nix-build")
+	assert.Equal(t, 200, resp.StatusCode, "GET /osm/api/registry-info?registry_mode=nix-build should return 200")
+	body = parseJSONResponse(t, resp)
+	assert.Equal(t, "nix-build", body["registry_mode"], "Mode should be nix-build")
+	assert.Contains(t, body, "nix_installed", "Should contain nix_installed field")
+	assert.Contains(t, body, "categories", "Should contain categories")
+	assert.Contains(t, body, "registry_url", "nix-build response should contain registry_url")
+
+	// nix-build mode with preset registry_url for metadata overlay
+	log.Info("Testing registry_mode=nix-build with preset registry_url for metadata")
+	resp = apiGet(t, "/osm/api/registry-info?registry_mode=nix-build&registry_url="+encodedPath)
+	assert.Equal(t, 200, resp.StatusCode, "GET /osm/api/registry-info nix-build+registry_url should return 200")
+	body = parseJSONResponse(t, resp)
+	assert.Equal(t, "nix-build", body["registry_mode"], "Mode should be nix-build")
+	assert.Equal(t, presetRegistryPath, body["registry_url"], "registry_url in nix-build response should match the path passed")
 
 	log.Success("Registry endpoint OK")
 }

@@ -16,6 +16,7 @@ import (
 // @Tags Install
 // @Produce json
 // @Param registry_mode query string false "Registry mode: direct-fetch or nix-build" default(direct-fetch)
+// @Param registry_url query string false "Custom registry URL or local file path. In direct-fetch mode: source for the full binary list. In nix-build mode: metadata overlay (desc, tags, version)."
 // @Success 200 {object} map[string]interface{} "Registry data"
 // @Failure 500 {object} map[string]interface{} "Failed to load registry"
 // @Security BearerAuth
@@ -37,12 +38,18 @@ func GetRegistryInfo(cfg *config.Config) fiber.Handler {
 
 // getDirectFetchRegistry returns the direct-fetch registry (existing behavior)
 func getDirectFetchRegistry(c *fiber.Ctx) error {
-	registry, err := installer.LoadRegistry("", nil)
+	registryPathOrURL := c.Query("registry_url", "")
+	registry, err := installer.LoadRegistry(registryPathOrURL, nil)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   true,
 			"message": "Failed to load registry: " + err.Error(),
 		})
+	}
+
+	// Using installer.DefaultRegistryURL as default for query would break LoadRegistry logic
+	if registryPathOrURL == "" {
+		registryPathOrURL = installer.DefaultRegistryURL
 	}
 
 	// Build response with installation status for each binary
@@ -71,7 +78,7 @@ func getDirectFetchRegistry(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"registry_mode": "direct-fetch",
-		"registry_url":  installer.DefaultRegistryURL,
+		"registry_url":  registryPathOrURL,
 		"binaries":      binariesWithStatus,
 	})
 }
@@ -95,8 +102,9 @@ func getNixBuildRegistry(c *fiber.Ctx) error {
 		})
 	}
 
-	// Load registry for metadata (desc, tags)
-	registry, _ := installer.LoadRegistry("", nil)
+	// Load registry for metadata (desc, tags) - use custom registry_url if provided
+	registryPathOrURL := c.Query("registry_url", "")
+	registry, _ := installer.LoadRegistry(registryPathOrURL, nil)
 
 	// Build response with categories and tool metadata
 	categoriesData := make([]map[string]interface{}, 0)
@@ -138,6 +146,7 @@ func getNixBuildRegistry(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"registry_mode": "nix-build",
+		"registry_url":  registryPathOrURL,
 		"nix_installed": installer.IsNixInstalled(),
 		"categories":    categoriesData,
 	})

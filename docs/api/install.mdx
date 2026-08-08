@@ -16,6 +16,7 @@ Fetch binary registry metadata with installation status. Supports two modes:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `registry_mode` | string | `direct-fetch` | Registry mode: `direct-fetch` or `nix-build` |
+| `registry_url` | string | _(embedded)_ | Custom registry URL or local file path. **Direct-fetch mode**: source for the full binary list. **Nix-build mode**: metadata overlay (desc, tags, version). Accepts HTTPS URLs or absolute file paths. |
 
 ---
 
@@ -25,6 +26,18 @@ Returns binary metadata with download URLs for each platform/architecture.
 
 ```bash
 curl http://localhost:8002/osm/api/registry-info \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**With a custom registry URL:**
+```bash
+curl "http://localhost:8002/osm/api/registry-info?registry_url=https://example.com/my-registry.json" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**With a local file path:**
+```bash
+curl "http://localhost:8002/osm/api/registry-info?registry_url=/etc/osmedeus/registry.json" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -95,6 +108,12 @@ curl "http://localhost:8002/osm/api/registry-info?registry_mode=nix-build" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+**With a custom metadata registry:**
+```bash
+curl "http://localhost:8002/osm/api/registry-info?registry_mode=nix-build&registry_url=/etc/osmedeus/registry.json" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 **Response:**
 ```json
 {
@@ -144,6 +163,7 @@ curl "http://localhost:8002/osm/api/registry-info?registry_mode=nix-build" \
 | Field | Type | Description |
 |-------|------|-------------|
 | `registry_mode` | string | Always `"nix-build"` |
+| `registry_url` | string | Registry URL or file path used for metadata (empty string = embedded) |
 | `nix_installed` | boolean | Whether Nix package manager is installed |
 | `categories` | array | List of tool categories from flake.nix |
 | `categories[].name` | string | Category name (e.g., "Subdomain", "Vuln") |
