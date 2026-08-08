@@ -195,13 +195,14 @@ The high-level ambitious plan for the project, in order:
 | Architecture         | [docs.osmedeus.org/concepts/architecture](https://docs.osmedeus.org/concepts/architecture) |
 | Development          | [docs.osmedeus.org/development](https://docs.osmedeus.org/development) and [HACKING.md](HACKING.md) |
 | Extending Osmedeus   | [docs.osmedeus.org/development/extending-osmedeus](https://docs.osmedeus.org/development/extending-osmedeus)   |
+| Security Model       | [SECURITY.md](SECURITY.md) and [docs.osmedeus.org/others/security-warning](https://docs.osmedeus.org/others/security-warning) |
 | Full Documentation   | [docs.osmedeus.org](https://docs.osmedeus.org) |
 
 ## Disclaimer
 
 **Osmedeus** is designed to execute arbitrary code and commands from user supplied input via CLI, API, and workflow definitions. This flexibility is intentional and central to how the engine operates.
 
-Please refer to the [⚠️ Security Warning](https://docs.osmedeus.org/others/security-warning) page for more information on how to stay safe.
+Please refer to the [⚠️ Security Warning](https://docs.osmedeus.org/others/security-warning) page for more information on how to stay safe. [SECURITY.md](SECURITY.md) draws the line between the code execution that is intentional and what counts as a vulnerability, and is where to start if you want to report one.
 
 **Think twice before you:**
 - Run workflows downloaded from untrusted sources
