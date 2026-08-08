@@ -36,13 +36,6 @@ func GetRegistryInfo(cfg *config.Config) fiber.Handler {
 	}
 }
 
-// isTrustedRegistry reports whether the registry source is one the server controls.
-// An empty registry_url means the embedded registry; anything else was supplied by the
-// caller and its entries must never be executed (see IsBinaryInstalledNoExec).
-func isTrustedRegistry(registryPathOrURL string) bool {
-	return registryPathOrURL == ""
-}
-
 // registryInstalledStatus reports install status for one entry, shelling out to its
 // valide-command only when the registry came from a trusted source.
 func registryInstalledStatus(name string, entry *installer.BinaryEntry, trusted bool) bool {
@@ -52,10 +45,21 @@ func registryInstalledStatus(name string, entry *installer.BinaryEntry, trusted 
 	return installer.IsBinaryInstalledNoExec(name, entry)
 }
 
+// displayRegistryURL names the source to report back to the caller. An empty
+// registry_url means LoadRegistry used the embedded copy of the default registry, so
+// report that URL rather than an empty string.
+func displayRegistryURL(registryPathOrURL string) string {
+	if registryPathOrURL == "" {
+		return installer.DefaultRegistryURL
+	}
+	return registryPathOrURL
+}
+
 // getDirectFetchRegistry returns the direct-fetch registry (existing behavior)
 func getDirectFetchRegistry(c *fiber.Ctx) error {
 	registryPathOrURL := c.Query("registry_url", "")
-	trusted := isTrustedRegistry(registryPathOrURL)
+	// Anything the caller supplied is untrusted: its entries must never be executed
+	trusted := registryPathOrURL == ""
 
 	registry, err := installer.LoadRegistry(registryPathOrURL, nil)
 	if err != nil {
@@ -63,11 +67,6 @@ func getDirectFetchRegistry(c *fiber.Ctx) error {
 			"error":   true,
 			"message": "Failed to load registry: " + err.Error(),
 		})
-	}
-
-	// Using installer.DefaultRegistryURL as default for query would break LoadRegistry logic
-	if registryPathOrURL == "" {
-		registryPathOrURL = installer.DefaultRegistryURL
 	}
 
 	// Build response with installation status for each binary
@@ -96,7 +95,7 @@ func getDirectFetchRegistry(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"registry_mode": "direct-fetch",
-		"registry_url":  registryPathOrURL,
+		"registry_url":  displayRegistryURL(registryPathOrURL),
 		"binaries":      binariesWithStatus,
 	})
 }
@@ -122,7 +121,8 @@ func getNixBuildRegistry(c *fiber.Ctx) error {
 
 	// Load registry for metadata (desc, tags) - use custom registry_url if provided
 	registryPathOrURL := c.Query("registry_url", "")
-	trusted := isTrustedRegistry(registryPathOrURL)
+	// Anything the caller supplied is untrusted: its entries must never be executed
+	trusted := registryPathOrURL == ""
 
 	registry, err := installer.LoadRegistry(registryPathOrURL, nil)
 	if err != nil {
@@ -136,11 +136,6 @@ func getNixBuildRegistry(c *fiber.Ctx) error {
 			})
 		}
 		registry = nil
-	}
-
-	// Report the concrete source used, matching direct-fetch mode
-	if registryPathOrURL == "" {
-		registryPathOrURL = installer.DefaultRegistryURL
 	}
 
 	// Build response with categories and tool metadata
@@ -183,7 +178,7 @@ func getNixBuildRegistry(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"registry_mode": "nix-build",
-		"registry_url":  registryPathOrURL,
+		"registry_url":  displayRegistryURL(registryPathOrURL),
 		"nix_installed": installer.IsNixInstalled(),
 		"categories":    categoriesData,
 	})

@@ -128,7 +128,7 @@ func fetchURL(url string, customHeaders map[string]string) ([]byte, error) {
 	req.Header.Set("User-Agent", core.DefaultUA)
 
 	// Auto-inject GitHub token for GitHub URLs (helps with rate limiting and private repos)
-	if isGitHubURL(url) {
+	if IsGitHubURL(url) {
 		if token := getGitHubToken(); token != "" {
 			req.Header.Set("Authorization", "Bearer "+token)
 		}
@@ -155,7 +155,7 @@ func fetchURL(url string, customHeaders map[string]string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if int64(len(data)) > maxRegistrySize {
+	if len(data) > maxRegistrySize {
 		return nil, fmt.Errorf("registry exceeds the %d byte limit", maxRegistrySize)
 	}
 	return data, nil

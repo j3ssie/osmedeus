@@ -29,6 +29,7 @@ import (
 	"github.com/j3ssie/osmedeus/v5/internal/executor"
 	"github.com/j3ssie/osmedeus/v5/internal/fileio"
 	"github.com/j3ssie/osmedeus/v5/internal/heuristics"
+	"github.com/j3ssie/osmedeus/v5/internal/installer"
 	"github.com/j3ssie/osmedeus/v5/internal/logger"
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
@@ -1699,7 +1700,7 @@ func fetchWorkflowFromURL(urlStr string) (*core.Workflow, error) {
 	}
 
 	// If failed and is a GitHub URL, retry with auth
-	if isGitHubURLForFetch(urlStr) {
+	if installer.IsGitHubURL(urlStr) {
 		token := getGitHubTokenForFetch()
 		if token != "" {
 			log.Debug("Retrying with GitHub authentication")
@@ -1803,13 +1804,6 @@ func retryableHTTPStatus(code int) bool {
 	default:
 		return false
 	}
-}
-
-// isGitHubURLForFetch checks if the URL is a GitHub URL
-func isGitHubURLForFetch(urlStr string) bool {
-	return strings.Contains(urlStr, "github.com") ||
-		strings.Contains(urlStr, "raw.githubusercontent.com") ||
-		strings.Contains(urlStr, "api.github.com")
 }
 
 // getGitHubTokenForFetch returns the GitHub token from settings or environment
