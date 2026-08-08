@@ -83,11 +83,14 @@ func IsZipFile(source string) bool {
 	return st == SourceTypeLocalZip || st == SourceTypeZipURL
 }
 
-// isGitHubURL checks if a URL is a GitHub URL that can benefit from authentication.
-// Matches on the parsed hostname, not a substring: the caller uses this to decide
-// whether to attach the GitHub token, and a lookalike host such as
-// "evil.tld/?x=github.com" or "github.com.evil.tld" must never receive it.
-func isGitHubURL(rawURL string) bool {
+// IsGitHubURL checks if a URL is a GitHub URL that can benefit from authentication.
+// Matches on the parsed hostname, not a substring: callers use this to decide whether
+// to attach the GitHub token, and a lookalike host such as "evil.tld/?x=github.com" or
+// "github.com.evil.tld" must never receive it.
+//
+// This is for http(s) URLs only. It does not recognise the SSH form
+// (git@github.com:user/repo.git), which has no parseable host.
+func IsGitHubURL(rawURL string) bool {
 	u, err := url.Parse(rawURL)
 	if err != nil {
 		return false
@@ -166,7 +169,7 @@ func downloadFileOnce(rawURL, dest string, customHeaders map[string]string) erro
 	req.Header.Set("User-Agent", core.DefaultUA)
 
 	// Auto-inject GitHub token for GitHub URLs
-	if isGitHubURL(rawURL) {
+	if IsGitHubURL(rawURL) {
 		if token := getGitHubToken(); token != "" {
 			req.Header.Set("Authorization", "Bearer "+token)
 		}
@@ -233,7 +236,7 @@ func downloadFileWithExternalTool(rawURL, dest string, customHeaders map[string]
 	// Build auth header args for GitHub URLs
 	var authHeaderWget []string
 	var authHeaderCurl []string
-	if isGitHubURL(rawURL) {
+	if IsGitHubURL(rawURL) {
 		if token := getGitHubToken(); token != "" {
 			authHeaderWget = []string{"--header", "Authorization: Bearer " + token}
 			authHeaderCurl = []string{"-H", "Authorization: Bearer " + token}

@@ -129,7 +129,7 @@ func TestIsGitHubURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expect, isGitHubURL(tt.url),
+			assert.Equal(t, tt.expect, IsGitHubURL(tt.url),
 				"the GitHub token is attached based on this check")
 		})
 	}
