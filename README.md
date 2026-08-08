@@ -33,23 +33,35 @@ Built for both beginners and experts, it delivers powerful, composable automatio
 
 See [Documentation Page](https://docs.osmedeus.org/) for more details.
 
-## ☁️ Sponsor — Bloome
-
-[![Bloome — humans and AI agents, working as one team](assets/bloome-home.png)](https://bloome.im/app?ref=j3ssie&utm_medium=github&utm_source=j3ssie-osmedeus-ivor-202607)
-
-Automating recon with Osmedeus? [Bloome](https://bloome.im/app?ref=j3ssie&utm_medium=github&utm_source=j3ssie-osmedeus-ivor-202607) brings that same team-of-agents mindset to the rest of your workflow: multiple AI agents (Claude, ChatGPT, DeepSeek and more) in one shared chat that split the work, hand off tasks, cross-check each other, and refine the output until it's right — triage findings, draft reports, and run scheduled checks together. Zero setup, in the cloud, on web and mobile, and shareable with your team. 👉 [Try Bloome](https://bloome.im/app?ref=j3ssie&utm_medium=github&utm_source=j3ssie-osmedeus-ivor-202607)
-
 ## Installation
 
 ```bash
 curl -sSL http://www.osmedeus.org/install.sh | bash
 ```
 
+### [npm](https://www.npmjs.com/package/@j3ssie/osmedeus)
+
+```bash
+npm install -g @j3ssie/osmedeus
+```
+
+Ships prebuilt binaries for linux and macOS on x64/arm64.
+
 See [Quickstart](https://docs.osmedeus.org/quickstart/) for quick setup and [Installation](https://docs.osmedeus.org/installation/) for advanced configurations.
 
-| CLI Usage | Web UI Assets | Workflow Visualization |
-|-----------|--------------|-----------------|
-| ![CLI Usage](https://raw.githubusercontent.com/osmedeus/assets/refs/heads/main/demo-images/cli-run-with-verbose-output.png) | ![Web UI Assets](https://raw.githubusercontent.com/osmedeus/assets/refs/heads/main/demo-images/web-ui-assets.png) | ![Workflow Visualization](https://raw.githubusercontent.com/osmedeus/assets/refs/heads/main/demo-images/web-ui-workflow.png) |
+| CLI Usage | Web UI Assets |
+|-----------|---------------|
+| ![CLI Usage](https://github.com/osmedeus/docs/blob/main/images/cli/cli-run-with-verbose-output.png?raw=true) | ![Web UI Assets](https://github.com/osmedeus/docs/blob/main/images/web-ui/web-ui-assets.png?raw=true) |
+| **Workflow Visualization** | **Vulnerabilities** |
+| ![Workflow Visualization](https://github.com/osmedeus/docs/blob/main/images/web-ui/web-ui-workflow.png?raw=true) | ![Vulnerabilities](https://github.com/osmedeus/docs/blob/main/images/web-ui/web-ui-vuln.png?raw=true) |
+
+
+## ☁️ Sponsor — Bloome
+
+[![Bloome — humans and AI agents, working as one team](assets/bloome-home.png)](https://bloome.im/app?ref=j3ssie&utm_medium=github&utm_source=j3ssie-osmedeus-ivor-202607)
+
+Automating recon with Osmedeus? [Bloome](https://bloome.im/app?ref=j3ssie&utm_medium=github&utm_source=j3ssie-osmedeus-ivor-202607) brings that same team-of-agents mindset to the rest of your workflow: multiple AI agents (Claude, ChatGPT, DeepSeek and more) in one shared chat that split the work, hand off tasks, cross-check each other, and refine the output until it's right — triage findings, draft reports, and run scheduled checks together. Zero setup, in the cloud, on web and mobile, and shareable with your team. 👉 [Try Bloome](https://bloome.im/app?ref=j3ssie&utm_medium=github&utm_source=j3ssie-osmedeus-ivor-202607)
+
 
 ## Quick Start
 

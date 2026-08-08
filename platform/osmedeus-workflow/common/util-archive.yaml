@@ -1,0 +1,129 @@
+# =============================================================================
+# Module Workflow: Archive URL Discovery
+# =============================================================================
+# This module finds archive URLs using passive reconnaissance techniques
+# and beautifies the results for analysis.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# WORKFLOW-LEVEL FIELDS
+# -----------------------------------------------------------------------------
+
+kind: module
+name: util-archive
+description: Mine historical URLs from Wayback Machine and CommonCrawl
+tags: archive, recon, passive
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# -----------------------------------------------------------------------------
+params:
+  - name: archiveJsonFile
+    default: "{{Output}}/archive/archive-{{TargetSpace}}.jsonl"
+
+  - name: archiveUrlFile
+    default: "{{Output}}/archive/archive-urls-{{TargetSpace}}.txt"
+
+  - name: archiveInterestingUrlFile
+    default: "{{Output}}/archive/archive-interesting-urls-{{TargetSpace}}.txt"
+
+  - name: httpArchiveJsonFile
+    default: "{{Output}}/archive/archive-http-{{TargetSpace}}.jsonl"
+
+  - name: httpArchiveCleanJsonFile
+    default: "{{Output}}/archive/archive-clean-http-{{TargetSpace}}.jsonl"
+
+  - name: httpArchiveCleanMarkdownFile
+    default: "{{Output}}/archive/archive-http-{{TargetSpace}}.md"
+
+  - name: archiveSources
+    default: "waybackarchive,alienvault,commoncrawl"
+  - name: urlfinderConfig
+    default: "{{ExternalConfigs}}/urlfinder-provider-config.yaml"
+  - name: archiveTimeout
+    default: "2h"
+  - name: archiveOutputLimit
+    default: "{{ threads * 1000 }}"
+  - name: archiveHttpThreads
+    default: "{{ threads * 5 }}"
+  - name: defaultUA
+    default: "User-Agent: Mozilla/5.0 (compatible; Osmedeus/v5; +https://github.com/j3ssie/osmedeus)"
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES SECTION
+# -----------------------------------------------------------------------------
+dependencies:
+  commands:
+    - urlfinder
+    - pd-httpx
+    - jq
+
+  variables:
+    - name: Target
+      type: string
+      required: true
+
+# -----------------------------------------------------------------------------
+# REPORTS SECTION
+# -----------------------------------------------------------------------------
+reports:
+  - name: archive-urls
+    path: "{{archiveUrlFile}}"
+    type: text
+    description: List of discovered archive URLs
+
+  - name: interesting-urls
+    path: "{{archiveInterestingUrlFile}}"
+    type: text
+    description: Interesting URLs from archive discovery
+
+  - name: http-archive-overview
+    path: "{{httpArchiveCleanMarkdownFile}}"
+    type: markdown
+    description: Markdown HTTP archive overview
+
+# -----------------------------------------------------------------------------
+# STEPS SECTION
+# -----------------------------------------------------------------------------
+steps:
+  # ---------------------------------------------------------------------------
+  # Setup: Create output folder
+  # ---------------------------------------------------------------------------
+  - name: create-output-folder
+    type: function
+    log: "Creating archive output folder"
+    function: 'create_folder("{{Output}}/archive")'
+
+  # ---------------------------------------------------------------------------
+  # Passive archive URL discovery using urlfinder
+  # ---------------------------------------------------------------------------
+  - name: passive-archive-discovery
+    type: bash
+    log: "Discovering archive URLs using urlfinder passive mode"
+    command: "timeout -k 1m {{archiveTimeout}} urlfinder -silent -no-color -config {{urlfinderConfig}} -sources {{archiveSources}} -jsonl -d {{Target}} | shuf -n {{archiveOutputLimit}} >> {{archiveJsonFile}}"
+
+  - name: sort-archive-results
+    type: function
+    log: "Sorting and deduplicating archive results"
+    functions:
+      - 'exec_cmd("cat {{archiveJsonFile}} | jq -r \".url\" > {{archiveUrlFile}}")'
+      - 'interesting_urls("{{archiveUrlFile}}", "{{archiveInterestingUrlFile}}")'
+      - 'sort_unix("{{archiveInterestingUrlFile}}")'
+      - 'db_total_archive("{{archiveInterestingUrlFile}}")'
+
+  # ---------------------------------------------------------------------------
+  # Beautify results with HTTP probing
+  # ---------------------------------------------------------------------------
+  - name: probe-archive-urls
+    type: bash
+    log: "Probing archive URLs with pd-httpx"
+    pre_condition: 'file_exists("{{archiveInterestingUrlFile}}")'
+    command: 'cat {{archiveInterestingUrlFile}} | pd-httpx -H "{{defaultUA}}" -timeout 10 -t {{archiveHttpThreads}} -no-fallback -no-color -silent -json -title -favicon -hash sha256 -jarm -tech-detect -status-code -cdn -tls-grab -ztls -vhost -follow-host-redirects -include-chain >> {{httpArchiveJsonFile}}'
+
+  - name: beautify-archive-results
+    type: function
+    log: "Beautifying archive results"
+    pre_condition: 'file_length("{{httpArchiveJsonFile}}") > 0'
+    functions:
+      - jsonl_filter("{{httpArchiveJsonFile}}", "{{httpArchiveCleanJsonFile}}", "url,status,length,words,redirectlocation")
+      - 'convert_jsonl_to_markdown("{{httpArchiveCleanJsonFile}}", "{{httpArchiveCleanMarkdownFile}}")'

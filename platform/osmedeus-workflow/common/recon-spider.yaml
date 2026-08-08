@@ -1,0 +1,196 @@
+# =============================================================================
+# Module Workflow: Web Spidering
+# =============================================================================
+
+kind: module
+name: recon-spider
+description: Crawl web pages with Katana and hunt for secrets
+tags: spider, crawl, links, secrets
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# -----------------------------------------------------------------------------
+params:
+  - name: httpInterestingFile
+    default: "{{Output}}/fingerprint/http-interesting-{{TargetSpace}}.txt"
+  - name: httpFile
+    default: "{{Output}}/probing/http-{{TargetSpace}}.txt"
+
+  - name: linkFile
+    default: "{{Output}}/links/links-{{TargetSpace}}.txt"
+  - name: httpResponse
+    default: "{{Output}}/http-response/"
+
+  - name: spiderTimeout
+    default: "2h"
+
+  - name: spiderThreads
+    default: "{{ threads }}"
+  - name: spiderPrallel
+    default: "{{ threads / 2 }}"
+  - name: spiderDepth
+    default: "3"
+  - name: crawlingTime
+    default: "30"
+
+  - name: spiderLimit
+    default: "10000"
+
+  - name: spitolasTimeout
+    default: "5m"
+  - name: spitolasCrawlingTime
+    default: "5m"
+  - name: spitolasConcurrency
+    default: "20"
+  - name: spitolasMaxPerHost
+    default: "20"
+
+  # merged stateless jsonl (each record is wrapped as {"type":"http_record","data":{...}})
+  - name: spitolasJsonlOutput
+    default: "{{Output}}/links/spitolas-{{TargetSpace}}.jsonl"
+  # flattened http_record .data objects consumed by the db import
+  - name: spitolasRecordsFile
+    default: "{{Output}}/links/spitolas-records-{{TargetSpace}}.jsonl"
+
+  - name: skipSpidering
+    type: bool
+    default: false
+  - name: defaultUA
+    default: "User-Agent: Mozilla/5.0 (compatible; Osmedeus/v5; +https://github.com/j3ssie/osmedeus)"
+  - name: vigoliumDefaultUA
+    default: "User-Agent: Mozilla/5.0 (compatible; Vigolium OSS +https://github.com/vigolium/vigolium)"
+
+  - name: trufflehogThreads
+    default: "{{ threads * 6}}"
+
+  - name: httpThreads
+    default: "{{ threads * 10}}"
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES SECTION
+# -----------------------------------------------------------------------------
+dependencies:
+  commands:
+    - katana
+    - pd-httpx
+
+  variables:
+    - name: Target
+      type: string
+      required: true
+
+# -----------------------------------------------------------------------------
+# REPORTS SECTION
+# -----------------------------------------------------------------------------
+reports:
+  - name: links
+    path: "{{Output}}/links/links-{{TargetSpace}}.txt"
+    type: text
+    description: Discovered links
+
+  - name: trufflehog-output
+    path: "{{Output}}/secrets/trufflehog-{{TargetSpace}}-output.txt"
+    type: text
+    optional: true
+    description: Trufflehog secrets scan output
+
+# -----------------------------------------------------------------------------
+# STEPS SECTION
+# -----------------------------------------------------------------------------
+steps:
+  # ---------------------------------------------------------------------------
+  # Setup: Create output folder
+  # ---------------------------------------------------------------------------
+  - name: create-output-folder
+    type: function
+    log: "Creating links output folder"
+    functions:
+      - 'create_folder("{{Output}}/links")'
+      - 'create_folder("{{Output}}/secrets")'
+
+  # ---------------------------------------------------------------------------
+  # Check skip condition
+  # ---------------------------------------------------------------------------
+  - name: check-skip-spidering
+    type: function
+    log: "Checking if spidering should be skipped"
+    pre_condition: '"{{skipSpidering}}" == "true"'
+    functions:
+      - 'log_error("Filter", "Skipping spidering")'
+      - "skip()"
+
+  # ---------------------------------------------------------------------------
+  # Check input file size limit
+  # ---------------------------------------------------------------------------
+  - name: check-input-limit
+    type: function
+    log: "Checking input file size"
+    pre_condition: 'file_length("{{httpFile}}") > {{spiderLimit}}'
+    functions:
+      - 'log_error("Filter", "Got input file greater than {{spiderLimit}} line")'
+      - "skip()"
+
+  # ---------------------------------------------------------------------------
+  # Web crawling with Katana
+  # ---------------------------------------------------------------------------
+  - name: web-crawling
+    type: foreach
+    log: "Crawling web pages with Katana"
+    pre_condition: 'file_exists("{{httpInterestingFile}}")'
+    input: "{{httpInterestingFile}}"
+    variable: line
+    threads: "{{spiderPrallel}}"
+    step:
+      name: katana-single-target
+      type: bash
+      command: "timeout -k 1m {{spiderTimeout}} katana -silent -c {{spiderThreads}} -jc -ct {{crawlingTime}} -u [[line]] | sort -u >> {{linkFile}}"
+
+  # ---------------------------------------------------------------------------
+  # Advanced Web crawling with Katana
+  # ---------------------------------------------------------------------------
+  - name: web-crawling-with-headless-browser
+    type: foreach
+    log: "Crawling web pages with Spitolas (vigolium) Headless Browser"
+    pre_condition: 'file_exists("{{httpInterestingFile}}")'
+    input: "{{httpInterestingFile}}"
+    variable: line
+    threads: "{{spiderPrallel}}"
+    step:
+      name: spitolas-single-target
+      type: bash
+      # stateless run writes each target's records straight to a per-iteration jsonl ([[_id_]] keeps parallel runs from clobbering each other)
+      commands:
+        - "timeout -k 1m {{spitolasTimeout}} vigolium scan --only spidering --db-isolate --soft-fail --silent -H \"{{vigoliumDefaultUA}}\" --concurrency {{spitolasConcurrency}} --max-per-host {{spitolasMaxPerHost}} --spider-max-time {{spitolasCrawlingTime}} --stateless --format jsonl --omit-response -o {{Output}}/links/spitolas-raw-[[_id_]].jsonl --target '[[line]]'"
+
+  - name: generate-crawling-data
+    type: function
+    log: "Merging and normalizing Spitolas (vigolium) spider output"
+    functions:
+      # merge the per-target stateless jsonl outputs into a single spidering file
+      - exec_cmd("cat {{Output}}/links/spitolas-raw-*.jsonl > {{spitolasJsonlOutput}} 2>/dev/null")
+      # vigolium nests every record under .data, so pull crawled urls from .data.url
+      - exec_cmd("cat {{spitolasJsonlOutput}} | jq -r '.data.url // empty' | sort -u >> {{linkFile}}")
+      # flatten the http_record .data objects into the flat schema the db import expects
+      - exec_cmd("cat {{spitolasJsonlOutput}} | jq -c 'select(.data.url != null) | .data | {url, status_code, title:.response_title, words:.response_words, content_length:.response_content_length, content_type:.response_content_type}' > {{spitolasRecordsFile}}")
+      # drop the raw per-target outputs to save space
+      - exec_cmd("rm -rf {{Output}}/links/spitolas-raw-*.jsonl")
+      - sort_unix("{{linkFile}}")
+    on_error:
+      - action: continue # in case of error with Spitolas, we continue with the next target
+
+  - name: unique-crawled-links
+    type: function
+    log: "Sorting and uniquifying crawled links"
+    functions:
+      - db_total_links("{{linkFile}}")
+      - db_import_custom_asset("{{TargetSpace}}", "{{spitolasRecordsFile}}", "spider", "spitolas")
+
+  # # ---------------------------------------------------------------------------
+  # # Get HTTP responses and scan for secrets
+  # # ---------------------------------------------------------------------------
+  # - name: fetch-responses-and-scan-secrets
+  #   type: bash
+  #   log: "Fetching HTTP responses and scanning for secrets with trufflehog"
+  #   commands:
+  #     - "sort -u {{linkFile}} -o {{linkFile}}"
+  #     - "cat {{linkFile}} | pd-httpx -silent -nf -no-color -title -t {{httpThreads}} -H '{{defaultUA}}' --store-response-dir {{httpResponse}}"

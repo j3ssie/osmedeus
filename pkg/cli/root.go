@@ -47,6 +47,7 @@ var (
 	globalForce bool
 	globalJSON  bool
 	globalWidth int
+	globalOrg   string
 
 	// Build info - set via SetBuildInfo from main.go
 	buildTime  = "unknown"
@@ -294,6 +295,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&globalForce, "force", false, "skip confirmation prompts and force operations")
 	rootCmd.PersistentFlags().BoolVar(&globalJSON, "json", false, "output in JSON format")
 	rootCmd.PersistentFlags().IntVar(&globalWidth, "width", 0, "max table width for display (0 = auto-detect terminal width)")
+	rootCmd.PersistentFlags().StringVar(&globalOrg, "org", "", "org to scope this command to, by name or UUID (default: all orgs)")
 
 	// Suppress usage display and default error output (we handle errors in Execute())
 	rootCmd.SilenceUsage = true
@@ -322,6 +324,7 @@ func init() {
 	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(dbCmd)
 	rootCmd.AddCommand(installCmd)
+	rootCmd.AddCommand(skillsCmd)
 	rootCmd.AddCommand(snapshotCmd)
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(updateCmd)
@@ -329,6 +332,7 @@ func init() {
 	rootCmd.AddCommand(clientCmd)
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(assetsCmd)
+	rootCmd.AddCommand(orgCmd)
 	rootCmd.AddCommand(agentCmd)
 	rootCmd.AddCommand(queryCmd)
 

@@ -15,11 +15,13 @@ import (
 // @Tags Assets
 // @Produce json
 // @Param workspace query string false "Filter by workspace name"
+// @Param org query string false "Filter by org name or UUID (omit for all orgs)"
 // @Param search query string false "Search in asset_value, url, title, host_ip"
 // @Param status_code query int false "Filter by HTTP status code"
 // @Param offset query int false "Number of records to skip" default(0)
 // @Param limit query int false "Maximum number of records to return" default(20)
 // @Success 200 {object} map[string]interface{} "List of assets with pagination"
+// @Failure 400 {object} map[string]interface{} "Unknown org"
 // @Failure 500 {object} map[string]interface{} "Failed to fetch assets"
 // @Security BearerAuth
 // @Router /osm/api/assets [get]
@@ -45,9 +47,15 @@ func ListAssets(cfg *config.Config) fiber.Handler {
 
 		ctx := context.Background()
 
+		orgUUID, errResp := ResolveOrgQuery(ctx, c)
+		if errResp != nil {
+			return errResp
+		}
+
 		// Get assets from database
 		result, err := database.ListAssets(ctx, database.AssetQuery{
 			Workspace:  workspace,
+			OrgUUID:    orgUUID,
 			Search:     search,
 			StatusCode: statusCode,
 			Offset:     offset,

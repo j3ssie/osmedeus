@@ -2913,7 +2913,7 @@ var tableDisplayColumns = map[string][]string{
 // tableAllColumns defines ALL columns for each table (ordered, matching model structs)
 var tableAllColumns = map[string][]string{
 	"runs": {"id", "run_uuid", "run_group_id", "workflow_name", "workflow_kind", "target", "params",
-		"status", "workspace", "started_at", "completed_at", "error_message",
+		"status", "workspace", "org_uuid", "started_at", "completed_at", "error_message",
 		"schedule_id", "trigger_type", "trigger_name", "total_steps",
 		"completed_steps", "current_pid", "run_priority", "run_mode", "created_at", "updated_at"},
 	"step_results": {"id", "run_id", "step_name", "step_type", "status", "command",
@@ -2921,7 +2921,7 @@ var tableAllColumns = map[string][]string{
 		"started_at", "completed_at", "created_at"},
 	"artifacts": {"id", "run_id", "workspace", "name", "artifact_path", "artifact_type",
 		"content_type", "size_bytes", "line_count", "description", "created_at"},
-	"assets": {"id", "workspace", "asset_value", "url", "input", "scheme", "method", "path",
+	"assets": {"id", "workspace", "org_uuid", "asset_value", "url", "input", "scheme", "method", "path",
 		"status_code", "content_type", "content_length", "title", "words",
 		"lines", "host_ip", "dns_records", "tls", "asset_type", "tech",
 		"response_time", "remarks", "language", "size", "loc", "blob_content", "source", "raw_json_data", "raw_response",
@@ -2932,13 +2932,13 @@ var tableAllColumns = map[string][]string{
 	"schedules": {"id", "name", "workflow_name", "workflow_kind", "target", "workspace",
 		"params", "trigger_name", "trigger_type", "schedule", "event_topic", "watch_path",
 		"is_enabled", "last_run", "next_run", "run_count", "created_at", "updated_at"},
-	"workspaces": {"id", "name", "local_path", "data_source", "total_assets", "total_subdomains",
+	"workspaces": {"id", "name", "org_uuid", "local_path", "data_source", "total_assets", "total_subdomains",
 		"total_urls", "total_ips", "total_links", "total_content", "total_archive",
 		"total_vulns", "vuln_critical", "vuln_high", "vuln_medium", "vuln_low",
 		"vuln_potential", "risk_score", "tags", "last_run", "run_workflow",
 		"state_execution_log", "state_completed_file", "state_workflow_file",
 		"state_workflow_folder", "created_at", "updated_at"},
-	"vulnerabilities": {"id", "workspace", "vuln_info", "vuln_title", "vuln_desc",
+	"vulnerabilities": {"id", "workspace", "org_uuid", "vuln_info", "vuln_title", "vuln_desc",
 		"vuln_poc", "severity", "confidence", "asset_type", "asset_value", "tags",
 		"detail_http_request", "detail_http_response", "raw_vuln_json",
 		"last_seen_at", "created_at", "updated_at"},
@@ -3178,7 +3178,10 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 
 // AssetQuery holds query parameters for listing assets
 type AssetQuery struct {
-	Workspace  string
+	Workspace string
+	// OrgUUID scopes the query to one org. Empty means no org filter, so the
+	// query spans every org - the pre-org behavior.
+	OrgUUID    string
 	Search     string
 	StatusCode int
 	Offset     int
@@ -3208,6 +3211,9 @@ func ListAssets(ctx context.Context, query AssetQuery) (*AssetResult, error) {
 	applyFilters := func(q *bun.SelectQuery) *bun.SelectQuery {
 		if query.Workspace != "" {
 			q = q.Where("workspace = ?", query.Workspace)
+		}
+		if query.OrgUUID != "" {
+			q = q.Where("org_uuid = ?", query.OrgUUID)
 		}
 		if query.Search != "" {
 			searchPattern := "%" + query.Search + "%"
@@ -3402,7 +3408,8 @@ type FullWorkspaceResult struct {
 }
 
 // ListWorkspacesFullFromDB returns workspaces from the workspaces table with full details
-func ListWorkspacesFullFromDB(ctx context.Context, offset, limit int) (*FullWorkspaceResult, error) {
+// An empty orgUUID applies no org filter and returns workspaces from every org.
+func ListWorkspacesFullFromDB(ctx context.Context, offset, limit int, orgUUID string) (*FullWorkspaceResult, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database not connected")
 	}
@@ -3412,10 +3419,15 @@ func ListWorkspacesFullFromDB(ctx context.Context, offset, limit int) (*FullWork
 		Limit:  limit,
 	}
 
+	applyOrg := func(q *bun.SelectQuery) *bun.SelectQuery {
+		if orgUUID != "" {
+			q = q.Where("org_uuid = ?", orgUUID)
+		}
+		return q
+	}
+
 	// Get total count
-	totalCount, err := db.NewSelect().
-		Model((*Workspace)(nil)).
-		Count(ctx)
+	totalCount, err := applyOrg(db.NewSelect().Model((*Workspace)(nil))).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count workspaces: %w", err)
 	}
@@ -3423,8 +3435,7 @@ func ListWorkspacesFullFromDB(ctx context.Context, offset, limit int) (*FullWork
 
 	// Get paginated workspaces with full details
 	var workspaces []Workspace
-	err = db.NewSelect().
-		Model(&workspaces).
+	err = applyOrg(db.NewSelect().Model(&workspaces)).
 		Order("name ASC").
 		Offset(offset).
 		Limit(limit).
@@ -3809,7 +3820,9 @@ func ListEventLogs(ctx context.Context, query EventLogQuery) (*EventLogResult, e
 
 // VulnerabilityQuery holds query parameters for listing vulnerabilities
 type VulnerabilityQuery struct {
-	Workspace  string
+	Workspace string
+	// OrgUUID scopes the query to one org. Empty means no org filter.
+	OrgUUID    string
 	Severity   string
 	Confidence string
 	AssetValue string
@@ -3843,6 +3856,9 @@ func ListVulnerabilities(ctx context.Context, query VulnerabilityQuery) (*Vulner
 	if query.Workspace != "" {
 		baseQuery = baseQuery.Where("workspace = ?", query.Workspace)
 	}
+	if query.OrgUUID != "" {
+		baseQuery = baseQuery.Where("org_uuid = ?", query.OrgUUID)
+	}
 	if query.Severity != "" {
 		baseQuery = baseQuery.Where("severity = ?", query.Severity)
 	}
@@ -3867,6 +3883,9 @@ func ListVulnerabilities(ctx context.Context, query VulnerabilityQuery) (*Vulner
 		Apply(func(q *bun.SelectQuery) *bun.SelectQuery {
 			if query.Workspace != "" {
 				q = q.Where("workspace = ?", query.Workspace)
+			}
+			if query.OrgUUID != "" {
+				q = q.Where("org_uuid = ?", query.OrgUUID)
 			}
 			if query.Severity != "" {
 				q = q.Where("severity = ?", query.Severity)
@@ -3984,7 +4003,8 @@ type RunResult struct {
 }
 
 // ListRuns returns paginated runs with optional filters
-func ListRuns(ctx context.Context, offset, limit int, status, workflow, target, workspace, runMode string) (*RunResult, error) {
+// An empty orgUUID applies no org filter and returns runs from every org.
+func ListRuns(ctx context.Context, offset, limit int, status, workflow, target, workspace, runMode, orgUUID string) (*RunResult, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database not connected")
 	}
@@ -4011,6 +4031,9 @@ func ListRuns(ctx context.Context, offset, limit int, status, workflow, target, 
 	if runMode != "" {
 		query = query.Where("run_mode = ?", runMode)
 	}
+	if orgUUID != "" {
+		query = query.Where("org_uuid = ?", orgUUID)
+	}
 
 	totalCount, err := query.Count(ctx)
 	if err != nil {
@@ -4036,6 +4059,9 @@ func ListRuns(ctx context.Context, offset, limit int, status, workflow, target, 
 			}
 			if runMode != "" {
 				q = q.Where("run_mode = ?", runMode)
+			}
+			if orgUUID != "" {
+				q = q.Where("org_uuid = ?", orgUUID)
 			}
 			return q
 		}).

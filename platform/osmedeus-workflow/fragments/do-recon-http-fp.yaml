@@ -1,0 +1,105 @@
+kind: module
+name: do-recon-http-fp
+description: Fingerprint a single host - tech stack, CDN, TLS, and response hashes
+tags: fingerprint,http,tech-detect,cdn,tls
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# -----------------------------------------------------------------------------
+params:
+  - name: httpFile
+    default: "{{Output}}/probing/http-{{TargetSpace}}.txt"
+
+  - name: httpInterestingFile
+    default: "{{Output}}/fingerprint/http-interesting-{{TargetSpace}}.txt"
+
+  - name: httpFingerprintJsonFile
+    default: "{{Output}}/fingerprint/http-fingerprint-{{TargetSpace}}.jsonl"
+  - name: httpInterestingFilteredJsonFile
+    default: "{{Output}}/fingerprint/http-interesting-filtered-{{TargetSpace}}.jsonl"
+
+  - name: httpInterestingMarkdownFile
+    default: "{{Output}}/fingerprint/http-interesting-filtered-{{TargetSpace}}.md"
+
+  - name: httpThreads
+    default: "{{ threads * 2 }}"
+
+  - name: httpTimeout
+    default: "15"
+
+  - name: defaultUA
+    default: "User-Agent: Mozilla/5.0 (compatible; Osmedeus/v5; +https://github.com/j3ssie/osmedeus)"
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES SECTION
+# -----------------------------------------------------------------------------
+dependencies:
+  commands:
+    - pd-httpx
+
+  variables:
+    - name: Target
+      type: string
+      required: true
+
+reports:
+  - name: http-data
+    path: "{{httpFingerprintJsonFile}}"
+    type: jsonl
+    description: HTTP fingerprinting data
+
+  - name: httpInterestingMarkdownFile
+    default: "{{Output}}/fingerprint/http-interesting-{{TargetSpace}}.md"
+    type: markdown
+    description: HTTP Fingerprinting Results with Interesting HTTP Responses
+
+# -----------------------------------------------------------------------------
+# STEPS SECTION
+# -----------------------------------------------------------------------------
+steps:
+  # ---------------------------------------------------------------------------
+  # Setup: Create output folder
+  # ---------------------------------------------------------------------------
+  - name: create-output-folder
+    type: function
+    log: "Creating fingerprint output folder"
+    functions:
+      - 'create_folder("{{Output}}/fingerprint")'
+      - 'create_folder("{{Output}}/probing")'
+
+  - name: generate-input-file
+    type: function
+    log: "Generating input file"
+    functions:
+      - exec_cmd("echo {{Target}} | pd-httpx -silent -H '{{defaultUA}}' -t {{httpThreads}} -timeout {{httpTimeout}} >> {{httpFile}}")
+      - exec_cmd("cat {{Target}} | pd-httpx -silent -H '{{defaultUA}}' -t {{httpThreads}} -timeout {{httpTimeout}} >> {{httpFile}}")
+      - sort_unix("{{httpFile}}")
+
+  # ---------------------------------------------------------------------------
+  # HTTP fingerprinting with pd-httpx
+  # ---------------------------------------------------------------------------
+  - name: http-fingerprint
+    type: bash
+    log: "Fingerprinting HTTP hosts with pd-httpx"
+    # pre_condition: 'file_exists("{{httpFile}}")'
+    commands:
+      - 'cat {{httpFile}} | pd-httpx -H "{{defaultUA}}" -timeout {{httpTimeout}} -t {{httpThreads}} -no-fallback -no-color -silent -json -title -favicon -hash sha256 -jarm -tech-detect -status-code -cdn -tls-grab -ztls -vhost -follow-host-redirects -include-chain >> {{httpFingerprintJsonFile}}'
+
+  - name: beautify-interesting-http-results
+    type: function
+    log: "Beautifying interesting HTTP results"
+    pre_condition: 'file_exists("{{httpFingerprintJsonFile}}")'
+    functions:
+      - jsonl_filter("{{httpFingerprintJsonFile}}", "{{httpInterestingFilteredJsonFile}}", "url,title,status_code,content_length,lines,webserver,tech,cdn")
+      - 'convert_jsonl_to_markdown("{{httpInterestingFilteredJsonFile}}", "{{httpInterestingMarkdownFile}}")'
+
+  - name: process-fingerprint-in-db
+    type: function
+    log: "Processing fingerprint in-db"
+    pre_condition: 'file_exists("{{httpFingerprintJsonFile}}")'
+    functions:
+      - 'db_total_urls("{{httpFingerprintJsonFile}}")'
+      - 'db_total_assets("{{httpFingerprintJsonFile}}")'
+      - 'db_import_asset_from_file("{{TargetSpace}}", "{{httpFingerprintJsonFile}}")'
+    on_error: 
+      - action: continue # in case of error, continue the workflow

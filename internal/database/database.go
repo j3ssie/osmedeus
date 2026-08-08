@@ -190,6 +190,7 @@ func Migrate(ctx context.Context) error {
 		(*AssetDiffSnapshot)(nil),
 		(*VulnDiffSnapshot)(nil),
 		(*AgentSession)(nil),
+		(*Org)(nil),
 	}
 
 	for _, model := range models {
@@ -272,6 +273,11 @@ func Migrate(ctx context.Context) error {
 		return err
 	}
 
+	// Add org_uuid to the org-scoped tables if it doesn't exist (for existing databases)
+	if err := addOrgUUIDColumns(ctx); err != nil {
+		return err
+	}
+
 	// Create indexes for Run table
 	if err := createRunIndexes(ctx); err != nil {
 		return err
@@ -312,6 +318,128 @@ func Migrate(ctx context.Context) error {
 		return err
 	}
 
+	// Create indexes for the Org table and the org_uuid columns. This must run
+	// before backfillOrgUUID below so the backfill's empty-org_uuid probe is
+	// an index seek rather than a table scan on every startup.
+	if err := createOrgIndexes(ctx); err != nil {
+		return err
+	}
+
+	// Insert the default org row before backfilling, so no row ever points at a
+	// non-existent org.
+	if err := seedDefaultOrg(ctx); err != nil {
+		return err
+	}
+
+	// Reconcile rows written with an explicit empty org_uuid.
+	if err := backfillOrgUUID(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// orgScopedTables are the tables carrying an org_uuid column.
+var orgScopedTables = []string{"workspaces", "assets", "vulnerabilities", "runs"}
+
+// addOrgUUIDColumns adds org_uuid to every org-scoped table for existing databases.
+// The NOT NULL DEFAULT means rows that predate the org layer are attributed to the
+// default org by the ALTER itself, so existing installs keep working untouched.
+func addOrgUUIDColumns(ctx context.Context) error {
+	for _, table := range orgScopedTables {
+		ddl := fmt.Sprintf("ALTER TABLE %s ADD COLUMN org_uuid TEXT NOT NULL DEFAULT '%s'", table, DefaultOrgUUID)
+		if _, err := db.ExecContext(ctx, ddl); err != nil {
+			errStr := strings.ToLower(err.Error())
+			if strings.Contains(errStr, "duplicate column") ||
+				strings.Contains(errStr, "already exists") ||
+				strings.Contains(errStr, "sqlstate 42701") {
+				continue
+			}
+			return fmt.Errorf("failed to add org_uuid column to %s: %w", table, err)
+		}
+	}
+	return nil
+}
+
+// createOrgIndexes creates indexes for the orgs table and the org_uuid columns
+func createOrgIndexes(ctx context.Context) error {
+	// orgs.name is already UNIQUE via the model's bun tag, so no separate index.
+	// assets deliberately gets only the compound index: (org_uuid) would be a
+	// strict prefix of it and serve no query it cannot, while costing a second
+	// B-tree write on every row of the hottest write table in the product.
+	indexes := []string{
+		"CREATE INDEX IF NOT EXISTS idx_workspaces_org_uuid ON workspaces(org_uuid)",
+		"CREATE INDEX IF NOT EXISTS idx_vulnerabilities_org_uuid ON vulnerabilities(org_uuid)",
+		"CREATE INDEX IF NOT EXISTS idx_runs_org_uuid ON runs(org_uuid)",
+		"CREATE INDEX IF NOT EXISTS idx_assets_org_workspace ON assets(org_uuid, workspace)",
+	}
+
+	for _, idx := range indexes {
+		if _, err := db.ExecContext(ctx, idx); err != nil {
+			return fmt.Errorf("failed to create index: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// seedDefaultOrg inserts the built-in default org. Idempotent.
+//
+// The existence check keeps the steady-state path read-only; see backfillOrgUUID
+// for why that matters on a Migrate that runs on nearly every command.
+func seedDefaultOrg(ctx context.Context) error {
+	exists, err := db.NewSelect().Model((*Org)(nil)).Where("uuid = ?", DefaultOrgUUID).Exists(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to check for default org: %w", err)
+	}
+	if exists {
+		return nil
+	}
+
+	org := &Org{
+		UUID:        DefaultOrgUUID,
+		Name:        DefaultOrgName,
+		Description: "Default org for data not assigned to a specific org",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	_, err = db.NewInsert().
+		Model(org).
+		On("CONFLICT (uuid) DO NOTHING").
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to seed default org: %w", err)
+	}
+	return nil
+}
+
+// backfillOrgUUID reassigns rows holding an explicit empty org_uuid to the default
+// org. Bun writes the Go zero value on insert, which bypasses the column DEFAULT,
+// so any write path that forgets to set OrgUUID would otherwise strand rows under
+// an empty string. Those rows match no org filter and are invisible to `org show`.
+//
+// Migrate runs on nearly every command, so each table is probed with a SELECT
+// first. An UPDATE opens a write cursor — and on SQLite takes the WAL write lock —
+// before it evaluates its WHERE clause, so issuing one unconditionally would make
+// every read-only command a writer contending for that lock. The probe is a
+// read-only index seek that matches nothing in the steady state.
+func backfillOrgUUID(ctx context.Context) error {
+	for _, table := range orgScopedTables {
+		var stranded int
+		probe := fmt.Sprintf("SELECT COUNT(*) FROM (SELECT 1 FROM %s WHERE org_uuid = '' LIMIT 1) t", table)
+		if err := db.NewRaw(probe).Scan(ctx, &stranded); err != nil {
+			return fmt.Errorf("failed to probe org_uuid on %s: %w", table, err)
+		}
+		if stranded == 0 {
+			continue
+		}
+
+		q := fmt.Sprintf("UPDATE %s SET org_uuid = ? WHERE org_uuid = ''", table)
+		if _, err := db.ExecContext(ctx, q, DefaultOrgUUID); err != nil {
+			return fmt.Errorf("failed to backfill org_uuid on %s: %w", table, err)
+		}
+	}
 	return nil
 }
 

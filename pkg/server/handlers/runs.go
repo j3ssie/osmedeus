@@ -130,6 +130,9 @@ func createRunRecord(ctx context.Context, _ *config.Config, workflow *core.Workf
 		StartedAt:    &now,
 		TotalSteps:   calculateTotalSteps(workflow, loader),
 		Workspace:    workspace,
+		// Empty is the normal case: the insert hook resolves the org from the
+		// workspace, so a run into an org-assigned workspace joins that org.
+		OrgUUID:      params["org_uuid"],
 		RunPriority:  priority,
 		RunMode:      runMode,
 		HooksEnabled: workflow.HookCount() > 0,
@@ -870,7 +873,13 @@ func ListRuns(cfg *config.Config) fiber.Handler {
 		}
 
 		ctx := context.Background()
-		result, err := database.ListRuns(ctx, offset, limit, status, workflow, target, workspace, runMode)
+
+		orgUUID, errResp := ResolveOrgQuery(ctx, c)
+		if errResp != nil {
+			return errResp
+		}
+
+		result, err := database.ListRuns(ctx, offset, limit, status, workflow, target, workspace, runMode, orgUUID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error":   true,

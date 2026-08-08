@@ -33,6 +33,19 @@ curl "http://localhost:8002/osm/api/assets?workspace=example.com&offset=50&limit
   -H "Authorization: Bearer $TOKEN"
 ```
 
+**Filter by org (spans every workspace in that org):**
+```bash
+curl "http://localhost:8002/osm/api/assets?org=acme" \
+  -H "Authorization: Bearer $TOKEN"
+
+# The org may be given by name or UUID
+curl "http://localhost:8002/osm/api/assets?org=f072a502-0a35-4e8f-aef0-79e048e082f7" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Omitting `org` applies no org filter at all, so the response spans every org. An
+unknown org returns `400`. See [Orgs](/api/orgs) for managing them.
+
 **Response:**
 ```json
 {

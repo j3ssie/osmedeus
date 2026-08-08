@@ -1,0 +1,98 @@
+kind: flow
+name: domain-list-recon
+description: Standard recon workflow for a list of domain targets
+tags: recon, domain, standard
+help:
+  example_targets: ['list-of-domains.txt']
+  usage: osmedeus run -f domain-list-recon -t list-of-domains.txt
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# -----------------------------------------------------------------------------
+# params:
+#   - name: enableDnsBruteFocing
+#     default: true
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES SECTION
+# -----------------------------------------------------------------------------
+dependencies:
+  variables:
+    - name: Target
+      type: file
+      required: true
+
+# -----------------------------------------------------------------------------
+# MODULES SECTION
+# Execution order with dependencies
+# -----------------------------------------------------------------------------
+modules:
+  # ===========================================================================
+  # Phase 1: Prepare Target
+  # ===========================================================================
+  - name: normalize-http-probing
+    path: fragments/do-util-normalize.yaml
+
+  # ===========================================================================
+  # Phase 2: Fingerprinting
+  # ===========================================================================
+  - name: recon-http-fp
+    path: common/recon-http-fp.yaml
+    depends_on:
+      - normalize-http-probing
+
+  # ===========================================================================
+  # Phase 3: Screenshots
+  # ===========================================================================
+  - name: recon-screenshot
+    path: common/recon-screenshot.yaml
+    depends_on:
+      - recon-http-fp
+
+  # ===========================================================================
+  # Phase 4: Spidering
+  # ===========================================================================
+  - name: recon-spider
+    path: common/recon-spider.yaml
+    depends_on:
+      - recon-http-fp
+
+  # ===========================================================================
+  # Phase 5: Archiving
+  # ===========================================================================
+  - name: util-archive
+    path: common/util-archive.yaml
+    depends_on:
+      - recon-http-fp
+
+  # ===========================================================================
+  # Phase 6: IP Space Enumeration
+  # ===========================================================================
+  - name: enum-ipspace
+    path: common/enum-ipspace.yaml
+    depends_on:
+      - recon-http-fp
+
+  # ===========================================================================
+  # Phase 7: Vulnerability Scanning
+  # ===========================================================================
+  - name: scan-vuln
+    path: common/scan-vuln.yaml
+    depends_on:
+      - recon-http-fp
+
+  # ===========================================================================
+  # Phase 8: Port Scanning
+  # ===========================================================================
+  - name: probe-port
+    path: common/probe-port.yaml
+    depends_on:
+      - recon-http-fp
+
+  # ===========================================================================
+  # Phase 9: Content Discovery
+  # ===========================================================================
+  - name: scan-content
+    path: common/scan-content.yaml
+    depends_on:
+      - recon-http-fp

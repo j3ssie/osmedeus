@@ -1,0 +1,98 @@
+# Simple Event Receiver Workflow
+# This workflow demonstrates how to receive events via triggers
+name: vuln-scan-receiver
+kind: module
+description: Simple workflow that receives and processes events
+tags: event,receiver,trigger,example
+hidden: true
+
+triggers:
+  # this is to disable the workflow to run from CLI
+  - name: manual-trigger
+    on: manual
+    enabled: false
+
+  # Trigger on new asset discovery events
+  - name: on-asset-vars
+    on: event
+    event:
+      # topic: "test.asset.vars"
+      topic: "*"
+    input:
+      # New exports-style syntax: variable_name: expression
+      Target: pick_valid(event_data.sample, event_data.value) 
+      # Target: jq(event_data, '.sample')
+      RawData: event.data
+      asset_type: event.type
+      source: event.source
+      description: trim_left(event.topic, 'test.')
+    enabled: true
+
+params:
+  - name: Target
+    required: true
+
+  - name: httpInterestingFile
+    default: "{{Output}}/fingerprint/http-interesting-{{TargetSpace}}.txt"
+  - name: httpFingerprintJsonFile
+    default: "{{Output}}/fingerprint/http-fingerprint-{{TargetSpace}}.jsonl"
+  - name: httpInterestingFilteredJsonFile
+    default: "{{Output}}/fingerprint/http-interesting-filtered-{{TargetSpace}}.jsonl"
+  - name: httpInterestingMarkdownFile
+    default: "{{Output}}/fingerprint/http-interesting-filtered-{{TargetSpace}}.md"
+  - name: httpThreads
+    default: "{{ threads * 2 }}"
+  - name: httpTimeout
+    default: "15"
+  - name: defaultUA
+    default: "User-Agent: Mozilla/5.0 (compatible; Osmedeus/v5; +https://github.com/j3ssie/osmedeus)"
+
+  - name: nucleiOutputJsonl
+    default: "{{Output}}/vulnscan/nuclei-jsonl-{{TargetSpace}}.txt"
+
+  - name: nucleiCleanOutputJsonl
+    default: "{{Output}}/vulnscan/clean-jsonl-{{TargetSpace}}.txt"
+
+  - name: nucleiMarkdownReport
+    default: "{{Output}}/vulnscan/nuclei-overview-report-{{TargetSpace}}.md"
+
+  - name: nucleiTemplateConfig
+    default: "~/nuclei-templates/"
+  - name: nucleiThreads
+    default: "{{ threads * 10 }}"
+
+  - name: nucleiTimeout
+    default: "8h"
+  - name: nucleiSeverity
+    default: "critical,high,medium,low,info"
+
+  - name: extraNuclei
+    default: " "
+
+
+steps:
+  # ---------------------------------------------------------------------------
+  # HTTP fingerprinting with pd-httpx
+  # ---------------------------------------------------------------------------
+  - name: create-output-folder
+    type: function
+    log: "Creating fingerprint output folder"
+    functions:
+      - 'create_folder("{{Output}}/fingerprint")'
+      - 'create_folder("{{Output}}/vulnscan")'
+
+  - name: http-fingerprint
+    type: bash
+    log: "Fingerprinting HTTP hosts with pd-httpx"
+    # pre_condition: 'file_exists("{{httpFile}}")'
+    commands:
+      - 'echo {{Target}} | pd-httpx -H "{{defaultUA}}" -timeout {{httpTimeout}} -t {{httpThreads}} -no-fallback -no-color -silent -json -title -favicon -hash sha256 -jarm -tech-detect -status-code -cdn -tls-grab -ztls -vhost -follow-host-redirects -include-chain >> {{httpFingerprintJsonFile}}'
+
+  # ---------------------------------------------------------------------------
+  # Nuclei vulnerability scan
+  # ---------------------------------------------------------------------------
+  - name: nuclei-scan
+    type: bash
+    log: "Running Nuclei vulnerability scan"
+    commands:
+      - "echo {{Target}} | nuclei -H '{{defaultUA}}' -silent -c {{nucleiThreads}} -jsonl -severity '{{nucleiSeverity}}' -t {{nucleiTemplateConfig}} -irr -o {{nucleiOutputJsonl}} {{extraNuclei}} > /dev/null 2>&1"

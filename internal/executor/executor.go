@@ -320,6 +320,11 @@ func (e *Executor) injectBuiltinVariables(cfg *config.Config, params map[string]
 	execCtx.WorkspaceName = targetSpace
 	execCtx.SetVariable("Workspace", targetSpace)
 
+	// Org attribution for database writes, already resolved to a UUID by the
+	// caller. Empty means no org was named: a new workspace lands in the default
+	// org, an existing one keeps whatever org it has.
+	execCtx.OrgUUID = params["org_uuid"]
+
 	// Output path uses final targetSpace
 	output := filepath.Join(workspacesPath, targetSpace)
 	execCtx.SetVariable("Output", output)
@@ -1076,7 +1081,7 @@ func (e *Executor) ExecuteModule(ctx context.Context, module *core.Workflow, par
 		stateWorkflowFolderStr, _ := stateWorkflowFolder.(string)
 
 		if execCtx.WorkspaceName != "" {
-			_ = database.EnsureWorkspaceRuntime(ctx, execCtx.WorkspaceName, outputStr, execCtx.WorkflowName, stateExecutionLogStr, stateCompletedFileStr, stateWorkflowFileStr, stateWorkflowFolderStr)
+			_ = database.EnsureWorkspaceRuntime(ctx, execCtx.WorkspaceName, outputStr, execCtx.WorkflowName, stateExecutionLogStr, stateCompletedFileStr, stateWorkflowFileStr, stateWorkflowFolderStr, execCtx.OrgUUID)
 		}
 	}
 
@@ -1812,7 +1817,7 @@ func (e *Executor) ExecuteFlow(ctx context.Context, flow *core.Workflow, params 
 		stateWorkflowFolderStr, _ := stateWorkflowFolder.(string)
 
 		if execCtx.WorkspaceName != "" {
-			_ = database.EnsureWorkspaceRuntime(ctx, execCtx.WorkspaceName, outputStr, execCtx.WorkflowName, stateExecutionLogStr, stateCompletedFileStr, stateWorkflowFileStr, stateWorkflowFolderStr)
+			_ = database.EnsureWorkspaceRuntime(ctx, execCtx.WorkspaceName, outputStr, execCtx.WorkflowName, stateExecutionLogStr, stateCompletedFileStr, stateWorkflowFileStr, stateWorkflowFolderStr, execCtx.OrgUUID)
 		}
 	}
 

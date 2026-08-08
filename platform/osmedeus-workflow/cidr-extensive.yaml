@@ -1,0 +1,17 @@
+kind: flow
+name: cidr-extensive
+description: IP/CIDR extensive scan - all 65535 ports with full analysis
+tags: recon, cidr, extensive
+extends: cidr-standard
+help:
+  example_targets: ['1.2.3.4/24', '10.0.0.0/16', '192.168.1.1']
+  usage: |
+    # Run the CIDR workflow against a specific CIDR block
+    osmedeus run -f cidr -t 1.2.3.4/24
+    # Enable actual port scanning with nmap. However, be cautious as this will alert many cloud providers.
+    osmedeus run -f cidr -t 1.2.3.4/24 -p 'enableSYNScan=true'
+
+override:
+  params:
+    commonHttpPorts: "1-65535"
+    commonHttpsPort: "1-65535"

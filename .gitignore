@@ -2,9 +2,15 @@
 
 # Binaries
 bin/
+# The npm launcher is source, not a build artifact — un-exclude it from `bin/`
+# above (a file cannot be re-included while its parent directory is excluded).
+!build/npm/bin/
 dist/**
 dist/config.yaml
 /osmedeus
+# npm distribution: cross-compiled binaries + staged packages
+build/dist-npm/
+build/dist-npm-bin/
 *.exe
 *.exe~
 *.dll
@@ -52,3 +58,18 @@ PLANNING.md
 PLANNING-*.md
 INTERNAL.md
 INTERNAL-*.md
+# platform/ holds vendored copies of the standalone osmedeus sub-projects
+# (dashboard, registry, workflow). Their sources are tracked here; their build
+# outputs and dependency trees are not.
+platform/*/node_modules/
+platform/*/.next/
+platform/*/build/
+platform/*/out/
+platform/*/coverage/
+platform/*/.env*
+platform/**/*.tsbuildinfo
+platform/osmedeus-dashboard/next-env.d.ts
+
+# The repo-wide .agents rule is for this repo's own agent config; the vendored
+# sub-projects track theirs upstream, so a sync-out must not delete them.
+!platform/*/.agents/

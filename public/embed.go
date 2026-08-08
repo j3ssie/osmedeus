@@ -9,6 +9,7 @@ import (
 //go:embed presets/*
 //go:embed all:examples/osmedeus-base.example
 //go:embed all:ui
+//go:embed all:skills
 var EmbedFS embed.FS
 
 // GetFavicon returns the favicon.ico file contents

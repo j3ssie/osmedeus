@@ -1,0 +1,32 @@
+import type { SystemStats } from "@/lib/types/stats";
+
+export const mockSystemStats: SystemStats = {
+  workflows: {
+    total: 15,
+    flows: 5,
+    modules: 10,
+  },
+  scans: {
+    total: 100,
+    completed: 85,
+    running: 10,
+    failed: 5,
+  },
+  workspaces: {
+    total: 50,
+  },
+  assets: {
+    total: 5000,
+  },
+  vulnerabilities: {
+    total: 150,
+    critical: 10,
+    high: 25,
+    medium: 50,
+    low: 65,
+  },
+  schedules: {
+    total: 5,
+    enabled: 3,
+  },
+};

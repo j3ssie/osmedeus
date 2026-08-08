@@ -1,0 +1,89 @@
+kind: module
+name: do-scan-vuln
+description: Hunt vulnerabilities on a single target with Nuclei
+tags: vuln,nuclei,security,scanning
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# -----------------------------------------------------------------------------
+params:
+  - name: httpFile
+    default: "{{Output}}/probing/http-{{TargetSpace}}.txt"
+
+  - name: vigeniumJsonOutput
+    default: "{{Output}}/vulnscan/vigenium-{{TargetSpace}}.jsonl"
+
+  - name: vigeniumPrallel
+    default: 5
+# -----------------------------------------------------------------------------
+# DEPENDENCIES SECTION
+# -----------------------------------------------------------------------------
+dependencies:
+  commands:
+    - vigenium
+
+  variables:
+    - name: Target
+      type: string
+      required: true
+
+# -----------------------------------------------------------------------------
+# REPORTS SECTION
+# -----------------------------------------------------------------------------
+reports:
+  - name: vigenium-jsonl
+    path: "{{vigeniumJsonOutput}}"
+    type: jsonl
+    description: vigenium deep vulnerability scan results in JSONL format
+
+# -----------------------------------------------------------------------------
+# STEPS SECTION
+# -----------------------------------------------------------------------------
+steps:
+  # ---------------------------------------------------------------------------
+  # Setup: Create output folders
+  # ---------------------------------------------------------------------------
+  - name: create-output-folders
+    type: function
+    log: "Creating output folders"
+    functions:
+      - 'create_folder("{{Output}}/vulnscan")'
+
+  # # ---------------------------------------------------------------------------
+  # - name: vigenium-deep-vuln-scan
+  #   type: foreach
+  #   log: "Running vigenium deep vulnerability scan on discovered URLs"
+  #   pre_condition: 'file_exists("{{httpFile}}")'
+  #   input: "{{httpFile}}"
+  #   variable: line
+  #   threads: "{{vigeniumPrallel}}"
+  #   step:
+  #     name: vigenium-single-target
+  #     type: bash
+  #     command: 'vigenium scan -u [[line]] -o results.json'
+
+
+  # ---------------------------------------------------------------------------
+  # Generate vulnerability markdown report
+  # ---------------------------------------------------------------------------
+
+  # - name: generate-vuln-md-report
+  #   type: function
+  #   log: "Generating vulnerability markdown report"
+  #   pre_condition: 'file_length("{{nucleiCleanOutputJsonl}}") > 0'
+  #   functions:
+  #     - 'convert_jsonl_to_markdown("{{nucleiCleanOutputJsonl}}", "{{nucleiMarkdownReport}}")'
+  #     # render markdown report
+  #     - render_markdown_report("{{ExternalMarkdowns}}/sample-report-template-filesystem.md", "{{Output}}/security-report.md")
+  #     - register_artifact("{{Output}}/security-report.md", "md")
+
+  # - name: process-vulnerability-in-db
+  #   type: function
+  #   log: "Processing vulnerability in-db"
+  #   pre_condition: 'file_exists("{{nucleiOutputJsonl}}")'
+  #   functions:
+  #     # updating total vulnerabilities count in db
+  #     - db_total_vulns("{{nucleiCleanOutputJsonl}}")
+  #     - 'db_import_vuln_from_file("{{TargetSpace}}", "{{nucleiOutputJsonl}}")'
+  #   on_error: 
+  #     - action: continue # in case of error, continue the workflow

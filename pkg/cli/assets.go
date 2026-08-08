@@ -96,6 +96,17 @@ func runAssetsList(ctx context.Context, args []string) error {
 		filters["workspace"] = assetsWorkspace
 	}
 
+	// Org filter. An empty resolution means no org was selected, in which case no
+	// clause is added at all and the query spans every org exactly as it did
+	// before orgs existed.
+	orgUUID, err := resolveOrgUUID(ctx)
+	if err != nil {
+		return err
+	}
+	if orgUUID != "" {
+		filters["org_uuid"] = orgUUID
+	}
+
 	// Fuzzy-match filters (LIKE)
 	fuzzyFilters := parseWhereFilters(assetsWhere)
 	if assetsSource != "" {

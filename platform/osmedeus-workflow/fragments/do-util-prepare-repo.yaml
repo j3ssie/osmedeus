@@ -1,0 +1,52 @@
+kind: module
+name: do-util-prepare-repo
+description: Normalize raw input data into HTTP probe files
+tags: normalization,http,probing
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# -----------------------------------------------------------------------------
+params:
+  - name: httpFile
+    default: "{{Output}}/probing/http-{{TargetSpace}}.txt"
+
+  - name: httpInterestingFile
+    default: "{{Output}}/fingerprint/http-interesting-{{TargetSpace}}.txt"
+
+  - name: httpFingerprintJsonFile
+    default: "{{Output}}/fingerprint/http-fingerprint-{{TargetSpace}}.jsonl"
+
+  - name: httpInterestingFilteredJsonFile
+    default: "{{Output}}/fingerprint/http-interesting-filtered-{{TargetSpace}}.jsonl"
+
+  - name: httpInterestingMarkdownFile
+    default: "{{Output}}/fingerprint/http-interesting-filtered-{{TargetSpace}}.md"
+
+  - name: httpThreads
+    default: "{{ threads * 2 }}"
+
+  - name: httpTimeout
+    default: "15"
+
+  - name: defaultUA
+    default: "User-Agent: Mozilla/5.0 (compatible; Osmedeus/v5; +https://github.com/j3ssie/osmedeus)"
+# -----------------------------------------------------------------------------
+# STEPS SECTION
+# -----------------------------------------------------------------------------
+steps:
+  # ---------------------------------------------------------------------------
+  # Setup: Create output folder
+  # ---------------------------------------------------------------------------
+  - name: create-output-folder
+    type: function
+    log: "Creating fingerprint output folder"
+    functions:
+      - 'create_folder("{{Output}}/probing")'
+
+  - name: generate-input-file
+    type: function
+    log: "Generating input file"
+    functions:
+      - exec_cmd("echo {{Target}} | pd-httpx -silent -H '{{defaultUA}}' -t {{httpThreads}} -nf -timeout {{httpTimeout}} >> {{httpFile}}")
+      - exec_cmd("cat {{Target}} | pd-httpx -silent -H '{{defaultUA}}' -t {{httpThreads}} -nf -timeout {{httpTimeout}} >> {{httpFile}}")
+      - sort_unix("{{httpFile}}")

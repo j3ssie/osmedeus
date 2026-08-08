@@ -1,0 +1,187 @@
+# =============================================================================
+# Module Workflow: Port Scanning
+# =============================================================================
+
+kind: module
+name: do-probe-port
+description: Scan common HTTP/HTTPS ports and fingerprint services
+tags: portscan, rustscan, network, nmap
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# -----------------------------------------------------------------------------
+params:
+  - name: ipFile
+    default: "{{Output}}/portscan/ip-file-{{TargetSpace}}.txt"
+
+  - name: httpFile
+    default: "{{Output}}/probing/http-{{TargetSpace}}.txt"
+
+  # pair of host:port
+  - name: openPortsFile
+    default: "{{Output}}/portscan/open-ports-{{TargetSpace}}.txt"
+  - name: httpPortFingerprintJsonlFile
+    default: "{{Output}}/portscan/http-port-fingerprint-{{TargetSpace}}.jsonl"
+  - name: httpPortFingerprintFilteredJsonlFile
+    default: "{{Output}}/portscan/http-port-fingerprint-filtered-{{TargetSpace}}.jsonl"
+  - name: httpPortFingerprintMarkdownFile
+    default: "{{Output}}/portscan/http-port-fingerprint-filtered-{{TargetSpace}}.md"
+  # this is for http probing only
+  - name: commonHttpPorts
+    default: "3000,5000,8000,8008,8080,8081,8082,8083,8088,8888,9000"
+  - name: commonHttpsPort
+    default: "8443,9443"
+  - name: httpThreads
+    default: "{{ threads * 3 }}"
+  - name: httpTimeout
+    default: "15"
+  - name: defaultUA
+    default: "User-Agent: Mozilla/5.0 (compatible; Osmedeus/v5; +https://github.com/j3ssie/osmedeus)"
+
+  # disable this by default as it alert a lot of Cloud Provider
+  - name: enableSYNScan
+    type: bool
+    default: false
+  - name: rateRustScan
+    default: "{{ threads * 400 }}"
+  - name: rustscanPorts
+    default: "1-65535"
+  - name: rustscanTimeout
+    default: "3000"
+  - name: nmapFlags
+    default: "-sC -sV"
+  - name: nmapOutput
+    default: "{{Output}}/synscan/nmap-{{TargetSpace}}"
+  - name: nmapJsonlOutput
+    default: "{{Output}}/synscan/portscan-{{TargetSpace}}.jsonl"
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES SECTION
+# -----------------------------------------------------------------------------
+dependencies:
+  commands:
+    - pd-httpx
+
+  variables:
+    - name: Target
+      type: string
+      required: true
+
+# -----------------------------------------------------------------------------
+# REPORTS SECTION
+# -----------------------------------------------------------------------------
+reports:
+  - name: open-ports
+    path: "{{openPortsFile}}"
+    type: text
+    description: List of open ports
+
+  - name: http-services
+    path: "{{httpPortFingerprintJsonlFile}}"
+    type: text
+    description: HTTP services on open ports
+
+  - name: nmap-services
+    path: "{{nmapJsonlOutput}}"
+    type: jsonl
+    description: Nmap scan results in JSONL format
+
+# -----------------------------------------------------------------------------
+# STEPS SECTION
+# -----------------------------------------------------------------------------
+steps:
+  # ---------------------------------------------------------------------------
+  # Setup: Create output folder
+  # ---------------------------------------------------------------------------
+  - name: create-output-folder
+    type: function
+    log: "Creating portscan output folder"
+    functions:
+      - create_folder("{{Output}}/portscan")
+      - create_folder("{{Output}}/synscan")
+      - create_folder("{{Output}}/probing")
+
+  - name: preparing-the-input-for-port-scanning
+    type: function
+    log: "Preparing the input for port scanning"
+    # if target is a file then parse it first
+    pre_condition: "file_exists('{{Target}}')"
+    functions:
+      - parse_url_file("{{Target}}", "%d", "{{ipFile}}")
+
+  # ---------------------------------------------------------------------------
+  # Port scanning with rustscan + nmap
+  # ---------------------------------------------------------------------------
+  - name: port-scan-with-rustscan-and-nmap
+    type: bash
+    log: "Running port scan with rustscan with ports list. This might take a while depending on the number of IPs and ports"
+    pre_condition: "{{enableSYNScan}} && contains('{{rustscanPorts}}', '-')"
+    command: "echo 'Checking the port flags'"
+    decision:
+      conditions:
+        # if the ports input contain a comma, it means it's a list of ports, we will use --port flag for rustscan
+        - if: "contains('{{rustscanPorts}}', '-') && contains('{{nmapFlags}}','-')"
+          command: "rustscan --timeout {{rustscanTimeout}} -b {{rateRustScan}} --scripts None --range {{rustscanPorts}} -a {{ipFile}}  -- -oA {{nmapOutput}} {{nmapFlags}}"
+        # rustscan with comma separated ports list is not working well with nmap output, so we need to run it separately
+        - if: "contains('{{rustscanPorts}}', ',') && contains('{{nmapFlags}}','-')"
+          command: "rustscan --timeout {{rustscanTimeout}} -b {{rateRustScan}} --scripts None --port {{rustscanPorts}} -a {{ipFile}}  -- -oA {{nmapOutput}} {{nmapFlags}}"
+
+        # no nmap flags, just run rustscan with default flags
+        - if: "contains('{{rustscanPorts}}', '-') && !contains('{{nmapFlags}}','-')"
+          command: "rustscan --timeout {{rustscanTimeout}} -b {{rateRustScan}} --scripts None --range {{rustscanPorts}} -a {{ipFile}} | grep 'Open' | awk '{print $2}' >> {{openPortsFile}}"
+        - if: "contains('{{rustscanPorts}}', ',') && !contains('{{nmapFlags}}','-')"
+          command: "rustscan --timeout {{rustscanTimeout}} -b {{rateRustScan}} --scripts None --port {{rustscanPorts}} -a {{ipFile}} | grep 'Open' | awk '{print $2}' >> {{openPortsFile}}"
+
+  - name: parse-nmap-results
+    type: function
+    log: "Parsing nmap results then import to DB"
+    pre_condition: 'file_exists("{{nmapOutput}}.xml")'
+    functions:
+      - nmap_to_jsonl("{{nmapOutput}}.xml", "{{nmapJsonlOutput}}")
+      - db_import_port_assets("{{TargetSpace}}", "{{nmapJsonlOutput}}")
+      # this is to join the host:ip and host:port for the http probing step, as pd-httpx need host:port as input
+      - exec_cmd("cat {{nmapJsonlOutput}} | jq -r '.host_ip as $ip | .open_ports[] | \"\($ip):\(. | split("/")[0])\"' >> {{openPortsFile}}")
+
+  - name: sort-open-ports-file
+    type: function
+    log: "Sorting open ports file"
+    pre_condition: 'file_exists("{{openPortsFile}}")'
+    functions:
+      - sort_unix("{{openPortsFile}}")
+      - db_total_assets("{{openPortsFile}}")
+
+  - name: http-probe-on-open-ports
+    type: bash
+    log: "Probing for HTTP services on open ports from rustscan results"
+    pre_condition: 'file_exists("{{openPortsFile}}")'
+    commands:
+      - cat {{openPortsFile}} | pd-httpx -H '{{defaultUA}}' -timeout {{httpTimeout}} -t {{httpThreads}} -no-fallback -no-color -silent -json -title -favicon -hash sha256 -jarm -tech-detect -status-code -cdn -tls-grab -ztls -vhost -follow-host-redirects -include-chain >> {{httpPortFingerprintJsonlFile}}
+      - cat {{httpPortFingerprintJsonlFile}} | jq -r '[.host_ip,.port] | join(\":\")' | sort -u >> {{openPortsFile}}
+    on_error:
+      - action: continue # expected error if no port found
+
+  # ---------------------------------------------------------------------------
+  # HTTP probing on open ports
+  # ---------------------------------------------------------------------------
+  - name: http-probe-ports
+    type: bash
+    log: "Probing for HTTP services on open ports"
+    pre_condition: 'file_exists("{{ipFile}}") && !file_exists("{{openPortsFile}}")'
+    commands:
+      - cat {{ipFile}} | pd-httpx -H '{{defaultUA}}' -timeout {{httpTimeout}} -t {{httpThreads}} -no-fallback -no-color -silent -json -title -favicon -hash sha256 -jarm -tech-detect -status-code -cdn -tls-grab -ztls -vhost -follow-host-redirects -include-chain -ports 'http:{{commonHttpPorts}},https:{{commonHttpsPort}}' >> {{httpPortFingerprintJsonlFile}}
+      - cat {{httpPortFingerprintJsonlFile}} | jq -r '[.host_ip,.port] | join(\":\")' | sort -u >> {{openPortsFile}}
+    on_error:
+      - action: continue # expected error if no port found
+
+  - name: sort-http-results
+    type: function
+    log: "Sorting HTTP probe results"
+    pre_condition: 'file_exists("{{httpPortFingerprintJsonlFile}}")'
+    functions:
+      - exec_cmd("cat {{httpPortFingerprintJsonlFile}} | jq -r '.url' >> {{httpFile}}")
+      - sort_unix("{{httpFile}}")
+      - jsonl_filter("{{httpPortFingerprintJsonlFile}}", "{{httpPortFingerprintFilteredJsonlFile}}", "url,title,status_code,content_length,lines,webserver,tech,cdn")
+      - convert_jsonl_to_markdown("{{httpPortFingerprintFilteredJsonlFile}}", "{{httpPortFingerprintMarkdownFile}}")
+      - 'db_total_urls("{{httpPortFingerprintJsonlFile}}")'
+      - 'db_total_assets("{{httpPortFingerprintJsonlFile}}")'
+      - 'db_import_asset_from_file("{{TargetSpace}}", "{{httpPortFingerprintJsonlFile}}")'

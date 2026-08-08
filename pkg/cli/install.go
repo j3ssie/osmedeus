@@ -143,6 +143,23 @@ This is the primary command for health checks. 'osmedeus health' is an alias for
 	RunE:    runInstallValidate,
 }
 
+// installSkillsCmd is an alias for `osmedeus skills install`, registered here so
+// skills are discoverable alongside the other install targets. A cobra command
+// has a single parent, so the alias is a thin second command sharing the handler
+// and flag variables — the same pattern as `workflow install`.
+var installSkillsCmd = &cobra.Command{
+	Use:     "skills [name...]",
+	Aliases: []string{"skill"},
+	Short:   "Install coding-agent skills into a skills directory",
+	Long: `Install the skill bundles embedded in this binary into a coding agent's
+skills directory. Alias for 'osmedeus skills install'.`,
+	Example: `  osmedeus install skills
+  osmedeus install skills --scope global
+  osmedeus install skills --agent codex`,
+	Args: cobra.ArbitraryArgs,
+	RunE: RunSkillsInstall,
+}
+
 // RunInstallWorkflow installs workflows from a source (exported for use by workflow install alias)
 func RunInstallWorkflow(cmd *cobra.Command, args []string) error {
 	cfg := config.Get()
@@ -1623,6 +1640,8 @@ func init() {
 	installCmd.AddCommand(installBinaryCmd)
 	installCmd.AddCommand(installEnvCmd)
 	installCmd.AddCommand(installValidateCmd)
+	installCmd.AddCommand(installSkillsCmd)
+	addSkillsInstallFlags(installSkillsCmd)
 
 	installValidateCmd.Flags().BoolVar(&validateSample, "sample", false, "initialize base folder from embedded sample (replaces existing base folder)")
 	installValidateCmd.Flags().BoolVar(&validatePreset, "preset", false, "install ready-to-use base from default repository")

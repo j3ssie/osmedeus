@@ -1,0 +1,165 @@
+kind: module
+name: do-scan-vuln-thorough
+description: Thorough single-target vulnerability scanning with Vigolium
+tags: vuln,vigolium,security,scanning,thorough
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# -----------------------------------------------------------------------------
+params:
+  - name: httpFile
+    default: "{{Output}}/probing/http-{{TargetSpace}}.txt"
+
+  - name: vulnLimit
+    default: "10000"
+
+  # Vigolium scan tuning
+  - name: vigoliumTimeout
+    default: "1h"
+  - name: vigoliumScanningMaxDuration
+    default: "45m"
+  - name: vigoliumParallel
+    default: "1"
+  - name: vigoliumConcurrency
+    default: "{{ threads * 5 }}"
+  - name: vigoliumMaxPerHost
+    default: "50"
+  - name: vigoliumStrategy
+    default: "balanced"
+  - name: vigoliumSkipPhases
+    default: "known-issue-scan"
+  - name: extraVigoliumScan
+    default: " "
+
+  - name: vigoliumDefaultUA
+    default: "User-Agent: Mozilla/5.0 (compatible; Vigolium OSS +https://github.com/vigolium/vigolium)"
+
+  - name: vigoliumVulnDBDir
+    default: "{{Output}}/vulnscan/vigolium-dbs"
+  - name: vigoliumVulnDBFile
+    default: "{{Output}}/vulnscan/vigolium-dbs/vgnm-vuln-{{TargetSpace}}.sqlite"
+
+  - name: vigoliumVulnHTMLReport
+    default: "{{Output}}/vulnscan/vigolium-findings-{{TargetSpace}}.html"
+  - name: vigoliumVulnJsonlFile
+    default: "{{Output}}/vulnscan/vigolium-output-{{TargetSpace}}.jsonl"
+  - name: vigoliumVulnNormalizedJsonlFile
+    default: "{{Output}}/vulnscan/vigolium-findings-normalized-{{TargetSpace}}.jsonl"
+  - name: vigoliumVulnCleanJsonlFile
+    default: "{{Output}}/vulnscan/vigolium-findings-clean-{{TargetSpace}}.jsonl"
+  - name: vigoliumVulnMarkdownReport
+    default: "{{Output}}/vulnscan/vigolium-findings-{{TargetSpace}}.md"
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES SECTION
+# -----------------------------------------------------------------------------
+dependencies:
+  commands:
+    - vigolium
+    - jq
+
+  variables:
+    - name: Target
+      type: string
+      required: true
+
+# -----------------------------------------------------------------------------
+# REPORTS SECTION
+# -----------------------------------------------------------------------------
+reports:
+  - name: vigolium-vuln-html-report
+    path: "{{vigoliumVulnHTMLReport}}"
+    type: html
+    description: Vigolium thorough vulnerability scan HTML report
+
+  - name: vigolium-vuln-jsonl
+    path: "{{vigoliumVulnJsonlFile}}"
+    type: jsonl
+    description: Vigolium thorough full database JSONL export
+
+  - name: vigolium-vuln-markdown-report
+    path: "{{vigoliumVulnMarkdownReport}}"
+    type: md
+    description: Vigolium thorough vulnerability findings Markdown report
+
+# -----------------------------------------------------------------------------
+# STEPS SECTION
+# -----------------------------------------------------------------------------
+steps:
+  # ---------------------------------------------------------------------------
+  # Setup: Create output folders
+  # ---------------------------------------------------------------------------
+  - name: create-output-folders
+    type: function
+    log: "Creating Vigolium vulnscan output folders"
+    functions:
+      - 'create_folder("{{Output}}/vulnscan")'
+      - 'create_folder("{{vigoliumVulnDBDir}}")'
+
+  # ---------------------------------------------------------------------------
+  # Check input file limit
+  # ---------------------------------------------------------------------------
+  - name: check-input-limit
+    type: function
+    log: "Checking input file size limit"
+    pre_condition: 'file_length("{{httpFile}}") > {{vulnLimit}}'
+    functions:
+      - 'log_error("Got {{file_length("{{httpFile}}")}} lines in input file, which is greater than {{vulnLimit}} line")'
+      - 'skip()'
+
+  # ---------------------------------------------------------------------------
+  # Vigolium thorough vulnerability scan
+  # ---------------------------------------------------------------------------
+  - name: vigolium-thorough-vuln-scan
+    type: foreach
+    log: "Running thorough vulnerability scan with Vigolium"
+    pre_condition: 'file_exists("{{httpFile}}")'
+    input: "{{httpFile}}"
+    variable: line
+    threads: "{{vigoliumParallel}}"
+    step:
+      name: vigolium-single-target
+      type: bash
+      command: "timeout -k 1m {{vigoliumTimeout}} vigolium scan --db-isolate --soft-fail --silent -H \"{{vigoliumDefaultUA}}\" --scanning-max-duration {{vigoliumScanningMaxDuration}} --omit-response --db {{vigoliumVulnDBFile}} --skip {{vigoliumSkipPhases}} --strategy {{vigoliumStrategy}} --concurrency {{vigoliumConcurrency}} --max-per-host {{vigoliumMaxPerHost}} -t '[[line]]' {{extraVigoliumScan}}"
+      on_error:
+        - action: continue # keep scanning remaining targets if one target fails
+
+  - name: generate-vigolium-vuln-reports
+    type: bash
+    log: "Generate Vigolium vulnerability reports from the shared db"
+    pre_condition: 'file_exists("{{vigoliumVulnDBFile}}")'
+    commands:
+      - "vigolium export --silent --db {{vigoliumVulnDBFile}} --only findings --omit-response --format html -o {{vigoliumVulnHTMLReport}}"
+      - "vigolium export --silent --db {{vigoliumVulnDBFile}} --omit-response --format jsonl -o {{vigoliumVulnJsonlFile}}"
+
+  - name: normalize-vigolium-vuln-findings
+    type: bash
+    log: "Normalizing Vigolium vulnerability findings"
+    pre_condition: 'file_length("{{vigoliumVulnJsonlFile}}") > 0'
+    commands:
+      - "jq -c '(.data? // .) as $d | select((.type? // \"finding\") == \"finding\") | {module_id: $d.module_id, module_name: $d.module_name, severity: $d.severity, confidence: $d.confidence, hostname: $d.hostname, url: $d.url, matched_at: (($d.matched_at // [$d.url]) | if type == \"array\" then .[0] else . end), extracted_results: $d.extracted_results} | with_entries(select(.value != null and .value != [] and .value != \"\"))' {{vigoliumVulnJsonlFile}} > {{vigoliumVulnNormalizedJsonlFile}}"
+
+  - name: vigolium-vuln-report-processing
+    type: function
+    log: "Processing Vigolium vulnerability report"
+    pre_condition: 'file_length("{{vigoliumVulnNormalizedJsonlFile}}") > 0'
+    functions:
+      - jsonl_filter("{{vigoliumVulnNormalizedJsonlFile}}", "{{vigoliumVulnCleanJsonlFile}}", "module_id,module_name,severity,confidence,hostname,url,matched_at,extracted_results")
+      - sort_unix("{{vigoliumVulnCleanJsonlFile}}")
+
+  - name: count-vigolium-vulnerabilities
+    type: function
+    log: "Counting Vigolium vulnerability findings"
+    pre_condition: 'file_length("{{vigoliumVulnCleanJsonlFile}}") > 0'
+    functions:
+      - db_total_vulns("{{vigoliumVulnCleanJsonlFile}}")
+
+  - name: process-vigolium-vulnerability-in-db
+    type: function
+    log: "Processing Vigolium vulnerability results in db"
+    pre_condition: 'file_length("{{vigoliumVulnJsonlFile}}") > 0'
+    functions:
+      - 'db_import_vigolium("{{TargetSpace}}", "{{vigoliumVulnJsonlFile}}")'
+      - 'send_telegram_file("{{vigoliumVulnHTMLReport}}", "Vigolium Thorough Vulnerability HTML Report")'
+    on_error:
+      - action: continue # in case of error, continue the workflow

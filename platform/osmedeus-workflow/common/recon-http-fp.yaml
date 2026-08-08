@@ -1,0 +1,135 @@
+# =============================================================================
+# Module Workflow: HTTP Fingerprinting
+# =============================================================================
+kind: module
+name: recon-http-fp
+description: Detect web technologies, CDN, TLS info, and response signatures
+tags: fingerprint, technology, http
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# -----------------------------------------------------------------------------
+params:
+  - name: httpFile
+    default: "{{Output}}/probing/http-{{TargetSpace}}.txt"
+
+  - name: httpInterestingFile
+    default: "{{Output}}/fingerprint/http-interesting-{{TargetSpace}}.txt"
+
+  - name: httpFingerprintJsonFile
+    default: "{{Output}}/fingerprint/http-fingerprint-{{TargetSpace}}.jsonl"
+
+  - name: httpInterestingJsonFile
+    default: "{{Output}}/fingerprint/http-interesting-{{TargetSpace}}.jsonl"
+
+  - name: httpInterestingFilteredJsonFile
+    default: "{{Output}}/fingerprint/http-interesting-filtered-{{TargetSpace}}.jsonl"
+
+  - name: httpInterestingMarkdownFile
+    default: "{{Output}}/fingerprint/http-interesting-filtered-{{TargetSpace}}.md"
+
+  - name: httpThreads
+    default: "{{ threads * 4 }}"
+
+  - name: httpTimeout
+    default: "15"
+
+  - name: defaultUA
+    default: "User-Agent: Mozilla/5.0 (compatible; Osmedeus/v5; +https://github.com/j3ssie/osmedeus)"
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES SECTION
+# -----------------------------------------------------------------------------
+dependencies:
+  # commands:
+  #   - pd-httpx  # disable because pd-httpx is also a common tool on a lot of machine
+
+  variables:
+    - name: Target
+      type: string
+      required: true
+
+reports:
+  - name: http-data
+    path: "{{httpFingerprintJsonFile}}"
+    type: jsonl
+    description: HTTP fingerprinting data
+
+  - name: httpInterestingMarkdownFile
+    default: "{{Output}}/fingerprint/http-interesting-{{TargetSpace}}.md"
+    type: markdown
+    description: HTTP Fingerprinting Results with Interesting HTTP Responses
+
+# -----------------------------------------------------------------------------
+# STEPS SECTION
+# -----------------------------------------------------------------------------
+steps:
+  # ---------------------------------------------------------------------------
+  # Setup: Create output folder
+  # ---------------------------------------------------------------------------
+  - name: create-output-folder
+    type: function
+    log: "Creating fingerprint output folder"
+    function: 'create_folder("{{Output}}/fingerprint")'
+
+  # ---------------------------------------------------------------------------
+  # HTTP fingerprinting with pd-httpx
+  # ---------------------------------------------------------------------------
+  - name: http-fingerprint-with-response
+    type: bash
+    log: "Fingerprinting HTTP hosts with pd-httpx and store response"
+    pre_condition: 'file_exists("{{httpFile}}") && {{enableStoreHTTPResponse}}'
+    command: 'cat {{httpFile}} | pd-httpx -H "{{defaultUA}}" -timeout {{httpTimeout}} -t {{httpThreads}} -no-fallback -no-color -silent -json -title -favicon -hash sha256 -jarm -tech-detect -status-code -cdn -tls-grab -ztls -vhost -follow-host-redirects -include-chain -include-response >> {{httpFingerprintJsonFile}}'
+    on_error:
+      - action: continue # in case of error, continue the workflow
+
+  - name: http-fingerprint
+    type: bash
+    log: "Fingerprinting HTTP hosts with pd-httpx"
+    pre_condition: 'file_exists("{{httpFile}}") && !{{enableStoreHTTPResponse}}'
+    command: 'cat {{httpFile}} | pd-httpx -H "{{defaultUA}}" -timeout {{httpTimeout}} -t {{httpThreads}} -no-fallback -no-color -silent -json -title -favicon -hash sha256 -jarm -tech-detect -status-code -cdn -tls-grab -ztls -vhost -follow-host-redirects -include-chain >> {{httpFingerprintJsonFile}}'
+    on_error:
+      - action: continue # in case of error, continue the workflow
+
+  # fallback in case the machine doesn't have 'pd-httpx'
+  - name: http-fingerprint-fallback
+    type: bash
+    log: "Fingerprinting HTTP hosts with pd-httpx"
+    pre_condition: '!file_exists("{{httpFingerprintJsonFile}}")'
+    command: 'cat {{httpFile}} | pd-httpx -H "{{defaultUA}}" -timeout {{httpTimeout}} -t {{httpThreads}} -no-fallback -no-color -silent -json -title -favicon -hash sha256 -jarm -tech-detect -status-code -cdn -tls-grab -ztls -vhost -follow-host-redirects -include-chain >> {{httpFingerprintJsonFile}}'
+    on_error:
+      - action: continue # in case of error, continue the workflow
+
+  - name: create-unique-jsonl
+    type: function
+    log: "Creating unique HTTP file based on host, status code, and body SHA256"
+    functions:
+      - jsonl_unique("{{httpFingerprintJsonFile}}", "{{httpInterestingJsonFile}}", "host,status,hash.body_sha256")
+      - exec_cmd("cat {{httpInterestingJsonFile}} | jq -r '.url' > {{httpInterestingFile}}")
+
+  - name: fallback-interesting-http
+    type: function
+    log: "Creating HTTP interesting if we can't unique the hash"
+    pre_condition: '!file_exists("{{httpInterestingFile}}")'
+    functions:
+      - exec_cmd("cp {{httpFile}} {{httpInterestingFile}}")
+
+  - name: beautify-interesting-http-results
+    type: function
+    log: "Beautifying interesting HTTP results"
+    pre_condition: 'file_exists("{{httpInterestingJsonFile}}")'
+    functions:
+      - jsonl_filter("{{httpInterestingJsonFile}}", "{{httpInterestingFilteredJsonFile}}", "url,title,status_code,content_length,lines,webserver,tech,cdn")
+      - 'convert_jsonl_to_markdown("{{httpInterestingFilteredJsonFile}}", "{{httpInterestingMarkdownFile}}")'
+
+  - name: process-fingerprint-in-db
+    type: function
+    log: "Processing fingerprint in-db"
+    pre_condition: 'file_exists("{{httpFingerprintJsonFile}}")'
+    functions:
+      - 'db_total_urls("{{httpFingerprintJsonFile}}")'
+      - 'db_total_assets("{{httpFingerprintJsonFile}}")'
+      - 'db_import_asset_from_file("{{TargetSpace}}", "{{httpFingerprintJsonFile}}")'
+      - 'send_telegram_file("{{httpInterestingMarkdownFile}}", "HTTP Fingerprint Results")'
+    on_error:
+      - action: continue # in case of error, continue the workflow

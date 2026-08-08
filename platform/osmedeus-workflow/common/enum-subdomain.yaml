@@ -1,0 +1,109 @@
+# =============================================================================
+# Module Workflow: Subdomain Enumeration
+# =============================================================================
+
+kind: module
+name: enum-subdomain
+description: Enumerate subdomains via subfinder, amass, assetfinder, and findomain
+tags: subdomain, enumeration, discovery, dns
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# -----------------------------------------------------------------------------
+params:
+  - name: subfinderThreads
+    default: "{{threads * 6}}"
+  - name: subfinderConfig
+    default: "{{ExternalConfigs}}/subfinder-provider-config.yaml"
+
+  - name: enable_amass
+    type: bool
+    default: false
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES SECTION
+# -----------------------------------------------------------------------------
+dependencies:
+  commands:
+    - subfinder
+    - findomain
+  variables:
+    - name: Target
+      type: string
+      required: true
+
+# -----------------------------------------------------------------------------
+# REPORTS SECTION
+# -----------------------------------------------------------------------------
+reports:
+  - name: final-subdomains
+    path: "{{Output}}/subdomain/final-{{TargetSpace}}.txt"
+    type: text
+    description: Final list of subdomains
+
+# -----------------------------------------------------------------------------
+# STEPS SECTION
+# -----------------------------------------------------------------------------
+steps:
+  # ---------------------------------------------------------------------------
+  # Setup: Create output folders
+  # ---------------------------------------------------------------------------
+  - name: create-output-folders
+    type: function
+    log: "Creating output folders"
+    functions:
+      - 'create_folder("{{Output}}/subdomain/")'
+
+  # ---------------------------------------------------------------------------
+  # Subdomain enumeration with subfinder
+  # ---------------------------------------------------------------------------
+  - name: subfinder-enum
+    type: bash
+    log: "Running subfinder subdomain enumeration"
+    commands:
+      - 'subfinder -d {{Target}} -provider-config {{subfinderConfig}} -t {{subfinderThreads}} -o {{Output}}/subdomain/{{TargetSpace}}-subfinder.txt >/dev/null 2>&1'
+
+  - name: amass-enum
+    type: bash
+    pre_condition: "{{enable_amass}}"
+    log: "Running amass subdomain enumeration (This may take a while)"
+    command: 'amass enum -active -d {{Target}} -o {{Output}}/subdomain/{{TargetSpace}}-amass.txt >/dev/null 2>&1'
+
+  # ---------------------------------------------------------------------------
+  # Additional subdomain sources
+  # ---------------------------------------------------------------------------
+  - name: additional-sources
+    type: function
+    log: "Running assetfinder and findomain"
+    functions:
+      - 'exec_cmd("findomain -u {{Output}}/subdomain/{{TargetSpace}}-findomain.txt -t {{Target}} > /dev/null 2>&1")'
+      - 'exec_cmd("assetfinder -subs-only {{Target}} > {{Output}}/subdomain/{{TargetSpace}}-assetfinder.txt")'
+    on_error: 
+      - action: continue # expected error when assetfinder fails
+
+  # ---------------------------------------------------------------------------
+  # Merge all subdomain sources
+  # ---------------------------------------------------------------------------
+  - name: merge-subdomains
+    type: function
+    log: "Merging subdomain sources"
+    functions:
+      - 'append_file("{{Output}}/subdomain/subdomain-{{TargetSpace}}.txt", "{{Output}}/subdomain/{{TargetSpace}}-subfinder.txt")'
+      - 'append_file("{{Output}}/subdomain/subdomain-{{TargetSpace}}.txt", "{{Output}}/subdomain/{{TargetSpace}}-amass.txt")'
+      - 'append_file("{{Output}}/subdomain/subdomain-{{TargetSpace}}.txt", "{{Output}}/subdomain/{{TargetSpace}}-assetfinder.txt")'
+      - 'append_file("{{Output}}/subdomain/subdomain-{{TargetSpace}}.txt", "{{Output}}/subdomain/{{TargetSpace}}-findomain.txt")'
+      - 'exec_cmd("rm -rf {{Output}}/subdomain/{{TargetSpace}}-*.txt")'
+    on_error: 
+      - action: continue # expected error as some subdomain sources may not be available
+
+  # ---------------------------------------------------------------------------
+  # Final sort and cleanup
+  # ---------------------------------------------------------------------------
+  - name: subdomain-sort
+    type: function
+    log: "Sorting final subdomain list"
+    functions: 
+      - 'clean_sub("{{Output}}/subdomain/subdomain-{{TargetSpace}}.txt", "{{Target}}")'
+      - 'sort_unix("{{Output}}/subdomain/subdomain-{{TargetSpace}}.txt")'
+
+

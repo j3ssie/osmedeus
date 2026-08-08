@@ -1,0 +1,159 @@
+# Workspaces
+
+## List Workspaces
+
+Get a list of all run workspaces.
+
+**List workspaces from database (default):**
+```bash
+curl http://localhost:8002/osm/api/workspaces \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**List workspaces with pagination:**
+```bash
+curl "http://localhost:8002/osm/api/workspaces?offset=0&limit=50" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**List workspaces from filesystem/assets:**
+```bash
+curl "http://localhost:8002/osm/api/workspaces?filesystem=true" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Combine pagination with filesystem mode:**
+```bash
+curl "http://localhost:8002/osm/api/workspaces?filesystem=true&offset=20&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response (database mode):**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "example.com",
+      "local_path": "/home/user/osmedeus-base/workspaces/example.com",
+      "total_assets": 150,
+      "total_subdomains": 120,
+      "total_urls": 500,
+      "total_vulns": 12,
+      "vuln_critical": 2,
+      "vuln_high": 3,
+      "vuln_medium": 4,
+      "vuln_low": 3,
+      "vuln_potential": 0,
+      "risk_score": 7.5,
+      "tags": ["production", "priority"],
+      "last_run": "2025-01-15T10:30:00Z",
+      "run_workflow": "subdomain-enum",
+      "created_at": "2025-01-10T08:00:00Z",
+      "updated_at": "2025-01-15T10:30:00Z"
+    },
+    {
+      "id": 2,
+      "name": "test.com",
+      "local_path": "/home/user/osmedeus-base/workspaces/test.com",
+      "total_assets": 50,
+      "total_subdomains": 35,
+      "total_urls": 120,
+      "total_vulns": 3,
+      "vuln_critical": 0,
+      "vuln_high": 1,
+      "vuln_medium": 2,
+      "vuln_low": 0,
+      "vuln_potential": 5,
+      "risk_score": 4.2,
+      "tags": ["staging"],
+      "last_run": "2025-01-14T15:00:00Z",
+      "run_workflow": "port-scan",
+      "created_at": "2025-01-12T12:00:00Z",
+      "updated_at": "2025-01-14T15:00:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 100,
+    "offset": 0,
+    "limit": 20
+  }
+}
+```
+
+**Workspace Fields Reference:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | int | Unique workspace identifier |
+| `name` | string | Workspace name (usually the target domain) |
+| `local_path` | string | Full path to workspace directory |
+| `total_assets` | int | Total discovered assets |
+| `total_subdomains` | int | Total discovered subdomains |
+| `total_urls` | int | Total discovered URLs |
+| `total_vulns` | int | Total vulnerabilities found |
+| `vuln_critical` | int | Critical severity vulnerabilities |
+| `vuln_high` | int | High severity vulnerabilities |
+| `vuln_medium` | int | Medium severity vulnerabilities |
+| `vuln_low` | int | Low severity vulnerabilities |
+| `vuln_potential` | int | Potential/informational findings |
+| `risk_score` | float | Calculated risk score (0-10) |
+| `tags` | array | Custom tags for organization |
+| `last_run` | timestamp | Last workflow run timestamp |
+| `run_workflow` | string | Name of last executed workflow |
+| `state_execution_log` | string | Path to execution log file |
+| `state_completed_file` | string | Path to completed marker file |
+| `state_workflow_file` | string | Path to workflow YAML file |
+| `state_workflow_folder` | string | Path to workflow folder |
+| `created_at` | timestamp | Workspace creation timestamp |
+| `updated_at` | timestamp | Last update timestamp |
+
+---
+
+## Get Workspace State File
+
+Retrieve the content of a workspace state file. This endpoint provides access to execution logs, completion markers, and workflow files associated with a workspace.
+
+**Get execution log:**
+```bash
+curl "http://localhost:8002/osm/api/workspaces/example.com/state-file?state_file=execution_log" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Get completed file:**
+```bash
+curl "http://localhost:8002/osm/api/workspaces/example.com/state-file?state_file=completed_file" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Get workflow file:**
+```bash
+curl "http://localhost:8002/osm/api/workspaces/example.com/state-file?state_file=workflow_file" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "workspace": "example.com",
+  "state_file": "execution_log",
+  "file_path": "/home/user/osmedeus-base/workspaces/example.com/log/execution.log",
+  "content": "2025-01-15 10:30:00 [INFO] Starting workflow...\n2025-01-15 10:30:05 [INFO] Step 1 completed...\n..."
+}
+```
+
+**State File Types:**
+
+| Type | Description |
+|------|-------------|
+| `execution_log` | Detailed execution log with timestamps and step output |
+| `completed_file` | Marker file indicating workflow completion status |
+| `workflow_file` | The YAML workflow definition that was executed |
+
+**Error Responses:**
+
+| Status | Description |
+|--------|-------------|
+| 400 | Invalid workspace name or missing state_file parameter |
+| 403 | Path traversal attempt detected |
+| 404 | Workspace or state file not found |

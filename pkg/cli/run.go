@@ -888,6 +888,15 @@ func executeRunForTargetWithContext(ctx context.Context, workflow *core.Workflow
 	var runID int64
 	if !dryRun {
 		runUUID, runID = createCLIRunRecord(ctx, cfg, workflow, target, params, loader)
+
+		// createCLIRunRecord resolved --org into params; surface a bad reference
+		// here (a memo hit, not a second lookup) so a typo fails the run instead
+		// of silently writing the scan to no org.
+		if database.GetDB() != nil {
+			if _, err := resolveOrgUUID(ctx); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	// Create executor
@@ -1190,6 +1199,14 @@ func createCLIRunRecord(ctx context.Context, cfg *config.Config, workflow *core.
 	// Compute workspace from target and params
 	workspace := computeWorkspace(target, params)
 
+	// The database is connected now, so --org can be resolved. This is the single
+	// resolution point for the run: params is shared with the executor, so writing
+	// the UUID here is what carries the org through to the workspace upsert.
+	// Errors are surfaced by the caller, which re-reads the memoized result.
+	if orgUUID, err := resolveOrgUUID(ctx); err == nil && orgUUID != "" {
+		params["org_uuid"] = orgUUID
+	}
+
 	run := &database.Run{
 		RunUUID:      runUUID,
 		WorkflowName: workflow.Name,
@@ -1201,6 +1218,9 @@ func createCLIRunRecord(ctx context.Context, cfg *config.Config, workflow *core.
 		StartedAt:    &now,
 		TotalSteps:   calculateTotalSteps(workflow, loader),
 		Workspace:    workspace,
+		// Empty is the normal case: the insert hook derives the org from the
+		// workspace, so a run into an org-assigned workspace joins that org.
+		OrgUUID:      params["org_uuid"],
 		RunPriority:  "critical", // CLI runs execute immediately
 		RunMode:      "local",
 		HooksEnabled: workflow.HookCount() > 0,

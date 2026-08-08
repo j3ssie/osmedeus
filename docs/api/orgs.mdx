@@ -1,0 +1,176 @@
+---
+title: "Orgs"
+description: "Group workspaces under an org for cross-workspace queries"
+---
+
+# Orgs
+
+An org groups multiple workspaces so assets, vulnerabilities and runs can be
+queried across all of them at once. Osmedeus derives a workspace per target —
+usually one apex domain — so a company with many root domains gets one org
+covering every workspace.
+
+Orgs are opt-in and additive:
+
+- Every row that does not name an org belongs to the built-in `default` org.
+- A request without an `org` query parameter applies **no** org filter and spans
+  every org, so existing integrations behave exactly as they did before orgs
+  existed.
+- An unknown org returns `400` on filter endpoints and `404` on `/orgs/{uuid}`,
+  rather than an empty result that looks like "this org has no data".
+
+The default org has a fixed UUID of `00000000-0000-0000-0000-000000000001` and
+cannot be deleted or renamed.
+
+## List Orgs
+
+Returns every org with its workspace, asset, vulnerability and run counts.
+
+```bash
+curl http://localhost:8002/osm/api/orgs \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "uuid": "00000000-0000-0000-0000-000000000001",
+      "name": "default",
+      "description": "Default org for data not assigned to a specific org",
+      "tags": null,
+      "is_default": true,
+      "created_at": "2026-08-08T10:27:07Z",
+      "updated_at": "2026-08-08T10:27:07Z",
+      "stats": {
+        "org_uuid": "00000000-0000-0000-0000-000000000001",
+        "org_name": "default",
+        "total_workspaces": 1,
+        "total_assets": 1,
+        "total_vulns": 0,
+        "total_runs": 0,
+        "workspaces": ["other.com"]
+      }
+    }
+  ],
+  "total": 1
+}
+```
+
+## Get Org
+
+Accepts either an org name or a UUID.
+
+```bash
+curl http://localhost:8002/osm/api/orgs/acme \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+## Get Org Stats
+
+```bash
+curl http://localhost:8002/osm/api/orgs/acme/stats \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+## Create Org
+
+```bash
+curl -X POST http://localhost:8002/osm/api/orgs \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "acme",
+    "description": "ACME Corp",
+    "tags": ["corp"]
+  }'
+```
+
+Pass `uuid` to create the org with a specific UUID instead of a generated one.
+Returns `201` with the created org, or `400` if the name is missing or taken.
+
+## Update Org
+
+Updates metadata, and optionally assigns workspaces to the org in the same call.
+Assigning cascades the stamp to every asset, vulnerability and run in those
+workspaces — this is how data that predates the org gets grouped without
+re-scanning.
+
+```bash
+curl -X PUT http://localhost:8002/osm/api/orgs/acme \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "ACME Corporation",
+    "workspaces": ["acme.com", "acme.io"]
+  }'
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "uuid": "f072a502-0a35-4e8f-aef0-79e048e082f7",
+    "name": "acme",
+    "description": "ACME Corporation",
+    "created_at": "2026-08-08T10:27:07Z",
+    "updated_at": "2026-08-08T10:52:50Z"
+  },
+  "assigned": {
+    "workspaces": 2,
+    "assets": 2,
+    "vulnerabilities": 1,
+    "runs": 0
+  }
+}
+```
+
+Renaming the default org returns `403`.
+
+## Delete Org
+
+By default the org's workspaces, assets, vulnerabilities and runs are reassigned
+to the default org — nothing is lost, only the grouping.
+
+```bash
+curl -X DELETE http://localhost:8002/osm/api/orgs/acme \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Pass `purge=true` to delete that data along with the org:
+
+```bash
+curl -X DELETE "http://localhost:8002/osm/api/orgs/acme?purge=true" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Deleting the default org returns `403`.
+
+## Filtering other endpoints by org
+
+These endpoints accept `?org=<name|uuid>`:
+
+| Endpoint | Behavior |
+|----------|----------|
+| `GET /osm/api/assets` | Assets across every workspace in the org |
+| `GET /osm/api/vulnerabilities` | Vulnerabilities across the org |
+| `GET /osm/api/runs` | Runs across the org |
+| `GET /osm/api/workspaces` | Workspaces belonging to the org |
+
+```bash
+curl "http://localhost:8002/osm/api/vulnerabilities?org=acme&severity=high" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+## Attributing new scans to an org
+
+Runs created through `POST /osm/api/runs` inherit the org of the target's
+workspace automatically, so a scan into a workspace that already belongs to an
+org joins that org. To force a specific org, pass `org_uuid` in the run params.
+
+From the CLI, use the global `--org` flag:
+
+```bash
+osmedeus run -f general -t acme.com --org acme
+```

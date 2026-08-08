@@ -1,0 +1,750 @@
+@import "tailwindcss" source(none);
+
+@custom-variant dark (&:is(.dark *));
+
+@source "../app/**/*.{js,jsx,ts,tsx,mdx}";
+@source "../components/**/*.{js,jsx,ts,tsx,mdx}";
+@source "../lib/**/*.{js,jsx,ts,tsx,mdx}";
+@source "../providers/**/*.{js,jsx,ts,tsx,mdx}";
+
+/*
+ * ---------------------------------------------------------------------------
+ * Palette
+ * ---------------------------------------------------------------------------
+ * Two layers, on purpose:
+ *
+ *   1. `--og-*` — the raw design tokens. Light is a warm paper palette (cream
+ *      and ivory planes, warm greys, a deep azure primary); dark is warm
+ *      near-neutral greys on a near-black page with the same azure a few steps
+ *      lighter. The two are NOT inverses of each other — the primary is the one
+ *      hue they hold in common; toggling changes the dashboard's
+ *      character, not just its brightness. What they share is structure: same
+ *      token names, same 12/10/8px radii, same OS type faces, and the same
+ *      contrast floors (4.5:1 body text, 3:1 faint, ~1.2:1 soft fills against
+ *      the panel they sit on).
+ *
+ *   2. The Shadcn semantic names (`--background`, `--card`, `--primary`, …)
+ *      derived from layer 1. Every existing component keeps working, and
+ *      `providers/color-vars-provider.tsx` can still override the semantic
+ *      layer at runtime from a stored theme preset.
+ *
+ * Both palettes keep the three-step lift (sunken chrome → surface canvas →
+ * raised panel), which on near-neutral surfaces does the work borders used to.
+ * Keep the steps: flattening them turns every panel into a floating outline.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces — chrome sits *under* the canvas here, not over it: the sidebar
+     is the darkest plane and panels are the brightest. Warm cream rather than
+     neutral grey; the whole ladder carries the same hue so nothing reads as a
+     tinted overlay on white. */
+  --og-page-bg: #e8e6e1;
+  --og-surface: #f4f2ea;
+  --og-surface-raised: #faf9f3;
+  --og-surface-sunken: #ebe8dd;
+
+  /* Rules. The border is a real step darker than the light palette this
+     replaced (1.5:1 on the canvas), which is what lets flat cards hold their
+     edge against cream instead of white. */
+  --og-border: #ccc8bb;
+  --og-border-subtle: #e8e5da;
+  --og-border-strong: #161616;
+
+  /* Text. Muted and faint are a hair darker than the source design's, so both
+     still clear their floors on the *darkest* plane (the page), not just on a
+     panel: muted 4.6:1 and faint 3.1:1 there. */
+  --og-text: #161616;
+  --og-text-body: #2e2e2e;
+  --og-text-muted: #6b6656;
+  --og-text-faint: #878272;
+
+  /* Primary. Dark's azure (#5a8fd6, hue 214°) carried over at a lower
+     lightness: the hue reads the same across modes, and going darker is what
+     lets the cream ink below sit on it at 4.8:1 — dark's own value only makes
+     3:1 against cream, which is why dark flips to dark ink instead. */
+  --og-accent: #2e6abb;
+  --og-accent-fg: #2e6abb;
+  /* Ink on the primary is the canvas cream, not white — white on this blue is
+     brighter than anything else in the palette and reads as a hole. */
+  --og-accent-contrast: #f4f2ea;
+  /* Soft fills are stepped to ~1.2:1 against the raised panel, which is what a
+     table row is made of here. Unlike the near-white palette this replaced, the
+     sunken plane is a genuine step below the panel, so a fill pitched at the
+     row would have to go dark enough to lose its own mark. */
+  --og-accent-soft-bg: #dce7f6;
+  --og-accent-soft-fg: #1e5391;
+  /* One exception: the sidebar's active pill sits on the sunken plane, where
+     the fill above collapses to 1.01:1. It gets its own step-darker fill. */
+  --og-accent-soft-bg-chrome: #c8daee;
+
+  /* Status tones. Hues come from the source design; every mark is pulled down
+     to ~6:1 on a panel so it still clears 4.5:1 as text on its own soft fill —
+     the pair that actually matters, since every Badge is fill + mark. */
+  --og-positive: #156e3e;
+  --og-positive-soft-bg: #d5e8d9;
+  --og-negative: #a1412e;
+  --og-negative-soft-bg: #f7ddd7;
+  --og-negative-contrast: #faf9f3;
+  --og-warning: #7f5910;
+  --og-warning-soft-bg: #eee1d0;
+  /* Info shares the primary's blue family now that the primary is azure — the
+     same tradeoff dark already makes (its #5a8fd6 against #7cb2e2). Separation
+     comes from depth and chroma instead of hue: info is darker and fully
+     saturated, so the two chips read as related rather than identical. */
+  --og-info: #00659c;
+  --og-info-soft-bg: #d7e4f6;
+
+  /* Extra categorical hues — tech-category chips and dots. Same construction
+     as the status tones: a mark at ~6:1 on a panel, a fill at ~1.2:1. */
+  --og-purple: #794d94;
+  --og-purple-soft-bg: #eadff0;
+  --og-pink: #a63664;
+  --og-pink-soft-bg: #f6dce4;
+  --og-cyan: #006a73;
+  --og-cyan-soft-bg: #cce8ec;
+  --og-orange: #984918;
+  --og-orange-soft-bg: #f5ded3;
+
+  --og-neutral-soft-bg: #e2dfd4;
+  --og-neutral-soft-fg: #5a564a;
+  --og-track: #e2dfd4;
+
+  /* Chart slices. Categorical slots are capped at three hues plus a neutral
+     "Other" — four could not clear the all-pairs CVD gates inside the lightness
+     band either mode allows. Validated against the raised surface #faf9f3:
+     worst CVD pair ΔE 8.2, worst normal-vision pair 24.4. The neutral stays a
+     true grey; warming it into the palette collapses it onto the teal under
+     protanopia (ΔE 0.8). */
+  --og-viz-1: #9f6d1f;
+  --og-viz-2: #008873;
+  --og-viz-3: #6165b6;
+  --og-viz-other: #8b8b8b;
+  /* The ramp follows the primary, so it turned over with it — azure now, and
+     the last step *is* the primary. It starts mid-toned, not pale: on a cream
+     panel the 2:1 floor for the lightest step rules out a near-white first step
+     (azure carries more luminance than the indigo this replaced, so each step
+     sits a little lower in HSL to hold the same floor), and chroma is dialled
+     back as it lightens so the pale end reads as blue rather than grey. */
+  --og-seq-1: #90aed5;
+  --og-seq-2: #6f98cd;
+  --og-seq-3: #457cc4;
+  --og-seq-4: #2e6abb;
+
+  /* Geometry */
+  --og-radius-frame: 12px;
+  --og-radius-card: 10px;
+  --og-radius-control: 8px;
+  --og-radius-pill: 999px;
+  --radius: 10px;
+
+  /*
+   * Type. The reference UI runs on the OS faces — SF on macOS, Segoe on
+   * Windows — rather than a webfont, and matching it means inheriting that.
+   */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+
+  /*
+   * Shadows are deliberately near-invisible: the design carries elevation with
+   * the surface ladder and hairline rules, not with drop shadows. Kept as
+   * tokens so existing `shadow-*` utilities degrade gracefully instead of
+   * punching holes in the flat look.
+   */
+  --shadow-2xs: 0 1px 1px 0 rgb(0 0 0 / 0.03);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06);
+  --shadow-md: 0 2px 6px -2px rgb(0 0 0 / 0.08);
+  --shadow-lg: 0 6px 18px -6px rgb(0 0 0 / 0.12);
+  --shadow-xl: 0 12px 32px -10px rgb(0 0 0 / 0.16);
+  --shadow-2xl: 0 20px 48px -14px rgb(0 0 0 / 0.22);
+
+  /* ---- Shadcn semantic layer, derived from the tokens above ---- */
+  --background: var(--og-surface);
+  --foreground: var(--og-text);
+  --card: var(--og-surface-raised);
+  --card-foreground: var(--og-text);
+  --popover: var(--og-surface-raised);
+  --popover-foreground: var(--og-text);
+  --primary: var(--og-accent);
+  --primary-foreground: var(--og-accent-contrast);
+  --secondary: var(--og-neutral-soft-bg);
+  --secondary-foreground: var(--og-neutral-soft-fg);
+  --muted: var(--og-surface-sunken);
+  --muted-foreground: var(--og-text-muted);
+  /* Shadcn's `accent` is the hover/press tint, not the brand hue — the brand
+     lives on `--primary`. Pointing it at the sunken plane is the same move the
+     source design system makes for a hovered table row. */
+  --accent: var(--og-surface-sunken);
+  --accent-foreground: var(--og-text);
+  --destructive: var(--og-negative);
+  --destructive-foreground: var(--og-negative-contrast);
+  --border: var(--og-border);
+  --input: var(--og-border);
+  --ring: var(--og-accent);
+  --chart-1: var(--og-viz-1);
+  --chart-2: var(--og-viz-2);
+  --chart-3: var(--og-viz-3);
+  --chart-4: var(--og-seq-2);
+  --chart-5: var(--og-viz-other);
+  --sidebar: var(--og-surface-sunken);
+  --sidebar-foreground: var(--og-text-body);
+  --sidebar-primary: var(--og-accent);
+  --sidebar-primary-foreground: var(--og-accent-contrast);
+  --sidebar-accent: var(--og-accent-soft-bg-chrome);
+  --sidebar-accent-foreground: var(--og-accent-soft-fg);
+  --sidebar-border: var(--og-border-subtle);
+  --sidebar-ring: var(--og-accent);
+
+  /*
+   * Row washes. A soft fill is tuned to read as a chip — roughly 1.2:1 against
+   * the panel it sits on — and that same strength stretched across a full table
+   * row shouts. The row states take a diluted mix of the very same token rather
+   * than a second colour hand-picked per palette.
+   *
+   * Declared here as real custom properties rather than inside `@theme inline`
+   * (which substitutes rather than emits) because AG Grid's theme has to name
+   * them as `var(--wash-primary)`. Both `color-mix` operands are themselves
+   * variables, so the mix re-resolves under `.dark` without a second rule.
+   */
+  --wash-primary: color-mix(in oklab, var(--og-accent-soft-bg) 55%, var(--card));
+  --wash-warning: color-mix(in oklab, var(--og-warning-soft-bg) 55%, var(--card));
+  --wash-destructive: color-mix(in oklab, var(--og-negative-soft-bg) 55%, var(--card));
+}
+
+/*
+ * Dark mode is a warm-grey studio palette, not the inverse of the light one.
+ * Panels are lifted much further off the page than their light twins — they
+ * read as paper on a desk rather than as a tinted canvas — and the primary is
+ * a mid-blue in place of the light mode's sage.
+ *
+ * To run a green primary in dark mode instead, change `--og-accent` /
+ * `--og-accent-fg` / `--og-accent-soft-*` below; nothing else needs to move.
+ */
+.dark {
+  color-scheme: dark;
+
+  --og-page-bg: #0e0e10;
+  --og-surface: #232322;
+  --og-surface-raised: #2b2b29;
+  --og-surface-sunken: #262625;
+
+  --og-border: #3a3a37;
+  --og-border-subtle: #32322f;
+  --og-border-strong: #55554f;
+
+  /* The greys run warm and high: muted clears 6.8:1 on a panel and faint
+     4.3:1, so both sit above the 4.5:1 / 3:1 floors without the stepping the
+     light twin needs. */
+  --og-text: #ecebe6;
+  --og-text-body: #d6d5d0;
+  --og-text-muted: #b5b4ae;
+  --og-text-faint: #8f8e88;
+
+  --og-accent: #5a8fd6;
+  --og-accent-fg: #7ea8e0;
+  /* The primary is bright enough that ink on top of it has to be dark. */
+  --og-accent-contrast: #101a26;
+  /* Soft fills sit a step higher than a naive port would put them: this app's
+     table rows are the lighter #2b2b29 panel, and pitched at the #232322
+     surface the fills collapse to ~1.04:1 and drop out from under the text. */
+  --og-accent-soft-bg: #31353a;
+  --og-accent-soft-fg: #7ea8e0;
+  /* Dark's sunken plane sits close enough to its panel that the fill above
+     already reads on the sidebar (1.23:1) — no separate chrome step needed. */
+  --og-accent-soft-bg-chrome: #31353a;
+
+  --og-positive: #6bbd85;
+  --og-positive-soft-bg: #26392d;
+  /* Negative is the one status hue whose mark and its own soft fill sit close
+     enough in lightness to fight, so the mark is brightened a step. */
+  --og-negative: #e08a7f;
+  --og-negative-soft-bg: #42302d;
+  --og-negative-contrast: #2a1512;
+  --og-warning: #d99a3d;
+  --og-warning-soft-bg: #4d3a1e;
+  --og-info: #7cb2e2;
+  --og-info-soft-bg: #2a353f;
+
+  --og-purple: #a795dd;
+  --og-purple-soft-bg: #34303f;
+  --og-pink: #dd8fb2;
+  --og-pink-soft-bg: #402c34;
+  --og-cyan: #59bdb2;
+  --og-cyan-soft-bg: #223836;
+  --og-orange: #e0a065;
+  --og-orange-soft-bg: #3f3220;
+
+  --og-neutral-soft-bg: #343532;
+  --og-neutral-soft-fg: #c4c3bd;
+  /* Navy rather than a grey: the meter rail and the toggle's off-state tint
+     toward the primary instead of away from it. */
+  --og-track: #20344d;
+
+  /* Validated against the raised surface #2b2b29, all pairs: worst CVD pair
+     ΔE 10.6, worst normal-vision pair 16.8. Same three hue families as the
+     light twin; only the neutral moves, warmed into the palette's own greys. */
+  --og-viz-1: #b38236;
+  --og-viz-2: #29a288;
+  --og-viz-3: #7986cf;
+  --og-viz-other: #85847e;
+  /* The ramp follows the primary, so it turns over with it. */
+  --og-seq-1: #cfe0f5;
+  --og-seq-2: #a5c4ea;
+  --og-seq-3: #7ea8e0;
+  --og-seq-4: #4a75b3;
+
+  --shadow-2xs: 0 1px 1px 0 rgb(0 0 0 / 0.2);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.24);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.28);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.32);
+  --shadow-md: 0 2px 6px -2px rgb(0 0 0 / 0.38);
+  --shadow-lg: 0 6px 18px -6px rgb(0 0 0 / 0.45);
+  --shadow-xl: 0 12px 32px -10px rgb(0 0 0 / 0.5);
+  --shadow-2xl: 0 20px 48px -14px rgb(0 0 0 / 0.6);
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Tailwind mapping
+ * ---------------------------------------------------------------------------
+ * `inline` matters: `bg-card` compiles to `background-color: var(--card)` and
+ * resolves against whichever palette block is active, rather than being baked
+ * in at build time. Toggling `.dark` on <html> restyles the whole app.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /*
+   * Surface ladder — `bg-sunken` / `bg-raised` name the planes the Shadcn
+   * vocabulary has no word for (hovered rows, tinted section bands, the app
+   * frame). Where a Shadcn equivalent exists these alias it rather than the raw
+   * token, so a runtime theme preset from `color-vars-provider` moves both
+   * spellings together instead of splitting them.
+   */
+  --color-page: var(--og-page-bg);
+  --color-surface: var(--background);
+  --color-raised: var(--card);
+  --color-sunken: var(--muted);
+
+  /* Text ladder. `text-muted-foreground` stays the muted step, as everywhere
+     else in the app; `text-faint` is the tier below it. */
+  --color-ink: var(--foreground);
+  --color-body: var(--og-text-body);
+  --color-faint: var(--og-text-faint);
+
+  --color-border-subtle: var(--og-border-subtle);
+  --color-border-strong: var(--og-border-strong);
+  --color-track: var(--og-track);
+
+  /* Tone chips: a `-soft` fill plus a mark that reads on it. Names match the
+     existing Badge variants (`success`, `warning`, `info`, …). */
+  --color-primary-fg: var(--og-accent-fg);
+  --color-primary-soft: var(--og-accent-soft-bg);
+  --color-primary-soft-fg: var(--og-accent-soft-fg);
+  --color-success: var(--og-positive);
+  --color-success-soft: var(--og-positive-soft-bg);
+  --color-destructive-soft: var(--og-negative-soft-bg);
+  --color-warning: var(--og-warning);
+  --color-warning-soft: var(--og-warning-soft-bg);
+  --color-info: var(--og-info);
+  --color-info-soft: var(--og-info-soft-bg);
+  --color-purple: var(--og-purple);
+  --color-purple-soft: var(--og-purple-soft-bg);
+  --color-pink: var(--og-pink);
+  --color-pink-soft: var(--og-pink-soft-bg);
+  --color-cyan: var(--og-cyan);
+  --color-cyan-soft: var(--og-cyan-soft-bg);
+  --color-orange: var(--og-orange);
+  --color-orange-soft: var(--og-orange-soft-bg);
+
+  /*
+   * Row washes. A soft fill is tuned to read as a chip — roughly 1.2:1 against
+   * the row it sits in — and that same strength stretched across a full table
+   * row shouts. The row states take a diluted mix of the very same token
+   * rather than a second colour hand-picked per palette.
+   */
+  --color-primary-wash: var(--wash-primary);
+  --color-warning-wash: var(--wash-warning);
+  --color-destructive-wash: var(--wash-destructive);
+
+  --color-viz-1: var(--og-viz-1);
+  --color-viz-2: var(--og-viz-2);
+  --color-viz-3: var(--og-viz-3);
+  --color-viz-other: var(--og-viz-other);
+  --color-seq-1: var(--og-seq-1);
+  --color-seq-2: var(--og-seq-2);
+  --color-seq-3: var(--og-seq-3);
+  --color-seq-4: var(--og-seq-4);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+  /* Aliases the source design system uses for headings and figures. Both
+     resolve to the OS sans here — they exist so type intent stays readable in
+     the markup and so swapping in a display face is a one-line change. */
+  --font-body: var(--font-sans);
+  --font-display: var(--font-sans);
+  --font-figure: var(--font-sans);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-frame: var(--og-radius-frame);
+  --radius-card: var(--og-radius-card);
+  --radius-control: var(--og-radius-control);
+  --radius-pill: var(--og-radius-pill);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+
+  /*
+   * Hover glow. Derived from the primary with color-mix rather than hard-coded
+   * per palette, so it follows whatever hue is active. Deliberately faint: a
+   * hairline ring plus a soft bloom, no offset.
+   */
+  --shadow-glow:
+    0 0 0 1px color-mix(in oklab, var(--primary) 30%, transparent),
+    0 0 18px -6px color-mix(in oklab, var(--primary) 70%, transparent);
+}
+
+@theme {
+  /*
+   * The type ramp is sub-pixel tuned and deliberately smaller than Tailwind's
+   * default — that density is a large part of the look. Names are unchanged so
+   * existing markup keeps working; `text-2xs` (table-header eyebrows) and
+   * `text-md` are the two additions.
+   */
+  --text-2xs: 10.5px;
+  --text-2xs--line-height: 1.45;
+  --text-xs: 11.5px;
+  --text-xs--line-height: 1.45;
+  --text-sm: 12.5px;
+  --text-sm--line-height: 1.45;
+  --text-md: 13.5px;
+  --text-md--line-height: 1.45;
+  --text-base: 13.5px;
+  --text-base--line-height: 1.45;
+  --text-lg: 15px;
+  --text-lg--line-height: 1.4;
+  --text-xl: 17px;
+  --text-xl--line-height: 1.35;
+  --text-2xl: 22px;
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 26px;
+  --text-3xl--line-height: 1.2;
+  --text-4xl: 32px;
+  --text-4xl--line-height: 1.1;
+  --text-5xl: 40px;
+  --text-5xl--line-height: 1.05;
+
+  /*
+   * THE horizontal page gutter — top bar, page headers, toolbars, stat tiles
+   * and table rows all use it, so content lines up in a single column down the
+   * page. Off Tailwind's 4px grid on purpose; everything else stays on it.
+   */
+  --spacing-gutter: 18px;
+
+  --tracking-label: 0.08em;
+
+  /*
+   * Motion. Everything is short and eased-out — the dashboard should feel
+   * settled, not animated. `both` fill keeps the from-state applied before the
+   * delay elapses, which is what makes staggering work without a flash.
+   */
+  --ease-out-soft: cubic-bezier(0.2, 0, 0, 1);
+  --animate-page-in: page-in 280ms var(--ease-out-soft) both;
+  --animate-rise: rise 320ms var(--ease-out-soft) both;
+  --animate-fade: fade 400ms ease-out both;
+  --animate-grow-x: grow-x 620ms var(--ease-out-soft) both;
+
+  @keyframes page-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes grow-x {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--og-page-bg);
+    color: var(--og-text-body);
+    font-family: var(--font-sans);
+    font-size: var(--text-md);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Keyboard affordance only — `:focus-visible` keeps it off mouse clicks, so
+     it reads as a keyboard aid rather than UI noise. */
+  *:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /*
+   * Reveals direct children in sequence. The ramp is capped at the sixth child
+   * so a long list never feels gated behind an animation.
+   */
+  .og-stagger > * {
+    animation: var(--animate-rise);
+  }
+  .og-stagger > *:nth-child(2) {
+    animation-delay: 40ms;
+  }
+  .og-stagger > *:nth-child(3) {
+    animation-delay: 80ms;
+  }
+  .og-stagger > *:nth-child(4) {
+    animation-delay: 120ms;
+  }
+  .og-stagger > *:nth-child(5) {
+    animation-delay: 160ms;
+  }
+  .og-stagger > *:nth-child(n + 6) {
+    animation-delay: 200ms;
+  }
+}
+
+/*
+ * Cross-fade the palette swap. `data-theme-transition` is set on <html> for the
+ * length of the swap by `components/layout/theme-toggle.tsx` and removed again,
+ * so these rules cost nothing the rest of the time — a permanent global
+ * transition would fight every other animation.
+ */
+[data-theme-transition],
+[data-theme-transition] *,
+[data-theme-transition] *::before,
+[data-theme-transition] *::after {
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    fill 200ms ease,
+    stroke 200ms ease !important;
+}
+
+/*
+ * AG Grid. The theme object in `components/ui/data-grid.tsx` carries the
+ * colours; these are the handful of details its parameter API has no word for.
+ */
+.og-grid .ag-header-cell-text {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+/* Match the 12px cell gutter of the HTML tables the grid replaced. */
+.og-grid .ag-cell,
+.og-grid .ag-header-cell {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/* Cells are flex containers, so overflowing chips clip instead of wrapping. */
+.og-grid .ag-cell {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+/*
+ * AG Grid wraps every renderer in `.ag-cell-wrapper > .ag-cell-value`, and both
+ * are flex items that default to `min-width: auto` — so a long URL sizes them
+ * to its own width and paints straight across the next column instead of
+ * ellipsing. Nothing a cell renderer does can fix that from the inside; the
+ * shrink has to be allowed here.
+ */
+.og-grid .ag-cell-wrapper,
+.og-grid .ag-cell-value {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+/*
+ * Severity rail. A 2px inset on the row edge turns the severity column into a
+ * ladder you can read down without parsing a single chip. Rows opt in with
+ * `getRowClass`; anything else keeps the transparent default so row heights and
+ * borders stay identical.
+ */
+.og-grid .ag-row {
+  box-shadow: inset 2px 0 0 transparent;
+}
+.og-grid .ag-row.og-sev-critical {
+  box-shadow: inset 2px 0 0 var(--og-negative);
+}
+.og-grid .ag-row.og-sev-high {
+  box-shadow: inset 2px 0 0 var(--og-orange);
+}
+.og-grid .ag-row.og-sev-medium {
+  box-shadow: inset 2px 0 0 var(--og-warning);
+}
+.og-grid .ag-row.og-sev-low {
+  box-shadow: inset 2px 0 0 var(--og-info);
+}
+.og-grid .ag-row.og-sev-info {
+  box-shadow: inset 2px 0 0 var(--og-border);
+}
+
+/* The grid paints its own row rules; a second one from the global border reset
+   would double up on the last row. */
+.og-grid .ag-root-wrapper {
+  border: 0;
+}
+
+.og-grid .ag-header {
+  min-height: unset;
+}
+
+/* Scrollbars follow the surface ladder in both modes. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--og-border);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--og-border-strong);
+  background-clip: content-box;
+}
+
+/* Logo shadow: bigger in size, colour adapts to the palette. */
+.logo-shadow {
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.18);
+}
+.dark .logo-shadow {
+  box-shadow: 0 8px 22px rgb(255 255 255 / 0.1);
+}
+
+/*
+ * Hover treatments. Both derive from `--primary` via color-mix rather than a
+ * hard-coded hue, so they follow a runtime theme preset.
+ */
+.glow-card {
+  transition:
+    box-shadow 200ms var(--ease-out-soft),
+    border-color 200ms var(--ease-out-soft);
+}
+.glow-card:hover {
+  box-shadow: var(--shadow-glow);
+}
+
+.glow-primary {
+  transition: box-shadow 200ms var(--ease-out-soft);
+}
+.glow-primary:hover {
+  box-shadow: var(--shadow-glow);
+}
+
+/* Blur background utility */
+.blur-bg {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

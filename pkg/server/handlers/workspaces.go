@@ -193,7 +193,12 @@ func ListWorkspaces(cfg *config.Config) fiber.Handler {
 		}
 
 		// Default: Get full workspace records from workspaces table
-		result, err := database.ListWorkspacesFullFromDB(ctx, offset, limit)
+		orgUUID, errResp := ResolveOrgQuery(ctx, c)
+		if errResp != nil {
+			return errResp
+		}
+
+		result, err := database.ListWorkspacesFullFromDB(ctx, offset, limit, orgUUID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error":   true,

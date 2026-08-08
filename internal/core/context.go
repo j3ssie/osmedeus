@@ -37,6 +37,12 @@ type ExecutionContext struct {
 	// WorkspaceName is the workspace identifier for database operations
 	WorkspaceName string
 
+	// OrgUUID is the org this run was explicitly scoped to via --org, $OSMEDEUS_ORG
+	// or the active org. Empty means no org was named, in which case a new
+	// workspace lands in the default org and an existing one keeps the org it
+	// already has.
+	OrgUUID string
+
 	// mu protects concurrent access to Exports and Variables
 	mu sync.RWMutex
 
@@ -159,6 +165,7 @@ func (c *ExecutionContext) Clone() *ExecutionContext {
 		WorkspacePath: c.WorkspacePath,
 		BaseFolder:    c.BaseFolder,
 		WorkspaceName: c.WorkspaceName,
+		OrgUUID:       c.OrgUUID,
 		Params:        make(map[string]interface{}, len(c.Params)),
 		Exports:       make(map[string]interface{}, len(c.Exports)),
 		Variables:     make(map[string]interface{}, len(c.Variables)),
@@ -206,6 +213,7 @@ func (c *ExecutionContext) CloneForLoop(loopVar string, loopValue interface{}, i
 		WorkspacePath: c.WorkspacePath,
 		BaseFolder:    c.BaseFolder,
 		WorkspaceName: c.WorkspaceName,
+		OrgUUID:       c.OrgUUID,
 		Logger:        c.Logger,
 		// Share immutable Params reference (no copy needed)
 		Params: c.Params,

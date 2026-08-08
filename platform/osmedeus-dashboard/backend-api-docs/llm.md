@@ -1,0 +1,154 @@
+# LLM API
+
+Direct API access to Large Language Model capabilities without requiring workflow execution.
+
+## Chat Completion
+
+Send a chat completion request to the configured LLM provider.
+
+```bash
+curl -X POST http://localhost:8002/osm/api/llm/v1/chat/completions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {"role": "system", "content": "You are a security analyst."},
+      {"role": "user", "content": "Analyze the security posture of example.com"}
+    ],
+    "max_tokens": 1000,
+    "temperature": 0.7
+  }'
+```
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `messages` | array | Yes | Array of message objects with `role` and `content` |
+| `model` | string | No | Model to use (defaults to provider's default model) |
+| `max_tokens` | int | No | Maximum tokens in response |
+| `temperature` | float | No | Sampling temperature (0.0-2.0) |
+| `top_p` | float | No | Top-p sampling parameter |
+| `top_k` | int | No | Top-k sampling parameter |
+| `n` | int | No | Number of completions to generate |
+| `stream` | bool | No | Enable streaming (not yet supported) |
+| `tools` | array | No | Tool definitions for function calling |
+| `tool_choice` | string/object | No | Tool selection strategy |
+| `response_format` | object | No | Response format (`{"type": "json_object"}`) |
+
+**Message Roles:**
+- `system` - System prompt to set assistant behavior
+- `user` - User message
+- `assistant` - Previous assistant response
+- `tool` - Tool call result
+
+**Response:**
+```json
+{
+  "id": "chatcmpl-abc123",
+  "model": "gpt-4",
+  "content": "Based on my analysis of example.com...",
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 50,
+    "completion_tokens": 200,
+    "total_tokens": 250
+  }
+}
+```
+
+---
+
+## With Tools (Function Calling)
+
+```bash
+curl -X POST http://localhost:8002/osm/api/llm/v1/chat/completions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {"role": "user", "content": "What DNS records exist for example.com?"}
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "dns_lookup",
+          "description": "Look up DNS records for a domain",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "domain": {"type": "string", "description": "Domain to look up"},
+              "record_type": {"type": "string", "enum": ["A", "AAAA", "MX", "TXT", "NS"]}
+            },
+            "required": ["domain"]
+          }
+        }
+      }
+    ],
+    "tool_choice": "auto"
+  }'
+```
+
+**Response with Tool Calls:**
+```json
+{
+  "id": "chatcmpl-xyz789",
+  "model": "gpt-4",
+  "content": null,
+  "finish_reason": "tool_calls",
+  "tool_calls": [
+    {
+      "id": "call_abc123",
+      "type": "function",
+      "function": {
+        "name": "dns_lookup",
+        "arguments": "{\"domain\": \"example.com\", \"record_type\": \"A\"}"
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 100,
+    "completion_tokens": 25,
+    "total_tokens": 125
+  }
+}
+```
+
+---
+
+## Generate Embeddings
+
+Generate vector embeddings for input text.
+
+```bash
+curl -X POST http://localhost:8002/osm/api/llm/v1/embeddings \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": ["security analysis", "vulnerability assessment"],
+    "model": "text-embedding-3-small"
+  }'
+```
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `input` | array | Yes | Array of strings to embed |
+| `model` | string | No | Embedding model (defaults to provider's model) |
+
+**Response:**
+```json
+{
+  "model": "text-embedding-3-small",
+  "embeddings": [
+    [0.0023, -0.0045, 0.0178, ...],
+    [0.0112, -0.0067, 0.0234, ...]
+  ],
+  "usage": {
+    "prompt_tokens": 10,
+    "total_tokens": 10
+  }
+}
+```

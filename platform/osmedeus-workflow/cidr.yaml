@@ -1,0 +1,36 @@
+kind: flow
+name: cidr
+description: IP/CIDR recon - port scan, spider, vuln scan, and content discovery
+tags: recon, cidr, standard
+help:
+  example_targets: ['1.2.3.4/24', '10.0.0.0/16', '192.168.1.1']
+  usage: |
+    # Run the CIDR workflow against a specific CIDR block
+    osmedeus run -f cidr -t 1.2.3.4/24
+    # Enable actual port scanning with nmap. However, be cautious as this will alert many cloud providers.
+    osmedeus run -f cidr -t 1.2.3.4/24 -p 'enableSYNScan=true'
+
+dependencies:
+  variables:
+    - name: Target
+      type: cidr,ip,file
+      required: true
+
+modules:
+  - name: do-probe-port
+    path: fragments/do-probe-port.yaml
+
+  - name: do-recon-spider
+    path: fragments/do-recon-spider.yaml
+    depends_on:
+      - do-probe-port
+
+  - name: do-scan-vuln
+    path: fragments/do-scan-vuln.yaml
+    depends_on:
+      - do-probe-port
+
+  - name: do-scan-content
+    path: fragments/do-scan-content.yaml
+    depends_on:
+      - do-probe-port

@@ -41,13 +41,17 @@ func mergeStringSlice(existing, incoming []string) []string {
 
 // mergeAssetFields merges incoming asset fields into existing.
 // Non-zero incoming fields win; zero incoming fields preserve existing values.
-// ID, CreatedAt, Workspace, and AssetValue are always taken from existing.
+// ID, CreatedAt, Workspace, AssetValue and OrgUUID are always taken from existing.
 func mergeAssetFields(existing, incoming *database.Asset) {
 	// Preserve identity fields from existing
 	incoming.ID = existing.ID
 	incoming.CreatedAt = existing.CreatedAt
 	incoming.Workspace = existing.Workspace
 	incoming.AssetValue = existing.AssetValue
+	// Org attribution is identity, not payload. The incoming struct is built fresh
+	// from scan output and has no OrgUUID, so taking it verbatim would reset the
+	// asset to the default org on every re-scan.
+	incoming.OrgUUID = existing.OrgUUID
 
 	// HTTP data
 	incoming.URL = mergeString(existing.URL, incoming.URL)
@@ -100,6 +104,8 @@ func mergeVulnFields(existing, incoming *database.Vulnerability) {
 	incoming.ID = existing.ID
 	incoming.CreatedAt = existing.CreatedAt
 	incoming.Workspace = existing.Workspace
+	// See mergeAssetFields: org attribution must survive a re-scan.
+	incoming.OrgUUID = existing.OrgUUID
 
 	// Core vulnerability fields
 	incoming.VulnInfo = mergeString(existing.VulnInfo, incoming.VulnInfo)

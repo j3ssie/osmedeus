@@ -766,6 +766,7 @@ func UsageInstall() string {
   • ` + terminal.Yellow("binary") + `    - Install binaries from registry
   • ` + terminal.Yellow("env") + `       - Add binaries path to shell configuration
   • ` + terminal.Yellow("validate") + `  - Check and fix environment health
+  • ` + terminal.Yellow("skills") + `    - Install coding-agent skills (alias for 'osmedeus skills install')
 
 ` + terminal.BoldCyan("▷ Examples") + `
   ` + terminal.Green("# List available binaries (direct-fetch mode)") + `
@@ -804,6 +805,114 @@ func UsageInstall() string {
   osmedeus install base https://github.com/user/osmedeus-base.git
   osmedeus install base http://<custom-host>/osmedeus-base.zip
   osmedeus install base local-file-osmedeus-base.zip
+
+` + docsFooter()
+}
+
+// UsageOrg returns usage information for the org command
+func UsageOrg() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Group multiple workspaces under one org so assets, findings and runs can be
+  queried across all of them at once.
+
+  Osmedeus derives a workspace from each target, which usually means one apex
+  domain per workspace. An org sits above that: a company with many root domains
+  gets one org covering every workspace, and ` + terminal.Yellow("--org") + ` scopes any query to it.
+
+  ` + terminal.Bold("Orgs are opt-in and additive.") + ` Every row without an explicit org belongs to
+  the ` + terminal.Yellow("default") + ` org, and a command with no ` + terminal.Yellow("--org") + ` and no active org spans all orgs,
+  so existing scans and scripts behave exactly as they did before.
+
+` + terminal.BoldCyan("▶ Subcommands") + `
+  • ` + terminal.Yellow("list") + `     - List orgs with their data counts (default when no subcommand is given)
+  • ` + terminal.Yellow("create") + `   - Create a new org
+  • ` + terminal.Yellow("show") + `     - Show one org's details, counts and workspaces
+  • ` + terminal.Yellow("use") + `      - Set the active org for later commands
+  • ` + terminal.Yellow("assign") + `   - Move existing workspaces into an org
+  • ` + terminal.Yellow("rename") + `   - Rename an org
+  • ` + terminal.Yellow("delete") + `   - Delete an org, reassigning or purging its data
+
+` + terminal.BoldCyan("▶ Org selection") + `
+  Every command accepts ` + terminal.Yellow("--org <name|uuid>") + `. When it is not given, osmedeus falls
+  back in this order:
+
+    1. ` + terminal.Yellow("--org") + ` flag
+    2. ` + terminal.Yellow("$OSMEDEUS_ORG_UUID") + `
+    3. ` + terminal.Yellow("$OSMEDEUS_ORG") + `
+    4. the active org set by ` + terminal.Yellow("osmedeus org use") + `
+    5. no filter - data from every org is shown
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# Create an org and group existing workspaces into it") + `
+  osmedeus org create acme ` + terminal.Yellow("--description") + ` "ACME Corp"
+  osmedeus org assign acme ` + terminal.Yellow("-w") + ` acme.com ` + terminal.Yellow("-w") + ` acme.io
+
+  ` + terminal.Green("# Query across every workspace in the org") + `
+  osmedeus assets ` + terminal.Yellow("--org") + ` acme
+  osmedeus assets ` + terminal.Yellow("--org") + ` acme ` + terminal.Yellow("--type") + ` web
+
+  ` + terminal.Green("# Scan into an org") + `
+  osmedeus run ` + terminal.Yellow("-f") + ` general ` + terminal.Yellow("-t") + ` acme.com ` + terminal.Yellow("--org") + ` acme
+
+  ` + terminal.Green("# Pin an org so later commands do not need --org") + `
+  eval $(osmedeus org use acme)
+  osmedeus org use ` + terminal.Yellow("--clear") + `
+
+  ` + terminal.Green("# Inspect one org") + `
+  osmedeus org show acme
+
+  ` + terminal.Green("# Delete an org but keep its data (moves to the default org)") + `
+  osmedeus org delete acme
+
+  ` + terminal.Green("# Delete an org and everything in it") + `
+  osmedeus org delete acme ` + terminal.Yellow("--purge") + `
+
+` + docsFooter()
+}
+
+// UsageSkills returns usage information for the skills command
+func UsageSkills() string {
+	return terminal.BoldCyan("◆ Description") + `
+  List, read, and install the coding-agent skill bundles embedded in this binary.
+
+  A skill teaches an AI coding agent (Claude Code, Codex, or any agent that reads
+  a skills directory) how to write osmedeus workflows and drive the CLI. Because
+  the content ships inside the binary, an installed skill always matches the
+  version of osmedeus you are running.
+
+` + terminal.BoldCyan("▶ Subcommands") + `
+  • ` + terminal.Yellow("list") + `     - List bundled skills (default when no subcommand is given)
+  • ` + terminal.Yellow("get") + `      - Print a skill's content to stdout
+  • ` + terminal.Yellow("install") + `  - Copy a skill into an agent's skills directory
+
+` + terminal.BoldCyan("▶ Destinations") + `
+  ` + terminal.Yellow("--agent claude") + `        .claude/skills/    ` + terminal.Gray("(project)") + `    ~/.claude/skills/    ` + terminal.Gray("(global)") + `
+  ` + terminal.Yellow("--agent codex") + `         .agents/skills/    ` + terminal.Gray("(project)") + `    ~/.agents/skills/    ` + terminal.Gray("(global)") + `
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# List what is bundled") + `
+  osmedeus skills list
+
+  ` + terminal.Green("# Install the default skill into ./.claude/skills/") + `
+  osmedeus skills install
+
+  ` + terminal.Green("# Install globally so every project sees it") + `
+  osmedeus skills install ` + terminal.Yellow("--scope") + ` global
+
+  ` + terminal.Green("# Install for an agent that reads .agents/skills/") + `
+  osmedeus skills install ` + terminal.Yellow("--agent") + ` codex
+
+  ` + terminal.Green("# Install every bundle, overwriting existing copies") + `
+  osmedeus skills install ` + terminal.Yellow("--all") + ` ` + terminal.Yellow("--force") + `
+
+  ` + terminal.Green("# Install to an explicit directory") + `
+  osmedeus skills install ` + terminal.Yellow("--dir") + ` ~/my-agent/skills
+
+  ` + terminal.Green("# Read a skill, including its reference files") + `
+  osmedeus skills get osmedeus-expert ` + terminal.Yellow("--full") + `
+
+  ` + terminal.Green("# Same thing, from the install command tree") + `
+  osmedeus install skills
 
 ` + docsFooter()
 }

@@ -326,6 +326,14 @@ func (s *Server) setupRoutes() {
 	api.Get("/assets/diff", handlers.GetAssetDiff(s.config))
 	api.Get("/assets/diffs", handlers.ListAssetDiffSnapshots(s.config))
 
+	// Orgs - group workspaces for cross-workspace queries
+	api.Get("/orgs", handlers.ListOrgs(s.config))
+	api.Post("/orgs", handlers.CreateOrg(s.config))
+	api.Get("/orgs/:uuid", handlers.GetOrg(s.config))
+	api.Get("/orgs/:uuid/stats", handlers.GetOrgStats(s.config))
+	api.Put("/orgs/:uuid", handlers.UpdateOrg(s.config))
+	api.Delete("/orgs/:uuid", handlers.DeleteOrg(s.config))
+
 	// Vulnerabilities
 	api.Get("/vulnerabilities", handlers.ListVulnerabilities(s.config))
 	api.Get("/vulnerabilities/diff", handlers.GetVulnerabilityDiff(s.config))

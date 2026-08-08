@@ -18,6 +18,7 @@ type Run struct {
 	Params       map[string]interface{} `bun:"params,type:json" json:"params"`
 	Status       string                 `bun:"status,notnull" json:"status"`
 	Workspace    string                 `bun:"workspace" json:"workspace"`
+	OrgUUID      string                 `bun:"org_uuid,notnull,default:'00000000-0000-0000-0000-000000000001'" json:"org_uuid"`
 	StartedAt    *time.Time             `bun:"started_at" json:"started_at"`
 	CompletedAt  *time.Time             `bun:"completed_at" json:"completed_at"`
 	ErrorMessage string                 `bun:"error_message" json:"error_message,omitempty"`
@@ -213,6 +214,7 @@ type Asset struct {
 
 	ID         int64  `bun:"id,pk,autoincrement" json:"id"`
 	Workspace  string `bun:"workspace,notnull" json:"workspace"`
+	OrgUUID    string `bun:"org_uuid,notnull,default:'00000000-0000-0000-0000-000000000001'" json:"org_uuid"`
 	AssetValue string `bun:"asset_value,notnull" json:"asset_value"`
 
 	// HTTP data
@@ -267,12 +269,57 @@ type Asset struct {
 	LastSeenAt time.Time `bun:"last_seen_at" json:"last_seen_at,omitempty"`
 }
 
+// DefaultOrgUUID is the UUID of the org created during migration. Every row that
+// predates the org layer is backfilled to it, and any write that does not name an
+// org lands here, so a database with no orgs configured behaves exactly as it did
+// before orgs existed.
+//
+// Keep this in sync with the `default:` value in the org_uuid struct tags on Run,
+// Asset, Workspace and Vulnerability — struct tags cannot reference a constant.
+// TestDefaultOrgUUIDMatchesStructTags guards the duplication.
+const DefaultOrgUUID = "00000000-0000-0000-0000-000000000001"
+
+// DefaultOrgName is the display name of the default org.
+const DefaultOrgName = "default"
+
+// Org groups multiple workspaces under a single tenant. Assets, vulnerabilities
+// and runs carry org_uuid directly so cross-workspace queries never need a join.
+type Org struct {
+	bun.BaseModel `bun:"table:orgs,alias:org"`
+
+	UUID        string   `bun:"uuid,pk,notnull" json:"uuid"`
+	Name        string   `bun:"name,unique,notnull" json:"name"`
+	Description string   `bun:"description" json:"description,omitempty"`
+	Tags        []string `bun:"tags,type:json" json:"tags,omitempty"`
+
+	CreatedAt time.Time `bun:"created_at,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt time.Time `bun:"updated_at,notnull,default:current_timestamp" json:"updated_at"`
+}
+
+// IsDefault reports whether this is the built-in default org, which cannot be
+// deleted or renamed.
+func (o *Org) IsDefault() bool {
+	return o.UUID == DefaultOrgUUID
+}
+
+// OrgStats holds aggregated counts for a single org.
+type OrgStats struct {
+	OrgUUID         string   `json:"org_uuid"`
+	OrgName         string   `json:"org_name"`
+	TotalWorkspaces int      `json:"total_workspaces"`
+	TotalAssets     int      `json:"total_assets"`
+	TotalVulns      int      `json:"total_vulns"`
+	TotalRuns       int      `json:"total_runs"`
+	Workspaces      []string `json:"workspaces,omitempty"`
+}
+
 // Workspace represents a scan workspace with aggregated statistics
 type Workspace struct {
 	bun.BaseModel `bun:"table:workspaces,alias:ws"`
 
 	ID         int64  `bun:"id,pk,autoincrement" json:"id"`
 	Name       string `bun:"name,unique,notnull" json:"name"`
+	OrgUUID    string `bun:"org_uuid,notnull,default:'00000000-0000-0000-0000-000000000001'" json:"org_uuid"`
 	LocalPath  string `bun:"local_path" json:"local_path"`
 	DataSource string `bun:"data_source,default:'local'" json:"data_source"` // local, cloud, imported
 
@@ -343,6 +390,7 @@ type Vulnerability struct {
 
 	ID                 int64    `bun:"id,pk,autoincrement" json:"id"`
 	Workspace          string   `bun:"workspace,notnull" json:"workspace"`
+	OrgUUID            string   `bun:"org_uuid,notnull,default:'00000000-0000-0000-0000-000000000001'" json:"org_uuid"`
 	VulnInfo           string   `bun:"vuln_info" json:"vuln_info"`
 	VulnTitle          string   `bun:"vuln_title" json:"vuln_title"`
 	VulnDesc           string   `bun:"vuln_desc" json:"vuln_desc"`

@@ -1,0 +1,8 @@
+kind: flow
+name: repo
+description: Alias for sast workflow
+extends: sast
+tags: recon, url, standard
+help:
+  example_targets: ['https://github.com/user/repo', 'https://github.com/juice-shop/juice-shop/archive/refs/heads/master.zip']
+  usage: osmedeus run -f repo -t https://github.com/user/repo

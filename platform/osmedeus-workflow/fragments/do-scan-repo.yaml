@@ -1,0 +1,317 @@
+kind: module
+name: do-scan-repo
+description: Static vulnerability scan and secret detection on git repositories
+tags: sast,secrets,repository,kingfisher,semgrep,trivy
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# -----------------------------------------------------------------------------
+params:
+  - name: repoFolder
+    default: "{{Output}}/source-repo"
+
+  - name: semgrepJobs
+    default: "15"
+
+  - name: kingfisherJobs
+    default: "15"
+
+  - name: gitDepth
+    default: "1000"
+
+  - name: crawlingTime
+    default: "2m"
+
+  - name: crawlingDepth
+    default: "3"
+
+  # SARIF outputs
+  - name: semgrepSarif
+    default: "{{Output}}/sast/semgrep-{{TargetSpace}}.sarif"
+
+  - name: semgrepJson
+    default: "{{Output}}/sast/semgrep-{{TargetSpace}}.json"
+
+  - name: kingfisherSarif
+    default: "{{Output}}/secret/kingfisher-{{TargetSpace}}.sarif"
+
+  - name: trivySarif
+    default: "{{Output}}/sast/trivy-report-{{TargetSpace}}.sarif"
+
+  - name: bearerSarif
+    default: "{{Output}}/sast/bearer-{{TargetSpace}}.sarif"
+
+  # Markdown reports
+  - name: semgrepMarkdown
+    default: "{{Output}}/sast/semgrep-{{TargetSpace}}.md"
+
+  - name: kingfisherMarkdown
+    default: "{{Output}}/secret/kingfisher-{{TargetSpace}}.md"
+
+  - name: trivyMarkdown
+    default: "{{Output}}/sast/trivy-report-{{TargetSpace}}.md"
+
+  - name: bearerMarkdown
+    default: "{{Output}}/sast/bearer-{{TargetSpace}}.md"
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES SECTION
+# -----------------------------------------------------------------------------
+dependencies:
+  commands:
+    - kingfisher
+    - trivy
+
+  variables:
+    - name: Target
+      type: string
+      required: true
+
+# -----------------------------------------------------------------------------
+# REPORTS SECTION
+# -----------------------------------------------------------------------------
+reports:
+  - name: semgrep-sarif
+    path: "{{semgrepSarif}}"
+    type: text
+    description: Semgrep SARIF results
+
+  - name: kingfisher-sarif
+    path: "{{kingfisherSarif}}"
+    type: text
+    description: Kingfisher SARIF results
+
+  - name: trivy-sarif
+    path: "{{trivySarif}}"
+    type: text
+    description: Trivy SARIF results
+
+  - name: bearer-sarif
+    path: "{{bearerSarif}}"
+    type: text
+    description: Bearer SARIF results
+    optional: true
+
+  - name: semgrep-markdown
+    path: "{{semgrepMarkdown}}"
+    type: text
+    description: Semgrep markdown report
+
+  - name: kingfisher-markdown
+    path: "{{kingfisherMarkdown}}"
+    type: text
+    description: Kingfisher markdown report
+
+  - name: trivy-markdown
+    path: "{{trivyMarkdown}}"
+    type: text
+    description: Trivy markdown report
+
+  - name: bearer-markdown
+    path: "{{bearerMarkdown}}"
+    type: text
+    description: Bearer markdown report
+
+# -----------------------------------------------------------------------------
+# STEPS SECTION
+# -----------------------------------------------------------------------------
+steps:
+  # ---------------------------------------------------------------------------
+  # Setup: Create output folders and clean the old output if it exist
+  # ---------------------------------------------------------------------------
+  - name: create-output-folders
+    type: function
+    log: "Creating output folders for SAST and secret scanning"
+    functions:
+      - 'create_folder("{{Output}}/sast")'
+      - 'create_folder("{{Output}}/secret")'
+      - 'rm_rf("{{repoFolder}}")'
+
+  - name: clone-repository
+    type: bash
+    log: "Cloning repository with depth {{gitDepth}}"
+    pre_condition: 'is_url("{{Target}}")'
+    commands:
+      - "git clone --depth={{gitDepth}} {{Target}} {{repoFolder}}"
+    on_error:
+      - action: continue
+
+  # ---------------------------------------------------------------------------
+  # Handle folder input: Copy local folder to repoFolder
+  # ---------------------------------------------------------------------------
+  - name: handle-folder-input
+    type: function
+    log: "Checking if input is a local folder and copying it"
+    pre_condition: 'dir_length("{{Target}}") > 0'
+    functions:
+      - 'printf("=> Looks like the input is a folder, copying it to {{repoFolder}}")'
+      - 'exec_cmd("rm -rf {{repoFolder}}")'
+      - 'exec_cmd("cp -r {{Target}} {{repoFolder}}")'
+
+  # ---------------------------------------------------------------------------
+  # Handle URL input: Download web content with katana
+  # ---------------------------------------------------------------------------
+  - name: handle-url-input
+    type: function
+    log: "Downloading HTML response for standard URL input"
+    pre_condition: 'is_url("{{Target}}") && !is_compress("{{Target}}")'
+    functions:
+      - 'printf("=> It appears that the input is a standard URL. Downloading the HTML response instead")'
+      - 'exec_cmd("rm -rf {{repoFolder}}")'
+      - 'exec_cmd("katana -u {{Target}} -silent -headless --no-sandbox -depth {{crawlingDepth}} -jc -crawl-duration {{crawlingTime}} -store-response-dir {{repoFolder}}")'
+
+
+  # ---------------------------------------------------------------------------
+  # Handle target is compressed file (local)
+  # ---------------------------------------------------------------------------
+  - name: handle-compress-local
+    type: function
+    log: "Extracting compressed archive to repo folder"
+    pre_condition: '!is_url("{{Target}}") && is_compress("{{Target}}")'
+    functions:
+      - 'extract_to("{{Target}}", "{{repoFolder}}")'
+
+  # ---------------------------------------------------------------------------
+  # Handle target is compressed file URL (download then extract)
+  # ---------------------------------------------------------------------------
+  - name: handle-compress-url
+    type: function
+    log: "Downloading and extracting compressed archive from URL"
+    pre_condition: 'is_url("{{Target}}") && is_compress("{{Target}}")'
+    functions:
+      - 'wget("{{Target}}", "/tmp/{{TargetSpace}}-archive")'
+      - 'extract_to("/tmp/{{TargetSpace}}-archive", "{{repoFolder}}")'
+
+  # ---------------------------------------------------------------------------
+  # Detect repository language
+  # ---------------------------------------------------------------------------
+  - name: detect-repo-language
+    type: function
+    log: "Detecting primary language of the repository"
+    functions:
+      - 'var repoLanguage = detect_language("{{repoFolder}}") ; printf("Detecting primary language of the repository: " + repoLanguage)'
+    exports:
+      repoLanguage: 'detect_language("{{repoFolder}}")'
+
+  # ---------------------------------------------------------------------------
+  # Semgrep static analysis scan
+  # ---------------------------------------------------------------------------
+  - name: semgrep-scan
+    type: bash
+    log: "Running semgrep static analysis"
+    commands:
+      - "semgrep scan --quiet --config auto --jobs={{semgrepJobs}} --json-output={{semgrepJson}} --sarif-output={{semgrepSarif}} {{repoFolder}}"
+    on_error:
+      - action: continue
+
+  # ---------------------------------------------------------------------------
+  # Kingfisher secret scan
+  # ---------------------------------------------------------------------------
+  - name: kingfisher-scan
+    type: bash
+    log: "Running kingfisher secret scan"
+    commands:
+      - "kingfisher --quiet scan {{repoFolder}} --num-jobs {{kingfisherJobs}} --format sarif --output {{kingfisherSarif}}"
+    on_error:
+      - action: continue
+
+  # ---------------------------------------------------------------------------
+  # Trivy filesystem scan
+  # ---------------------------------------------------------------------------
+  - name: trivy-scan
+    type: bash
+    log: "Running trivy filesystem scan"
+    commands:
+      - "trivy --quiet fs {{repoFolder}} --format sarif --output {{trivySarif}}"
+    on_error:
+      - action: continue
+
+  # ---------------------------------------------------------------------------
+  # Bearer SAST scan
+  # ---------------------------------------------------------------------------
+  - name: bearer-scan
+    type: bash
+    log: "Running bearer SAST scan if semgrep did not produce results"
+    pre_condition: '!file_exists("{{semgrepSarif}}")'
+    commands:
+      - "bearer --quiet scan {{repoFolder}} --format sarif --output {{bearerSarif}}"
+    on_error:
+      - action: continue
+
+  # ---------------------------------------------------------------------------
+  # Import SARIF results into database
+  # ---------------------------------------------------------------------------
+  - name: import-semgrep-sarif
+    type: function
+    log: "Importing semgrep SARIF results into database"
+    pre_condition: 'file_exists("{{semgrepSarif}}")'
+    functions:
+      - 'db_import_sarif("{{Workspace}}", "{{semgrepSarif}}")'
+    on_error:
+      - action: continue
+
+  - name: import-kingfisher-sarif
+    type: function
+    log: "Importing kingfisher SARIF results into database"
+    pre_condition: 'file_exists("{{kingfisherSarif}}")'
+    functions:
+      - 'db_import_sarif("{{Workspace}}", "{{kingfisherSarif}}")'
+    on_error:
+      - action: continue
+
+  - name: import-trivy-sarif
+    type: function
+    log: "Importing trivy SARIF results into database"
+    pre_condition: 'file_exists("{{trivySarif}}")'
+    functions:
+      - 'db_import_sarif("{{Workspace}}", "{{trivySarif}}")'
+    on_error:
+      - action: continue
+
+  - name: import-bearer-sarif
+    type: function
+    log: "Importing bearer SARIF results into database"
+    pre_condition: 'file_exists("{{bearerSarif}}")'
+    functions:
+      - 'db_import_sarif("{{Workspace}}", "{{bearerSarif}}")'
+    on_error:
+      - action: continue
+
+  # ---------------------------------------------------------------------------
+  # Convert SARIF results to markdown reports
+  # ---------------------------------------------------------------------------
+  - name: semgrep-markdown-report
+    type: function
+    log: "Converting semgrep SARIF to markdown report"
+    pre_condition: 'file_exists("{{semgrepSarif}}")'
+    functions:
+      - 'convert_sarif_to_markdown("{{semgrepSarif}}", "{{semgrepMarkdown}}")'
+    on_error:
+      - action: continue
+
+  - name: kingfisher-markdown-report
+    type: function
+    log: "Converting kingfisher SARIF to markdown report"
+    pre_condition: 'file_exists("{{kingfisherSarif}}")'
+    functions:
+      - 'convert_sarif_to_markdown("{{kingfisherSarif}}", "{{kingfisherMarkdown}}")'
+    on_error:
+      - action: continue
+
+  - name: trivy-markdown-report
+    type: function
+    log: "Converting trivy SARIF to markdown report"
+    pre_condition: 'file_exists("{{trivySarif}}")'
+    functions:
+      - 'convert_sarif_to_markdown("{{trivySarif}}", "{{trivyMarkdown}}")'
+    on_error:
+      - action: continue
+
+  - name: bearer-markdown-report
+    type: function
+    log: "Converting bearer SARIF to markdown report"
+    pre_condition: 'file_exists("{{bearerSarif}}")'
+    functions:
+      - 'convert_sarif_to_markdown("{{bearerSarif}}", "{{bearerMarkdown}}")'
+    on_error:
+      - action: continue

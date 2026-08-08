@@ -6,7 +6,20 @@ import (
 	"time"
 )
 
-func EnsureWorkspaceRuntime(ctx context.Context, name, localPath, runWorkflow, stateExecutionLog, stateCompletedFile, stateWorkflowFile, stateWorkflowFolder string) error {
+// EnsureWorkspaceRuntime upserts a workspace and attributes it to an org.
+//
+// orgUUID is the org the caller explicitly selected (--org / $OSMEDEUS_ORG / the
+// active org). An empty orgUUID means "no org was named", which is treated very
+// differently on insert and update:
+//
+//   - New workspace: it lands in the default org.
+//   - Existing workspace: its org is left alone. Re-scanning a workspace that
+//     `osmedeus org assign` put into an org must not silently drag it back to the
+//     default org just because this run did not pass --org.
+//
+// Naming an org explicitly does move the workspace, since that is the whole point
+// of `osmedeus run --org`.
+func EnsureWorkspaceRuntime(ctx context.Context, name, localPath, runWorkflow, stateExecutionLog, stateCompletedFile, stateWorkflowFile, stateWorkflowFolder, orgUUID string) error {
 	if db == nil {
 		return fmt.Errorf("database not connected")
 	}
@@ -19,6 +32,7 @@ func EnsureWorkspaceRuntime(ctx context.Context, name, localPath, runWorkflow, s
 
 	ws := &Workspace{
 		Name:                name,
+		OrgUUID:             NormalizeOrgUUID(orgUUID),
 		LocalPath:           localPath,
 		DataSource:          "local",
 		LastRun:             &now,
@@ -31,7 +45,7 @@ func EnsureWorkspaceRuntime(ctx context.Context, name, localPath, runWorkflow, s
 		UpdatedAt:           now,
 	}
 
-	_, err := db.NewInsert().Model(ws).
+	q := db.NewInsert().Model(ws).
 		On("CONFLICT (name) DO UPDATE").
 		Set("local_path = EXCLUDED.local_path").
 		Set("data_source = EXCLUDED.data_source").
@@ -41,7 +55,15 @@ func EnsureWorkspaceRuntime(ctx context.Context, name, localPath, runWorkflow, s
 		Set("state_completed_file = EXCLUDED.state_completed_file").
 		Set("state_workflow_file = EXCLUDED.state_workflow_file").
 		Set("state_workflow_folder = EXCLUDED.state_workflow_folder").
-		Set("updated_at = EXCLUDED.updated_at").
-		Exec(ctx)
+		Set("updated_at = EXCLUDED.updated_at")
+
+	if orgUUID != "" {
+		q = q.Set("org_uuid = EXCLUDED.org_uuid")
+	}
+
+	_, err := q.Exec(ctx)
+	if err == nil && orgUUID != "" {
+		invalidateWorkspaceOrgCache()
+	}
 	return err
 }

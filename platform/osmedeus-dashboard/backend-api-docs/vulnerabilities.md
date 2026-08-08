@@ -1,0 +1,317 @@
+# Vulnerabilities
+
+## List Vulnerabilities
+
+Get a paginated list of vulnerabilities with optional filtering by workspace, severity, confidence, or asset value.
+
+**List all vulnerabilities:**
+```bash
+curl http://localhost:8002/osm/api/vulnerabilities \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**List vulnerabilities with pagination:**
+```bash
+curl "http://localhost:8002/osm/api/vulnerabilities?offset=0&limit=100" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Filter by workspace:**
+```bash
+curl "http://localhost:8002/osm/api/vulnerabilities?workspace=example.com" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Filter by severity:**
+```bash
+curl "http://localhost:8002/osm/api/vulnerabilities?severity=critical" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Filter by confidence:**
+```bash
+curl "http://localhost:8002/osm/api/vulnerabilities?confidence=Certain" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Filter by asset value (partial match):**
+```bash
+curl "http://localhost:8002/osm/api/vulnerabilities?asset_value=api.example" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Combine filters:**
+```bash
+curl "http://localhost:8002/osm/api/vulnerabilities?workspace=example.com&severity=high&offset=0&limit=50" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `workspace` | string | - | Filter by workspace name |
+| `severity` | string | - | Filter by severity (critical, high, medium, low, info) |
+| `confidence` | string | - | Filter by confidence (Certain, Firm, Tentative, Manual Review Required) |
+| `asset_value` | string | - | Filter by asset value (partial match) |
+| `offset` | int | 0 | Number of records to skip |
+| `limit` | int | 20 | Maximum records to return (max 10000) |
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "workspace": "example.com",
+      "vuln_info": "CVE-2024-1234",
+      "vuln_title": "SQL Injection in Login Form",
+      "vuln_desc": "The login form is vulnerable to SQL injection via the username parameter.",
+      "vuln_poc": "username=' OR '1'='1' --&password=test",
+      "severity": "critical",
+      "confidence": "Certain",
+      "asset_type": "web",
+      "asset_value": "https://example.com/login",
+      "tags": ["sqli", "owasp-top10", "authentication"],
+      "detail_http_request": "POST /login HTTP/1.1\nHost: example.com\n...",
+      "detail_http_response": "HTTP/1.1 200 OK\n...",
+      "raw_vuln_json": "{\"template\":\"sqli-login.yaml\",...}",
+      "created_at": "2025-01-15T10:30:00Z",
+      "updated_at": "2025-01-15T10:30:00Z"
+    },
+    {
+      "id": 2,
+      "workspace": "example.com",
+      "vuln_info": "CVE-2024-5678",
+      "vuln_title": "Cross-Site Scripting (XSS) in Search",
+      "vuln_desc": "Reflected XSS vulnerability in the search functionality.",
+      "vuln_poc": "<script>alert('XSS')</script>",
+      "severity": "high",
+      "confidence": "Firm",
+      "asset_type": "web",
+      "asset_value": "https://example.com/search",
+      "tags": ["xss", "owasp-top10"],
+      "detail_http_request": "GET /search?q=<script>alert(1)</script> HTTP/1.1\n...",
+      "detail_http_response": "HTTP/1.1 200 OK\n...",
+      "raw_vuln_json": "{\"template\":\"xss-reflected.yaml\",...}",
+      "created_at": "2025-01-15T10:31:00Z",
+      "updated_at": "2025-01-15T10:31:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 15,
+    "offset": 0,
+    "limit": 20
+  }
+}
+```
+
+---
+
+## Get Vulnerability Summary
+
+Get a summary of vulnerabilities grouped by severity, optionally filtered by workspace.
+
+**Get summary for all workspaces:**
+```bash
+curl http://localhost:8002/osm/api/vulnerabilities/summary \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Get summary for a specific workspace:**
+```bash
+curl "http://localhost:8002/osm/api/vulnerabilities/summary?workspace=example.com" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `workspace` | string | - | Filter by workspace name |
+
+**Response:**
+```json
+{
+  "data": {
+    "by_severity": {
+      "critical": 2,
+      "high": 5,
+      "medium": 8,
+      "low": 12,
+      "info": 3
+    },
+    "total": 30,
+    "workspace": "example.com"
+  }
+}
+```
+
+---
+
+## Get Vulnerability by ID
+
+Retrieve a single vulnerability by its ID.
+
+```bash
+curl http://localhost:8002/osm/api/vulnerabilities/1 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "id": 1,
+    "workspace": "example.com",
+    "vuln_info": "CVE-2024-1234",
+    "vuln_title": "SQL Injection in Login Form",
+    "vuln_desc": "The login form is vulnerable to SQL injection via the username parameter.",
+    "vuln_poc": "username=' OR '1'='1' --&password=test",
+    "severity": "critical",
+    "confidence": "Certain",
+    "asset_type": "web",
+    "asset_value": "https://example.com/login",
+    "tags": ["sqli", "owasp-top10", "authentication"],
+    "detail_http_request": "POST /login HTTP/1.1\nHost: example.com\n...",
+    "detail_http_response": "HTTP/1.1 200 OK\n...",
+    "raw_vuln_json": "{\"template\":\"sqli-login.yaml\",...}",
+    "created_at": "2025-01-15T10:30:00Z",
+    "updated_at": "2025-01-15T10:30:00Z"
+  }
+}
+```
+
+**Error Response (404):**
+```json
+{
+  "error": true,
+  "message": "Vulnerability not found"
+}
+```
+
+---
+
+## Create Vulnerability
+
+Create a new vulnerability record.
+
+```bash
+curl -X POST http://localhost:8002/osm/api/vulnerabilities \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workspace": "example.com",
+    "vuln_info": "CVE-2024-9999",
+    "vuln_title": "Remote Code Execution",
+    "vuln_desc": "Critical RCE vulnerability in admin panel.",
+    "vuln_poc": "curl -X POST /admin/exec -d \"cmd=id\"",
+    "severity": "critical",
+    "asset_type": "web",
+    "asset_value": "https://example.com/admin",
+    "tags": ["rce", "critical", "admin"],
+    "detail_http_request": "POST /admin/exec HTTP/1.1\n...",
+    "detail_http_response": "HTTP/1.1 200 OK\nuid=0(root)...",
+    "raw_vuln_json": "{\"template\":\"rce-admin.yaml\"}"
+  }'
+```
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `workspace` | string | Yes | Workspace/target name |
+| `vuln_info` | string | No | CVE or vulnerability identifier |
+| `vuln_title` | string | No | Short title for the vulnerability |
+| `vuln_desc` | string | No | Detailed description |
+| `vuln_poc` | string | No | Proof of concept |
+| `severity` | string | No | Severity level (critical, high, medium, low, info) |
+| `confidence` | string | No | Confidence level (Certain, Firm, Tentative, Manual Review Required) |
+| `asset_type` | string | No | Type of asset (web, api, network, etc.) |
+| `asset_value` | string | No | Affected asset URL or identifier |
+| `tags` | array | No | Tags for categorization |
+| `detail_http_request` | string | No | Raw HTTP request |
+| `detail_http_response` | string | No | Raw HTTP response |
+| `raw_vuln_json` | string | No | Raw JSON from scanner (nuclei, etc.) |
+
+**Response (201 Created):**
+```json
+{
+  "data": {
+    "id": 15,
+    "workspace": "example.com",
+    "vuln_info": "CVE-2024-9999",
+    "vuln_title": "Remote Code Execution",
+    "vuln_desc": "Critical RCE vulnerability in admin panel.",
+    "vuln_poc": "curl -X POST /admin/exec -d \"cmd=id\"",
+    "severity": "critical",
+    "confidence": "Certain",
+    "asset_type": "web",
+    "asset_value": "https://example.com/admin",
+    "tags": ["rce", "critical", "admin"],
+    "detail_http_request": "POST /admin/exec HTTP/1.1\n...",
+    "detail_http_response": "HTTP/1.1 200 OK\nuid=0(root)...",
+    "raw_vuln_json": "{\"template\":\"rce-admin.yaml\"}",
+    "created_at": "2025-01-15T14:25:00Z",
+    "updated_at": "2025-01-15T14:25:00Z"
+  },
+  "message": "Vulnerability created successfully"
+}
+```
+
+**Error Response (400):**
+```json
+{
+  "error": true,
+  "message": "Workspace is required"
+}
+```
+
+---
+
+## Delete Vulnerability
+
+Delete a vulnerability by ID.
+
+```bash
+curl -X DELETE http://localhost:8002/osm/api/vulnerabilities/15 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "message": "Vulnerability deleted successfully"
+}
+```
+
+**Error Response (404):**
+```json
+{
+  "error": true,
+  "message": "Vulnerability not found"
+}
+```
+
+---
+
+## Vulnerability Fields Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | int | Unique vulnerability identifier |
+| `workspace` | string | Workspace/scan target name |
+| `vuln_info` | string | CVE or vulnerability identifier |
+| `vuln_title` | string | Short descriptive title |
+| `vuln_desc` | string | Detailed vulnerability description |
+| `vuln_poc` | string | Proof of concept exploit |
+| `severity` | string | Severity level (critical, high, medium, low, info) |
+| `confidence` | string | Confidence level (Certain, Firm, Tentative, Manual Review Required) |
+| `asset_type` | string | Type of affected asset |
+| `asset_value` | string | Affected asset URL or identifier |
+| `tags` | array | Categorization tags |
+| `detail_http_request` | string | Raw HTTP request that triggered the vulnerability |
+| `detail_http_response` | string | Raw HTTP response from the vulnerable endpoint |
+| `raw_vuln_json` | string | Raw JSON output from vulnerability scanner |
+| `created_at` | timestamp | Record creation timestamp |
+| `updated_at` | timestamp | Last update timestamp |

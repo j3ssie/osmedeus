@@ -1,0 +1,31 @@
+name: test-decision
+kind: module
+description: Test conditional step routing with decision
+
+params:
+  - name: target
+    required: true
+
+steps:
+  - name: check-condition
+    type: bash
+    command: echo "{{target}}"
+    exports:
+      target_value: "output"
+    decision:
+      - condition: target_value == "skip"
+        next: "_end"
+      - condition: target_value == "jump"
+        next: "final-step"
+
+  - name: middle-step
+    type: bash
+    command: echo "middle executed"
+    exports:
+      middle_output: "output"
+
+  - name: final-step
+    type: bash
+    command: echo "final executed"
+    exports:
+      final_output: "output"

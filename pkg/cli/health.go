@@ -326,8 +326,14 @@ func findWorkflowYAMLFiles(root string) ([]string, error) {
 }
 
 func copyEmbeddedAssets(dest string) error {
+	return copyEmbeddedTree("examples/osmedeus-base.example", dest)
+}
+
+// copyEmbeddedTree materializes an embedded subtree onto disk, creating parent
+// directories as needed. Shared by the base-folder installer and the skills
+// installer so both get the same directory/permission semantics.
+func copyEmbeddedTree(srcRoot, dest string) error {
 	srcFS := public.EmbedFS
-	srcRoot := "examples/osmedeus-base.example"
 
 	return fs.WalkDir(srcFS, srcRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {

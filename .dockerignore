@@ -1,0 +1,29 @@
+# The Dockerfile does `COPY . .`, so everything here is build context. The Go
+# build needs no JS tooling, and platform/ can hold a ~600MB node_modules tree
+# once anyone runs `bun install` — keep it out of the context entirely.
+#
+# public/ui/ is the *built* dashboard and IS needed: it is go:embed'd.
+platform/
+
+.git/
+.github/
+
+# Build outputs and local artifacts
+build/bin/
+build/dist-npm/
+bin/
+coverage.out
+coverage.html
+test-results.xml
+
+# Databases and scan artifacts
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+.claude/
+.agents/

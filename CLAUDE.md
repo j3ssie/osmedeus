@@ -49,7 +49,28 @@ make canary-up            # Build & start canary container
 make canary-down          # Stop & cleanup canary container
 
 # UI
-make update-ui          # Update embedded UI from dashboard build
+make update-ui          # Build platform/osmedeus-dashboard and refresh public/ui/
+make update-ui DASHBOARD_SKIP_BUILD=1   # Reuse an existing dashboard build
+
+# Platform sub-projects
+make sync-platform                        # Publish platform/* OUT to standalone repos
+make sync-platform PLATFORM=osmedeus-registry   # Just one
+make sync-platform PLATFORM_COMMIT=1      # Also commit and push
+
+# Agent Skills
+make sync-skills                                # Push public/skills/ out to ../osmedeus-skills
+make sync-skills SKILLS_DEST=/path/to/checkout  # Push to a checkout elsewhere
+
+# Release
+make bump-version       # Bump the patch in constants.go (v5.1.0 -> v5.1.1)
+make bump-version PART=minor      # v5.1.0 -> v5.2.0 (also: major|pre|release)
+make bump-version SET=v5.1.0-rc.1 # Set an explicit version
+make bump-version DRY_RUN=1       # Preview without writing
+make github-release     # Build and publish GitHub release (GoReleaser)
+make npm-binaries       # Cross-compile the 4 npm target platforms
+make npm-build          # Stage @j3ssie/osmedeus packages into build/dist-npm/
+make npm-pack           # npm-build + inspectable .tgz tarballs
+make npm-publish        # Publish to npm (needs NPM_TOKEN); DRY_RUN=1 to preview
 ```
 
 ## Architecture Overview
@@ -87,6 +108,8 @@ Runner (internal/runner) - executes commands via: HostRunner, DockerRunner, SSHR
 | `internal/state` | Run state export for debugging and sharing |
 | `internal/updater` | Self-update functionality via GitHub releases |
 | `internal/cloud` | Cloud infrastructure provisioning (DigitalOcean, AWS, GCP, Linode, Azure) |
+| `public` | Embedded assets: UI, presets, base example, and coding-agent skills |
+| `platform` | Vendored sub-projects: dashboard, registry, workflow (not Go code) |
 
 ### Key Types
 
@@ -229,6 +252,137 @@ osmedeus agent --timeout 1h "msg"               # Custom timeout (default: 30m)
 echo "message" | osmedeus agent --stdin          # Read from stdin
 ```
 
+### Org (Tenant) Layer
+
+Orgs group multiple workspaces so assets, findings and runs can be queried across
+all of them at once — a company with many root domains gets one org spanning every
+workspace.
+
+- **Model**: `Org` in `internal/database/models.go` (UUID pk, unique name). `org_uuid`
+  is a denormalized column on `workspaces`, `assets`, `vulnerabilities` and `runs`
+  (`orgScopedTables` in `internal/database/database.go`), so cross-workspace queries
+  need no join.
+- **Default org**: `DefaultOrgUUID` = `00000000-0000-0000-0000-000000000001`, seeded
+  on migrate. Cannot be deleted or renamed.
+- **Two different empty semantics** — this is the backward-compatibility contract:
+  - *Read*: empty org means **no filter**, so queries span every org exactly as they
+    did before orgs existed.
+  - *Write*: empty org is coerced to the default org, never stored blank.
+- **Migration**: `addOrgUUIDColumns` adds `org_uuid TEXT NOT NULL DEFAULT '<default>'`,
+  so every pre-existing row is attributed to the default org automatically.
+  `backfillOrgUUID` then reclaims rows holding an explicit empty string (Bun writes
+  the Go zero value, bypassing the column DEFAULT).
+- **Attribution is automatic**: `BeforeAppendModel` hooks in `internal/database/org_hooks.go`
+  resolve an unset `org_uuid` from the row's workspace on insert *and* update, so
+  importers need no org awareness and a re-scan never evicts a row from its org.
+  Writes that deliberately set `org_uuid` use raw SQL without a model, so the hooks
+  do not fire on them.
+- **Resolution order** (`pkg/cli/org_resolve.go`): `--org` flag → `$OSMEDEUS_ORG_UUID`
+  → `$OSMEDEUS_ORG` → `{{base_folder}}/.active-org` → unset (no filter).
+  `--org` accepts a name or a UUID.
+- **CLI**: `pkg/cli/org.go`. **API**: `pkg/server/handlers/orgs.go`, plus `?org=` on
+  the assets, vulnerabilities, runs and workspaces endpoints.
+
+Re-scanning a workspace without `--org` deliberately leaves its org alone;
+only an explicit `--org` moves it (`EnsureWorkspaceRuntimeWithOrg`).
+
+### Platform Sub-Projects
+
+`platform/` holds the non-Go sub-projects that ship alongside the engine, vendored
+into this repo so they version together with the code they talk to.
+
+| Directory | Standalone repo | Purpose |
+|-----------|-----------------|---------|
+| `platform/osmedeus-dashboard` | `osmedeus/osmedeus-dashboard` | Next.js UI; built into `public/ui/` and `go:embed`ed |
+| `platform/osmedeus-registry` | `osmedeus/osmedeus-registry` | Binary registry metadata and install scripts |
+| `platform/osmedeus-workflow` | `osmedeus/osmedeus-workflow` | Public workflow collection |
+
+- **This repo is the source of truth.** Edit under `platform/`, then
+  `make sync-platform` publishes to the standalone repos. It writes files only —
+  review and commit there yourself unless you pass `PLATFORM_COMMIT=1`.
+- **No nested `.git`.** The sub-projects are plain directories here; their
+  history lives in the standalone repos.
+- **Build outputs are gitignored** (`node_modules/`, `.next/`, `build/`, `out/`).
+  `.dockerignore` excludes `platform/` wholesale so an installed `node_modules`
+  never enters the Docker build context.
+- `.agents/` is un-ignored under `platform/` (`!platform/*/.agents/`) because the
+  dashboard tracks its agent skills upstream — ignoring them here would make
+  `sync-platform --delete` wipe them.
+- **The dashboard is not the embedded UI.** `public/ui/` is the *built* output and
+  is what gets embedded; `make update-ui` rebuilds it from `platform/`.
+
+Targets that consume `platform/` rather than a sibling checkout:
+
+| Target / file | Reads from |
+|---------------|-----------|
+| `make update-ui` | `platform/osmedeus-dashboard` (builds, then copies to `public/ui/`) |
+| `make snapshot-release` | `$(REGISTRY_DIR)` = `platform/osmedeus-registry` for `registry-metadata-direct-fetch.json` and `install.sh` |
+| `build/docker/docker-compose.canary.yaml` | `platform/osmedeus-workflow` mounted as the canary's workflows |
+
+Adding a new consumer? Point it at `platform/<name>/`, never `../<name>/` — the
+sibling checkout may not exist on a fresh clone.
+
+Note `make sync-skills` is separate and stays that way: skills live in
+`public/skills/` because they are `go:embed`ed, so they are not a `platform/`
+sub-project. Both sync targets default to publishing into the directory that
+holds this repo.
+
+### Bundled Agent Skills
+
+Skill bundles that teach an AI coding agent how to write osmedeus workflows and
+drive the CLI are embedded in the binary and installed via `osmedeus skills install`.
+Because they ship inside the binary, an installed skill always matches the running version.
+
+- **Content**: `public/skills/<bundle>/` — `SKILL.md` (YAML frontmatter: `name`, `description`) plus optional `references/*.md`
+- **Embed**: `//go:embed all:skills` in `public/embed.go`, read from `public.EmbedFS` under `skills/`
+- **Implementation**: `pkg/cli/skills.go` — `list`, `get`, `install` subcommands
+- **Discovery is filesystem-driven**: any directory under `public/skills/` containing a `SKILL.md` is a bundle, so adding one needs no code change
+- **Install destinations**: `--agent claude` → `.claude/skills/`, `--agent codex|agents` → `.agents/skills/`; `--scope project` (cwd) or `global` (home)
+- **`osmedeus install skills`** is a thin alias sharing `RunSkillsInstall`, mirroring the `workflow install` / `RunInstallWorkflow` pattern (a cobra command has one parent)
+
+`public/skills/` is **authored in-tree** — it is the source of truth, so a skill
+change ships in the same commit as the code it documents. The standalone repo
+https://github.com/osmedeus/osmedeus-skills is a published mirror (it lets agents
+install a skill without osmedeus); `make sync-skills` pushes this directory out to
+a local checkout of it, writing bundle directories only — never the destination's
+`README.md`, which is its own public landing page.
+
+Installing into a project's `.claude/skills/` also benefits `osmedeus agent`, which
+spawns claude-code/codex via ACP in that directory.
+
+### npm Distribution
+
+`npm install -g @j3ssie/osmedeus` ships the Go binary through npm. Everything
+lives under `build/npm/` and is driven by the `npm-*` make targets.
+
+- **One npm name, version-suffixed platform builds** (codex-style): the launcher
+  publishes as `@j3ssie/osmedeus@<version>`, each platform build as
+  `@j3ssie/osmedeus@<version>-<tag>` for the four tags `linux-x64`,
+  `linux-arm64`, `darwin-x64`, `darwin-arm64`. The launcher pulls its own build
+  in as an **aliased optionalDependency**
+  (`"@j3ssie/osmedeus-linux-x64": "npm:@j3ssie/osmedeus@<version>-linux-x64"`),
+  so an install downloads exactly one binary.
+- **The binary ships gzipped** (`vendor/<tag>/osmedeus.gz`, ~50MB vs ~240MB raw)
+  because the UI, presets and skills are embedded. `bin/osmedeus.js`
+  decompresses it on first run into `~/.osmedeus/npm-bin/<version>/<tag>/`
+  (override with `$OSMEDEUS_NPM_HOME`) — version-scoped, so an upgrade can never
+  exec a stale binary — then `spawn`s it, forwarding args, stdio, signals and
+  the exit status.
+- **Publish order matters**: platform packages first, then the launcher, else its
+  optionalDependencies do not resolve. `npm-publish` does this, then pins and
+  verifies the `latest` dist-tag (retrying through registry cache lag).
+- **Version source** is `VERSION` in `internal/core/constants.go`, minus the `v`
+  — bump it with `make bump-version` (`build/scripts/bump-version.sh`), which is
+  the only thing that should rewrite that constant. npm versions are immutable,
+  so `build.mjs` refuses to pack unless the `.build-version` stamp
+  `make npm-binaries` writes matches the version being published. Never verify a
+  build by grepping the binary for a version string — the embedded
+  docs/presets/UI mention other versions and it false-matches.
+- **Files**: `build/npm/build.mjs` (staging), `build/npm/bin/osmedeus.js`
+  (launcher — kept out of the `bin/` gitignore rule by a `!build/npm/bin/`
+  negation), output in `build/dist-npm-bin/` (binaries) and `build/dist-npm/`
+  (staged packages), both gitignored.
+
 ## CLI Commands
 
 ```bash
@@ -263,6 +417,17 @@ osmedeus install workflow --preset               # Install workflows from preset
 osmedeus install validate --preset               # Validate/install ready-to-use base
 osmedeus install env                             # Add binaries to PATH (auto-detects shell)
 osmedeus install env --all                       # Add to all shell configs
+osmedeus skills                                  # List bundled coding-agent skills (alias: skill)
+osmedeus skills list --json                      # List skills as JSON
+osmedeus skills get <name>                       # Print a skill's SKILL.md to stdout
+osmedeus skills get <name> --full                # Include reference files
+osmedeus skills get --all                        # Print every bundled skill
+osmedeus skills install                          # Install default skill into ./.claude/skills/
+osmedeus skills install --scope global           # Install into ~/.claude/skills/
+osmedeus skills install --agent codex            # Install into .agents/skills/ instead
+osmedeus skills install --all --force            # Install every bundle, overwriting
+osmedeus skills install --dir <path>             # Install to an explicit directory
+osmedeus install skills                          # Alias for 'osmedeus skills install'
 osmedeus update                                  # Self-update to latest version
 osmedeus update --check                          # Check for updates without installing
 osmedeus snapshot export <workspace>             # Export workspace as ZIP
@@ -285,6 +450,17 @@ osmedeus assets --stats -w <workspace>           # Stats filtered by workspace
 osmedeus assets --columns url,title,status_code  # Custom columns
 osmedeus assets --limit 100 --offset 50          # Pagination
 osmedeus assets --json                           # JSON output
+osmedeus assets --org acme                       # Assets across every workspace in an org
+osmedeus org                                     # List orgs (alias: orgs, tenant)
+osmedeus org create acme -d "ACME Corp"          # Create an org
+osmedeus org show acme                           # Org details, counts and workspaces
+osmedeus org assign acme -w acme.com -w acme.io  # Group existing workspaces into an org
+osmedeus org use acme                            # Set the active org (eval $(...) to export)
+osmedeus org use --clear                         # Clear the active org
+osmedeus org rename acme acme-corp               # Rename an org
+osmedeus org delete acme                         # Delete org, data moves to default org
+osmedeus org delete acme --purge                 # Delete org and all its data
+osmedeus run -m <module> -t <target> --org acme  # Attribute a scan to an org
 osmedeus agent "your prompt"                     # Run ACP agent (default: claude-code)
 osmedeus agent --agent codex "your prompt"       # Use a specific agent
 osmedeus agent --list                            # List available agents
@@ -325,6 +501,7 @@ REST API documentation with curl examples is in `docs/api/`. Key endpoint catego
 - **Workflows**: List, get details, refresh index
 - **Schedules**: Full CRUD + enable/disable/trigger
 - **Assets/Workspaces**: Query discovered data
+- **Orgs**: Group workspaces under a tenant; full CRUD + workspace assignment. `?org=` filters assets, vulnerabilities, runs and workspaces
 - **Event Logs**: Query execution events
 - **Functions**: Execute utility functions via API
 - **Snapshots**: Export/import workspace archives
@@ -443,6 +620,8 @@ Assets now include CDN/WAF classification fields derived from httpx JSON data:
 
 **New Agent Preset Tool**: Add to `PresetToolRegistry` in `internal/core/agent_tool_presets.go`, add case in `buildPresetCallExpr()` in `internal/executor/agent_executor.go`
 
+**New Bundled Skill**: Add a directory with a `SKILL.md` under `public/skills/`, then run `make sync-skills` to mirror it out to the skills repo. No Go changes needed — discovery finds any such directory.
+
 ## Architecture Notes
 
 - **Executor**: Fresh instances created per target/request - no global singleton
@@ -456,6 +635,9 @@ Assets now include CDN/WAF classification fields derived from httpx JSON data:
 - **Execute Hooks**: Distributed coordination via `RegisterExecuteHooks()` in `internal/functions/execute_hooks.go` - avoids circular imports between functions and distributed packages
 - **Queue System**: Dual-source polling (DB + Redis) with deduplication and configurable concurrency in `pkg/cli/worker_queue.go`
 - **Command Fallback**: `internal/executor/cmd_fallback.go` handles timeout prefix stripping and custom binary path prepending
+- **Bundled Skills**: `public/skills/` is the source of truth, embedded via `//go:embed all:skills`; edit in place, then `make sync-skills` pushes the bundles out to the standalone osmedeus-skills repo (a published mirror) for review and commit there
+- **npm Distribution**: run `make bump-version` before `make npm-publish` — npm versions are immutable, so a version can only be superseded, never re-published. `make npm-binaries` restamps `build/dist-npm-bin/.build-version`; the guard in `build.mjs` fails closed if it does not match
+- **Org Attribution**: never set `org_uuid` manually in a new import path — the `BeforeAppendModel` hooks derive it from the row's workspace. If you add an org-scoped table, add it to `orgScopedTables` and give it a `BeforeAppendModel` hook, or its rows will be invisible to every org query
 
 ## SARIF Integration
 

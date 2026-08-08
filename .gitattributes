@@ -3,3 +3,12 @@ public/ui/** linguist-vendored
 public/ui/**/*.js linguist-vendored
 public/ui/**/*.css linguist-vendored
 public/ui/**/*.html linguist-vendored
+
+# platform/ holds vendored sub-projects (dashboard, registry, workflow) that live
+# in their own repos — keep their TypeScript/JS out of this repo's language stats.
+platform/** linguist-vendored
+platform/**/*.ts linguist-vendored
+platform/**/*.tsx linguist-vendored
+platform/**/*.js linguist-vendored
+platform/**/*.mjs linguist-vendored
+platform/**/*.css linguist-vendored

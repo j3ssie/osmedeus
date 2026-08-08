@@ -1,0 +1,107 @@
+import type { ThemeStyles } from "@/types/theme";
+
+export const defaultThemeState: ThemeStyles = {
+  light: {
+    background: "hsl(65, 35.6%, 88.4%)",
+    foreground: "hsl(48 19.6078% 20%)",
+    card: "hsl(48 33.3333% 97.0588%)",
+    "card-foreground": "hsl(60 2.5641% 7.6471%)",
+    popover: "hsl(0 0% 100%)",
+    "popover-foreground": "hsl(50.7692 19.4030% 13.1373%)",
+    primary: "hsl(247.8798 68.2873% 51.0713%)",
+    "primary-foreground": "hsl(0 0% 100%)",
+    secondary: "hsl(46.1538 22.8070% 88.8235%)",
+    "secondary-foreground": "hsl(50.7692 8.4967% 30.0000%)",
+    muted: "hsl(44.0000 29.4118% 90%)",
+    "muted-foreground": "hsl(50.0000 2.3622% 50.1961%)",
+    accent: "hsl(46.1538 22.8070% 88.8235%)",
+    "accent-foreground": "hsl(50.7692 19.4030% 13.1373%)",
+    destructive: "hsl(0 84.2365% 60.1961%)",
+    "destructive-foreground": "hsl(0 0% 100%)",
+    border: "hsl(50 7.5000% 84.3137%)",
+    input: "hsl(50.7692 7.9755% 68.0392%)",
+    ring: "hsl(247.8798 68.2873% 51.0713%)",
+    "chart-1": "hsl(18.2813 57.1429% 43.9216%)",
+    "chart-2": "hsl(251.4545 84.6154% 74.5098%)",
+    "chart-3": "hsl(46.1538 28.2609% 81.9608%)",
+    "chart-4": "hsl(256.5517 49.1525% 88.4314%)",
+    "chart-5": "hsl(17.7778 60% 44.1176%)",
+    sidebar: "hsl(51.4286 25.9259% 94.7059%)",
+    "sidebar-foreground": "hsl(60 2.5210% 23.3333%)",
+    "sidebar-primary": "hsl(247.8798 68.2873% 51.0713%)",
+    "sidebar-primary-foreground": "hsl(0 0% 98.4314%)",
+    "sidebar-accent": "hsl(46.1538 22.8070% 88.8235%)",
+    "sidebar-accent-foreground": "hsl(0 0% 20.3922%)",
+    "sidebar-border": "hsl(50 7.5000% 84.3137%)",
+    "sidebar-ring": "hsl(247.8798 68.2873% 51.0713%)",
+    "font-sans":
+      "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
+    "font-serif":
+      'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
+    "font-mono":
+      'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+    radius: "0.5rem",
+    "shadow-2xs": "0 1px 3px 0px hsl(0 0% 0% / 0.05)",
+    "shadow-xs": "0 1px 3px 0px hsl(0 0% 0% / 0.05)",
+    "shadow-sm":
+      "0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10)",
+    shadow:
+      "0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10)",
+    "shadow-md":
+      "0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10)",
+    "shadow-lg":
+      "0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10)",
+    "shadow-xl":
+      "0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10)",
+    "shadow-2xl": "0 1px 3px 0px hsl(0 0% 0% / 0.25)",
+  },
+  dark: {
+    background: "hsl(180,2%,10%)",
+    foreground: "hsl(46.1538 9.7744% 73.9216%)",
+    card: "hsl(60 2.7027% 14.5098%)",
+    "card-foreground": "hsl(48 33.3333% 97.0588%)",
+    popover: "hsl(60 2.1277% 18.4314%)",
+    "popover-foreground": "hsl(60 5.4545% 89.2157%)",
+    primary: "hsl(142.1569 71% 29%)",
+    "primary-foreground": "hsl(0 0% 100%)",
+    secondary: "hsl(48 33.3333% 97.0588%)",
+    "secondary-foreground": "hsl(60 2.1277% 18.4314%)",
+    muted: "hsl(60 3.8462% 10.1961%)",
+    "muted-foreground": "hsl(51.4286 8.8608% 69.0196%)",
+    accent: "hsl(48 10.6383% 9.2157%)",
+    "accent-foreground": "hsl(51.4286 25.9259% 94.7059%)",
+    destructive: "hsl(0 84.2365% 60.1961%)",
+    "destructive-foreground": "hsl(0 0% 100%)",
+    border: "hsl(60 5.0847% 23.1373%)",
+    input: "hsl(52.5000 5.1282% 30.5882%)",
+    ring: "hsl(116.2500 62.7451% 60%)",
+    "chart-1": "hsl(18.2813 57.1429% 43.9216%)",
+    "chart-2": "hsl(251.4545 84.6154% 74.5098%)",
+    "chart-3": "hsl(48 10.6383% 9.2157%)",
+    "chart-4": "hsl(248.2759 25.2174% 22.5490%)",
+    "chart-5": "hsl(17.7778 60% 44.1176%)",
+    sidebar: "hsl(30 3.3333% 11.7647%)",
+    "sidebar-foreground": "hsl(46.1538 9.7744% 73.9216%)",
+    "sidebar-primary": "hsl(116.2500 62.7451% 60%)",
+    "sidebar-primary-foreground": "hsl(0 0% 98.4314%)",
+    "sidebar-accent": "hsl(60 3.4483% 5.6863%)",
+    "sidebar-accent-foreground": "hsl(46.1538 9.7744% 73.9216%)",
+    "sidebar-border": "hsl(60 5.0847% 23.1373%)",
+    "sidebar-ring": "hsl(116.2500 62.7451% 60%)",
+    "shadow-2xs": "0 1px 3px 0px hsl(0 0% 0% / 0.05)",
+    "shadow-xs": "0 1px 3px 0px hsl(0 0% 0% / 0.05)",
+    "shadow-sm":
+      "0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10)",
+    shadow:
+      "0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10)",
+    "shadow-md":
+      "0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10)",
+    "shadow-lg":
+      "0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10)",
+    "shadow-xl":
+      "0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10)",
+    "shadow-2xl": "0 1px 3px 0px hsl(0 0% 0% / 0.25)",
+  },
+  css: {},
+};
+

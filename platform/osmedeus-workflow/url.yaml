@@ -1,0 +1,27 @@
+kind: flow
+name: web-analysis
+description: Single URL analysis - fingerprint, spider, scan, and discover
+tags: recon, url, standard
+help:
+  example_targets: ['https://example.com', 'https://httpbin.org', 'example.com']
+  usage: osmedeus run -f url -t https://example.com
+
+dependencies:
+  variables:
+    - name: Target
+      type: url,domain
+      required: true
+
+modules:
+  - name: do-recon-http-fp
+    path: fragments/do-recon-http-fp.yaml
+
+  - name: do-scan-vuln
+    path: fragments/do-scan-vuln.yaml
+    depends_on:
+      - do-recon-http-fp
+
+  - name: do-scan-vuln-thorough
+    path: fragments/do-scan-vuln-thorough.yaml
+    depends_on:
+      - do-recon-http-fp

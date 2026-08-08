@@ -1,0 +1,213 @@
+# =============================================================================
+# Module Workflow: Docker Runner Configuration Example
+# =============================================================================
+# This file demonstrates all Docker runner configuration fields at both
+# the workflow level (for all steps) and step level (per-step override).
+# =============================================================================
+
+kind: module
+name: docker-runner-example
+description: Demonstrates Docker runner configuration with all available fields
+tags: docker, runner, container
+
+# -----------------------------------------------------------------------------
+# RUNNER CONFIGURATION (Workflow-Level)
+# Applies to all steps unless overridden at step level
+# -----------------------------------------------------------------------------
+
+# runner: Execution environment for this workflow
+# Options: host (default - local machine), docker, ssh
+runner: docker
+
+# runner_config: Configuration for the selected runner type
+runner_config:
+  # -------------------------------------------------------------------------
+  # DOCKER-SPECIFIC CONFIGURATION
+  # -------------------------------------------------------------------------
+
+  # image: Docker image to use (required for docker runner)
+  # Format: registry/image:tag or just image:tag
+  image: ubuntu:22.04
+
+  # env: Environment variables to set inside the container
+  # Map of VAR_NAME: value
+  env:
+    MY_VAR: my-value
+    API_KEY: "{{api_key}}"  # Can use template variables
+    THREADS: "{{threads}}"
+
+  # volumes: Volume mounts in docker format
+  # Format: host_path:container_path[:options]
+  # Options: ro (read-only), rw (read-write)
+  volumes:
+    - "/tmp/osmedeus:/data"
+    - "{{Output}}:/output"
+    - "/etc/hosts:/etc/hosts:ro"
+
+  # network: Docker network mode
+  # Options: bridge (default), host, none, container:<name>, or network name
+  network: host
+
+  # persistent: Container lifecycle mode
+  # true = reuse the same container across steps (faster, state preserved)
+  # false = ephemeral, create new container per step (isolated, clean state)
+  persistent: true
+
+  # -------------------------------------------------------------------------
+  # COMMON CONFIGURATION (applies to docker and ssh)
+  # -------------------------------------------------------------------------
+
+  # workdir: Working directory inside the container/remote
+  # Commands will execute in this directory
+  workdir: /app
+
+params:
+  - name: api_key
+    default: "demo-key"
+
+  - name: threads
+    default: "5"
+
+steps:
+  # ===========================================================================
+  # Step using workflow-level runner (docker with ubuntu:22.04)
+  # ===========================================================================
+  - name: use-workflow-runner
+    type: bash
+    log: "Running in workflow-level Docker container"
+    command: 'echo "Running inside ubuntu:22.04 container"'
+
+  # ===========================================================================
+  # Step with per-step Docker runner override
+  # Uses different image than workflow-level config
+  # ===========================================================================
+  - name: step-with-runner-override
+    type: bash
+    log: "Running in step-specific Docker container"
+
+    # step_runner: Override runner type for this step only
+    # Options: host, docker, ssh
+    step_runner: docker
+
+    # step_runner_config: Override runner configuration for this step
+    # Same structure as runner_config but applies only to this step
+    step_runner_config:
+      # Use a different image for this specific step
+      image: python:3.11-slim
+
+      env:
+        PYTHONPATH: /app
+
+      volumes:
+        - "{{Output}}:/output:rw"
+
+      network: bridge
+
+      persistent: false
+
+      workdir: /app
+
+    command: 'python3 -c "print(\"Running in Python container\")"'
+
+  # ===========================================================================
+  # Remote-bash step type with Docker (explicit remote-bash type)
+  # remote-bash is specifically for executing commands in remote environments
+  # ===========================================================================
+  - name: remote-bash-docker
+    # type: remote-bash is specifically for remote execution (docker/ssh)
+    type: remote-bash
+    log: "Remote bash execution in Docker"
+
+    # step_runner: Required for remote-bash type - specifies execution environment
+    # Must be "docker" or "ssh"
+    step_runner: docker
+
+    step_runner_config:
+      image: alpine:latest
+      workdir: /tmp
+
+    # command/commands/parallel_commands: Same as bash step
+    command: 'echo "Hello from Alpine container" > /tmp/output.txt'
+
+    # step_remote_file: File path on remote (inside container) to copy after execution
+    # This file will be copied from the container to the host
+    step_remote_file: /tmp/output.txt
+
+    # host_output_file: Local path where the remote file will be copied
+    # Template variables are supported
+    host_output_file: "{{Output}}/docker-output.txt"
+
+  # ===========================================================================
+  # Parallel commands in Docker container
+  # ===========================================================================
+  - name: docker-parallel-commands
+    type: bash
+    log: "Running parallel commands in Docker"
+    step_runner: docker
+    step_runner_config:
+      image: ubuntu:22.04
+      persistent: true
+
+    parallel_commands:
+      - 'sleep 2 && echo "Parallel job A completed"'
+      - 'sleep 1 && echo "Parallel job B completed"'
+      - 'sleep 3 && echo "Parallel job C completed"'
+
+  # ===========================================================================
+  # Foreach loop executing in Docker
+  # ===========================================================================
+  - name: docker-foreach
+    type: foreach
+    log: "Processing items in Docker containers"
+    input: "{{Output}}/targets.txt"
+    variable: target
+    threads: 3
+
+    step:
+      name: process-in-docker
+      type: bash
+      step_runner: docker
+      step_runner_config:
+        image: curlimages/curl:latest
+        network: host
+      command: 'curl -s -o /dev/null -w "%{http_code}" "[[target]]"'
+      exports:
+        http_status: "{{stdout}}"
+
+  # ===========================================================================
+  # Step running on host (override workflow's docker runner)
+  # ===========================================================================
+  - name: run-on-host
+    type: bash
+    log: "Running on host machine (overriding workflow runner)"
+
+    # Override to run locally instead of in container
+    step_runner: host
+
+    command: 'echo "This runs directly on the host machine"'
+
+  # ===========================================================================
+  # Docker step with all structured arguments
+  # ===========================================================================
+  - name: docker-with-args
+    type: bash
+    log: "Docker step with structured arguments"
+    step_runner: docker
+    step_runner_config:
+      image: nuclei:latest
+      volumes:
+        - "{{Output}}:/output"
+        - "/root/nuclei-templates:/templates:ro"
+      workdir: /output
+
+    command: nuclei
+    speed_args: '-rate-limit 100 -c {{threads}}'
+    config_args: '-t /templates/cves/'
+    input_args: '-u {{Target}}'
+    output_args: '-o /output/nuclei-results.txt'
+
+    step_remote_file: /output/nuclei-results.txt
+    host_output_file: "{{Output}}/nuclei-results.txt"
+
+    exports:
+      nuclei_output: "{{Output}}/nuclei-results.txt"

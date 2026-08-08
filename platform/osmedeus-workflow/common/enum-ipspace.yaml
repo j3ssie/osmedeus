@@ -1,0 +1,103 @@
+# =============================================================================
+# Module Workflow: IP Space Discovery
+# =============================================================================
+
+kind: module
+name: enum-ipspace
+description: Map IP ranges, ASN ownership, and filter CDN addresses
+tags: ipspace, network, asn, cidr
+
+# -----------------------------------------------------------------------------
+# PARAMS SECTION
+# -----------------------------------------------------------------------------
+params:
+  - name: ipTimeout
+    default: "2h"
+
+  - name: ipFile
+    default: "{{Output}}/ipspace/ip-{{TargetSpace}}.txt"
+
+  - name: cdnTag
+    default: "waf|cdn"
+
+  - name: nonCdnIPFile
+    default: "{{Output}}/ipspace/non-cdn-ip-{{TargetSpace}}.txt"
+
+  - name: rawIPSpace
+    default: "{{Output}}/ipspace/raw-ipspace-{{TargetSpace}}.txt"
+
+  - name: dnsFile
+    default: "{{Output}}/probing/dns-{{TargetSpace}}.txt"
+  - name: httpFingerprintJsonFile
+    default: "{{Output}}/fingerprint/http-fingerprint-{{TargetSpace}}.jsonl"
+
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES SECTION
+# -----------------------------------------------------------------------------
+dependencies:
+  commands:
+    - metabigor
+    - jq
+
+# -----------------------------------------------------------------------------
+# REPORTS SECTION
+# -----------------------------------------------------------------------------
+reports:
+  - name: ip-list
+    path: "{{ipFile}}"
+    type: text
+    description: List of discovered IP addresses
+
+  - name: non-cdn-ip-list
+    default: "{{nonCdnIPFile}}"
+    type: text
+    description: List of discovered non-cdn IP addresses
+
+
+# -----------------------------------------------------------------------------
+# STEPS SECTION
+# -----------------------------------------------------------------------------
+steps:
+  # ---------------------------------------------------------------------------
+  # Setup: Create output folder
+  # ---------------------------------------------------------------------------
+  - name: create-output-folder
+    type: function
+    log: "Creating ipspace output folder"
+    function: 'create_folder("{{Output}}/ipspace")'
+
+  # ---------------------------------------------------------------------------
+  # ASN and IP range discovery
+  # ---------------------------------------------------------------------------
+  - name: asn-discovery
+    type: bash
+    log: "Discovering ASN and IP ranges based on Target Second Level Domain"
+    pre_condition: '"{{Org}}" != ""'
+    commands:
+      - 'echo "{{Org}}" | timeout -k 1m {{ipTimeout}} metabigor net -o {{Output}}/ipspace/{{TargetSpace}}-range.txt >/dev/null 2>&1'
+    on_error:
+      - action: continue # expected error as sometimes we don't want to do permutation
+
+  - name: process-cdn-results
+    type: function
+    log: "Processing cdn results from HTTP Data"
+    pre_condition: 'file_exists("{{httpFingerprintJsonFile}}")'
+    functions:
+      - exec_cmd("cat {{httpFingerprintJsonFile}}  | jq '[.cdn_name, .cdn_type, .host_ip] | join(\" - \")' >> {{rawIPSpace}}")
+      - sort_unix("{{rawIPSpace}}")
+      # just simply grep out the cdn IP
+      - exec_cmd("cat {{rawIPSpace}} | grep -v '{{cdnTag}}' >> {{nonCdnIPFile}}")
+      - sort_unix("{{nonCdnIPFile}}")
+
+  - name: process-ip-results
+    type: function
+    log: "Processing IP results from HTTP Data and DNS Data"
+    pre_condition: 'file_exists("{{httpFingerprintJsonFile}}")'
+    functions:
+      # grepping IP from DNS data
+      - exec_cmd("cat {{dnsFile}}  | grep ' A ' | awk '{print $3}' | sort -u >> {{ipFile}}")
+      - exec_cmd("cat {{httpFingerprintJsonFile}}  | jq -r '.a[]' | sort -u >> {{ipFile}}")
+      - sort_unix("{{ipFile}}")
+      # count total ips
+      - 'db_total_ips("{{ipFile}}")'
