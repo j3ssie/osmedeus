@@ -83,9 +83,22 @@ func IsZipFile(source string) bool {
 	return st == SourceTypeLocalZip || st == SourceTypeZipURL
 }
 
-// isGitHubURL checks if a URL is a GitHub URL that can benefit from authentication
-func isGitHubURL(url string) bool {
-	return strings.Contains(url, "github.com") || strings.Contains(url, "raw.githubusercontent.com")
+// isGitHubURL checks if a URL is a GitHub URL that can benefit from authentication.
+// Matches on the parsed hostname, not a substring: the caller uses this to decide
+// whether to attach the GitHub token, and a lookalike host such as
+// "evil.tld/?x=github.com" or "github.com.evil.tld" must never receive it.
+func isGitHubURL(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	host := strings.ToLower(u.Hostname())
+	for _, domain := range []string{"github.com", "githubusercontent.com"} {
+		if host == domain || strings.HasSuffix(host, "."+domain) {
+			return true
+		}
+	}
+	return false
 }
 
 // downloadMaxRetries is the number of retry attempts for transient download failures

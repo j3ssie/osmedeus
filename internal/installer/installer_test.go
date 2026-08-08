@@ -1,6 +1,8 @@
 package installer
 
 import (
+	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -81,9 +83,9 @@ func TestMaybePrependSudo(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		input   string
-		expect  string
+		name   string
+		input  string
+		expect string
 	}{
 		{"apt install", "apt install coreutils", "sudo apt install coreutils"},
 		{"apt-get install", "apt-get install -y curl", "sudo apt-get install -y curl"},
@@ -103,4 +105,46 @@ func TestMaybePrependSudo(t *testing.T) {
 			assert.Equal(t, tt.expect, result)
 		})
 	}
+}
+
+func TestIsGitHubURL(t *testing.T) {
+	tests := []struct {
+		name   string
+		url    string
+		expect bool
+	}{
+		{"github repo", "https://github.com/owner/repo", true},
+		{"raw content", "https://raw.githubusercontent.com/owner/repo/main/f.json", true},
+		{"api subdomain", "https://api.github.com/repos/owner/repo/releases", true},
+		{"release objects", "https://objects.githubusercontent.com/foo", true},
+		{"uppercase host", "https://GitHub.com/owner/repo", true},
+		{"with port", "https://github.com:443/owner/repo", true},
+		{"lookalike suffix host", "https://github.com.evil.tld/owner/repo", false},
+		{"host as query param", "https://evil.tld/?x=github.com", false},
+		{"host in path", "https://evil.tld/github.com/owner/repo", false},
+		{"userinfo trick", "https://github.com@evil.tld/repo", false},
+		{"unrelated host", "https://gitlab.com/owner/repo", false},
+		{"empty", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expect, isGitHubURL(tt.url),
+				"the GitHub token is attached based on this check")
+		})
+	}
+}
+
+func TestIsBinaryInstalledNoExec(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "executed.txt")
+	entry := &BinaryEntry{ValidateCommand: "touch " + marker}
+
+	assert.False(t, IsBinaryInstalledNoExec("definitely-not-a-real-binary-xyz", entry))
+	_, err := os.Stat(marker)
+	assert.True(t, os.IsNotExist(err), "no-exec variant must not run the validate command")
+
+	// The trusted variant still executes it
+	assert.True(t, IsBinaryInstalled("definitely-not-a-real-binary-xyz", entry))
+	_, err = os.Stat(marker)
+	assert.NoError(t, err, "trusted variant should still run the validate command")
 }

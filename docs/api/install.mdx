@@ -16,7 +16,9 @@ Fetch binary registry metadata with installation status. Supports two modes:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `registry_mode` | string | `direct-fetch` | Registry mode: `direct-fetch` or `nix-build` |
-| `registry_url` | string | _(embedded)_ | Custom registry URL or local file path. **Direct-fetch mode**: source for the full binary list. **Nix-build mode**: metadata overlay (desc, tags, version). Accepts HTTPS URLs or absolute file paths. |
+| `registry_url` | string | _(embedded)_ | Custom registry URL or local file path. **Direct-fetch mode**: source for the full binary list. **Nix-build mode**: metadata overlay (desc, tags, version). Accepts `http(s)://` URLs or filesystem paths. |
+
+**Note on custom registries:** when `registry_url` is supplied, the `valide-command` of each entry is **not executed** — `installed` falls back to a `PATH` lookup. Only the embedded registry is trusted to run validation commands, because that field is run as shell and a registry author controls it. In nix-build mode, a `registry_url` that cannot be loaded returns `500` instead of silently dropping the metadata.
 
 ---
 
@@ -163,7 +165,7 @@ curl "http://localhost:8002/osm/api/registry-info?registry_mode=nix-build&regist
 | Field | Type | Description |
 |-------|------|-------------|
 | `registry_mode` | string | Always `"nix-build"` |
-| `registry_url` | string | Registry URL or file path used for metadata (empty string = embedded) |
+| `registry_url` | string | Registry URL or file path used for metadata (the default registry URL when the embedded registry was used) |
 | `nix_installed` | boolean | Whether Nix package manager is installed |
 | `categories` | array | List of tool categories from flake.nix |
 | `categories[].name` | string | Category name (e.g., "Subdomain", "Vuln") |

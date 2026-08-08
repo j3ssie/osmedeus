@@ -22,6 +22,9 @@ import (
 // DefaultRegistryURL is the default URL for the binary registry
 const DefaultRegistryURL = "https://raw.githubusercontent.com/osmedeus/osmedeus-base/main/registry-metadata.json"
 
+// maxRegistrySize bounds how much registry JSON is read from a remote source
+const maxRegistrySize = 32 << 20 // 32MB
+
 // BinaryEntry represents a single binary's download/install information
 // Supports both download URLs and commands per OS/architecture
 type BinaryEntry struct {
@@ -146,7 +149,16 @@ func fetchURL(url string, customHeaders map[string]string) ([]byte, error) {
 		return nil, fmt.Errorf("HTTP status %d", resp.StatusCode)
 	}
 
-	return io.ReadAll(resp.Body)
+	// Cap the read: the registry URL can come from an API caller, and an endpoint that
+	// streams endlessly would otherwise exhaust memory. Real registries are ~30KB.
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxRegistrySize+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > maxRegistrySize {
+		return nil, fmt.Errorf("registry exceeds the %d byte limit", maxRegistrySize)
+	}
+	return data, nil
 }
 
 // DetectPackageManager returns the system's package manager
@@ -292,7 +304,23 @@ func IsBinaryInPath(name string) bool {
 // IsBinaryInstalled checks if a binary is installed using validate command or PATH lookup
 // If entry has a ValidateCommand, run it and check exit code (0 = installed)
 // If ValidateCommand is empty, fall back to checking if binary name is in PATH
+//
+// Only call this for registries from a trusted source (embedded or operator-configured):
+// ValidateCommand is executed as shell. For a registry loaded from a caller-supplied
+// path or URL, use IsBinaryInstalledNoExec instead.
 func IsBinaryInstalled(name string, entry *BinaryEntry) bool {
+	return isBinaryInstalled(name, entry, true)
+}
+
+// IsBinaryInstalledNoExec is IsBinaryInstalled without the shell execution: entries
+// whose ValidateCommand is a shell command are checked against PATH instead of being
+// run. Use it whenever the registry came from an untrusted source, since a registry
+// author controls ValidateCommand and could otherwise run arbitrary code.
+func IsBinaryInstalledNoExec(name string, entry *BinaryEntry) bool {
+	return isBinaryInstalled(name, entry, false)
+}
+
+func isBinaryInstalled(name string, entry *BinaryEntry, allowExec bool) bool {
 	// If validate command is provided and not empty, use it
 	if entry != nil && entry.ValidateCommand != "" {
 		vc := entry.ValidateCommand
@@ -302,11 +330,15 @@ func IsBinaryInstalled(name string, entry *BinaryEntry) bool {
 		if !strings.ContainsAny(vc, " \t|;&") {
 			return IsBinaryInPath(vc)
 		}
-		// @NOTE: This is intentional - ValidateCommand comes from the binary registry
-		// configuration which is a trusted source for installation validation commands.
-		cmd := exec.Command("sh", "-c", vc)
-		err := cmd.Run()
-		return err == nil // exit code 0 means installed
+		if allowExec {
+			// @NOTE: This is intentional - ValidateCommand comes from the binary registry
+			// configuration which is a trusted source for installation validation commands.
+			cmd := exec.Command("sh", "-c", vc)
+			err := cmd.Run()
+			return err == nil // exit code 0 means installed
+		}
+		// Untrusted registry: fall through to the PATH check below rather than
+		// executing a command the caller supplied.
 	}
 	// Fall back to default PATH check
 	if IsBinaryInPath(name) {
