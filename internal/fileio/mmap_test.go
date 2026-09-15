@@ -116,6 +116,33 @@ func TestCountNonEmptyLines(t *testing.T) {
 	assert.Equal(t, 3, count)
 }
 
+func TestCountNonEmptyLines_LongLines(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    int
+	}{
+		{"below_scanner_limit", strings.Repeat("x", 64*1024-1) + "\n", 1},
+		{"at_scanner_limit", strings.Repeat("x", 64*1024) + "\n", 1},
+		{"long_line_between_records", "first\n\n \t\r\n" + strings.Repeat("x", 128*1024) + "\r\nlast", 3},
+		{"long_blank_line", "first\n" + strings.Repeat(" ", 128*1024) + "\nlast\n", 2},
+		{"below_mmap_threshold", strings.Repeat("x", MmapThreshold-1), 1},
+		{"at_mmap_threshold", strings.Repeat("x", MmapThreshold), 1},
+		{"above_mmap_threshold", strings.Repeat("x", MmapThreshold+1) + "\nlast", 2},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "records.txt")
+			require.NoError(t, os.WriteFile(path, []byte(tt.content), 0644))
+
+			count, err := CountNonEmptyLines(path)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, count)
+		})
+	}
+}
+
 func TestOpenFile_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "empty.txt")
