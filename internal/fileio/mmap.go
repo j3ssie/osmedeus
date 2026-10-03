@@ -220,6 +220,8 @@ func countLinesBuffered(path string) (int, error) {
 
 	count := 0
 	scanner := bufio.NewScanner(f)
+	// This path handles files smaller than MmapThreshold, including a single long line.
+	scanner.Buffer(nil, MmapThreshold)
 	for scanner.Scan() {
 		if strings.TrimSpace(scanner.Text()) != "" {
 			count++
