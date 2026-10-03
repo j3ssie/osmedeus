@@ -42,7 +42,7 @@
   "subfinder": {
     "desc": "Fast passive subdomain enumeration tool.",
     "repo_link": "https://github.com/projectdiscovery/subfinder",
-    "version": "2.14.0",
+    "version": "2.16.0",
     "package-manager": "github-release",
     "tags": [
       "recon",
@@ -51,12 +51,12 @@
     ],
     "valide-command": "",
     "linux": {
-      "amd64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.14.0/subfinder_2.14.0_linux_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.14.0/subfinder_2.14.0_linux_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.16.0/subfinder_2.16.0_linux_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.16.0/subfinder_2.16.0_linux_arm64.zip"
     },
     "darwin": {
-      "amd64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.14.0/subfinder_2.14.0_macOS_amd64.zip",
-      "arm64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.14.0/subfinder_2.14.0_macOS_arm64.zip"
+      "amd64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.16.0/subfinder_2.16.0_macOS_amd64.zip",
+      "arm64": "https://github.com/projectdiscovery/subfinder/releases/download/v2.16.0/subfinder_2.16.0_macOS_arm64.zip"
     }
   },
   "dnsx": {
