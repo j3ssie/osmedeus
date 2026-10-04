@@ -710,8 +710,11 @@ func getDefaultExcludeColumns(tableName string) []string {
 	if dbIncludeHeavy {
 		return nil
 	}
-	if tableName == "assets" {
+	switch tableName {
+	case "assets":
 		return database.AssetHeavyColumns
+	case "vulnerabilities":
+		return database.VulnHeavyColumns
 	}
 	return nil
 }

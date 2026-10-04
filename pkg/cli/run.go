@@ -1313,6 +1313,9 @@ func readTargetsFromStdin() ([]string, error) {
 
 	var result []string
 	scanner := bufio.NewScanner(os.Stdin)
+	// A piped target can be a long line (URL with a large query string), which
+	// overflows the scanner's default 64KiB token limit.
+	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line != "" && !strings.HasPrefix(line, "#") {

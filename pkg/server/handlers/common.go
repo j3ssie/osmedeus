@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"strings"
+
+	"github.com/j3ssie/osmedeus/v5/internal/fileio"
 )
 
 // LoginRequest represents login credentials
@@ -136,24 +136,11 @@ type FunctionListResponse struct {
 	Tags        []string `json:"tags,omitempty"`
 }
 
-// readTargetsFromFile reads targets from a file (one per line)
+// readTargetsFromFile reads targets from a file (one per line), skipping empty
+// lines and comments. Shares the CLI's reader so both paths handle long lines
+// and large target files identically.
 func readTargetsFromFile(filePath string) ([]string, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = file.Close() }()
-
-	var result []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		// Skip empty lines and comments
-		if line != "" && !strings.HasPrefix(line, "#") {
-			result = append(result, line)
-		}
-	}
-	return result, scanner.Err()
+	return fileio.ReadLinesFiltered(filePath)
 }
 
 // dangerousChars contains shell metacharacters that could enable command injection

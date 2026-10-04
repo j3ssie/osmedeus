@@ -1689,3 +1689,48 @@ func UsageRunCancel() string {
 func docsFooter() string {
 	return terminal.HiCyan("📖 Documentation: ") + terminal.HiWhite(core.DOCS) + "\n"
 }
+
+func UsageVulns() string {
+	return terminal.BoldCyan("◆ Description") + `
+  Query and list discovered vulnerabilities from the database.
+  The finding counterpart to ` + terminal.Yellow("osmedeus assets") + `, with severity filtering,
+  a severity breakdown, and full per-finding evidence.
+
+  Listings omit the heavy evidence columns (description, PoC, both HTTP messages).
+  Use ` + terminal.Yellow("--id") + ` to print one finding in full.
+
+` + terminal.BoldCyan("▷ Examples") + `
+  ` + terminal.Green("# List all findings, most severe first") + `
+  osmedeus vulns
+
+  ` + terminal.Green("# Fuzzy search across finding fields") + `
+  osmedeus vulns example.com
+
+  ` + terminal.Green("# Filter by workspace") + `
+  osmedeus vulns ` + terminal.Yellow("-w") + ` myworkspace
+
+  ` + terminal.Green("# Only high and critical") + `
+  osmedeus vulns ` + terminal.Yellow("--severity") + ` critical,high
+
+  ` + terminal.Green("# Everything at medium or above") + `
+  osmedeus vulns ` + terminal.Yellow("--min-severity") + ` medium
+
+  ` + terminal.Green("# Filter by detection template or confidence") + `
+  osmedeus vulns ` + terminal.Yellow("--template") + ` git-config
+  osmedeus vulns ` + terminal.Yellow("--confidence") + ` certain
+
+  ` + terminal.Green("# Severity breakdown and distinct templates") + `
+  osmedeus vulns ` + terminal.Yellow("--stats") + `
+  osmedeus vulns ` + terminal.Yellow("--stats") + ` -w myworkspace
+
+  ` + terminal.Green("# One finding in full (description, PoC, request/response)") + `
+  osmedeus vulns ` + terminal.Yellow("--id") + ` 42
+
+  ` + terminal.Green("# Across every workspace in an org") + `
+  osmedeus vulns ` + terminal.Yellow("--org") + ` acme
+
+  ` + terminal.Green("# Custom columns and JSON output") + `
+  osmedeus vulns ` + terminal.Yellow("--columns") + ` vuln_title,severity,asset_value
+  osmedeus vulns ` + terminal.Yellow("--json") + `
+`
+}

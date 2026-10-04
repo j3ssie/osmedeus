@@ -11,8 +11,10 @@ import (
 
 	"github.com/j3ssie/osmedeus/v5/internal/config"
 	"github.com/j3ssie/osmedeus/v5/internal/core"
+	"github.com/j3ssie/osmedeus/v5/internal/installer"
 	"github.com/j3ssie/osmedeus/v5/internal/parser"
 	"github.com/j3ssie/osmedeus/v5/internal/terminal"
+	"github.com/j3ssie/osmedeus/v5/internal/utils"
 	"github.com/j3ssie/osmedeus/v5/public"
 	"github.com/spf13/cobra"
 )
@@ -58,7 +60,11 @@ func runHealth(cmd *cobra.Command, args []string) error {
 	hasErrors = checkConfigFiles(printer, cfg) || hasErrors
 
 	// 3. Check workflows
-	hasErrors = checkWorkflows(printer, cfg) || hasErrors
+	workflows, workflowErrors := checkWorkflows(printer, cfg)
+	hasErrors = workflowErrors || hasErrors
+
+	// 4. Cross-check what the workflows declare against what is installed
+	hasErrors = checkWorkflowDependencies(printer, cfg, workflows) || hasErrors
 
 	// Summary
 	fmt.Println()
@@ -204,34 +210,37 @@ func checkConfigFiles(printer *terminal.Printer, cfg *config.Config) bool {
 	return hasErrors
 }
 
-func checkWorkflows(printer *terminal.Printer, cfg *config.Config) bool {
+// checkWorkflows validates every workflow and returns the ones that parsed, so a
+// later pass can inspect them without re-reading and re-unmarshalling each file.
+func checkWorkflows(printer *terminal.Printer, cfg *config.Config) ([]*core.Workflow, bool) {
 	printer.Section("Workflows")
 
 	if cfg.WorkflowsPath == "" {
 		printer.Error("  Workflows path not configured")
-		return true
+		return nil, true
 	}
 
 	// Check if workflows directory exists
 	if _, err := os.Stat(cfg.WorkflowsPath); os.IsNotExist(err) {
 		printer.Warning("  No workflows found in %s", terminal.White(cfg.WorkflowsPath))
-		return false
+		return nil, false
 	}
 
 	workflowFiles, err := findWorkflowYAMLFiles(cfg.WorkflowsPath)
 	if err != nil {
 		printer.Error("  Failed to scan workflows folder: %v", err)
-		return true
+		return nil, true
 	}
 
 	if len(workflowFiles) == 0 {
 		printer.Error("  Workflows folder is empty: %s", terminal.White(cfg.WorkflowsPath))
-		return true
+		return nil, true
 	}
 
 	p := parser.NewParser()
 	validCount := 0
 	invalidCount := 0
+	parsed := make([]*core.Workflow, 0, len(workflowFiles))
 
 	for _, filePath := range workflowFiles {
 		relPath, _ := filepath.Rel(cfg.WorkflowsPath, filePath)
@@ -243,6 +252,7 @@ func checkWorkflows(printer *terminal.Printer, cfg *config.Config) bool {
 			invalidCount++
 			continue
 		}
+		parsed = append(parsed, wf)
 
 		if err := p.Validate(wf); err != nil {
 			printer.Error("  [INVALID] %s (%s): %v", terminal.White(relPath), terminal.White(wf.Name), err)
@@ -257,7 +267,111 @@ func checkWorkflows(printer *terminal.Printer, cfg *config.Config) bool {
 	fmt.Println()
 	printer.Info("  Total: %s valid, %s invalid", terminal.Green(fmt.Sprintf("%d", validCount)), terminal.Red(fmt.Sprintf("%d", invalidCount)))
 
-	return invalidCount > 0
+	return parsed, invalidCount > 0
+}
+
+// checkWorkflowDependencies cross-checks every dependencies.commands entry declared
+// by a workflow against what is actually installed, and against the binary registry.
+//
+// A missing declared command is a hard failure at run time ("required command not
+// found: X"), so finding it here is the difference between a clear install-time
+// message and a scan that dies mid-flow. Resolution deliberately mirrors the run-time
+// gate in the executor (utils.LookPathWithBinaries): the binaries folder first, then
+// PATH, so a tool installed where osmedeus puts it is never reported missing.
+//
+// Splitting the report by whether the registry knows the name matters: a registry
+// entry just needs installing, while a name the registry has never heard of is
+// usually a typo in the workflow.
+func checkWorkflowDependencies(printer *terminal.Printer, cfg *config.Config, workflows []*core.Workflow) bool {
+	printer.Section("Workflow Dependencies")
+
+	if len(workflows) == 0 {
+		printer.Info("  No workflows to check")
+		return false
+	}
+
+	// command -> set of workflows that require it
+	required := make(map[string]map[string]bool)
+	for _, wf := range workflows {
+		if wf.Dependencies == nil {
+			continue
+		}
+		for _, cmdName := range wf.Dependencies.Commands {
+			cmdName = strings.TrimSpace(cmdName)
+			if cmdName == "" {
+				continue
+			}
+			if required[cmdName] == nil {
+				required[cmdName] = make(map[string]bool)
+			}
+			required[cmdName][wf.Name] = true
+		}
+	}
+
+	if len(required) == 0 {
+		printer.Info("  No workflow declares a command dependency")
+		return false
+	}
+
+	// The registry is best-effort: without it we can still report what is missing,
+	// just not whether it is installable.
+	registry, regErr := installer.LoadRegistry("", nil)
+	if regErr != nil {
+		printer.Warning("  Could not load the binary registry (%v); reporting availability only", regErr)
+	}
+
+	names := make([]string, 0, len(required))
+	for name := range required {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	var missingInstallable, missingUnknown []string
+	for _, name := range names {
+		// Same resolution order the executor uses, so this predicts the run-time gate.
+		if _, err := utils.LookPathWithBinaries(name, cfg.BinariesPath); err == nil {
+			continue
+		}
+		// Indexing a nil map is safe, so no registry means every name is unknown.
+		if _, known := registry[name]; known {
+			missingInstallable = append(missingInstallable, name)
+		} else {
+			missingUnknown = append(missingUnknown, name)
+		}
+	}
+
+	available := len(names) - len(missingInstallable) - len(missingUnknown)
+	printer.Success("  %d of %d declared commands available", available, len(names))
+
+	requiredBy := func(name string) string {
+		owners := make([]string, 0, len(required[name]))
+		for owner := range required[name] {
+			owners = append(owners, owner)
+		}
+		sort.Strings(owners)
+		return terminal.Gray(strings.Join(owners, ", "))
+	}
+
+	if len(missingInstallable) > 0 {
+		fmt.Println()
+		printer.Warning("  Missing, but in the registry:")
+		for _, name := range missingInstallable {
+			printer.Warning("    %s - required by %s", terminal.White(name), requiredBy(name))
+		}
+		printer.Info("    Install them: %s", terminal.Yellow("osmedeus install binary --name "+strings.Join(missingInstallable, " --name ")))
+	}
+
+	if len(missingUnknown) > 0 {
+		fmt.Println()
+		printer.Error("  Missing and NOT in the registry (likely a typo, or a tool you must install yourself):")
+		for _, name := range missingUnknown {
+			printer.Error("    %s - required by %s", terminal.White(name), requiredBy(name))
+		}
+	}
+
+	// Only an unknown name is an error: it cannot be resolved by installing, and a
+	// workflow declaring it fails its dependency check every time it runs.
+	return len(missingUnknown) > 0
 }
 
 func findWorkflowYAMLFiles(root string) ([]string, error) {

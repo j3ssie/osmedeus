@@ -377,6 +377,28 @@ steps:
 		}
 		assert.True(t, hasTypeIssue, "should detect missing step type")
 	})
+
+	t.Run("detects report without path", func(t *testing.T) {
+		ast := parseTestWorkflow(t, `
+name: test
+kind: module
+reports:
+  - name: good
+    path: "{{Output}}/good.txt"
+  - name: bad
+    default: "{{Output}}/bad.md"
+    type: markdown
+steps:
+  - name: step1
+    type: bash
+    command: echo "hello"
+`)
+		issues := rule.Check(ast)
+		assert.Len(t, issues, 1)
+		assert.Equal(t, "reports[1].path", issues[0].Field)
+		assert.Contains(t, issues[0].Message, "'bad'")
+		assert.NotZero(t, issues[0].Line)
+	})
 }
 
 func TestGetDefaultRules(t *testing.T) {

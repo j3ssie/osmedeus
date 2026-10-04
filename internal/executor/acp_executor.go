@@ -182,8 +182,9 @@ type RunAgentACPConfig struct {
 
 // RunAgentACP spawns an ACP agent subprocess and returns its output.
 // agentName can be a built-in name ("claude-code", "codex", etc.) or empty to use the default ("claude-code").
-// Returns (stdout, stderr, error).
-func RunAgentACP(ctx context.Context, prompt, agentName string, cfg *RunAgentACPConfig) (string, string, error) {
+// Returns (stdout, stderr, error). Once the agent has started, stderr is filled in
+// by the deferred cleanup after the drain finishes, so every return carries it.
+func RunAgentACP(ctx context.Context, prompt, agentName string, cfg *RunAgentACPConfig) (output, stderr string, err error) {
 	log := oslogger.Get()
 
 	if prompt == "" {
@@ -223,6 +224,8 @@ func RunAgentACP(ctx context.Context, prompt, agentName string, cfg *RunAgentACP
 	// Create command with process group for cleanup
 	cmd := exec.CommandContext(ctx, cmdPath, args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	// Bounds cmd.Wait if a grandchild outside the process group keeps stderr open.
+	cmd.WaitDelay = 5 * time.Second
 
 	// Apply environment variables
 	if len(cfg.Env) > 0 {
@@ -258,22 +261,37 @@ func RunAgentACP(ctx context.Context, prompt, agentName string, cfg *RunAgentACP
 	go func() {
 		defer stderrWg.Done()
 		scanner := bufio.NewScanner(stderrReader)
+		// Agents emit JSON diagnostics and stack traces, which overflow the
+		// scanner's default 64KiB token limit.
+		scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 		for scanner.Scan() {
 			line := scanner.Text()
 			stderrBuf.WriteString(line)
 			stderrBuf.WriteByte('\n')
 			log.Debug("acp agent stderr", zap.String("line", line))
 		}
+		// stderrReader is a synchronous io.Pipe: if this goroutine stops reading
+		// while the agent is still writing, the agent blocks and cmd.Wait never
+		// returns. Keep draining past a scanner error so that cannot happen.
+		if err := scanner.Err(); err != nil {
+			log.Debug("acp agent stderr scan stopped", zap.Error(err))
+			_, _ = io.Copy(io.Discard, stderrReader)
+		}
 	}()
 
 	defer func() {
 		_ = stdinPipe.Close()
-		_ = stderrWriter.Close()
-		stderrWg.Wait()
 		if cmd.Process != nil {
 			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		}
+		// Wait returns once exec has copied all of the agent's stderr into
+		// stderrWriter, so closing it afterwards drops nothing in flight.
 		_ = cmd.Wait()
+		_ = stderrWriter.Close()
+		stderrWg.Wait()
+		// Read only after the drain has finished: the goroutine writes stderrBuf,
+		// so reading it earlier is a data race and truncates the captured stderr.
+		stderr = stderrBuf.String()
 	}()
 
 	// Build client options
@@ -306,11 +324,10 @@ func RunAgentACP(ctx context.Context, prompt, agentName string, cfg *RunAgentACP
 		},
 	})
 	if initErr != nil {
-		stderrStr := stderrBuf.String()
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return "", stderrStr, fmt.Errorf("ACP initialize timed out: %w", ctx.Err())
+			return "", "", fmt.Errorf("ACP initialize timed out: %w", ctx.Err())
 		}
-		return "", stderrStr, fmt.Errorf("ACP initialize failed: %w", initErr)
+		return "", "", fmt.Errorf("ACP initialize failed: %w", initErr)
 	}
 
 	log.Debug("ACP initialized successfully")
@@ -332,11 +349,10 @@ func RunAgentACP(ctx context.Context, prompt, agentName string, cfg *RunAgentACP
 		McpServers: []acp.McpServer{},
 	})
 	if sessErr != nil {
-		stderrStr := stderrBuf.String()
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return "", stderrStr, fmt.Errorf("ACP session creation timed out: %w", ctx.Err())
+			return "", "", fmt.Errorf("ACP session creation timed out: %w", ctx.Err())
 		}
-		return "", stderrStr, fmt.Errorf("ACP new session failed: %w", sessErr)
+		return "", "", fmt.Errorf("ACP new session failed: %w", sessErr)
 	}
 
 	log.Debug("ACP session created",
@@ -352,13 +368,12 @@ func RunAgentACP(ctx context.Context, prompt, agentName string, cfg *RunAgentACP
 	})
 
 	agentOutput := client.collectedOutput()
-	stderrStr := stderrBuf.String()
 
 	if promptErr != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return agentOutput, stderrStr, fmt.Errorf("ACP prompt timed out: %w", ctx.Err())
+			return agentOutput, "", fmt.Errorf("ACP prompt timed out: %w", ctx.Err())
 		}
-		return agentOutput, stderrStr, fmt.Errorf("ACP prompt failed: %w", promptErr)
+		return agentOutput, "", fmt.Errorf("ACP prompt failed: %w", promptErr)
 	}
 
 	stopReason := "unknown"
@@ -370,7 +385,7 @@ func RunAgentACP(ctx context.Context, prompt, agentName string, cfg *RunAgentACP
 		zap.String("stopReason", stopReason),
 		zap.Int("collectedOutputBytes", len(agentOutput)))
 
-	return agentOutput, stderrStr, nil
+	return agentOutput, "", nil
 }
 
 // ListAgentNames returns the names of all built-in ACP agents.

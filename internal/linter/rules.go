@@ -650,6 +650,23 @@ func (r *MissingRequiredFieldRule) Check(wast *WorkflowAST) []LintIssue {
 		}
 	}
 
+	// Reports without a path are silently dropped from the run's artifacts.
+	// A common slip is copying a param entry and keeping 'default:'.
+	for i, report := range w.Reports {
+		if report.Path == "" {
+			line, col := wast.GetNodePosition(fmt.Sprintf("reports[%d]", i))
+			issues = append(issues, LintIssue{
+				Rule:       r.Name(),
+				Severity:   r.Severity(),
+				Message:    fmt.Sprintf("Report '%s' is missing required 'path' field", report.Name),
+				Suggestion: "Add 'path: {{Output}}/...' to the report (reports take 'path', not 'default')",
+				Line:       line,
+				Column:     col,
+				Field:      fmt.Sprintf("reports[%d].path", i),
+			})
+		}
+	}
+
 	return issues
 }
 

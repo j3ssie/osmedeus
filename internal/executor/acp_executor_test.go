@@ -2,6 +2,10 @@ package executor
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -367,6 +371,49 @@ func TestRunAgentACP_NilConfig(t *testing.T) {
 	// Will fail on LookPath in most test envs
 	if err != nil {
 		assert.NotContains(t, err.Error(), "panic")
+	}
+}
+
+// TestRunAgentACP_LongStderrLine guards the stderr drain against a single line
+// longer than bufio.Scanner's default 64KiB token limit. stderrReader is a
+// synchronous io.Pipe, so a drain that stops early blocks the agent's writes and
+// cmd.Wait never returns — the call hangs until the context deadline instead of
+// failing fast. Shadows the "opencode" built-in, whose command resolves through
+// PATH, with a script that emits one 200KB stderr line.
+func TestRunAgentACP_LongStderrLine(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script stub is not portable to windows")
+	}
+
+	binDir := t.TempDir()
+	stub := filepath.Join(binDir, "opencode")
+	script := "#!/bin/sh\nhead -c 200000 /dev/zero | tr '\\0' 'x' >&2\necho >&2\nexit 1\n"
+	require.NoError(t, os.WriteFile(stub, []byte(script), 0o755))
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	// Generous enough that the context is not what rescues a stalled drain.
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	type outcome struct {
+		stderr string
+		err    error
+	}
+	done := make(chan outcome, 1)
+	go func() {
+		_, stderr, err := RunAgentACP(ctx, "hello", "opencode", nil)
+		done <- outcome{stderr: stderr, err: err}
+	}()
+
+	select {
+	case got := <-done:
+		// The handshake fails once the stub exits; what matters is that the call
+		// returned and the oversized line was drained rather than dropped.
+		assert.Error(t, got.err)
+		assert.NotErrorIs(t, got.err, context.DeadlineExceeded)
+		assert.Contains(t, got.stderr, strings.Repeat("x", 100*1024))
+	case <-time.After(20 * time.Second):
+		t.Fatal("RunAgentACP did not return: stderr drain stalled on a long line")
 	}
 }
 

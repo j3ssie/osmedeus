@@ -337,6 +337,7 @@ func init() {
 	rootCmd.AddCommand(clientCmd)
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(assetsCmd)
+	rootCmd.AddCommand(vulnsCmd)
 	rootCmd.AddCommand(orgCmd)
 	rootCmd.AddCommand(agentCmd)
 	rootCmd.AddCommand(queryCmd)

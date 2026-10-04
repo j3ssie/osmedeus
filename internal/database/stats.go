@@ -278,3 +278,107 @@ func mapKeysToSortedSlice(m map[string]bool) []string {
 	sort.Strings(keys)
 	return keys
 }
+
+// VulnStatsData holds the distinct values and severity breakdown for a vulnerability listing.
+type VulnStatsData struct {
+	Severities  map[string]int `json:"severities"`
+	Total       int            `json:"total"`
+	Confidences []string       `json:"confidences"`
+	AssetTypes  []string       `json:"asset_types"`
+	Workspaces  []string       `json:"workspaces"`
+	Templates   []string       `json:"templates"`
+}
+
+// GetVulnStats retrieves the severity breakdown plus distinct confidences, asset types,
+// workspaces and detection templates, with optional workspace and org filtering.
+// An empty org means no filter, matching how every other org-scoped read behaves.
+//
+// Everything here is aggregated in SQL: the counts and the distinct lists are both
+// bounded by cardinality (a handful of severities, tens of templates), so a database
+// with a million findings costs the same as one with a thousand.
+func GetVulnStats(ctx context.Context, workspace, orgUUID string) (*VulnStatsData, error) {
+	db := GetDB()
+	if db == nil {
+		return nil, fmt.Errorf("database not connected")
+	}
+
+	scope := func(q *bun.SelectQuery) *bun.SelectQuery {
+		q = q.Model((*Vulnerability)(nil))
+		if workspace != "" {
+			q = q.Where("workspace = ?", workspace)
+		}
+		if orgUUID != "" {
+			q = q.Where("org_uuid = ?", orgUUID)
+		}
+		return q
+	}
+
+	// Severity counts, normalised so "High" and "high" are one band.
+	var sevRows []struct {
+		Severity string `bun:"severity"`
+		Count    int    `bun:"count"`
+	}
+	err := scope(db.NewSelect()).
+		ColumnExpr("LOWER(TRIM(severity)) AS severity").
+		ColumnExpr("COUNT(*) AS count").
+		GroupExpr("LOWER(TRIM(severity))").
+		Scan(ctx, &sevRows)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count vulnerabilities by severity: %w", err)
+	}
+
+	severities := make(map[string]int, len(sevRows))
+	total := 0
+	for _, r := range sevRows {
+		sev := r.Severity
+		if sev == "" {
+			sev = "unknown"
+		}
+		severities[sev] += r.Count
+		total += r.Count
+	}
+
+	// Distinct values, one bounded query per column.
+	distinct := func(column string) ([]string, error) {
+		var values []string
+		err := scope(db.NewSelect()).
+			ColumnExpr("DISTINCT ?", bun.Ident(column)).
+			Where("? != ''", bun.Ident(column)).
+			Scan(ctx, &values)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list distinct %s: %w", column, err)
+		}
+		sort.Strings(values)
+		return values, nil
+	}
+
+	confidences, err := distinct("confidence")
+	if err != nil {
+		return nil, err
+	}
+	assetTypes, err := distinct("asset_type")
+	if err != nil {
+		return nil, err
+	}
+	templates, err := distinct("vuln_info")
+	if err != nil {
+		return nil, err
+	}
+
+	// Only meaningful when not already scoped to a single workspace.
+	var workspaces []string
+	if workspace == "" {
+		if workspaces, err = distinct("workspace"); err != nil {
+			return nil, err
+		}
+	}
+
+	return &VulnStatsData{
+		Severities:  severities,
+		Total:       total,
+		Confidences: confidences,
+		AssetTypes:  assetTypes,
+		Workspaces:  workspaces,
+		Templates:   templates,
+	}, nil
+}

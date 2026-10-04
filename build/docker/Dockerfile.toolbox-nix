@@ -20,12 +20,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
     python3-venv \
-    chromium-browser \
     sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Create symlink for python
 RUN ln -sf /usr/bin/python3 /usr/bin/python
+
+# Ubuntu 24.04's chromium-browser package is only a stub that installs the snap,
+# which cannot run in a container. Install a native build from the xtradeb PPA so
+# headless screenshots and crawling (pd-httpx -system-chrome, katana, vigolium) work.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    gpg-agent \
+    && add-apt-repository -y ppa:xtradeb/apps \
+    && apt-get update && apt-get install -y --no-install-recommends chromium \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Nix package manager (single-user mode for Docker)
 RUN mkdir -m 0755 /nix && \
