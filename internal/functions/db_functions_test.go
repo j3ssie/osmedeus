@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -1547,4 +1548,13 @@ func TestDbImportCustomAsset_VigoliumWithSourceOverride(t *testing.T) {
 	assert.Equal(t, "web", asset.AssetType)    // from envelope default, matches arg too
 	assert.Equal(t, "1.2.3.4", asset.HostIP)   // ip -> host_ip remapped
 	assert.Equal(t, "test.com", asset.Input)    // hostname -> input remapped
+}
+
+func TestCountNonEmptyLines_LongLine(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "httpx.jsonl")
+	require.NoError(t, os.WriteFile(path, []byte("a\n"+strings.Repeat("x", 128*1024)+"\nb\n"), 0644))
+
+	count, err := countNonEmptyLines(path)
+	require.NoError(t, err)
+	assert.Equal(t, 3, count)
 }
