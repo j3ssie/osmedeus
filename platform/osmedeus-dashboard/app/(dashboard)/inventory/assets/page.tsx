@@ -106,7 +106,10 @@ export default function InventoryAssetsPage() {
     lastSeenAt: false,
   }));
   const lastFetchRef = React.useRef<number>(0);
-  const forceNextRef = React.useRef<boolean>(false);
+  // The query the last fetch was for. The cooldown below throttles repeats of
+  // the *same* query only, so paging, filtering or switching workspace always
+  // reaches the API — a guard keyed on time alone silently swallowed those.
+  const lastQueryKeyRef = React.useRef<string | null>(null);
   const COOLDOWN_MS = 20000;
 
   React.useEffect(() => {
@@ -163,7 +166,6 @@ export default function InventoryAssetsPage() {
       prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
     );
     setPage(1);
-    forceNextRef.current = true;
   }, []);
 
   // Rows from several workspaces are indistinguishable without the column that
@@ -204,10 +206,22 @@ export default function InventoryAssetsPage() {
     loadStats();
   }, [workspaceFilterKey]);
 
+  // Everything that goes into the request, as one comparable value.
+  const queryKey = React.useMemo(
+    () => JSON.stringify({ workspaceFilterKey, page, pageSize, filters }),
+    [workspaceFilterKey, page, pageSize, filters]
+  );
+
   const loadAssets = React.useCallback(
     async (force?: boolean) => {
       const now = Date.now();
-      if (!force && now - lastFetchRef.current < COOLDOWN_MS) return;
+      if (
+        !force &&
+        queryKey === lastQueryKeyRef.current &&
+        now - lastFetchRef.current < COOLDOWN_MS
+      ) {
+        return;
+      }
       try {
         setIsLoading(true);
         const res = await fetchHttpAssets(
@@ -220,11 +234,13 @@ export default function InventoryAssetsPage() {
         );
         const tp = res.pagination?.totalPages ?? 0;
         if (tp > 0 && page > tp) {
+          // Clamping changes the query, so the effect re-runs and fetches the
+          // page that does exist.
           setPage(tp);
-          forceNextRef.current = true;
           return;
         }
         setAssetsResponse(res);
+        lastQueryKeyRef.current = queryKey;
         lastFetchRef.current = Date.now();
       } catch (e) {
         toast.error("Failed to load assets", {
@@ -234,15 +250,11 @@ export default function InventoryAssetsPage() {
         setIsLoading(false);
       }
     },
-    [workspaceFilterKey, page, pageSize, filters]
+    [workspaceFilterKey, page, pageSize, filters, queryKey]
   );
 
   React.useEffect(() => {
-    const doLoad = async () => {
-      await loadAssets(forceNextRef.current);
-      forceNextRef.current = false;
-    };
-    doLoad();
+    loadAssets();
   }, [loadAssets]);
 
   const handleFiltersChange = React.useCallback((next: HttpAssetFilters) => {
@@ -497,7 +509,6 @@ export default function InventoryAssetsPage() {
                         onClick={() => {
                           setSelectedWorkspaces([]);
                           setPage(1);
-                          forceNextRef.current = true;
                         }}
                       >
                         All workspaces
@@ -579,7 +590,6 @@ export default function InventoryAssetsPage() {
             onPageSizeChange={(size) => {
               setPageSize(size);
               setPage(1);
-              forceNextRef.current = true;
             }}
           />
         </div>
