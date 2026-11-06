@@ -857,6 +857,7 @@ func countNonEmptyLines(filePath string) (int, error) {
 
 	count := 0
 	scanner := bufio.NewScanner(file)
+	scanner.Buffer(nil, 10*1024*1024)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line != "" {
