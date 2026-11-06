@@ -102,16 +102,18 @@ func (e *ACPExecutor) Execute(ctx context.Context, step *core.Step, execCtx *cor
 		Exports:   make(map[string]interface{}),
 	}
 
-	// Validate we have an agent
-	agentName := step.Agent
-	if agentName == "" {
-		err := fmt.Errorf("agent-acp step requires 'agent' field or 'acp_config.command'")
+	// Resolve the agent up front: a built-in name, or a custom command from
+	// acp_config. This is the same rule the parser validates against, so a step
+	// that passed validation cannot be rejected here for a different reason.
+	command, commandArgs, err := ResolveAgent(step)
+	if err != nil {
 		result.Status = core.StepStatusFailed
 		result.Error = err
 		result.EndTime = time.Now()
 		result.Duration = result.EndTime.Sub(result.StartTime)
 		return result, err
 	}
+	agentName := step.Agent
 
 	// Build prompt from messages
 	prompt := BuildPrompt(step)
@@ -124,9 +126,12 @@ func (e *ACPExecutor) Execute(ctx context.Context, step *core.Step, execCtx *cor
 		return result, err
 	}
 
-	// Build config from step + execution context
+	// Build config from step + execution context. The command is already
+	// resolved, so RunAgentACP does not repeat the registry lookup.
 	cfg := &RunAgentACPConfig{
-		Cwd: step.Cwd,
+		Cwd:     step.Cwd,
+		Command: command,
+		Args:    commandArgs,
 	}
 	if cfg.Cwd == "" {
 		cfg.Cwd = execCtx.WorkspacePath
@@ -178,6 +183,8 @@ type RunAgentACPConfig struct {
 	Env          map[string]string // Extra environment variables for agent process
 	WriteEnabled bool              // Allow file writes (default: false)
 	StreamWriter io.Writer         // Optional writer for real-time output streaming
+	Command      string            // Custom agent command; bypasses the built-in registry when set
+	Args         []string          // Arguments for Command (only used when Command is set)
 }
 
 // RunAgentACP spawns an ACP agent subprocess and returns its output.
@@ -195,18 +202,27 @@ func RunAgentACP(ctx context.Context, prompt, agentName string, cfg *RunAgentACP
 		cfg = &RunAgentACPConfig{}
 	}
 
-	// Default agent
-	if agentName == "" {
-		agentName = core.DefaultACPAgent
-	}
+	// A custom command wins over the registry, so an agent that is not built in
+	// can still be spawned. agentName is ignored in that case.
+	var command string
+	var args []string
+	if cfg.Command != "" {
+		command = cfg.Command
+		args = cfg.Args
+	} else {
+		// Default agent
+		if agentName == "" {
+			agentName = core.DefaultACPAgent
+		}
 
-	// Resolve agent command from built-in registry
-	def, ok := builtinACPAgents[agentName]
-	if !ok {
-		return "", "", fmt.Errorf("unknown agent: %q (available: %s)", agentName, availableAgentNames())
+		// Resolve agent command from built-in registry
+		def, ok := builtinACPAgents[agentName]
+		if !ok {
+			return "", "", fmt.Errorf("unknown agent: %q (available: %s)", agentName, availableAgentNames())
+		}
+		command = def.Command
+		args = def.Args
 	}
-	command := def.Command
-	args := def.Args
 
 	// Verify command exists in PATH
 	cmdPath, err := exec.LookPath(command)

@@ -344,6 +344,106 @@ func TestRunAgentACP_EmptyPrompt(t *testing.T) {
 	assert.Contains(t, err.Error(), "prompt is required")
 }
 
+// acpStubAgent writes an executable stub that marks stderr and exits, and
+// returns its path. It is enough to prove which command was spawned — the ACP
+// handshake then fails, which the callers assert on.
+func acpStubAgent(t *testing.T, marker string) string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script stub is not portable to windows")
+	}
+	stub := filepath.Join(t.TempDir(), "my-acp-agent")
+	script := "#!/bin/sh\necho " + marker + " >&2\nexit 1\n"
+	require.NoError(t, os.WriteFile(stub, []byte(script), 0o755))
+	return stub
+}
+
+// TestRunAgentACP_CustomCommand covers a custom agent spawned through
+// cfg.Command. Before the fix the command was resolved only from
+// builtinACPAgents, so an empty agent name fell back to the default agent and a
+// custom one could never run.
+func TestRunAgentACP_CustomCommand(t *testing.T) {
+	stub := acpStubAgent(t, "custom-agent-ran")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	_, stderr, err := RunAgentACP(ctx, "hello", "", &RunAgentACPConfig{
+		Command: stub,
+		Args:    []string{"--acp"},
+	})
+
+	// The handshake fails once the stub exits; what matters is that the stub is
+	// what ran, rather than the default built-in.
+	assert.Error(t, err)
+	assert.NotContains(t, err.Error(), "unknown agent")
+	assert.Contains(t, stderr, "custom-agent-ran")
+}
+
+// TestRunAgentACP_CustomCommandOverridesBuiltin pins the documented precedence:
+// acp_config.command overrides the built-in registry.
+func TestRunAgentACP_CustomCommandOverridesBuiltin(t *testing.T) {
+	stub := acpStubAgent(t, "override-ran")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	_, stderr, err := RunAgentACP(ctx, "hello", "claude-code", &RunAgentACPConfig{
+		Command: stub,
+	})
+
+	assert.Error(t, err)
+	assert.Contains(t, stderr, "override-ran")
+}
+
+// TestACPExecutor_Execute_CustomCommand is the regression test for the step
+// path: Execute rejected any step with an empty Agent field, so a step carrying
+// only acp_config.command passed parser validation and then failed at runtime
+// with "requires 'agent' field or 'acp_config.command'".
+func TestACPExecutor_Execute_CustomCommand(t *testing.T) {
+	stub := acpStubAgent(t, "step-agent-ran")
+
+	e := NewACPExecutor(nil)
+	step := &core.Step{
+		Name: "custom-acp",
+		Type: core.StepTypeAgentACP,
+		ACPConfig: &core.ACPStepConfig{
+			Command: stub,
+			Args:    []string{"--acp"},
+		},
+		Messages: []core.LLMMessage{{Role: "user", Content: "Analyze the results"}},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	result, err := e.Execute(ctx, step, &core.ExecutionContext{WorkspacePath: t.TempDir()})
+
+	// The stub cannot complete an ACP handshake, so the step fails — but it must
+	// fail having spawned the custom command, not on the old validation check.
+	require.Error(t, err)
+	assert.NotContains(t, err.Error(), "requires 'agent' field")
+	require.NotNil(t, result)
+	assert.Contains(t, result.Exports["acp_stderr"], "step-agent-ran")
+	assert.Equal(t, stub, result.Exports["acp_agent"])
+}
+
+// TestACPExecutor_Execute_NoAgentOrCommand keeps the genuine misconfiguration
+// an error, now reported through ResolveAgent.
+func TestACPExecutor_Execute_NoAgentOrCommand(t *testing.T) {
+	e := NewACPExecutor(nil)
+	step := &core.Step{
+		Name:     "no-agent",
+		Type:     core.StepTypeAgentACP,
+		Messages: []core.LLMMessage{{Role: "user", Content: "hello"}},
+	}
+
+	result, err := e.Execute(context.Background(), step, &core.ExecutionContext{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "agent-acp step requires")
+	assert.Equal(t, core.StepStatusFailed, result.Status)
+}
+
 func TestRunAgentACP_UnknownAgent(t *testing.T) {
 	_, _, err := RunAgentACP(context.Background(), "hello", "nonexistent-agent", nil)
 	assert.Error(t, err)
