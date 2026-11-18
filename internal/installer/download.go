@@ -306,7 +306,7 @@ func injectGitHubToken(repoURL string) string {
 		return repoURL
 	}
 	// Only inject for github.com HTTPS URLs
-	if strings.Contains(repoURL, "github.com") && strings.HasPrefix(repoURL, "https://") {
+	if IsGitHubURL(repoURL) && strings.HasPrefix(repoURL, "https://") {
 		repoURL = strings.Replace(repoURL, "https://github.com", "https://"+token+"@github.com", 1)
 	}
 	return repoURL

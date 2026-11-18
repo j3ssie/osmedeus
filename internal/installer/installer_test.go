@@ -135,6 +135,12 @@ func TestIsGitHubURL(t *testing.T) {
 	}
 }
 
+func TestInjectGitHubToken(t *testing.T) {
+	t.Setenv("GITHUB_API_KEY", "tok")
+	assert.Equal(t, "https://tok@github.com/owner/repo.git", injectGitHubToken("https://github.com/owner/repo.git"))
+	assert.Equal(t, "https://github.com.example.org/owner/repo.git", injectGitHubToken("https://github.com.example.org/owner/repo.git"))
+}
+
 func TestIsBinaryInstalledNoExec(t *testing.T) {
 	marker := filepath.Join(t.TempDir(), "executed.txt")
 	entry := &BinaryEntry{ValidateCommand: "touch " + marker}
