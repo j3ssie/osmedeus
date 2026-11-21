@@ -120,7 +120,7 @@ steps:
     step:
       name: vigolium-single-target
       type: bash
-      command: "timeout -k 1m {{vigoliumTimeout}} vigolium scan --db-isolate --soft-fail --silent -H \"{{vigoliumDefaultUA}}\" --scanning-max-duration {{vigoliumScanningMaxDuration}} --omit-response --db {{vigoliumVulnDBFile}} --skip {{vigoliumSkipPhases}} --strategy {{vigoliumStrategy}} --concurrency {{vigoliumConcurrency}} --max-per-host {{vigoliumMaxPerHost}} -t '[[line]]' {{extraVigoliumScan}}"
+      command: "timeout -k 1m {{vigoliumTimeout}} vigolium scan --db-isolate --soft-fail --silent -H \"{{vigoliumDefaultUA}}\" --max-time {{vigoliumScanningMaxDuration}} --omit-response --db {{vigoliumVulnDBFile}} --skip {{vigoliumSkipPhases}} --strategy {{vigoliumStrategy}} --concurrency {{vigoliumConcurrency}} --max-per-host {{vigoliumMaxPerHost}} -t '[[line]]' {{extraVigoliumScan}}"
       on_error:
         - action: continue # keep scanning remaining targets if one target fails
 

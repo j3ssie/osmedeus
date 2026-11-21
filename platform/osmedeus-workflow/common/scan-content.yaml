@@ -153,7 +153,7 @@ steps:
     step:
       name: vigolium-single-target
       type: bash
-      command: "timeout -k 1m {{deparosTimeout}} vigolium scan --only discover --db-isolate --soft-fail --silent -H \"{{vigoliumDefaultUA}}\" --omit-response --db {{deparosDBDir}}/vgnm_{{TargetSpace}}.sqlite --concurrency {{deparosThreads}} --max-per-host {{deparosMaxPerHost}} --scanning-max-duration {{deparosMaxtime}} --fuzz-wordlist {{contentDiscoverWordlist}} -t '[[line]]'"
+      command: "timeout -k 1m {{deparosTimeout}} vigolium scan --only discovery --db-isolate --soft-fail --silent -H \"{{vigoliumDefaultUA}}\" --omit-response --db {{deparosDBDir}}/vgnm_{{TargetSpace}}.sqlite --concurrency {{deparosThreads}} --max-per-host {{deparosMaxPerHost}} --max-time {{deparosMaxtime}} --discovery-wordlist {{contentDiscoverWordlist}} -t '[[line]]'"
       # with custom wordlists
 
   - name: "generate-deparos-reports"
