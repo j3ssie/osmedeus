@@ -49,6 +49,14 @@ type BinaryEntry struct {
 // BinaryRegistry is a map of binary name to BinaryEntry
 type BinaryRegistry map[string]BinaryEntry
 
+// Entry returns a copy of the named entry, or nil when the registry has none.
+func (r BinaryRegistry) Entry(name string) *BinaryEntry {
+	if e, ok := r[name]; ok {
+		return &e
+	}
+	return nil
+}
+
 // IsGoGetterPackage returns true if entry uses go-getter package manager
 func (entry *BinaryEntry) IsGoGetterPackage() bool {
 	return entry.PackageManager == "go-getter"
@@ -287,6 +295,36 @@ func IsCoreUnixTool(name string) bool {
 	return coreUnixTools[name]
 }
 
+// LookupName returns the executable a registry entry is actually found by: the
+// first word of its valide-command, else the registry key itself. The two differ
+// when a package ships no binary of its own name — "coreutils" is validated by
+// `sort --help` (no distro ships a `coreutils` executable) and "minio-client" by
+// `mc` — so looking up the key reports a false "not installed".
+//
+// Only the first word is used and nothing is executed, so this is safe for a
+// registry from an untrusted source.
+func LookupName(name string, entry *BinaryEntry) string {
+	if entry != nil {
+		if fields := strings.Fields(entry.ValidateCommand); len(fields) > 0 {
+			return fields[0]
+		}
+	}
+	return name
+}
+
+// LinkIfPresent reports whether the entry's binary is already on PATH, and if so
+// links it into binariesFolder (core system tools are left in place). Install
+// paths use it to skip what is already installed.
+func LinkIfPresent(name string, entry *BinaryEntry, binariesFolder string) bool {
+	if !IsBinaryInPath(LookupName(name, entry)) {
+		return false
+	}
+	if entry != nil {
+		_ = SymlinkInstalledBinaryToFolder(name, entry, binariesFolder)
+	}
+	return true
+}
+
 // IsBinaryInPath checks if a binary exists and is executable in $PATH
 func IsBinaryInPath(name string) bool {
 	path, err := exec.LookPath(name)
@@ -362,9 +400,12 @@ func isBinaryInstalled(name string, entry *BinaryEntry, allowExec bool) bool {
 // Skips installation if the binary is already available in PATH
 // Optional customHeaders map adds custom HTTP headers for downloads
 func InstallBinary(name string, registry BinaryRegistry, binariesFolder string, customHeaders map[string]string) error {
-	// Check if binary already exists in PATH
-	if IsBinaryInPath(name) {
-		if IsCoreUnixTool(name) {
+	entryPtr := registry.Entry(name)
+
+	// Check if binary already exists in PATH, by the name it is validated with
+	// (coreutils -> sort), not just the registry key.
+	if lookup := LookupName(name, entryPtr); IsBinaryInPath(lookup) {
+		if IsCoreUnixTool(lookup) {
 			// Core Unix tools: show exists, don't copy
 			fmt.Printf("[%s] Binary '%s' already available in PATH (system tool, skipping copy)\n",
 				terminal.Gray(terminal.SymbolBowtie), terminal.HiBlue(name))
@@ -373,17 +414,16 @@ func InstallBinary(name string, registry BinaryRegistry, binariesFolder string, 
 		// Non-core tools: show exists, still symlink to external-binaries
 		fmt.Printf("[%s] Binary '%s' already available in PATH, symlinking to external-binaries\n",
 			terminal.Gray(terminal.SymbolBowtie), terminal.HiBlue(name))
-		entry, ok := registry[name]
-		if ok {
-			_ = SymlinkInstalledBinaryToFolder(name, &entry, binariesFolder)
+		if entryPtr != nil {
+			_ = SymlinkInstalledBinaryToFolder(name, entryPtr, binariesFolder)
 		}
 		return nil
 	}
 
-	entry, ok := registry[name]
-	if !ok {
+	if entryPtr == nil {
 		return fmt.Errorf("binary '%s' not found in registry", name)
 	}
+	entry := *entryPtr
 
 	// Check for go-getter package manager
 	if entry.IsGoGetterPackage() {
@@ -447,31 +487,50 @@ func InstallBinary(name string, registry BinaryRegistry, binariesFolder string, 
 	return downloadAndExtractBinary(name, url, binariesFolder, customHeaders)
 }
 
+// Seams for tests: whether sudo handling applies on this OS (package managers
+// there need it; Homebrew must not run as root), whether we run as root, and
+// whether sudo can be invoked.
+var (
+	sudoApplies   = runtime.GOOS != "windows" && runtime.GOOS != "darwin"
+	isRoot        = func() bool { return os.Geteuid() == 0 }
+	sudoAvailable = func() bool { return IsBinaryInPath("sudo") }
+)
+
 // maybePrependSudo prepends "sudo" to package manager commands when not running as root.
 // This ensures commands like "apt install coreutils" work on cloud VMs where osmedeus
 // runs as an unprivileged user (e.g., ubuntu on AWS).
-func maybePrependSudo(command string) string {
-	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
-		return command
+//
+// A command that needs root when we are not root and sudo is not installed (a
+// hardened, rootless container) returns an error saying so, instead of running
+// and failing with "sh: sudo: not found" / exit 127.
+func maybePrependSudo(command string) (string, error) {
+	if !sudoApplies || isRoot() {
+		return command, nil
 	}
-	if os.Geteuid() == 0 {
-		return command
-	}
-	if strings.HasPrefix(command, "sudo ") {
-		return command
-	}
-	pkgManagers := []string{"apt ", "apt-get ", "dnf ", "yum ", "pacman ", "zypper ", "apk "}
-	for _, prefix := range pkgManagers {
-		if strings.HasPrefix(command, prefix) {
-			return "sudo " + command
+	needsSudo := strings.HasPrefix(command, "sudo ")
+	if !needsSudo {
+		pkgManagers := []string{"apt ", "apt-get ", "dnf ", "yum ", "pacman ", "zypper ", "apk "}
+		for _, prefix := range pkgManagers {
+			if strings.HasPrefix(command, prefix) {
+				command = "sudo " + command
+				needsSudo = true
+				break
+			}
 		}
 	}
-	return command
+	if needsSudo && !sudoAvailable() {
+		return "", fmt.Errorf("%q needs root, but osmedeus is not running as root and sudo is not installed: "+
+			"install the package yourself, or re-run as root", strings.TrimPrefix(command, "sudo "))
+	}
+	return command, nil
 }
 
 // executeCommand runs a shell command for installing a binary
 func executeCommand(command string) error {
-	command = maybePrependSudo(command)
+	command, err := maybePrependSudo(command)
+	if err != nil {
+		return err
+	}
 
 	var cmd *exec.Cmd
 	// @NOTE: This is intentional - installation commands come from the binary registry
@@ -743,10 +802,15 @@ func symlinkOrCopyFile(src, dest string) error {
 // Uses the validate command (valide-command) from registry to locate the binary
 // Returns nil if binary not found (installation may have failed) or symlink succeeds
 func SymlinkInstalledBinaryToFolder(name string, entry *BinaryEntry, destFolder string) error {
-	// Determine which command to look for
-	lookupCmd := name
-	if entry != nil && entry.ValidateCommand != "" {
-		lookupCmd = entry.ValidateCommand
+	// Look up the executable, not the whole validate command: LookPath("jq --version")
+	// can never succeed, so a multi-word valide-command used to skip the link.
+	lookupCmd := LookupName(name, entry)
+
+	// A core system tool stays where the OS put it. This also stops a package
+	// validated by one of its tools (coreutils -> sort) from linking that tool
+	// under the package's name.
+	if IsCoreUnixTool(lookupCmd) {
+		return nil
 	}
 
 	// Find the binary path using LookPath (equivalent to 'which')

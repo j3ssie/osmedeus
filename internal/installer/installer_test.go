@@ -3,10 +3,10 @@ package installer
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsSubPath(t *testing.T) {
@@ -74,14 +74,17 @@ func TestIsSubPath(t *testing.T) {
 	}
 }
 
-func TestMaybePrependSudo(t *testing.T) {
-	// On darwin/windows, maybePrependSudo is a no-op
-	if runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
-		assert.Equal(t, "apt install coreutils", maybePrependSudo("apt install coreutils"),
-			"should be no-op on darwin/windows")
-		return
-	}
+// stubSudo sets the sudo seams for one test and restores them afterwards.
+func stubSudo(t *testing.T, applies, root, available bool) {
+	t.Helper()
+	origApplies, origRoot, origAvail := sudoApplies, isRoot, sudoAvailable
+	t.Cleanup(func() { sudoApplies, isRoot, sudoAvailable = origApplies, origRoot, origAvail })
+	sudoApplies = applies
+	isRoot = func() bool { return root }
+	sudoAvailable = func() bool { return available }
+}
 
+func TestMaybePrependSudo(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  string
@@ -99,12 +102,46 @@ func TestMaybePrependSudo(t *testing.T) {
 		{"curl unchanged", "curl -fsSL https://example.com | bash", "curl -fsSL https://example.com | bash"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := maybePrependSudo(tt.input)
-			assert.Equal(t, tt.expect, result)
-		})
-	}
+	t.Run("non-root with sudo", func(t *testing.T) {
+		stubSudo(t, true, false, true)
+		for _, tt := range tests {
+			got, err := maybePrependSudo(tt.input)
+			require.NoError(t, err, tt.name)
+			assert.Equal(t, tt.expect, got, tt.name)
+		}
+	})
+
+	t.Run("root never needs sudo", func(t *testing.T) {
+		stubSudo(t, true, true, false)
+		got, err := maybePrependSudo("apt install coreutils")
+		require.NoError(t, err)
+		assert.Equal(t, "apt install coreutils", got)
+	})
+
+	t.Run("darwin and windows are left alone", func(t *testing.T) {
+		stubSudo(t, false, false, false)
+		got, err := maybePrependSudo("apt install coreutils")
+		require.NoError(t, err)
+		assert.Equal(t, "apt install coreutils", got)
+	})
+
+	// Issue #330: a rootless container without sudo ran "sudo apt install ..."
+	// and failed with "sh: sudo: not found" / exit 127.
+	t.Run("non-root without sudo says so instead of running", func(t *testing.T) {
+		stubSudo(t, true, false, false)
+
+		_, err := maybePrependSudo("apt install coreutils")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `"apt install coreutils" needs root`)
+		assert.Contains(t, err.Error(), "sudo is not installed")
+
+		_, err = maybePrependSudo("sudo apt install coreutils")
+		require.Error(t, err, "an explicit sudo cannot run either")
+
+		got, err := maybePrependSudo("go install example.com/tool@latest")
+		require.NoError(t, err, "commands that need no root still run")
+		assert.Equal(t, "go install example.com/tool@latest", got)
+	})
 }
 
 func TestIsGitHubURL(t *testing.T) {
