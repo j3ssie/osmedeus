@@ -75,14 +75,14 @@ func (r *RunRepository) List(ctx context.Context, page, perPage int) ([]*databas
 	count, err := r.db.NewSelect().
 		Model(&scans).
 		Order("created_at DESC").
-		Limit(perPage).
-		Offset((page - 1) * perPage).
+		Limit(int64(perPage)).
+		Offset(int64((page - 1) * perPage)).
 		ScanAndCount(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	return scans, count, nil
+	return scans, int(count), nil
 }
 
 // ListByStatus lists runs by status

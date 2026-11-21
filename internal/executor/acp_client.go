@@ -119,11 +119,11 @@ func (c *acpClient) SessionUpdate(_ context.Context, n acp.SessionNotification) 
 		fields := []zap.Field{
 			zap.String("toolCallId", string(update.ToolCallUpdate.ToolCallId)),
 		}
-		if update.ToolCallUpdate.Status != nil {
-			fields = append(fields, zap.String("status", string(*update.ToolCallUpdate.Status)))
+		if status, ok := update.ToolCallUpdate.Status.Value(); ok {
+			fields = append(fields, zap.String("status", string(status)))
 		}
-		if update.ToolCallUpdate.Title != nil {
-			fields = append(fields, zap.String("title", *update.ToolCallUpdate.Title))
+		if title, ok := update.ToolCallUpdate.Title.Value(); ok {
+			fields = append(fields, zap.String("title", title))
 		}
 		oslogger.Get().Debug("acp agent tool call update", fields...)
 	}
@@ -143,10 +143,7 @@ func (c *acpClient) SessionUpdate(_ context.Context, n acp.SessionNotification) 
 // first allow_once or allow_always option. If no allow option is found, the
 // first option is selected.
 func (c *acpClient) RequestPermission(_ context.Context, p acp.RequestPermissionRequest) (acp.RequestPermissionResponse, error) {
-	toolTitle := ""
-	if p.ToolCall.Title != nil {
-		toolTitle = *p.ToolCall.Title
-	}
+	toolTitle, _ := p.ToolCall.Title.Value()
 
 	optionNames := make([]string, len(p.Options))
 	for i, opt := range p.Options {
@@ -221,16 +218,11 @@ func (c *acpClient) ReadTextFile(_ context.Context, p acp.ReadTextFileRequest) (
 		lines := strings.Split(content, "\n")
 		start := 0
 		if p.Line != nil && *p.Line > 0 {
-			start = *p.Line - 1
-			if start > len(lines) {
-				start = len(lines)
-			}
+			start = int(min(*p.Line-1, int64(len(lines))))
 		}
 		end := len(lines)
-		if p.Limit != nil && *p.Limit > 0 {
-			if start+*p.Limit < end {
-				end = start + *p.Limit
-			}
+		if p.Limit != nil && *p.Limit > 0 && int64(start)+*p.Limit < int64(end) {
+			end = start + int(*p.Limit)
 		}
 		content = strings.Join(lines[start:end], "\n")
 	}
@@ -284,10 +276,10 @@ func (c *acpClient) CreateTerminal(_ context.Context, p acp.CreateTerminalReques
 	return acp.CreateTerminalResponse{TerminalId: "osmedeus-stub-term"}, nil
 }
 
-// KillTerminalCommand is a no-op.
-func (c *acpClient) KillTerminalCommand(_ context.Context, _ acp.KillTerminalCommandRequest) (acp.KillTerminalCommandResponse, error) {
-	oslogger.Get().Debug("acp KillTerminalCommand (no-op)")
-	return acp.KillTerminalCommandResponse{}, nil
+// KillTerminal is a no-op.
+func (c *acpClient) KillTerminal(_ context.Context, _ acp.KillTerminalRequest) (acp.KillTerminalResponse, error) {
+	oslogger.Get().Debug("acp KillTerminal (no-op)")
+	return acp.KillTerminalResponse{}, nil
 }
 
 // ReleaseTerminal is a no-op.
@@ -305,8 +297,21 @@ func (c *acpClient) TerminalOutput(_ context.Context, _ acp.TerminalOutputReques
 // WaitForTerminalExit returns exit code 0 (no-op).
 func (c *acpClient) WaitForTerminalExit(_ context.Context, _ acp.WaitForTerminalExitRequest) (acp.WaitForTerminalExitResponse, error) {
 	oslogger.Get().Debug("acp WaitForTerminalExit (no-op)")
-	exitCode := 0
+	exitCode := int64(0)
 	return acp.WaitForTerminalExitResponse{ExitCode: &exitCode}, nil
+}
+
+// CreateElicitation declines: the client runs unattended, so there is no user
+// to answer a form or follow a URL. Elicitation is also not advertised in the
+// client capabilities, so a conforming agent should not ask.
+func (c *acpClient) CreateElicitation(_ context.Context, _ acp.CreateElicitationRequest) (acp.CreateElicitationResponse, error) {
+	oslogger.Get().Debug("acp CreateElicitation (declined: unattended client)")
+	return acp.CreateElicitationResponse{Decline: &acp.CreateElicitationDecline{Action: "decline"}}, nil
+}
+
+// CompleteElicitation is a no-op: no elicitation is ever accepted.
+func (c *acpClient) CompleteElicitation(_ context.Context, _ acp.CompleteElicitationNotification) error {
+	return nil
 }
 
 // isPathAllowed checks if a path is under one of the allowed directories.

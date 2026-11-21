@@ -101,11 +101,11 @@ func (r *EventLogRepository) ListByTopic(ctx context.Context, topic string, page
 		Model(&events).
 		Where("topic = ?", topic).
 		Order("created_at DESC").
-		Limit(perPage).
-		Offset(offset).
+		Limit(int64(perPage)).
+		Offset(int64(offset)).
 		ScanAndCount(ctx)
 
-	return events, count, err
+	return events, int(count), err
 }
 
 // ListByScanID lists events for a specific scan (uses run_id column)
@@ -134,11 +134,11 @@ func (r *EventLogRepository) ListByWorkspace(ctx context.Context, workspace stri
 		Model(&events).
 		Where("workspace = ?", workspace).
 		Order("created_at DESC").
-		Limit(perPage).
-		Offset(offset).
+		Limit(int64(perPage)).
+		Offset(int64(offset)).
 		ScanAndCount(ctx)
 
-	return events, count, err
+	return events, int(count), err
 }
 
 // ListUnprocessed lists unprocessed events
@@ -152,7 +152,7 @@ func (r *EventLogRepository) ListUnprocessed(ctx context.Context, limit int) ([]
 		Model(&events).
 		Where("processed = ?", false).
 		Order("created_at ASC").
-		Limit(limit).
+		Limit(int64(limit)).
 		Scan(ctx)
 	return events, err
 }
@@ -213,19 +213,18 @@ func (r *EventLogRepository) Search(ctx context.Context, query EventLogQuery) ([
 
 	count, err := q.
 		Order("created_at DESC").
-		Limit(query.PerPage).
-		Offset(offset).
+		Limit(int64(query.PerPage)).
+		Offset(int64(offset)).
 		ScanAndCount(ctx)
 
-	return events, count, err
+	return events, int(count), err
 }
 
 // CountByTopic returns the count of events for a topic
 func (r *EventLogRepository) CountByTopic(ctx context.Context, topic string) (int, error) {
-	return r.db.NewSelect().
+	return database.CountInt(ctx, r.db.NewSelect().
 		Model((*database.EventLog)(nil)).
-		Where("topic = ?", topic).
-		Count(ctx)
+		Where("topic = ?", topic))
 }
 
 // GetTopicSummary returns a summary of events by topic
@@ -306,7 +305,7 @@ func (r *EventLogRepository) GetRecentByWorkflow(ctx context.Context, workflowNa
 		Model(&events).
 		Where("workflow_name = ?", workflowName).
 		Order("created_at DESC").
-		Limit(limit).
+		Limit(int64(limit)).
 		Scan(ctx)
 	return events, err
 }

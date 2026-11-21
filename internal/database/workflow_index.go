@@ -220,7 +220,7 @@ func ListWorkflowsFromDB(ctx context.Context, query WorkflowQuery) (*WorkflowMet
 	if err != nil {
 		return nil, fmt.Errorf("failed to count workflows: %w", err)
 	}
-	result.TotalCount = totalCount
+	result.TotalCount = int(totalCount)
 
 	// Fetch records with pagination
 	var workflows []WorkflowMeta
@@ -251,8 +251,8 @@ func ListWorkflowsFromDB(ctx context.Context, query WorkflowQuery) (*WorkflowMet
 			return q
 		}).
 		Order("name ASC").
-		Offset(result.Offset).
-		Limit(result.Limit).
+		Offset(int64(result.Offset)).
+		Limit(int64(result.Limit)).
 		Scan(ctx)
 
 	if err != nil {
@@ -326,5 +326,5 @@ func GetWorkflowCount(ctx context.Context) (int, error) {
 		return 0, fmt.Errorf("database not connected")
 	}
 
-	return db.NewSelect().Model((*WorkflowMeta)(nil)).Count(ctx)
+	return CountInt(ctx, db.NewSelect().Model((*WorkflowMeta)(nil)))
 }

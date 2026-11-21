@@ -2873,7 +2873,7 @@ func ListTables(ctx context.Context) ([]TableInfo, error) {
 		}
 		result = append(result, TableInfo{
 			Name:     t.name,
-			RowCount: count,
+			RowCount: int(count),
 		})
 	}
 
@@ -3028,9 +3028,9 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 		if err != nil {
 			return nil, fmt.Errorf("failed to count records: %w", err)
 		}
-		result.TotalCount = count
+		result.TotalCount = int(count)
 		fetchQuery := applyFilters(db.NewSelect().Model(&records))
-		err = fetchQuery.Order("created_at DESC").Offset(offset).Limit(limit).Scan(ctx)
+		err = fetchQuery.Order("created_at DESC").Offset(int64(offset)).Limit(int64(limit)).Scan(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch records: %w", err)
 		}
@@ -3043,9 +3043,9 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 		if err != nil {
 			return nil, fmt.Errorf("failed to count records: %w", err)
 		}
-		result.TotalCount = count
+		result.TotalCount = int(count)
 		fetchQuery := applyFilters(db.NewSelect().Model(&records))
-		err = fetchQuery.Order("created_at DESC").Offset(offset).Limit(limit).Scan(ctx)
+		err = fetchQuery.Order("created_at DESC").Offset(int64(offset)).Limit(int64(limit)).Scan(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch records: %w", err)
 		}
@@ -3058,9 +3058,9 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 		if err != nil {
 			return nil, fmt.Errorf("failed to count records: %w", err)
 		}
-		result.TotalCount = count
+		result.TotalCount = int(count)
 		fetchQuery := applyFilters(db.NewSelect().Model(&records))
-		err = fetchQuery.Order("created_at DESC").Offset(offset).Limit(limit).Scan(ctx)
+		err = fetchQuery.Order("created_at DESC").Offset(int64(offset)).Limit(int64(limit)).Scan(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch records: %w", err)
 		}
@@ -3073,12 +3073,12 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 		if err != nil {
 			return nil, fmt.Errorf("failed to count records: %w", err)
 		}
-		result.TotalCount = count
+		result.TotalCount = int(count)
 		fetchQuery := applyFilters(db.NewSelect().Model(&records))
 		if len(excludeColumns) > 0 {
 			fetchQuery = fetchQuery.ExcludeColumn(excludeColumns...)
 		}
-		err = fetchQuery.Order("created_at DESC").Offset(offset).Limit(limit).Scan(ctx)
+		err = fetchQuery.Order("created_at DESC").Offset(int64(offset)).Limit(int64(limit)).Scan(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch records: %w", err)
 		}
@@ -3091,9 +3091,9 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 		if err != nil {
 			return nil, fmt.Errorf("failed to count records: %w", err)
 		}
-		result.TotalCount = count
+		result.TotalCount = int(count)
 		fetchQuery := applyFilters(db.NewSelect().Model(&records))
-		err = fetchQuery.Order("created_at DESC").Offset(offset).Limit(limit).Scan(ctx)
+		err = fetchQuery.Order("created_at DESC").Offset(int64(offset)).Limit(int64(limit)).Scan(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch records: %w", err)
 		}
@@ -3106,9 +3106,9 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 		if err != nil {
 			return nil, fmt.Errorf("failed to count records: %w", err)
 		}
-		result.TotalCount = count
+		result.TotalCount = int(count)
 		fetchQuery := applyFilters(db.NewSelect().Model(&records))
-		err = fetchQuery.Order("created_at DESC").Offset(offset).Limit(limit).Scan(ctx)
+		err = fetchQuery.Order("created_at DESC").Offset(int64(offset)).Limit(int64(limit)).Scan(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch records: %w", err)
 		}
@@ -3121,9 +3121,9 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 		if err != nil {
 			return nil, fmt.Errorf("failed to count records: %w", err)
 		}
-		result.TotalCount = count
+		result.TotalCount = int(count)
 		fetchQuery := applyFilters(db.NewSelect().Model(&records))
-		err = fetchQuery.Order("created_at DESC").Offset(offset).Limit(limit).Scan(ctx)
+		err = fetchQuery.Order("created_at DESC").Offset(int64(offset)).Limit(int64(limit)).Scan(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch records: %w", err)
 		}
@@ -3136,12 +3136,12 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 		if err != nil {
 			return nil, fmt.Errorf("failed to count records: %w", err)
 		}
-		result.TotalCount = count
+		result.TotalCount = int(count)
 		fetchQuery := applyFilters(db.NewSelect().Model(&records))
 		if len(excludeColumns) > 0 {
 			fetchQuery = fetchQuery.ExcludeColumn(excludeColumns...)
 		}
-		err = fetchQuery.Order("created_at DESC").Offset(offset).Limit(limit).Scan(ctx)
+		err = fetchQuery.Order("created_at DESC").Offset(int64(offset)).Limit(int64(limit)).Scan(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch records: %w", err)
 		}
@@ -3154,9 +3154,9 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 		if err != nil {
 			return nil, fmt.Errorf("failed to count records: %w", err)
 		}
-		result.TotalCount = count
+		result.TotalCount = int(count)
 		fetchQuery := applyFilters(db.NewSelect().Model(&records))
-		err = fetchQuery.Order("created_at DESC").Offset(offset).Limit(limit).Scan(ctx)
+		err = fetchQuery.Order("created_at DESC").Offset(int64(offset)).Limit(int64(limit)).Scan(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch records: %w", err)
 		}
@@ -3169,9 +3169,9 @@ func GetTableRecords(ctx context.Context, tableName string, offset, limit int, f
 		if err != nil {
 			return nil, fmt.Errorf("failed to count records: %w", err)
 		}
-		result.TotalCount = count
+		result.TotalCount = int(count)
 		fetchQuery := applyFilters(db.NewSelect().Model(&records))
-		err = fetchQuery.Order("created_at DESC").Offset(offset).Limit(limit).Scan(ctx)
+		err = fetchQuery.Order("created_at DESC").Offset(int64(offset)).Limit(int64(limit)).Scan(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch records: %w", err)
 		}
@@ -3246,15 +3246,15 @@ func ListAssets(ctx context.Context, query AssetQuery) (*AssetResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to count assets: %w", err)
 	}
-	result.TotalCount = count
+	result.TotalCount = int(count)
 
 	// Get paginated results
 	baseQuery := db.NewSelect().Model(&result.Data)
 	baseQuery = applyFilters(baseQuery)
 	err = baseQuery.
 		Order("created_at DESC").
-		Offset(query.Offset).
-		Limit(query.Limit).
+		Offset(int64(query.Offset)).
+		Limit(int64(query.Limit)).
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch assets: %w", err)
@@ -3315,14 +3315,14 @@ func ListArtifacts(ctx context.Context, query ArtifactQuery) (*ArtifactResult, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to count artifacts: %w", err)
 	}
-	result.TotalCount = count
+	result.TotalCount = int(count)
 
 	baseQuery := db.NewSelect().Model(&result.Data)
 	baseQuery = applyFilters(baseQuery)
 	err = baseQuery.
 		Order("created_at DESC").
-		Offset(query.Offset).
-		Limit(query.Limit).
+		Offset(int64(query.Offset)).
+		Limit(int64(query.Limit)).
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch artifacts: %w", err)
@@ -3376,8 +3376,8 @@ func ListWorkspacesFromDB(ctx context.Context, offset, limit int) (*WorkspaceRes
 		ColumnExpr("COUNT(*) AS asset_count").
 		Group("workspace").
 		Order("workspace ASC").
-		Offset(offset).
-		Limit(limit).
+		Offset(int64(offset)).
+		Limit(int64(limit)).
 		Scan(ctx, &workspaces)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch workspaces: %w", err)
@@ -3439,14 +3439,14 @@ func ListWorkspacesFullFromDB(ctx context.Context, offset, limit int, orgUUID st
 	if err != nil {
 		return nil, fmt.Errorf("failed to count workspaces: %w", err)
 	}
-	result.TotalCount = totalCount
+	result.TotalCount = int(totalCount)
 
 	// Get paginated workspaces with full details
 	var workspaces []Workspace
 	err = applyOrg(db.NewSelect().Model(&workspaces)).
 		Order("name ASC").
-		Offset(offset).
-		Limit(limit).
+		Offset(int64(offset)).
+		Limit(int64(limit)).
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch workspaces: %w", err)
@@ -3556,15 +3556,15 @@ func ListSchedules(ctx context.Context, offset, limit int) (*ScheduleResult, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to count schedules: %w", err)
 	}
-	result.TotalCount = totalCount
+	result.TotalCount = int(totalCount)
 
 	// Get paginated schedules
 	var schedules []Schedule
 	err = db.NewSelect().
 		Model(&schedules).
 		Order("created_at DESC").
-		Offset(offset).
-		Limit(limit).
+		Offset(int64(offset)).
+		Limit(int64(limit)).
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch schedules: %w", err)
@@ -3784,7 +3784,7 @@ func ListEventLogs(ctx context.Context, query EventLogQuery) (*EventLogResult, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to count event logs: %w", err)
 	}
-	result.TotalCount = totalCount
+	result.TotalCount = int(totalCount)
 
 	// Get paginated event logs
 	var eventLogs []EventLog
@@ -3815,8 +3815,8 @@ func ListEventLogs(ctx context.Context, query EventLogQuery) (*EventLogResult, e
 			return q
 		}).
 		Order("created_at DESC").
-		Offset(query.Offset).
-		Limit(query.Limit).
+		Offset(int64(query.Offset)).
+		Limit(int64(query.Limit)).
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch event logs: %w", err)
@@ -3885,7 +3885,7 @@ func ListVulnerabilities(ctx context.Context, query VulnerabilityQuery) (*Vulner
 	if err != nil {
 		return nil, fmt.Errorf("failed to count vulnerabilities: %w", err)
 	}
-	result.TotalCount = totalCount
+	result.TotalCount = int(totalCount)
 
 	// Get paginated vulnerabilities
 	var vulnerabilities []Vulnerability
@@ -3893,8 +3893,8 @@ func ListVulnerabilities(ctx context.Context, query VulnerabilityQuery) (*Vulner
 		Model(&vulnerabilities).
 		Apply(applyFilters).
 		Order("created_at DESC").
-		Offset(query.Offset).
-		Limit(query.Limit).
+		Offset(int64(query.Offset)).
+		Limit(int64(query.Limit)).
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch vulnerabilities: %w", err)
@@ -4048,7 +4048,7 @@ func ListRuns(ctx context.Context, offset, limit int, status, workflow, target, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to count runs: %w", err)
 	}
-	result.TotalCount = totalCount
+	result.TotalCount = int(totalCount)
 
 	var runs []Run
 	err = db.NewSelect().
@@ -4075,8 +4075,8 @@ func ListRuns(ctx context.Context, offset, limit int, status, workflow, target, 
 			return q
 		}).
 		Order("created_at DESC").
-		Offset(offset).
-		Limit(limit).
+		Offset(int64(offset)).
+		Limit(int64(limit)).
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch runs: %w", err)
@@ -4370,14 +4370,14 @@ func ListStepResults(ctx context.Context, query StepResultQuery) (*StepResultRes
 	if err != nil {
 		return nil, fmt.Errorf("failed to count step results: %w", err)
 	}
-	result.TotalCount = count
+	result.TotalCount = int(count)
 
 	baseQuery := db.NewSelect().Model(&result.Data)
 	baseQuery = applyFilters(baseQuery)
 	err = baseQuery.
 		Order("sr.completed_at ASC").
-		Offset(query.Offset).
-		Limit(query.Limit).
+		Offset(int64(query.Offset)).
+		Limit(int64(query.Limit)).
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch step results: %w", err)
@@ -4413,7 +4413,7 @@ func ListAssetDiffSnapshots(ctx context.Context, workspace string, offset, limit
 	if err != nil {
 		return nil, fmt.Errorf("failed to count asset diff snapshots: %w", err)
 	}
-	result.TotalCount = count
+	result.TotalCount = int(count)
 
 	baseQuery := db.NewSelect().Model(&result.Data)
 	if workspace != "" {
@@ -4421,8 +4421,8 @@ func ListAssetDiffSnapshots(ctx context.Context, workspace string, offset, limit
 	}
 	err = baseQuery.
 		Order("created_at DESC").
-		Offset(offset).
-		Limit(limit).
+		Offset(int64(offset)).
+		Limit(int64(limit)).
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch asset diff snapshots: %w", err)
@@ -4458,7 +4458,7 @@ func ListVulnDiffSnapshots(ctx context.Context, workspace string, offset, limit 
 	if err != nil {
 		return nil, fmt.Errorf("failed to count vulnerability diff snapshots: %w", err)
 	}
-	result.TotalCount = count
+	result.TotalCount = int(count)
 
 	baseQuery := db.NewSelect().Model(&result.Data)
 	if workspace != "" {
@@ -4466,8 +4466,8 @@ func ListVulnDiffSnapshots(ctx context.Context, workspace string, offset, limit 
 	}
 	err = baseQuery.
 		Order("created_at DESC").
-		Offset(offset).
-		Limit(limit).
+		Offset(int64(offset)).
+		Limit(int64(limit)).
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch vulnerability diff snapshots: %w", err)

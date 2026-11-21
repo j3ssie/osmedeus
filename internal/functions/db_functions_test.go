@@ -484,7 +484,7 @@ func TestDbPartialImportAsset_Upsert(t *testing.T) {
 		Where("workspace = ? AND asset_value = ?", "test-workspace", "sub.example.com").
 		Count(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 1, count)
+	assert.EqualValues(t, 1, count)
 
 	// Verify type was updated
 	var asset database.Asset
@@ -670,7 +670,7 @@ func TestDbQuickImportAsset_NoEventOnUpdate(t *testing.T) {
 		Where("topic = ? AND workspace = ?", "db.new.asset", "test-workspace").
 		Count(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 1, count)
+	assert.EqualValues(t, 1, count)
 
 	// Import same asset again (update)
 	result, err := registry.Execute(
@@ -685,7 +685,7 @@ func TestDbQuickImportAsset_NoEventOnUpdate(t *testing.T) {
 		Where("topic = ? AND workspace = ?", "db.new.asset", "test-workspace").
 		Count(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 1, count, "should not create event log on update")
+	assert.EqualValues(t, 1, count, "should not create event log on update")
 }
 
 func TestDbQuickImportAsset_MissingArgs(t *testing.T) {
@@ -734,14 +734,14 @@ func TestDbResetEventLogs(t *testing.T) {
 	require.NoError(t, err)
 	stats := result.(map[string]interface{})
 	assert.Equal(t, int64(4), stats["reset"]) // 4 were processed=true
-	assert.Equal(t, 4, stats["total"])
+	assert.EqualValues(t, 4, stats["total"])
 
 	// Verify all are now unprocessed
 	count, err := db.NewSelect().Model((*database.EventLog)(nil)).
 		Where("processed = ?", false).
 		Count(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 5, count)
+	assert.EqualValues(t, 5, count)
 
 	// Reset for next test - mark some as processed again
 	_, err = db.NewUpdate().Model((*database.EventLog)(nil)).
@@ -794,7 +794,7 @@ func TestDbResetEventLogs(t *testing.T) {
 	require.NoError(t, err)
 	stats = result.(map[string]interface{})
 	assert.Equal(t, int64(1), stats["reset"]) // workspace1 has 1 run.* event
-	assert.Equal(t, 1, stats["total"])
+	assert.EqualValues(t, 1, stats["total"])
 }
 
 func TestGlobToSQLLike(t *testing.T) {
@@ -955,12 +955,12 @@ func TestDbImportDNSAsset_Upsert(t *testing.T) {
 	// Should still only have 3 assets (no duplicates)
 	ctx := context.Background()
 	db := database.GetDB()
-	var count int
+	var count int64
 	count, err = db.NewSelect().Model((*database.Asset)(nil)).
 		Where("workspace = ?", "test-workspace").
 		Count(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 3, count)
+	assert.Equal(t, int64(3), count)
 }
 
 // --- Custom Asset Import Tests ---

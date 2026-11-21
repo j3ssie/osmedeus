@@ -87,13 +87,13 @@ func GetSystemStats(ctx context.Context, workflowsPath string) (*SystemStats, er
 	// Get workspace stats
 	workspaceCount, err := db.NewSelect().Model((*Workspace)(nil)).Count(ctx)
 	if err == nil {
-		stats.Workspaces = WorkspaceStats{Total: workspaceCount}
+		stats.Workspaces = WorkspaceStats{Total: int(workspaceCount)}
 	}
 
 	// Get asset stats
 	assetCount, err := db.NewSelect().Model((*Asset)(nil)).Count(ctx)
 	if err == nil {
-		stats.Assets = AssetStats{Total: assetCount}
+		stats.Assets = AssetStats{Total: int(assetCount)}
 	}
 
 	// Get vulnerability stats (aggregated from workspaces)

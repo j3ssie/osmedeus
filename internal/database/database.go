@@ -176,6 +176,13 @@ func Close() error {
 }
 
 // Migrate runs database migrations
+// CountInt runs a COUNT and narrows it to int, the type every counter in the
+// database layer exposes. bun returns int64 from Count since v1.3.
+func CountInt(ctx context.Context, q *bun.SelectQuery) (int, error) {
+	n, err := q.Count(ctx)
+	return int(n), err
+}
+
 func Migrate(ctx context.Context) error {
 	models := []interface{}{
 		(*Run)(nil),

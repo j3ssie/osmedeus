@@ -270,10 +270,10 @@ func TestBackfillReclaimsEmptyOrgUUID(t *testing.T) {
 		"orphan.com", "orphan-asset")
 	require.NoError(t, err)
 
-	var stranded int
+	var stranded int64
 	stranded, err = db.NewSelect().Model((*Asset)(nil)).Where("org_uuid = ''").Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 1, stranded)
+	require.Equal(t, int64(1), stranded)
 
 	require.NoError(t, Migrate(ctx))
 

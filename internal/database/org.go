@@ -286,16 +286,16 @@ func GetOrgStats(ctx context.Context, orgUUID string) (*OrgStats, error) {
 
 	stats := &OrgStats{OrgUUID: org.UUID, OrgName: org.Name}
 
-	if stats.TotalAssets, err = db.NewSelect().Model((*Asset)(nil)).
-		Where("org_uuid = ?", orgUUID).Count(ctx); err != nil {
+	if stats.TotalAssets, err = CountInt(ctx, db.NewSelect().Model((*Asset)(nil)).
+		Where("org_uuid = ?", orgUUID)); err != nil {
 		return nil, err
 	}
-	if stats.TotalVulns, err = db.NewSelect().Model((*Vulnerability)(nil)).
-		Where("org_uuid = ?", orgUUID).Count(ctx); err != nil {
+	if stats.TotalVulns, err = CountInt(ctx, db.NewSelect().Model((*Vulnerability)(nil)).
+		Where("org_uuid = ?", orgUUID)); err != nil {
 		return nil, err
 	}
-	if stats.TotalRuns, err = db.NewSelect().Model((*Run)(nil)).
-		Where("org_uuid = ?", orgUUID).Count(ctx); err != nil {
+	if stats.TotalRuns, err = CountInt(ctx, db.NewSelect().Model((*Run)(nil)).
+		Where("org_uuid = ?", orgUUID)); err != nil {
 		return nil, err
 	}
 

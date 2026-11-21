@@ -96,11 +96,11 @@ func (r *AssetRepository) ListByWorkspace(ctx context.Context, workspace string,
 		Model(&assets).
 		Where("workspace = ?", workspace).
 		Order("created_at DESC").
-		Limit(perPage).
-		Offset(offset).
+		Limit(int64(perPage)).
+		Offset(int64(offset)).
 		ScanAndCount(ctx)
 
-	return assets, count, err
+	return assets, int(count), err
 }
 
 // ListByAssetValue lists assets for a specific asset value
@@ -176,11 +176,11 @@ func (r *AssetRepository) Search(ctx context.Context, query AssetQuery) ([]*data
 
 	count, err := q.
 		Order("created_at DESC").
-		Limit(query.PerPage).
-		Offset(offset).
+		Limit(int64(query.PerPage)).
+		Offset(int64(offset)).
 		ScanAndCount(ctx)
 
-	return assets, count, err
+	return assets, int(count), err
 }
 
 // ImportFromJSONL imports assets from a JSONL file
@@ -197,10 +197,9 @@ func (r *AssetRepository) ImportFromReader(ctx context.Context, reader io.Reader
 
 // CountByWorkspace returns the count of assets in a workspace
 func (r *AssetRepository) CountByWorkspace(ctx context.Context, workspace string) (int, error) {
-	return r.db.NewSelect().
+	return database.CountInt(ctx, r.db.NewSelect().
 		Model((*database.Asset)(nil)).
-		Where("workspace = ?", workspace).
-		Count(ctx)
+		Where("workspace = ?", workspace))
 }
 
 // GetTechSummary returns a summary of technologies found in a workspace

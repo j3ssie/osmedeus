@@ -55,13 +55,13 @@ func TestDbImportVigolium(t *testing.T) {
 	assetCount, err := db.NewSelect().Model((*database.Asset)(nil)).
 		Where("workspace = ?", "test-workspace").Count(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 179, assetCount)
+	assert.EqualValues(t, 179, assetCount)
 
 	// Findings landed in the vulnerabilities table
 	vulnCount, err := db.NewSelect().Model((*database.Vulnerability)(nil)).
 		Where("workspace = ?", "test-workspace").Count(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 146, vulnCount)
+	assert.EqualValues(t, 146, vulnCount)
 
 	// Spot-check a finding -> vulnerability field mapping
 	var vuln database.Vulnerability
@@ -114,12 +114,12 @@ func TestDbImportVigolium_Idempotent(t *testing.T) {
 	assetCount, err := db.NewSelect().Model((*database.Asset)(nil)).
 		Where("workspace = ?", "test-workspace").Count(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 179, assetCount, "no duplicate assets after re-import")
+	assert.EqualValues(t, 179, assetCount, "no duplicate assets after re-import")
 
 	vulnCount, err := db.NewSelect().Model((*database.Vulnerability)(nil)).
 		Where("workspace = ?", "test-workspace").Count(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 146, vulnCount, "no duplicate vulns after re-import")
+	assert.EqualValues(t, 146, vulnCount, "no duplicate vulns after re-import")
 }
 
 // A single finding record can embed a multi-MB response body, producing a JSONL
