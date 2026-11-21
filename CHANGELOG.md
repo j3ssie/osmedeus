@@ -1,5 +1,25 @@
 # Changelog
 
+## v5.1.3
+
+### Added
+- `suspect` severity (a lead the scanner could not confirm) across the dashboard, API filters and `osmedeus vulns`, ranked between low and info.
+- Vulnerabilities store `cwe_id`, `cvss_score` and `remediation`; the finding drawer shows CVSS, a linked CWE and a Remediation section.
+- Install API responses report `skipped` / `skipped_count` for binaries already on PATH.
+
+### Changed
+- Vigolium import brings in technologies, response time, CWE/CVSS/remediation, vigolium's own tags and `vuln_class` (v0.5.7 exports).
+- Workflows use vigolium's canonical `--max-time`, `--discovery-wordlist` and `--only discovery`.
+
+### Fixed
+- `agent-acp` steps can run custom agents from `acp_config.command` (#331).
+- Assets page pagination and filter changes now fetch immediately (#332).
+- Multi-select severity and confidence filters on the vulnerabilities API, and the page now applies the confidence filter its total did.
+- First-time setup no longer reports `coreutils` as failed when it is installed, and counts present binaries as skipped rather than installed (#330).
+- Installing a package that needs root, without root or sudo, explains why instead of failing with exit 127.
+- The GitHub token is only added to clone URLs on GitHub hosts (#333).
+- Workspace URL and asset totals count long JSONL lines (#329).
+
 ## v5.1.2
 
 ### Added
