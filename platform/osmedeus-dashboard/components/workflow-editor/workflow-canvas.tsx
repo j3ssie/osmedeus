@@ -96,27 +96,20 @@ export function WorkflowCanvas({
     (changes) => {
       onNodesChange(changes);
 
-      // Check for selection changes
-      const selectedChange = changes.find(
-        (change) => change.type === "select" && change.selected
-      );
-      if (selectedChange && selectedChange.type === "select") {
+      // @xyflow/react 13 passes a NodeChangeset, not an array.
+      const selects = changes.getByType("select");
+
+      const selectedChange = selects.find((change) => change.selected);
+      if (selectedChange) {
         onNodeSelect?.(selectedChange.id);
         return;
       }
 
-      // Also check if all nodes are deselected
-      const hasSelection = changes.some(
-        (change) => change.type === "select" && change.selected
-      );
-      if (!hasSelection && changes.some((c) => c.type === "select")) {
-        // Check if any node is still selected
+      // Every select change was a deselect: clear the selection unless some
+      // node remains selected.
+      if (selects.length > 0) {
         const stillSelected = nodes.some(
-          (n) =>
-            n.selected &&
-            !changes.find(
-              (c) => c.type === "select" && c.id === n.id && !c.selected
-            )
+          (n) => n.selected && !selects.some((c) => c.id === n.id && !c.selected)
         );
         if (!stillSelected) {
           onNodeSelect?.(null);
