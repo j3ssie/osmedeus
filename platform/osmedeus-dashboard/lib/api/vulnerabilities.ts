@@ -97,24 +97,7 @@ export async function fetchVulnerabilities(params: {
   const res = await http.get(`${API_PREFIX}/vulnerabilities`, { params: query });
   const list = (res.data?.data || []) as Array<any>;
 
-  const mapped: Vulnerability[] = list.map((v) => ({
-    id: String(v.id),
-    workspace: v.workspace ?? "",
-    vulnInfo: v.vuln_info ?? "",
-    vulnTitle: v.vuln_title ?? "",
-    vulnDesc: v.vuln_desc ?? "",
-    vulnPoc: v.vuln_poc ?? "",
-    severity: v.severity ?? "info",
-    confidence: toConfidence(v.confidence),
-    assetType: v.asset_type ?? "",
-    assetValue: v.asset_value ?? "",
-    tags: v.tags ?? [],
-    detailHttpRequest: v.detail_http_request,
-    detailHttpResponse: v.detail_http_response,
-    rawVulnJson: v.raw_vuln_json,
-    createdAt: v.created_at ? new Date(v.created_at) : new Date(),
-    updatedAt: v.updated_at ? new Date(v.updated_at) : new Date(),
-  }));
+  const mapped: Vulnerability[] = list.map(mapVulnerability);
 
   const total = res.data?.pagination?.total ?? mapped.length;
   const respLimit = res.data?.pagination?.limit ?? pageSize;
@@ -129,6 +112,34 @@ export async function fetchVulnerabilities(params: {
       totalItems: total,
       totalPages: Math.ceil(total / respLimit),
     },
+  };
+}
+
+/**
+ * One API row -> Vulnerability, shared by the list and the detail fetch so a
+ * field added to one cannot be missed by the other.
+ */
+function mapVulnerability(v: any): Vulnerability {
+  return {
+    id: String(v.id),
+    workspace: v.workspace ?? "",
+    vulnInfo: v.vuln_info ?? "",
+    vulnTitle: v.vuln_title ?? "",
+    vulnDesc: v.vuln_desc ?? "",
+    vulnPoc: v.vuln_poc ?? "",
+    severity: v.severity ?? "info",
+    confidence: toConfidence(v.confidence),
+    assetType: v.asset_type ?? "",
+    assetValue: v.asset_value ?? "",
+    tags: v.tags ?? [],
+    cweId: v.cwe_id || undefined,
+    cvssScore: typeof v.cvss_score === "number" && v.cvss_score > 0 ? v.cvss_score : undefined,
+    remediation: v.remediation || undefined,
+    detailHttpRequest: v.detail_http_request,
+    detailHttpResponse: v.detail_http_response,
+    rawVulnJson: v.raw_vuln_json,
+    createdAt: v.created_at ? new Date(v.created_at) : new Date(),
+    updatedAt: v.updated_at ? new Date(v.updated_at) : new Date(),
   };
 }
 
@@ -147,6 +158,7 @@ export async function fetchVulnerabilitySummary(
       high: data.by_severity?.high ?? 0,
       medium: data.by_severity?.medium ?? 0,
       low: data.by_severity?.low ?? 0,
+      suspect: data.by_severity?.suspect ?? 0,
       info: data.by_severity?.info ?? 0,
     },
     total: data.total ?? 0,
@@ -160,24 +172,7 @@ export async function fetchVulnerabilityById(id: string): Promise<Vulnerability 
     const v = res.data?.data;
     if (!v) return null;
 
-    return {
-      id: String(v.id),
-      workspace: v.workspace ?? "",
-      vulnInfo: v.vuln_info ?? "",
-      vulnTitle: v.vuln_title ?? "",
-      vulnDesc: v.vuln_desc ?? "",
-      vulnPoc: v.vuln_poc ?? "",
-      severity: v.severity ?? "info",
-      confidence: toConfidence(v.confidence),
-      assetType: v.asset_type ?? "",
-      assetValue: v.asset_value ?? "",
-      tags: v.tags ?? [],
-      detailHttpRequest: v.detail_http_request,
-      detailHttpResponse: v.detail_http_response,
-      rawVulnJson: v.raw_vuln_json,
-      createdAt: v.created_at ? new Date(v.created_at) : new Date(),
-      updatedAt: v.updated_at ? new Date(v.updated_at) : new Date(),
-    };
+    return mapVulnerability(v);
   } catch {
     return null;
   }

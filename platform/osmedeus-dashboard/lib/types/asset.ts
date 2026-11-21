@@ -65,7 +65,7 @@ export interface Vulnerability {
   id: string;
   workspaceId: string;
   title: string;
-  severity: "critical" | "high" | "medium" | "low" | "info";
+  severity: "critical" | "high" | "medium" | "low" | "suspect" | "info";
   target: string;
   description?: string;
   createdAt: Date;
