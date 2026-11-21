@@ -3,7 +3,7 @@ package core
 // Project metadata constants
 const (
 	// VERSION of this project
-	VERSION = "v5.1.3"
+	VERSION = "v5.1.4"
 	// DESC description of the tool
 	DESC = "A Modern Orchestration Engine for Security"
 	// BINARY name of osmedeus

@@ -1,5 +1,15 @@
 # Changelog
 
+## v5.1.4
+
+v5.1.3 was tagged but never published; this is the first release to ship its
+changes, listed under v5.1.3 below.
+
+### Changed
+- All Go dependencies updated to their latest versions, including bun v1.3 and acp-go-sdk v0.20.0. Go 1.26.10 or newer is required to build.
+- All dashboard dependencies updated to their latest versions, including Next.js 16.4, @xyflow/react 13, motion 14, ESLint 10 and TypeScript 7.
+- ACP agents that ask for user input (elicitation) are declined: the ACP client runs unattended.
+
 ## v5.1.3
 
 ### Added
