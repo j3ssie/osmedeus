@@ -3857,28 +3857,31 @@ func ListVulnerabilities(ctx context.Context, query VulnerabilityQuery) (*Vulner
 		Limit:  query.Limit,
 	}
 
-	// Build base query
-	baseQuery := db.NewSelect().Model((*Vulnerability)(nil))
-
-	// Apply filters
-	if query.Workspace != "" {
-		baseQuery = baseQuery.Where("workspace = ?", query.Workspace)
-	}
-	if query.OrgUUID != "" {
-		baseQuery = baseQuery.Where("org_uuid = ?", query.OrgUUID)
-	}
-	if query.Severity != "" {
-		baseQuery = baseQuery.Where("severity = ?", query.Severity)
-	}
-	if query.Confidence != "" {
-		baseQuery = baseQuery.Where("confidence = ?", query.Confidence)
-	}
-	if query.AssetValue != "" {
-		baseQuery = baseQuery.Where("asset_value LIKE ?", "%"+query.AssetValue+"%")
+	// One filter set for both the count and the page, so the total can never
+	// describe a different row set than the page it paginates.
+	applyFilters := func(q *bun.SelectQuery) *bun.SelectQuery {
+		if query.Workspace != "" {
+			q = q.Where("workspace = ?", query.Workspace)
+		}
+		if query.OrgUUID != "" {
+			q = q.Where("org_uuid = ?", query.OrgUUID)
+		}
+		// Severity and confidence accept a comma-separated list: the dashboard
+		// sends one value per selected tile ("high,critical").
+		if values := splitFilterList(query.Severity); len(values) > 0 {
+			q = q.Where("severity IN (?)", bun.In(values))
+		}
+		if values := splitFilterList(query.Confidence); len(values) > 0 {
+			q = q.Where("confidence IN (?)", bun.In(values))
+		}
+		if query.AssetValue != "" {
+			q = q.Where("asset_value LIKE ?", "%"+query.AssetValue+"%")
+		}
+		return q
 	}
 
 	// Get total count with filters
-	totalCount, err := baseQuery.Count(ctx)
+	totalCount, err := db.NewSelect().Model((*Vulnerability)(nil)).Apply(applyFilters).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to count vulnerabilities: %w", err)
 	}
@@ -3888,21 +3891,7 @@ func ListVulnerabilities(ctx context.Context, query VulnerabilityQuery) (*Vulner
 	var vulnerabilities []Vulnerability
 	err = db.NewSelect().
 		Model(&vulnerabilities).
-		Apply(func(q *bun.SelectQuery) *bun.SelectQuery {
-			if query.Workspace != "" {
-				q = q.Where("workspace = ?", query.Workspace)
-			}
-			if query.OrgUUID != "" {
-				q = q.Where("org_uuid = ?", query.OrgUUID)
-			}
-			if query.Severity != "" {
-				q = q.Where("severity = ?", query.Severity)
-			}
-			if query.AssetValue != "" {
-				q = q.Where("asset_value LIKE ?", "%"+query.AssetValue+"%")
-			}
-			return q
-		}).
+		Apply(applyFilters).
 		Order("created_at DESC").
 		Offset(query.Offset).
 		Limit(query.Limit).
@@ -3913,6 +3902,18 @@ func ListVulnerabilities(ctx context.Context, query VulnerabilityQuery) (*Vulner
 	result.Data = vulnerabilities
 
 	return result, nil
+}
+
+// splitFilterList splits a comma-separated filter value into its trimmed,
+// non-empty parts. A single value yields a one-element list.
+func splitFilterList(raw string) []string {
+	var out []string
+	for _, part := range strings.Split(raw, ",") {
+		if p := strings.TrimSpace(part); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // GetVulnerabilityByID returns a vulnerability by ID

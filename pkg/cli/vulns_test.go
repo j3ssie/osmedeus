@@ -53,9 +53,31 @@ func TestSeveritySelection(t *testing.T) {
 		vulnsMinSeverity = "info"
 		got, err := severitySelection()
 		require.NoError(t, err)
-		assert.Equal(t, []string{"critical", "high", "medium", "low", "info"}, got)
+		assert.Equal(t, []string{"critical", "high", "medium", "low", "suspect", "info"}, got)
 		// "unknown" is an internal alias for info, not a user-facing band
 		assert.NotContains(t, got, "unknown")
+	})
+
+	t.Run("suspect sits between low and info", func(t *testing.T) {
+		resetVulnSeverityFlags()
+		vulnsSeverity = "suspect"
+		got, err := severitySelection()
+		require.NoError(t, err)
+		assert.Equal(t, []string{"suspect"}, got)
+
+		resetVulnSeverityFlags()
+		vulnsMinSeverity = "low"
+		got, err = severitySelection()
+		require.NoError(t, err)
+		assert.NotContains(t, got, "suspect", "an unconfirmed lead is below low")
+
+		resetVulnSeverityFlags()
+		vulnsMinSeverity = "suspect"
+		got, err = severitySelection()
+		require.NoError(t, err)
+		assert.Equal(t, []string{"critical", "high", "medium", "low", "suspect"}, got)
+		assert.Greater(t, severityRank("suspect"), severityRank("info"))
+		assert.Less(t, severityRank("suspect"), severityRank("low"))
 	})
 
 	t.Run("invalid severity is rejected", func(t *testing.T) {

@@ -17,8 +17,8 @@ import (
 // @Produce json
 // @Param workspace query string false "Filter by workspace name"
 // @Param org query string false "Filter by org name or UUID (omit for all orgs)"
-// @Param severity query string false "Filter by severity (critical, high, medium, low, info)"
-// @Param confidence query string false "Filter by confidence (certain, firm, tentative, manual review required)"
+// @Param severity query string false "Filter by severity, comma-separated for several (critical, high, medium, low, suspect, info)"
+// @Param confidence query string false "Filter by confidence, comma-separated for several (certain, firm, tentative, manual review required)"
 // @Param asset_value query string false "Filter by asset value (partial match)"
 // @Param offset query int false "Number of records to skip" default(0)
 // @Param limit query int false "Maximum number of records to return" default(20)

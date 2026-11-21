@@ -34,7 +34,10 @@ var (
 // severityOrder is the single source of severity ordering, most severe first. It is
 // the --severity whitelist, the --min-severity expansion and the --stats display
 // order, so a band cannot be added to one and forgotten in the others.
-var severityOrder = []string{"critical", "high", "medium", "low", "info"}
+//
+// "suspect" is a lead the scanner could not confirm (vigolium files every
+// Tentative finding there): above info because it names a weakness, below low.
+var severityOrder = []string{"critical", "high", "medium", "low", "suspect", "info"}
 
 // severityRank returns a sortable rank, highest for the most severe. An
 // unrecognised or empty severity ranks lowest so it never outranks a real finding.
@@ -58,7 +61,7 @@ var vulnsCmd = &cobra.Command{
 func init() {
 	vulnsCmd.Flags().StringVarP(&vulnsWorkspace, "workspace", "w", "", "filter by workspace name")
 	vulnsCmd.Flags().StringVar(&vulnsSeverity, "severity", "", "filter by exact severity (comma-separated, e.g., critical,high)")
-	vulnsCmd.Flags().StringVar(&vulnsMinSeverity, "min-severity", "", "only show findings at or above this severity (info|low|medium|high|critical)")
+	vulnsCmd.Flags().StringVar(&vulnsMinSeverity, "min-severity", "", "only show findings at or above this severity (info|suspect|low|medium|high|critical)")
 	vulnsCmd.Flags().StringVar(&vulnsConfidence, "confidence", "", "filter by confidence (fuzzy match, e.g., certain)")
 	vulnsCmd.Flags().StringVar(&vulnsTemplate, "template", "", "filter by detection template/module id (fuzzy match on vuln_info)")
 	vulnsCmd.Flags().StringVar(&vulnsType, "type", "", "filter by asset_type (fuzzy match, e.g., http)")

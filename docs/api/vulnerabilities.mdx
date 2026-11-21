@@ -33,6 +33,12 @@ curl "http://localhost:8002/osm/api/vulnerabilities?severity=critical" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+**Filter by several severities (comma-separated):**
+```bash
+curl "http://localhost:8002/osm/api/vulnerabilities?severity=critical,high" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 **Filter by confidence:**
 ```bash
 curl "http://localhost:8002/osm/api/vulnerabilities?confidence=Certain" \
@@ -56,8 +62,8 @@ curl "http://localhost:8002/osm/api/vulnerabilities?workspace=example.com&severi
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `workspace` | string | - | Filter by workspace name |
-| `severity` | string | - | Filter by severity (critical, high, medium, low, info) |
-| `confidence` | string | - | Filter by confidence (Certain, Firm, Tentative, Manual Review Required) |
+| `severity` | string | - | Filter by severity; comma-separate several (critical, high, medium, low, suspect, info). `suspect` is a lead the scanner could not confirm |
+| `confidence` | string | - | Filter by confidence; comma-separate several (Certain, Firm, Tentative, Manual Review Required) |
 | `asset_value` | string | - | Filter by asset value (partial match) |
 | `offset` | int | 0 | Number of records to skip |
 | `limit` | int | 20 | Maximum records to return (max 10000) |
@@ -78,6 +84,9 @@ curl "http://localhost:8002/osm/api/vulnerabilities?workspace=example.com&severi
       "asset_type": "web",
       "asset_value": "https://example.com/login",
       "tags": ["sqli", "owasp-top10", "authentication"],
+      "cwe_id": "CWE-89",
+      "cvss_score": 9.8,
+      "remediation": "Use parameterized queries for every database call.",
       "detail_http_request": "POST /login HTTP/1.1\nHost: example.com\n...",
       "detail_http_response": "HTTP/1.1 200 OK\n...",
       "raw_vuln_json": "{\"template\":\"sqli-login.yaml\",...}",
