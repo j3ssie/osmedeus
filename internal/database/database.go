@@ -273,6 +273,11 @@ func Migrate(ctx context.Context) error {
 		return err
 	}
 
+	// Add classification columns (cwe_id, cvss_score, remediation) to vulnerabilities
+	if err := addVulnClassificationColumns(ctx); err != nil {
+		return err
+	}
+
 	// Add org_uuid to the org-scoped tables if it doesn't exist (for existing databases)
 	if err := addOrgUUIDColumns(ctx); err != nil {
 		return err
@@ -686,6 +691,33 @@ func addVulnFindingHashColumn(ctx context.Context) error {
 			return nil
 		}
 		return fmt.Errorf("failed to add finding_hash column: %w", err)
+	}
+	return nil
+}
+
+// addVulnClassificationColumns adds the CWE, CVSS and remediation columns to the
+// vulnerabilities table for existing databases. Scanners such as vigolium report
+// these per finding; before the columns existed they survived only inside
+// raw_vuln_json.
+func addVulnClassificationColumns(ctx context.Context) error {
+	columns := []string{
+		"ALTER TABLE vulnerabilities ADD COLUMN cwe_id TEXT DEFAULT ''",
+		// DOUBLE PRECISION, not REAL: on PostgreSQL REAL is float4, so 3.1 would
+		// scan back as 3.0999999. SQLite gives both REAL affinity.
+		"ALTER TABLE vulnerabilities ADD COLUMN cvss_score DOUBLE PRECISION DEFAULT 0",
+		"ALTER TABLE vulnerabilities ADD COLUMN remediation TEXT DEFAULT ''",
+	}
+	for _, ddl := range columns {
+		_, err := db.ExecContext(ctx, ddl)
+		if err != nil {
+			errStr := strings.ToLower(err.Error())
+			if strings.Contains(errStr, "duplicate column") ||
+				strings.Contains(errStr, "already exists") ||
+				strings.Contains(errStr, "sqlstate 42701") {
+				continue
+			}
+			return fmt.Errorf("failed to add vulnerability classification column: %w", err)
+		}
 	}
 	return nil
 }

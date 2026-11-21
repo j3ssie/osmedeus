@@ -205,6 +205,16 @@ func unwrapEnvelopeJSON(raw []byte) (extracted []byte, skip bool) {
 		"response_title":          "title",
 		"ip":                      "host_ip",
 		"hostname":                "input",
+		"technology":              "tech",
+	}
+
+	// response_time_ms is a number; Asset.ResponseTime ("time") is a string in
+	// httpx's duration form, so convert rather than rename.
+	if ms, ok := data["response_time_ms"].(float64); ok {
+		if _, exists := data["time"]; !exists && ms > 0 {
+			data["time"] = strconv.FormatFloat(ms, 'f', -1, 64) + "ms"
+		}
+		delete(data, "response_time_ms")
 	}
 	for oldKey, newKey := range fieldRemap {
 		if val, ok := data[oldKey]; ok {
@@ -3085,6 +3095,9 @@ func hasVulnChanged(existing, new *database.Vulnerability) bool {
 		existing.VulnTitle != new.VulnTitle ||
 		existing.VulnDesc != new.VulnDesc ||
 		existing.Confidence != new.Confidence ||
+		existing.CWEID != new.CWEID ||
+		existing.CVSSScore != new.CVSSScore ||
+		existing.Remediation != new.Remediation ||
 		!slicesEqual(existing.Tags, new.Tags)
 }
 
@@ -3203,10 +3216,36 @@ func mapVigoliumFindingToVuln(data map[string]interface{}, workspace, rawLine st
 		vuln.DetailHTTPResponse = v
 	}
 
-	// Tags from module_type, finding_source, status
-	for _, key := range []string{"module_type", "finding_source", "status"} {
-		if v, ok := data[key].(string); ok && v != "" {
-			vuln.Tags = append(vuln.Tags, v)
+	// Classification
+	if v, ok := data["cwe_id"].(string); ok {
+		vuln.CWEID = v
+	}
+	if v, ok := data["cvss_score"].(float64); ok {
+		vuln.CVSSScore = v
+	}
+	if v, ok := data["remediation"].(string); ok {
+		vuln.Remediation = v
+	}
+
+	// Tags: module_type, finding_source and status, then vuln_class (vigolium
+	// v0.5.7+, a stable class such as "sqli") and vigolium's own tags.
+	seen := make(map[string]bool)
+	addTag := func(s string) {
+		if s != "" && !seen[s] {
+			seen[s] = true
+			vuln.Tags = append(vuln.Tags, s)
+		}
+	}
+	for _, key := range []string{"module_type", "finding_source", "status", "vuln_class"} {
+		if v, ok := data[key].(string); ok {
+			addTag(v)
+		}
+	}
+	if arr, ok := data["tags"].([]interface{}); ok {
+		for _, t := range arr {
+			if s, ok := t.(string); ok {
+				addTag(s)
+			}
 		}
 	}
 

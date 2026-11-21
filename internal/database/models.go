@@ -401,6 +401,9 @@ type Vulnerability struct {
 	AssetType          string   `bun:"asset_type" json:"asset_type"`
 	AssetValue         string   `bun:"asset_value" json:"asset_value"`
 	Tags               []string `bun:"tags,type:json" json:"tags,omitempty"`
+	CWEID              string   `bun:"cwe_id" json:"cwe_id,omitempty"`         // e.g. "CWE-22"
+	CVSSScore          float64  `bun:"cvss_score" json:"cvss_score,omitempty"` // 0 when the source gives none
+	Remediation        string   `bun:"remediation" json:"remediation,omitempty"`
 	DetailHTTPRequest  string   `bun:"detail_http_request" json:"detail_http_request"`
 	DetailHTTPResponse string   `bun:"detail_http_response" json:"detail_http_response"`
 	RawVulnJSON        string   `bun:"raw_vuln_json" json:"raw_vuln_json"`

@@ -119,6 +119,14 @@ func mergeVulnFields(existing, incoming *database.Vulnerability) {
 	incoming.AssetValue = mergeString(existing.AssetValue, incoming.AssetValue)
 	incoming.Tags = mergeStringSlice(existing.Tags, incoming.Tags)
 
+	// Classification fields — not every source reports them, so an incoming
+	// record that lacks one must not blank what an earlier import stored.
+	incoming.CWEID = mergeString(existing.CWEID, incoming.CWEID)
+	incoming.Remediation = mergeString(existing.Remediation, incoming.Remediation)
+	if incoming.CVSSScore == 0 {
+		incoming.CVSSScore = existing.CVSSScore
+	}
+
 	// Detail fields
 	incoming.DetailHTTPRequest = mergeString(existing.DetailHTTPRequest, incoming.DetailHTTPRequest)
 	incoming.DetailHTTPResponse = mergeString(existing.DetailHTTPResponse, incoming.DetailHTTPResponse)
