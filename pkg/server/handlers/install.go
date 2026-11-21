@@ -72,7 +72,7 @@ func getDirectFetchRegistry(c *fiber.Ctx) error {
 	// Build response with installation status for each binary
 	binariesWithStatus := make(map[string]BinaryStatusEntry)
 	for name, entry := range registry {
-		path, _ := exec.LookPath(name)
+		path, _ := exec.LookPath(installer.LookupName(name, &entry))
 		binariesWithStatus[name] = BinaryStatusEntry{
 			Desc:                entry.Desc,
 			RepoLink:            entry.RepoLink,
@@ -144,12 +144,7 @@ func getNixBuildRegistry(c *fiber.Ctx) error {
 		toolsData := make([]map[string]interface{}, 0)
 		for _, tool := range cat.Tools {
 			// Get entry for validation command check
-			var entryPtr *installer.BinaryEntry
-			if registry != nil {
-				if entry, ok := registry[tool]; ok {
-					entryPtr = &entry
-				}
-			}
+			entryPtr := registry.Entry(tool) // safe on a nil registry
 
 			toolData := map[string]interface{}{
 				"name":      tool,
@@ -164,7 +159,7 @@ func getNixBuildRegistry(c *fiber.Ctx) error {
 					toolData["valide-command"] = entryPtr.ValidateCommand
 				}
 			}
-			if path, err := exec.LookPath(tool); err == nil {
+			if path, err := exec.LookPath(installer.LookupName(tool, entryPtr)); err == nil {
 				toolData["path"] = path
 			}
 			toolsData = append(toolsData, toolData)
@@ -267,43 +262,37 @@ func installBinariesDirectFetch(c *fiber.Ctx, cfg *config.Config, inst *installe
 		binariesFolder = filepath.Join(cfg.BaseFolder, "binaries")
 	}
 
-	var installed []string
-	var failed []map[string]string
-
+	var names []string
 	if req.InstallAll {
 		// Install all binaries from registry (skip optional unless install_optional is true)
 		for name, entry := range registry {
-			// Skip optional binaries unless explicitly requested
 			if !req.InstallOptional && containsOptionalTag(entry.Tags) {
 				continue
 			}
-			if err := installer.InstallBinary(name, registry, binariesFolder, nil); err != nil {
-				failed = append(failed, map[string]string{
-					"name":  name,
-					"error": err.Error(),
-				})
-			} else {
-				installed = append(installed, name)
-			}
+			names = append(names, name)
 		}
 	} else {
-		// Install specified binaries
 		if len(req.Names) == 0 {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error":   true,
 				"message": "names array is required for binary installation (or set install_all=true)",
 			})
 		}
+		names = req.Names
+	}
 
-		for _, name := range req.Names {
-			if err := installer.InstallBinary(name, registry, binariesFolder, nil); err != nil {
-				failed = append(failed, map[string]string{
-					"name":  name,
-					"error": err.Error(),
-				})
-			} else {
-				installed = append(installed, name)
-			}
+	// A binary already on PATH is reported as skipped, not installed.
+	installed, skipped := []string{}, []string{}
+	var failed []map[string]string
+	for _, name := range names {
+		wasPresent, err := installer.InstallBinary(name, registry, binariesFolder, nil)
+		switch {
+		case err != nil:
+			failed = append(failed, map[string]string{"name": name, "error": err.Error()})
+		case wasPresent:
+			skipped = append(skipped, name)
+		default:
+			installed = append(installed, name)
 		}
 	}
 
@@ -312,6 +301,8 @@ func installBinariesDirectFetch(c *fiber.Ctx, cfg *config.Config, inst *installe
 		"registry_mode":   "direct-fetch",
 		"installed":       installed,
 		"installed_count": len(installed),
+		"skipped":         skipped,
+		"skipped_count":   len(skipped),
 		"binaries_folder": binariesFolder,
 	}
 

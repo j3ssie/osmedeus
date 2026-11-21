@@ -232,6 +232,8 @@ curl -X POST http://localhost:8002/osm/api/registry-install \
   "registry_mode": "direct-fetch",
   "installed": ["nuclei", "httpx"],
   "installed_count": 2,
+  "skipped": ["jq"],
+  "skipped_count": 1,
   "binaries_folder": "/home/user/osmedeus-base/binaries",
   "failed": [
     {"name": "ffuf", "error": "download failed"}
@@ -239,6 +241,9 @@ curl -X POST http://localhost:8002/osm/api/registry-install \
   "failed_count": 1
 }
 ```
+
+`skipped` lists binaries already on PATH (linked into the binaries folder, nothing
+installed). They are not counted in `installed`.
 
 ---
 

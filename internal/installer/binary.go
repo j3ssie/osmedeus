@@ -301,15 +301,25 @@ func IsCoreUnixTool(name string) bool {
 // `sort --help` (no distro ships a `coreutils` executable) and "minio-client" by
 // `mc` — so looking up the key reports a false "not installed".
 //
-// Only the first word is used and nothing is executed, so this is safe for a
-// registry from an untrusted source.
+// The first word is trusted only when the command is plainly `<binary> [-flags]`.
+// A check that runs some other program on an argument — `python3 -c 'import x'`,
+// `test -f ~/x` — names an interpreter or helper, not the package, so it falls
+// back to the registry key rather than calling the package installed whenever
+// python3 is. Nothing is executed, so this is safe for an untrusted registry.
 func LookupName(name string, entry *BinaryEntry) string {
-	if entry != nil {
-		if fields := strings.Fields(entry.ValidateCommand); len(fields) > 0 {
-			return fields[0]
+	if entry == nil || strings.ContainsAny(entry.ValidateCommand, "|;&$`<>()'\"\\") {
+		return name
+	}
+	fields := strings.Fields(entry.ValidateCommand)
+	if len(fields) == 0 {
+		return name
+	}
+	for _, arg := range fields[1:] {
+		if !strings.HasPrefix(arg, "-") {
+			return name
 		}
 	}
-	return name
+	return fields[0]
 }
 
 // LinkIfPresent reports whether the entry's binary is already on PATH, and if so
@@ -362,10 +372,10 @@ func isBinaryInstalled(name string, entry *BinaryEntry, allowExec bool) bool {
 	// If validate command is provided and not empty, use it
 	if entry != nil && entry.ValidateCommand != "" {
 		vc := entry.ValidateCommand
-		// If validate command is a bare binary name (no spaces, flags, or shell operators),
-		// check PATH instead of executing — many tools (e.g. massdns) exit non-zero
-		// when run without arguments, causing false negatives.
-		if !strings.ContainsAny(vc, " \t|;&") {
+		// A bare binary name is looked up on PATH, never executed — many tools
+		// (e.g. massdns) exit non-zero when run without arguments. LookupName is
+		// the one parser of valide-command, so "bare" means what it says.
+		if LookupName(name, entry) == vc {
 			return IsBinaryInPath(vc)
 		}
 		if allowExec {
@@ -378,8 +388,9 @@ func isBinaryInstalled(name string, entry *BinaryEntry, allowExec bool) bool {
 		// Untrusted registry: fall through to the PATH check below rather than
 		// executing a command the caller supplied.
 	}
-	// Fall back to default PATH check
-	if IsBinaryInPath(name) {
+	// Fall back to a PATH check, by the binary the entry is validated with
+	// (coreutils -> sort) rather than its registry key.
+	if IsBinaryInPath(LookupName(name, entry)) {
 		return true
 	}
 	// nuclei-templates is a directory cloned to $HOME/nuclei-templates, not a binary.
@@ -396,35 +407,31 @@ func isBinaryInstalled(name string, entry *BinaryEntry, allowExec bool) bool {
 	return false
 }
 
-// InstallBinary installs a single binary from the registry
-// Skips installation if the binary is already available in PATH
+// InstallBinary installs a single binary from the registry. When the binary is
+// already on PATH it is linked into binariesFolder instead and skipped=true is
+// returned, so callers can count it apart from a fresh install.
 // Optional customHeaders map adds custom HTTP headers for downloads
-func InstallBinary(name string, registry BinaryRegistry, binariesFolder string, customHeaders map[string]string) error {
-	entryPtr := registry.Entry(name)
+func InstallBinary(name string, registry BinaryRegistry, binariesFolder string, customHeaders map[string]string) (skipped bool, err error) {
+	entry := registry.Entry(name)
 
-	// Check if binary already exists in PATH, by the name it is validated with
-	// (coreutils -> sort), not just the registry key.
-	if lookup := LookupName(name, entryPtr); IsBinaryInPath(lookup) {
-		if IsCoreUnixTool(lookup) {
-			// Core Unix tools: show exists, don't copy
-			fmt.Printf("[%s] Binary '%s' already available in PATH (system tool, skipping copy)\n",
-				terminal.Gray(terminal.SymbolBowtie), terminal.HiBlue(name))
-			return nil
+	// Present by the name it is validated with (coreutils -> sort), not just the key.
+	if LinkIfPresent(name, entry, binariesFolder) {
+		msg := "already available in PATH, symlinking to external-binaries"
+		if IsCoreUnixTool(LookupName(name, entry)) {
+			msg = "already available in PATH (system tool, skipping copy)"
 		}
-		// Non-core tools: show exists, still symlink to external-binaries
-		fmt.Printf("[%s] Binary '%s' already available in PATH, symlinking to external-binaries\n",
-			terminal.Gray(terminal.SymbolBowtie), terminal.HiBlue(name))
-		if entryPtr != nil {
-			_ = SymlinkInstalledBinaryToFolder(name, entryPtr, binariesFolder)
-		}
-		return nil
+		fmt.Printf("[%s] Binary '%s' %s\n", terminal.Gray(terminal.SymbolBowtie), terminal.HiBlue(name), msg)
+		return true, nil
 	}
 
-	if entryPtr == nil {
-		return fmt.Errorf("binary '%s' not found in registry", name)
+	if entry == nil {
+		return false, fmt.Errorf("binary '%s' not found in registry", name)
 	}
-	entry := *entryPtr
+	return false, installEntry(name, entry, binariesFolder, customHeaders)
+}
 
+// installEntry installs a registry entry known not to be on PATH.
+func installEntry(name string, entry *BinaryEntry, binariesFolder string, customHeaders map[string]string) error {
 	// Check for go-getter package manager
 	if entry.IsGoGetterPackage() {
 		pkg := entry.GetGoGetterPackagePath()
@@ -471,7 +478,7 @@ func InstallBinary(name string, registry BinaryRegistry, binariesFolder string, 
 		}
 
 		// After successful command execution, symlink the binary to external-binaries
-		if err := SymlinkInstalledBinaryToFolder(name, &entry, binariesFolder); err != nil {
+		if err := SymlinkInstalledBinaryToFolder(name, entry, binariesFolder); err != nil {
 			logger.Get().Warn("Failed to symlink binary to external-binaries folder",
 				zap.String("name", name),
 				zap.Error(err))
@@ -507,18 +514,13 @@ func maybePrependSudo(command string) (string, error) {
 	if !sudoApplies || isRoot() {
 		return command, nil
 	}
-	needsSudo := strings.HasPrefix(command, "sudo ")
-	if !needsSudo {
-		pkgManagers := []string{"apt ", "apt-get ", "dnf ", "yum ", "pacman ", "zypper ", "apk "}
-		for _, prefix := range pkgManagers {
-			if strings.HasPrefix(command, prefix) {
-				command = "sudo " + command
-				needsSudo = true
-				break
-			}
+	for _, prefix := range []string{"apt ", "apt-get ", "dnf ", "yum ", "pacman ", "zypper ", "apk "} {
+		if strings.HasPrefix(command, prefix) {
+			command = "sudo " + command
+			break
 		}
 	}
-	if needsSudo && !sudoAvailable() {
+	if strings.HasPrefix(command, "sudo ") && !sudoAvailable() {
 		return "", fmt.Errorf("%q needs root, but osmedeus is not running as root and sudo is not installed: "+
 			"install the package yourself, or re-run as root", strings.TrimPrefix(command, "sudo "))
 	}

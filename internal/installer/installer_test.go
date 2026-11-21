@@ -111,19 +111,22 @@ func TestMaybePrependSudo(t *testing.T) {
 		}
 	})
 
-	t.Run("root never needs sudo", func(t *testing.T) {
-		stubSudo(t, true, true, false)
-		got, err := maybePrependSudo("apt install coreutils")
-		require.NoError(t, err)
-		assert.Equal(t, "apt install coreutils", got)
-	})
-
-	t.Run("darwin and windows are left alone", func(t *testing.T) {
-		stubSudo(t, false, false, false)
-		got, err := maybePrependSudo("apt install coreutils")
-		require.NoError(t, err)
-		assert.Equal(t, "apt install coreutils", got)
-	})
+	// Root, or an OS where package managers take no sudo: left alone, even
+	// with no sudo installed.
+	for _, tc := range []struct {
+		name          string
+		applies, root bool
+	}{
+		{"root never needs sudo", true, true},
+		{"darwin and windows are left alone", false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			stubSudo(t, tc.applies, tc.root, false)
+			got, err := maybePrependSudo("apt install coreutils")
+			require.NoError(t, err)
+			assert.Equal(t, "apt install coreutils", got)
+		})
+	}
 
 	// Issue #330: a rootless container without sudo ran "sudo apt install ..."
 	// and failed with "sh: sudo: not found" / exit 127.
@@ -190,4 +193,10 @@ func TestIsBinaryInstalledNoExec(t *testing.T) {
 	assert.True(t, IsBinaryInstalled("definitely-not-a-real-binary-xyz", entry))
 	_, err = os.Stat(marker)
 	assert.NoError(t, err, "trusted variant should still run the validate command")
+}
+
+// Issue #330, untrusted-registry status: without executing anything, a package
+// validated by `sort --help` is found by sort, not by its absent key.
+func TestIsBinaryInstalledNoExec_FindsByValidateBinary(t *testing.T) {
+	assert.True(t, IsBinaryInstalledNoExec("coreutils", &BinaryEntry{ValidateCommand: "sort --help"}))
 }

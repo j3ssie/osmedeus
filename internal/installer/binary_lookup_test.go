@@ -20,8 +20,17 @@ func TestLookupName(t *testing.T) {
 		{"minio-client", &BinaryEntry{ValidateCommand: "mc"}, "mc"},
 		{"jq", &BinaryEntry{ValidateCommand: "jq --version"}, "jq"},
 		{"httpx", &BinaryEntry{}, "httpx"},
+		{"nuclei", &BinaryEntry{ValidateCommand: "nuclei -version"}, "nuclei"},
 		{"blank", &BinaryEntry{ValidateCommand: "   "}, "blank"},
 		{"nil-entry", nil, "nil-entry"},
+		// A check that runs another program on an argument names that program,
+		// not the package: fall back to the key, never "installed because
+		// python3 is".
+		{"pymod", &BinaryEntry{ValidateCommand: "python3 -c 'import pymod'"}, "pymod"},
+		{"templates", &BinaryEntry{ValidateCommand: "test -d /opt/templates"}, "templates"},
+		{"marker", &BinaryEntry{ValidateCommand: "touch /tmp/x"}, "marker"},
+		{"piped", &BinaryEntry{ValidateCommand: "foo --version | grep 1"}, "piped"},
+		{"subshell", &BinaryEntry{ValidateCommand: "sh -c foo"}, "subshell"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -63,7 +72,9 @@ func TestInstallBinary_SkipsPackageFoundByValidateCommand(t *testing.T) {
 	binDir := t.TempDir()
 	registry := BinaryRegistry{"coreutils": entryWithMarkerInstall("sort --help", marker)}
 
-	require.NoError(t, InstallBinary("coreutils", registry, binDir, nil))
+	skipped, err := InstallBinary("coreutils", registry, binDir, nil)
+	require.NoError(t, err)
+	assert.True(t, skipped, "reported as skipped, not installed")
 
 	assert.NoFileExists(t, marker, "coreutils is present (sort is on PATH); nothing should be installed")
 	assert.NoFileExists(t, filepath.Join(binDir, "coreutils"),
@@ -76,7 +87,9 @@ func TestInstallBinary_LinksNonCoreToolFoundByValidateCommand(t *testing.T) {
 	binDir := t.TempDir()
 	registry := BinaryRegistry{"fake-minio-client": entryWithMarkerInstall("fakemc", marker)}
 
-	require.NoError(t, InstallBinary("fake-minio-client", registry, binDir, nil))
+	skipped, err := InstallBinary("fake-minio-client", registry, binDir, nil)
+	require.NoError(t, err)
+	assert.True(t, skipped)
 
 	assert.NoFileExists(t, marker, "already installed as fakemc; must not reinstall")
 	assert.FileExists(t, filepath.Join(binDir, "fake-minio-client"))
@@ -95,22 +108,24 @@ func TestSymlinkInstalledBinaryToFolder_MultiWordValidateCommand(t *testing.T) {
 	assert.FileExists(t, filepath.Join(binDir, "fakejq"))
 }
 
-func TestLinkIfPresent(t *testing.T) {
-	fakeBinDir(t, "fakepresent")
+func TestLinkIfPresent_Missing(t *testing.T) {
 	binDir := t.TempDir()
-
-	assert.True(t, LinkIfPresent("fakepresent", &BinaryEntry{}, binDir))
-	assert.FileExists(t, filepath.Join(binDir, "fakepresent"))
-
-	assert.True(t, LinkIfPresent("coreutils", &BinaryEntry{ValidateCommand: "sort --help"}, binDir))
-	assert.NoFileExists(t, filepath.Join(binDir, "coreutils"))
-
 	assert.False(t, LinkIfPresent("definitely-not-installed-xyz", nil, binDir))
+	assert.False(t, LinkIfPresent("definitely-not-installed-xyz", &BinaryEntry{}, binDir))
 }
 
-func TestBinaryRegistryEntry(t *testing.T) {
-	reg := BinaryRegistry{"jq": {ValidateCommand: "jq --version"}}
-	require.NotNil(t, reg.Entry("jq"))
-	assert.Equal(t, "jq --version", reg.Entry("jq").ValidateCommand)
-	assert.Nil(t, reg.Entry("missing"))
+// An interpreter-style check must not make the package look installed, nor
+// link the interpreter in under the package's name.
+func TestInstallBinary_InterpreterValidateCommandStillInstalls(t *testing.T) {
+	fakeBinDir(t, "fakepython")
+	marker := filepath.Join(t.TempDir(), "install-ran")
+	binDir := t.TempDir()
+	registry := BinaryRegistry{"pymod": entryWithMarkerInstall("fakepython -c 'import pymod'", marker)}
+
+	skipped, err := InstallBinary("pymod", registry, binDir, nil)
+	require.NoError(t, err)
+	assert.False(t, skipped, "pymod was installed, not skipped")
+
+	assert.FileExists(t, marker, "pymod is not on PATH; it must be installed")
+	assert.NoFileExists(t, filepath.Join(binDir, "pymod"), "fakepython must not be linked as pymod")
 }

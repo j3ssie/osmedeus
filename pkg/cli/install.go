@@ -620,7 +620,7 @@ func runInstallBinary(cmd *cobra.Command, args []string) error {
 			terminal.Cyan(binariesFolder))
 		printer.Newline()
 
-		failed := installBinariesParallel(allNames, registry, binariesFolder, headers, printer, silent)
+		_, failed := installBinariesParallel(allNames, registry, binariesFolder, headers, printer, silent)
 		printer.Newline()
 		printFailedBinariesSummary(printer, failed)
 		ensureBinariesPathInEnv(printer, binariesFolder, true)
@@ -688,7 +688,7 @@ func runInstallBinary(cmd *cobra.Command, args []string) error {
 	var failed []string
 	for _, name := range binaryNames {
 		printer.Info("Processing binary: %s", name)
-		if err := installer.InstallBinary(name, registry, binariesFolder, headers); err != nil {
+		if _, err := installer.InstallBinary(name, registry, binariesFolder, headers); err != nil {
 			printer.Error("Failed to install %s: %s", name, err)
 			lastErr = err
 			failed = append(failed, name)
@@ -1774,12 +1774,15 @@ func renderMultiRowDisplay(rows [][]string, status map[string]string, spinnerFra
 	}
 }
 
-// installBinariesParallel installs binaries using parallel workers with multi-row spinner
+// installBinariesParallel installs names on parallel workers behind a multi-row
+// spinner. It returns the names its
+// pre-check found already on PATH (skipped, nothing installed) and the names
+// whose install failed; every other name was installed.
 func installBinariesParallel(names []string, registry installer.BinaryRegistry,
-	binariesFolder string, headers map[string]string, printer *terminal.Printer, silent bool) (failed []string) {
+	binariesFolder string, headers map[string]string, printer *terminal.Printer, silent bool) (skipped, failed []string) {
 
 	if len(names) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	rows := splitIntoRows(names, binariesPerRow)
@@ -1799,6 +1802,7 @@ func installBinariesParallel(names []string, registry installer.BinaryRegistry,
 	for _, name := range names {
 		if installer.LinkIfPresent(name, registry.Entry(name), binariesFolder) {
 			status[name] = "installed"
+			skipped = append(skipped, name)
 		} else {
 			toInstall = append(toInstall, name)
 		}
@@ -1810,7 +1814,7 @@ func installBinariesParallel(names []string, registry installer.BinaryRegistry,
 			isFirst := true
 			renderMultiRowDisplay(rows, status, spinnerFrames, 0, &statusMu, false, &isFirst)
 		}
-		return nil
+		return skipped, nil
 	}
 	spinnerIdx := 0
 	spinnerDone := make(chan struct{})
@@ -1852,7 +1856,7 @@ func installBinariesParallel(names []string, registry installer.BinaryRegistry,
 				if silent {
 					fmt.Printf("  %s Installing: %s\n", terminal.SymbolBullet, terminal.Cyan(name))
 				}
-				err := installer.InstallBinary(name, registry, binariesFolder, headers)
+				_, err := installer.InstallBinary(name, registry, binariesFolder, headers)
 				statusMu.Lock()
 				if err != nil {
 					status[name] = "failed"
@@ -1884,5 +1888,5 @@ func installBinariesParallel(names []string, registry installer.BinaryRegistry,
 		renderMultiRowDisplay(rows, status, spinnerFrames, 0, &statusMu, false, &isFirstFinal)
 	}
 
-	return failed
+	return skipped, failed
 }

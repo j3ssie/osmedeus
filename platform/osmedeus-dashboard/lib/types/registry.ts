@@ -48,6 +48,9 @@ export interface BinaryInstallResponse {
   registry_mode?: RegistryMode;
   installed: string[];
   installed_count: number;
+  /** Already on PATH: linked, nothing installed. Absent from older servers. */
+  skipped?: string[];
+  skipped_count?: number;
   binaries_folder?: string;
   failed: Array<{ name: string; error?: string }>;
   failed_count: number;

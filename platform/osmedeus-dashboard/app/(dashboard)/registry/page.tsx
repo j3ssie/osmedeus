@@ -293,7 +293,7 @@ export default function RegistryPage() {
         registry_mode: registryMode,
       });
       toast.success(res.message || "Installation complete", {
-        description: `Installed: ${res.installed_count}, Failed: ${res.failed_count}`,
+        description: `Installed: ${res.installed_count}, Already present: ${res.skipped_count ?? 0}, Failed: ${res.failed_count ?? 0}`,
       });
       setSelected({});
       await load();

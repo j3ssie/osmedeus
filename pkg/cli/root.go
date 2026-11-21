@@ -392,17 +392,10 @@ func installRequiredBinaries(cfg *config.Config, printer *terminal.Printer) (ins
 		printer.Warning("Failed to create binaries folder: %s", err)
 	}
 
-	// Collect all non-optional binaries (InstallBinary handles skip logic and shows names)
+	// Collect all non-optional binaries; installBinariesParallel skips those already on PATH
 	var toInstall []string
 	for name, entry := range registry {
-		isOptional := false
-		for _, tag := range entry.Tags {
-			if tag == "optional" {
-				isOptional = true
-				break
-			}
-		}
-		if !isOptional {
+		if !containsTag(entry.Tags, "optional") {
 			toInstall = append(toInstall, name)
 		}
 	}
@@ -429,30 +422,12 @@ func installRequiredBinaries(cfg *config.Config, printer *terminal.Printer) (ins
 		_ = logger.Init(logCfg)
 	}()
 
-	// Install binaries in parallel with multi-row spinner display
-	var failedNames []string
-	if len(toInstall) > 0 {
-		failedNames = installBinariesParallel(toInstall, registry, binariesFolder, nil, printer, false)
-	}
-
-	// Count results
-	installedCount := len(toInstall) - len(failedNames)
-	failedCount := len(failedNames)
-
-	// Count skipped (already in PATH) - these weren't in toInstall
-	skippedCount := 0
-	for name, entry := range registry {
-		isOptional := false
-		for _, tag := range entry.Tags {
-			if tag == "optional" {
-				isOptional = true
-				break
-			}
-		}
-		if !isOptional && installer.IsBinaryInPath(name) {
-			skippedCount++
-		}
-	}
+	// Counts come from the installer's own pre-check, so a binary already on PATH
+	// is counted once, as skipped (not also as installed), and is found by the
+	// name it is validated with (coreutils -> sort).
+	skippedNames, failedNames := installBinariesParallel(toInstall, registry, binariesFolder, nil, printer, false)
+	skippedCount, failedCount := len(skippedNames), len(failedNames)
+	installedCount := len(toInstall) - skippedCount - failedCount
 
 	printer.Newline()
 

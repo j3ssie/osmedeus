@@ -229,8 +229,12 @@ func (i *Installer) InstallBinaryFromRegistry(name, registryPath string) error {
 	}
 
 	i.Printer.Info("Installing binary: %s", name)
-	if err := InstallBinary(name, registry, i.BinariesFolder, i.CustomHeaders); err != nil {
+	skipped, err := InstallBinary(name, registry, i.BinariesFolder, i.CustomHeaders)
+	if err != nil {
 		return fmt.Errorf("failed to install %s: %w", name, err)
+	}
+	if skipped {
+		return nil // InstallBinary already said it is on PATH
 	}
 
 	i.Printer.Success("Binary '%s' installed successfully to %s", name, terminal.Gray(i.BinariesFolder))
@@ -251,12 +255,15 @@ func (i *Installer) InstallAllBinaries(registryPath string) error {
 	var failed []string
 	for _, name := range binaries {
 		i.Printer.Info("Installing: %s", name)
-		if err := InstallBinary(name, registry, i.BinariesFolder, i.CustomHeaders); err != nil {
+		skipped, err := InstallBinary(name, registry, i.BinariesFolder, i.CustomHeaders)
+		if err != nil {
 			i.Printer.Warning("Failed to install %s: %s", name, err)
 			failed = append(failed, name)
 			continue
 		}
-		i.Printer.Success("Installed: %s", name)
+		if !skipped {
+			i.Printer.Success("Installed: %s", name)
+		}
 	}
 
 	if len(failed) > 0 {
