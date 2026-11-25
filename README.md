@@ -62,15 +62,13 @@ See [Quickstart](https://docs.osmedeus.org/quickstart/) for setup and [Installat
 
 [Infistar.cc](https://infistar.cc/register?aff=OSMEDEUS&ref_source=link) serves Claude, GPT, Gemini, Grok, DeepSeek and more on one API key, at a fraction of official prices.
 
-- **Up to 99% off.** Pricing starts at 0.1x the official rate.
-- **Official upstreams and 100% genuine models.** No downgrades, no dilution, and every model is verifiable.
-- **1,000+ redundant routes with automatic failover.** When one route fails, the next takes over.
-- **200+ models from 16 brands.** Text, image, and video on one key.
-- **Recommended by 100+ open source projects**, the largest with 100k+ stars.
-- **Built for Osmedeus.** Run the agentic LLM steps and multi-model security automation against one API key.
-- **¥5 free for Osmedeus users** who sign up through the [exclusive link](https://infistar.cc/register?aff=OSMEDEUS&ref_source=link).
-
-[Try Infistar.cc](https://infistar.cc/register?aff=OSMEDEUS&ref_source=link)
+💥 Up to 99% off: from 0.1x official pricing
+✅ Official upstreams, 100% genuine models: no downgrades, no dilution, every model verifiable
+⚡ 1,000+ redundant routes with automatic failover: one route stumbles, the next takes over
+🧩 200+ models from 16 brands: text, image and video with one key
+🏆 Recommended by 100+ top open-source projects, the largest with 100k+ stars
+🎯 Run Osmedeus's agentic LLM workflows and multi-model security automation with one unified API key
+🎁 Osmedeus users: sign up through the exclusive link and get ¥5 free through the [exclusive link](https://infistar.cc/register?aff=OSMEDEUS&ref_source=link).
 
 
 ## Quick start
