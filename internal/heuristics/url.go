@@ -121,12 +121,17 @@ func ExtractRepoSlug(host, urlPath string) string {
 		return ""
 	}
 
-	// Truncate path at first archive/non-repo prefix
+	// One cut at the earliest prefix. ToLower indexes are not safe to reapply
+	// after urlPath shrinks, and ToLower can change byte length.
 	lower := strings.ToLower(urlPath)
-	for _, prefix := range archivePathPrefixes {
-		if idx := strings.Index(lower, prefix); idx != -1 {
-			urlPath = urlPath[:idx]
+	if len(lower) == len(urlPath) {
+		cut := len(urlPath)
+		for _, prefix := range archivePathPrefixes {
+			if idx := strings.Index(lower, prefix); idx != -1 && idx < cut {
+				cut = idx
+			}
 		}
+		urlPath = urlPath[:cut]
 	}
 
 	// Clean and split path into segments
