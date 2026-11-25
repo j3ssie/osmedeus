@@ -3,7 +3,7 @@
 <p align="center">
   <a href="https://www.osmedeus.org"><img alt="Osmedeus" src="https://raw.githubusercontent.com/osmedeus/assets/main/osm-logo-with-white-border.png" height="140" /></a>
   <br />
-  <strong>Osmedeus - A Modern Orchestration Engine for Security</strong>
+  <strong>A modern orchestration engine for security</strong>
 
   <p align="center">
   <a href="https://docs.osmedeus.org/"><img src="https://img.shields.io/badge/Documentation-0078D4?style=for-the-badge&logo=GitBook&logoColor=39ff14&labelColor=black&color=black"></a>
@@ -16,20 +16,20 @@
 
 ## What is Osmedeus?
 
-[Osmedeus](https://www.osmedeus.org) is a security focused declarative orchestration engine that simplifies complex workflow automation into auditable YAML definitions, complete with encrypted data handling, secure credential management, and sandboxed execution.
+[Osmedeus](https://www.osmedeus.org) is a security-focused declarative orchestration engine. It defines workflow automation in YAML you can read and audit, with encrypted data handling, credential management, and sandboxed execution.
 
-Built for both beginners and experts, it delivers powerful, composable automation without sacrificing the integrity and safety of your infrastructure.
+A workflow composes from modules, so the same YAML runs on your host, in Docker, or over SSH.
 
-## Key Features
+## Key features
 
-- **Declarative YAML Workflows** - Define pipelines with hooks, decision routing, module exclusion, and conditional branching across multiple runners (host, Docker, SSH)
-- **Distributed Execution** - Redis-based master-worker pattern with queue system, webhook triggers, and file sync across workers
-- **Rich Function Library** - 80+ utility functions including nmap integration, tmux sessions, SSH execution, TypeScript/Python scripting, SARIF parsing, and CDN/WAF classification
-- **Event-Driven Scheduling** - Cron, file-watch, and event triggers with filtering, deduplication, and delayed task queues
-- **Agentic LLM Steps** - Tool-calling agent loops with sub-agent orchestration, memory management, and structured output; plus ACP subprocess agents (Claude Code, Codex, OpenCode, Gemini)
-- **Cloud Infrastructure** - Provision and run scans across DigitalOcean, AWS, GCP, Linode, and Azure with cost controls and automatic cleanup
-- **Rich CLI Interface** - Interactive database queries, bulk function evaluation, workflow linting, progress bars, and comprehensive usage examples
-- **REST API & Web UI** - Full API server with webhook triggers, database queries, and embedded dashboard for visualization
+- **Declarative YAML workflows.** Define pipelines with hooks, decision routing, module exclusion, and conditional branching across the host, Docker, and SSH runners.
+- **Distributed execution.** A Redis-backed master and worker setup with a task queue, webhook triggers, and file sync between workers.
+- **Function library.** 80+ utility functions, including nmap integration, tmux sessions, SSH execution, TypeScript and Python scripting, SARIF parsing, and CDN and WAF classification.
+- **Event-driven scheduling.** Cron, file-watch, and event triggers with filtering, deduplication, and delayed task queues.
+- **Agentic LLM steps.** Tool-calling agent loops with sub-agent orchestration, memory management, and structured output, plus ACP subprocess agents (Claude Code, Codex, OpenCode, Gemini).
+- **Cloud infrastructure.** Provision machines and run scans on DigitalOcean, AWS, GCP, Linode, and Azure, with cost controls and automatic cleanup.
+- **CLI.** Interactive database queries, bulk function evaluation, workflow linting, progress bars, and usage examples for every command.
+- **REST API and web UI.** An API server with webhook triggers and database queries, and an embedded dashboard that renders the results.
 
 See [Documentation Page](https://docs.osmedeus.org/) for more details.
 
@@ -45,9 +45,9 @@ curl -sSL http://www.osmedeus.org/install.sh | bash
 npm install -g @j3ssie/osmedeus
 ```
 
-Ships prebuilt binaries for linux and macOS on x64/arm64.
+The npm package ships prebuilt binaries for Linux and macOS on x64 and arm64.
 
-See [Quickstart](https://docs.osmedeus.org/quickstart/) for quick setup and [Installation](https://docs.osmedeus.org/installation/) for advanced configurations.
+See [Quickstart](https://docs.osmedeus.org/quickstart/) for setup and [Installation](https://docs.osmedeus.org/installation/) for advanced configuration.
 
 | CLI Usage | Web UI Assets |
 |-----------|---------------|
@@ -56,7 +56,24 @@ See [Quickstart](https://docs.osmedeus.org/quickstart/) for quick setup and [Ins
 | ![Workflow Visualization](https://github.com/osmedeus/docs/blob/main/images/web-ui/web-ui-workflow.png?raw=true) | ![Vulnerabilities](https://github.com/osmedeus/docs/blob/main/images/web-ui/web-ui-vuln.png?raw=true) |
 
 
-## Quick Start
+## Sponsor: Infistar.cc
+
+[![Osmedeus and Infistar. Claude, GPT, Gemini, Grok, DeepSeek and more on one key at a fraction of official prices](assets/infistar-banner.png)](https://infistar.cc/register?aff=OSMEDEUS&ref_source=link)
+
+[Infistar.cc](https://infistar.cc/register?aff=OSMEDEUS&ref_source=link) serves Claude, GPT, Gemini, Grok, DeepSeek and more on one API key, at a fraction of official prices.
+
+- **Up to 99% off.** Pricing starts at 0.1x the official rate.
+- **Official upstreams and 100% genuine models.** No downgrades, no dilution, and every model is verifiable.
+- **1,000+ redundant routes with automatic failover.** When one route fails, the next takes over.
+- **200+ models from 16 brands.** Text, image, and video on one key.
+- **Recommended by 100+ open source projects**, the largest with 100k+ stars.
+- **Built for Osmedeus.** Run the agentic LLM steps and multi-model security automation against one API key.
+- **¥5 free for Osmedeus users** who sign up through the [exclusive link](https://infistar.cc/register?aff=OSMEDEUS&ref_source=link).
+
+[Try Infistar.cc](https://infistar.cc/register?aff=OSMEDEUS&ref_source=link)
+
+
+## Quick start
 
 ```bash
 # Run a module workflow
@@ -143,7 +160,7 @@ docker run --rm -v $(pwd)/output:/root/workspaces-osmedeus \
 
 For more CLI usage and example commands, refer to the [CLI Reference](https://docs.osmedeus.org/getting-started/cli).
 
-## High-Level Architecture
+## High-level architecture
 
 ```plaintext
 ┌───────────────────────────────────────────────────────────────────────────┐
@@ -171,23 +188,24 @@ For more CLI usage and example commands, refer to the [CLI Reference](https://do
 
 For more information about the architecture, refer to the [Architecture Documentation](https://docs.osmedeus.org/architecture).
 
-## Roadmap and Status
+## Roadmap and status
 
-The high-level ambitious plan for the project, in order:
+The plan for the project, in order:
 
 |  #  | Step                                                                        |  Status |
 | :-: | --------------------------------------------------------------------------- |  :----: |
-|  1  | Osmedeus Engine reforged with a next-generation architecture                |    ✅   |
+|  1  | Rebuild the Osmedeus engine on a new architecture                           |    ✅   |
 |  2  | Flexible workflows and step types                                           |    ✅   |
-|  3  | Event-driven architectural model and the different trigger event categories |    ✅   |
-|  4  | Beautiful UI for visualize results and workflow diagram                     |    ✅   |
-|  5  | Rewriting the workflow to adapt to new architecture and syntax              |    ✅   |
-|  6  | Testing more utility functions like notifications                           |    ✅   |
-|  7  | SAST integration with SARIF parsing (Semgrep, Trivy, etc.)                  |    ✅   |
-|  8  | Cloud integration, which supports running the scan on the cloud provider.   |    ✅   |
-|  9  | Generate diff reports showing new/removed/unchanged assets between runs.    |    ❌   |
-|  10 | Adding step type from cloud provider that can be run via serverless         |    ❌   |
-|  N  | Fancy features (to be discussed later)                                      |    ❌   |
+|  3  | Event-driven model and the trigger event categories                         |    ✅   |
+|  4  | Web UI for results and workflow diagrams                                    |    ✅   |
+|  5  | Rewrite the workflows for the new architecture and syntax                   |    ✅   |
+|  6  | Test more utility functions, such as notifications                          |    ✅   |
+|  7  | SAST integration with SARIF parsing (Semgrep, Trivy, and others)            |    ✅   |
+|  8  | Cloud integration that runs a scan on a cloud provider                      |    ✅   |
+|  9  | Diff reports listing new, removed, and unchanged assets between runs        |    ❌   |
+|  10 | A step type that runs on a cloud provider's serverless platform             |    ❌   |
+|  N  | Further features, to be decided                                             |    ❌   |
+
 ## Documentation
 
 | Topic                | Link                                                                                                     |
@@ -205,9 +223,9 @@ The high-level ambitious plan for the project, in order:
 
 ## Disclaimer
 
-**Osmedeus** is designed to execute arbitrary code and commands from user supplied input via CLI, API, and workflow definitions. This flexibility is intentional and central to how the engine operates.
+Osmedeus executes arbitrary code and commands from user-supplied input through the CLI, the API, and workflow definitions. That is intentional and central to how the engine operates.
 
-Please refer to the [⚠️ Security Warning](https://docs.osmedeus.org/others/security-warning) page for more information on how to stay safe. [SECURITY.md](SECURITY.md) draws the line between the code execution that is intentional and what counts as a vulnerability, and is where to start if you want to report one.
+Read the [Security Warning](https://docs.osmedeus.org/others/security-warning) page for how to stay safe. [SECURITY.md](SECURITY.md) draws the line between the code execution that is intentional and what counts as a vulnerability, and is where to start if you want to report one.
 
 **Think twice before you:**
 - Run workflows downloaded from untrusted sources
@@ -218,4 +236,4 @@ You are responsible for what you run. Always review workflow YAML files before e
 
 ## License
 
-Osmedeus is made with ♥ by [@j3ssie](https://twitter.com/j3ssie) and it is released under the MIT license.
+Osmedeus is made with ♥ by [@j3ssie](https://x.com/j3ssie) and it is released under the MIT license.
