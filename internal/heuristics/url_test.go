@@ -18,6 +18,10 @@ func TestExtractRepoSlug(t *testing.T) {
 		{"github pull", "github.com", "/owner/repo/pull/123", "owner__repo"},
 		{"github issues", "github.com", "/owner/repo/issues/456", "owner__repo"},
 		{"github trailing slash", "github.com", "/owner/repo/", "owner__repo"},
+		// A later prefix (/tree/, /blob/) sits past the first cut. The slug is
+		// still owner/repo; slicing with the later index used to panic.
+		{"github blob path containing tree", "github.com", "/owner/repo/blob/main/src/tree/file.go", "owner__repo"},
+		{"github archive path containing blob", "github.com", "/owner/repo/archive/refs/heads/main/blob/README.md", "owner__repo"},
 
 		// GitLab
 		{"gitlab basic", "gitlab.com", "/org/repo", "org__repo"},
@@ -69,6 +73,12 @@ func TestParseURL_RepoSlug(t *testing.T) {
 			"github archive URL",
 			"https://github.com/juice-shop/juice-shop/archive/refs/heads/master.zip",
 			"juice-shop__juice-shop",
+			"github.com",
+		},
+		{
+			"github blob URL whose file path contains /tree/",
+			"https://github.com/owner/repo/blob/main/src/tree/file.go",
+			"owner__repo",
 			"github.com",
 		},
 		{
